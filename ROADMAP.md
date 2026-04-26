@@ -14,6 +14,7 @@ Status: shipped locally
 - AstrBot shell can send a claimed proactive message through NapCat / OneBot.
 - `xinyu_status.py` checks the local Core + AstrBot + NapCat stack.
 - Runtime secrets, logs, and memory state are excluded from Git.
+- Local learning library separates self-found material from owner-supplied material.
 
 ## v0.2 - Repository Consolidation
 
@@ -35,6 +36,8 @@ Status: planned
 - Add a single operator command for "start everything, then verify".
 - Add a single operator command for "stop everything cleanly".
 - Expand smoke tests for repeated proactive cycles and failed-send retries.
+- Add runtime scheduling around `xinyu_learning_library.py` so approved learning
+  requests can download materials without manual shell commands.
 
 ## v0.4 - Memory Review And Safety
 

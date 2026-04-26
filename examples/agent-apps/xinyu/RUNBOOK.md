@@ -81,6 +81,7 @@ python proactive_presence_smoke.py
 python bridge_probe_smoke.py
 python bridge_session_cleanup_smoke.py
 python ai_self_iteration_review_bridge_smoke.py
+python learning_library_smoke.py
 python capability_zones_smoke.py
 ```
 
@@ -90,7 +91,58 @@ Python 语法检查：
 python -m py_compile xinyu_core_bridge.py xinyu_proactive_presence.py xinyu_status.py
 ```
 
-## 5. QQ 发送模型
+## 5. 学习资料库
+
+XinYu 的学习资料库：
+
+```text
+D:/XinYu/KohakuTerrarium-main/examples/agent-apps/xinyu/learning/
+```
+
+两个资料桶：
+
+- `self_found/`：XinYu 自己找的资料。
+- `owner_supplied/`：主人给她、让她找、或手动放进去的资料。
+
+初始化：
+
+```powershell
+python xinyu_learning_library.py init
+```
+
+下载论文 / 文件 / 网页：
+
+```powershell
+python xinyu_learning_library.py url "https://example.com/paper.pdf" --origin owner_supplied --reason "主人要求学习这篇论文"
+```
+
+下载 GitHub 仓库用于插件学习：
+
+```powershell
+python xinyu_learning_library.py github "https://github.com/user/repo" --origin owner_supplied --reason "学习这个插件结构"
+```
+
+登记主人手动放入的文件或文件夹：
+
+```powershell
+python xinyu_learning_library.py add "D:\path\to\file-or-folder" --origin owner_supplied --reason "主人手动放入的资料"
+```
+
+进入学习管道：
+
+```powershell
+python xinyu_learning_library.py list
+python xinyu_learning_library.py stage --id learn-...
+```
+
+原则：
+
+- 入库只是保存资料，不等于已经学会。
+- `owner_supplied` 默认按 curated material stage。
+- `self_found` 默认 `comparison_status: not_compared`，必须经过比较或审查。
+- 学习资料不能直接改写人格、关系、主人记忆或情绪状态。
+
+## 6. QQ 发送模型
 
 XinYu 的主动 QQ 发送使用 claim / ack：
 
@@ -103,7 +155,7 @@ XinYu 的主动 QQ 发送使用 claim / ack：
 
 所以：预览不是发送，只有 claim 才能领取真实发送权。
 
-## 6. QQ 没发出去时
+## 7. QQ 没发出去时
 
 先跑：
 
@@ -125,7 +177,7 @@ python xinyu_status.py
 
 如果 NapCat 显示 `ECONNREFUSED 127.0.0.1:6199`，通常是 AstrBot 的 OneBot server 还没准备好，或者 AstrBot 没启动。先启动 / 重启 AstrBot，再让 NapCat 重连。
 
-## 7. 主动消息重复时
+## 8. 主动消息重复时
 
 查看：
 
@@ -147,7 +199,7 @@ python xinyu_status.py --json
 - `failed` 允许重试
 - preview 不会 claim，也不会获得真实发送权
 
-## 8. 本地秘密
+## 9. 本地秘密
 
 不要提交：
 
@@ -155,11 +207,13 @@ python xinyu_status.py --json
 xinyu.local.env
 logs/
 memory/
+learning/self_found/
+learning/owner_supplied/
 ```
 
 `xinyu.local.env.example` 可以提交，因为它只放占位值。
 
-## 9. 提交前检查
+## 10. 提交前检查
 
 提交前看：
 
@@ -174,4 +228,6 @@ git diff --cached --name-only
 examples/agent-apps/xinyu/xinyu.local.env
 examples/agent-apps/xinyu/logs/
 examples/agent-apps/xinyu/memory/
+examples/agent-apps/xinyu/learning/self_found/
+examples/agent-apps/xinyu/learning/owner_supplied/
 ```

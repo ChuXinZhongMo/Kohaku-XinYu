@@ -47,6 +47,18 @@ Status: pending
 - [ ] Add a dependency extraction plan if XinYu should later consume
   KohakuTerrarium as a package instead of carrying a source snapshot.
 
+## Phase 3.5 - Learning Library
+
+Status: completed
+
+- [x] Add `examples/agent-apps/xinyu/learning/`.
+- [x] Split learning material into `self_found/` and `owner_supplied/`.
+- [x] Keep downloaded materials, papers, repository snapshots, extracted text,
+  and manifest data out of Git.
+- [x] Add `xinyu_learning_library.py` for URL, GitHub, file, and folder intake.
+- [x] Add stage support to move registered items into `source_materials`.
+- [x] Add `learning_library_smoke.py`.
+
 ## Phase 4 - Runtime Polish
 
 Status: pending

@@ -1,0 +1,9 @@
+manifest.jsonl
+self_found/**
+owner_supplied/**
+!self_found/
+!owner_supplied/
+!self_found/.gitkeep
+!owner_supplied/.gitkeep
+!README.md
+!.gitignore

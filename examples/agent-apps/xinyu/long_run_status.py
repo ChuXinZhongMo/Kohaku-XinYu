@@ -47,6 +47,7 @@ REQUIRED_VALIDATIONS = [
     "learning_quality_smoke.py",
     "local_scope_smoke.py",
     "xinyu_status.py",
+    "learning_library_smoke.py",
     "bridge_probe_smoke.py",
     "bridge_session_cleanup_smoke.py",
     "xinyu_speech_controller_smoke.py",

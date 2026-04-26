@@ -25,7 +25,13 @@ jobs:
             examples/agent-apps/xinyu/xinyu_core_bridge.py \
             examples/agent-apps/xinyu/xinyu_proactive_presence.py \
             examples/agent-apps/xinyu/xinyu_status.py \
+            examples/agent-apps/xinyu/xinyu_learning_library.py \
+            examples/agent-apps/xinyu/learning_library_smoke.py \
             examples/agent-apps/xinyu/custom/ai_self_iteration_review_bridge_plugin.py
+
+      - name: Run XinYu learning library smoke
+        working-directory: examples/agent-apps/xinyu
+        run: python learning_library_smoke.py
 
       - name: Compile AstrBot integration files
         run: |
@@ -41,3 +47,5 @@ jobs:
           test ! -d examples/agent-apps/xinyu/memory
           test ! -d integrations/astrbot/data
           test ! -d integrations/astrbot/logs
+          test -z "$(find examples/agent-apps/xinyu/learning/self_found -type f ! -name .gitkeep -print -quit)"
+          test -z "$(find examples/agent-apps/xinyu/learning/owner_supplied -type f ! -name .gitkeep -print -quit)"
