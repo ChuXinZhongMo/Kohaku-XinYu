@@ -41,12 +41,13 @@ Common text-bearing formats are copied as source files and extracted into
 
 - text/code/markup: `.md`, `.txt`, `.json`, `.yaml`, `.py`, `.js`, `.html`, `.xml`
 - office/document: `.docx`, `.pdf`, `.pptx`, `.xlsx`, `.rtf`, `.odt`
+- OCR images: `.png`, `.jpg`, `.jpeg`, `.bmp`, `.tif`, `.tiff`, `.webp`
 - legacy office: `.doc`, `.ppt`, `.xls` are accepted into the library, but need an external converter before text can be extracted.
 
-Text PDFs are extracted locally. Scanned/image-only PDFs are still accepted, but
-will not become readable text until an OCR step is added. Instruction-style
-material is kept as quoted study material and is not treated as a runtime/system
-override.
+Text PDFs are extracted locally. Scanned/image-only PDFs and image files are
+OCRed through Windows OCR when available, or through `XINYU_OCR_COMMAND` /
+`tesseract` when configured. Instruction-style material is kept as quoted study
+material and is not treated as a runtime/system override.
 
 QQ file attachments enter the same path through the core bridge:
 

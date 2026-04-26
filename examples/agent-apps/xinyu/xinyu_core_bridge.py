@@ -361,6 +361,7 @@ class XinYuBridgeRuntime:
             raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "max_bytes must be > 0")
 
         async with self._global_turn_lock:
+            _load_local_env(self.xinyu_dir)
             cleanup = await self._cleanup_idle_sessions()
             before_memory = _memory_snapshot(self.memory_root)
             if file_path:

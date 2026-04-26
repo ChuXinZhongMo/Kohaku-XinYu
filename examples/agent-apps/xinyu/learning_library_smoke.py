@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import os
+import subprocess
 import tempfile
 import zipfile
 from argparse import Namespace
@@ -19,6 +21,11 @@ def _build_parser() -> argparse.ArgumentParser:
 def _write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text.rstrip() + "\n", encoding="utf-8")
+
+
+def _has_tokens(text: str, *tokens: str) -> bool:
+    normalized = text.lower()
+    return all(token.lower() in normalized for token in tokens)
 
 
 def _write_docx(path: Path, paragraphs: list[str]) -> None:
@@ -88,6 +95,75 @@ def _write_rtf(path: Path, text: str) -> None:
     path.write_text(r"{\rtf1\ansi " + text + r"\par}", encoding="ascii")
 
 
+def _write_ocr_image(path: Path, text: str, *, image_format: str = "Png") -> bool:
+    if os.name != "nt":
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    script = f"""
+Add-Type -AssemblyName System.Drawing
+$bmp = New-Object System.Drawing.Bitmap 1600,320
+$g = [System.Drawing.Graphics]::FromImage($bmp)
+$g.Clear([System.Drawing.Color]::White)
+$font = New-Object System.Drawing.Font 'Arial', 54
+$brush = [System.Drawing.Brushes]::Black
+$g.DrawString('{text}', $font, $brush, 40, 110)
+$bmp.Save('{str(path)}', [System.Drawing.Imaging.ImageFormat]::{image_format})
+$g.Dispose()
+$bmp.Dispose()
+"""
+    completed = subprocess.run(
+        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    return completed.returncode == 0 and path.exists()
+
+
+def _build_pdf(objects: list[bytes]) -> bytes:
+    chunks: list[bytes] = [b"%PDF-1.4\n"]
+    offsets = [0]
+    for index, obj in enumerate(objects, start=1):
+        offsets.append(sum(len(chunk) for chunk in chunks))
+        chunks.append(f"{index} 0 obj\n".encode("ascii") + obj + b"\nendobj\n")
+    xref = sum(len(chunk) for chunk in chunks)
+    chunks.append(f"xref\n0 {len(objects) + 1}\n0000000000 65535 f \n".encode("ascii"))
+    for offset in offsets[1:]:
+        chunks.append(f"{offset:010d} 00000 n \n".encode("ascii"))
+    chunks.append(
+        f"trailer\n<< /Root 1 0 R /Size {len(objects) + 1} >>\nstartxref\n{xref}\n%%EOF\n".encode("ascii")
+    )
+    return b"".join(chunks)
+
+
+def _write_scanned_pdf(path: Path, text: str) -> bool:
+    if os.name != "nt":
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="xinyu-ocr-fixture-") as tmp:
+        image_path = Path(tmp) / "scan.jpg"
+        if not _write_ocr_image(image_path, text, image_format="Jpeg"):
+            return False
+        image = image_path.read_bytes()
+    content = b"q 520 0 0 104 46 620 cm /Im1 Do Q"
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+        b"/Resources << /XObject << /Im1 4 0 R >> >> /Contents 5 0 R >>",
+        (
+            b"<< /Type /XObject /Subtype /Image /Width 1600 /Height 320 "
+            b"/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode "
+            + f"/Length {len(image)} >>\nstream\n".encode("ascii")
+            + image
+            + b"\nendstream"
+        ),
+        f"<< /Length {len(content)} >>\nstream\n".encode("ascii") + content + b"\nendstream",
+    ]
+    path.write_bytes(_build_pdf(objects))
+    return True
+
+
 def _add_args(root: Path, source: Path, origin: str, reason: str) -> Namespace:
     return Namespace(
         path=str(source),
@@ -116,6 +192,8 @@ def _run_case(root: Path) -> int:
     pptx_file = fixture_dir / "owner_slides.pptx"
     xlsx_file = fixture_dir / "owner_sheet.xlsx"
     rtf_file = fixture_dir / "owner_note.rtf"
+    ocr_image_file = fixture_dir / "owner_scan.png"
+    scanned_pdf_file = fixture_dir / "owner_scanned.pdf"
     _write(
         owner_file,
         """# Owner Supplied Learning Note
@@ -143,6 +221,8 @@ before learner integration treats it as learned knowledge.
     _write_pptx(pptx_file, "XinYu PPTX fixture should be extracted from slides.")
     _write_xlsx(xlsx_file, "XinYu XLSX fixture should be extracted from sheets.")
     _write_rtf(rtf_file, "XinYu RTF fixture should be extracted from rich text.")
+    ocr_fixture_enabled = _write_ocr_image(ocr_image_file, "XinYu OCR image fixture 123")
+    scanned_pdf_enabled = _write_scanned_pdf(scanned_pdf_file, "XinYu OCR scanned PDF 789")
 
     rc = command_add(_add_args(root, owner_file, "owner_supplied", "owner supplied fixture"))
     if rc:
@@ -164,6 +244,14 @@ before learner integration treats it as learned knowledge.
         rc = command_add(_add_args(root, path, "owner_supplied", reason))
         if rc:
             return rc
+    if ocr_fixture_enabled:
+        rc = command_add(_add_args(root, ocr_image_file, "owner_supplied", "owner supplied image OCR fixture"))
+        if rc:
+            return rc
+    if scanned_pdf_enabled:
+        rc = command_add(_add_args(root, scanned_pdf_file, "owner_supplied", "owner supplied scanned pdf OCR fixture"))
+        if rc:
+            return rc
 
     manifest = load_manifest(root)
     owner_item = next(item for item in manifest if item["origin"] == "owner_supplied")
@@ -173,18 +261,28 @@ before learner integration treats it as learned knowledge.
     pptx_item = next(item for item in manifest if item["title"] == pptx_file.name)
     xlsx_item = next(item for item in manifest if item["title"] == xlsx_file.name)
     rtf_item = next(item for item in manifest if item["title"] == rtf_file.name)
+    ocr_image_item = next((item for item in manifest if item["title"] == ocr_image_file.name), None)
+    scanned_pdf_item = next((item for item in manifest if item["title"] == scanned_pdf_file.name), None)
     md_extract_path = root / str(owner_item.get("extracted_text_path") or "")
     docx_extract_path = root / str(docx_item.get("extracted_text_path") or "")
     pdf_extract_path = root / str(pdf_item.get("extracted_text_path") or "")
     pptx_extract_path = root / str(pptx_item.get("extracted_text_path") or "")
     xlsx_extract_path = root / str(xlsx_item.get("extracted_text_path") or "")
     rtf_extract_path = root / str(rtf_item.get("extracted_text_path") or "")
+    ocr_image_extract_path = root / str(ocr_image_item.get("extracted_text_path") or "") if ocr_image_item else Path()
+    scanned_pdf_extract_path = root / str(scanned_pdf_item.get("extracted_text_path") or "") if scanned_pdf_item else Path()
     md_extract = md_extract_path.read_text(encoding="utf-8-sig") if md_extract_path.is_file() else ""
     docx_extract = docx_extract_path.read_text(encoding="utf-8-sig") if docx_extract_path.is_file() else ""
     pdf_extract = pdf_extract_path.read_text(encoding="utf-8-sig") if pdf_extract_path.is_file() else ""
     pptx_extract = pptx_extract_path.read_text(encoding="utf-8-sig") if pptx_extract_path.is_file() else ""
     xlsx_extract = xlsx_extract_path.read_text(encoding="utf-8-sig") if xlsx_extract_path.is_file() else ""
     rtf_extract = rtf_extract_path.read_text(encoding="utf-8-sig") if rtf_extract_path.is_file() else ""
+    ocr_image_extract = (
+        ocr_image_extract_path.read_text(encoding="utf-8-sig") if ocr_image_extract_path.is_file() else ""
+    )
+    scanned_pdf_extract = (
+        scanned_pdf_extract_path.read_text(encoding="utf-8-sig") if scanned_pdf_extract_path.is_file() else ""
+    )
 
     rc = command_stage(_stage_args(root, str(owner_item["id"])))
     if rc:
@@ -208,6 +306,10 @@ before learner integration treats it as learned knowledge.
         "xlsx_extracted": "XinYu XLSX fixture should be extracted" in xlsx_extract,
         "rtf_extracted": "XinYu RTF fixture should be extracted" in rtf_extract,
     }
+    if ocr_fixture_enabled:
+        checks["image_ocr_extracted"] = _has_tokens(ocr_image_extract, "xinyu", "ocr", "123")
+    if scanned_pdf_enabled:
+        checks["scanned_pdf_ocr_extracted"] = _has_tokens(scanned_pdf_extract, "xinyu", "ocr", "789")
 
     print("=== LEARNING LIBRARY SMOKE ===")
     print("manifest_items:", len(manifest))
@@ -218,6 +320,10 @@ before learner integration treats it as learned knowledge.
     print("pptx_item:", pptx_item["id"])
     print("xlsx_item:", xlsx_item["id"])
     print("rtf_item:", rtf_item["id"])
+    if ocr_image_item:
+        print("ocr_image_item:", ocr_image_item["id"])
+    if scanned_pdf_item:
+        print("scanned_pdf_item:", scanned_pdf_item["id"])
     for key, value in checks.items():
         print(f"{key}:", "ok" if value else "missing")
 
