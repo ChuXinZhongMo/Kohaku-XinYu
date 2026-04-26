@@ -1,172 +1,151 @@
-# Xinyu
+# XinYu App
 
-Early-stage scaffold for Xinyu, a memory-centered emerging self built on KohakuTerrarium.
+这个目录是 XinYu 的核心 app：提示词、运行入口、记忆相关引擎、bridge 接口、状态检查和 smoke 测试都在这里。
 
-## Current State
+XinYu 的目标不是“回答得像人”这么简单，而是让一个 AI 系统能在长期交互中维持连续性：记住关系、调整表达、审查自身变化，并在被允许时主动联系主人。
 
-This example currently provides:
+## 目录内容
 
-- a controller prompt centered on continuity, memory, time, and relationship
-- an output prompt for restrained, human-like outward expression
-- a first-pass memory directory with core self, narrative, emotion, relationship, and context files
-- specialized writer subagents for emotion, relationship, and self-narrative updates
-- specialized writer subagents for emotion, relationship, self-narrative, reflection, and dream updates
-- a dedicated archive writer for compression and dormancy
-- a dedicated time writer for explicit reality-time anchoring
-- an explicit real-time anchor file
-- an explicit runtime rhythm file for maintenance cadence
-- an explicit maintenance trigger plan
-- a runtime plugin that injects current real time into each LLM call
-- minimal reflection and dream logs
+核心运行文件：
 
-## Navigation
+- `config.yaml` - XinYu 的 KohakuTerrarium app 配置
+- `run_local_xinyu.py` / `run_local_xinyu.ps1` - 本地运行入口
+- `xinyu_core_bridge.py` - 给外部 shell 使用的 HTTP bridge
+- `xinyu_proactive_presence.py` - 主动 QQ 候选、claim、ack 逻辑
+- `xinyu_status.py` - 整体系统只读状态检查
 
-Use:
+提示词和行为模块：
 
-- `INDEX.md` for the full map
-- `RUNBOOK.md` for operational use
-- `smoke_run.py` for repeatable first-turn validation
-- `manual_inner_sync.py` for inner-memory validation without full runtime dependence
-- `manual_slow_reprocess.py` for reflection / dream / archive validation without full runtime dependence
-- `VALIDATION-INDEX.md` for validation flow
-- `STRUCTURE-NOTES.md` for file-layer understanding
-- `CHANGELOG-XINYU.md` for evolution history
-- `NAMING-CONVENTIONS.md` for id and file consistency
-- `STATE-OF-XINYU.md` for current engineering status
-- `EXECUTION-ORDER.md` for staged implementation flow
+- `prompts/system.md`
+- `prompts/output.md`
+- `prompts/*_writer.md`
+- `custom/*_bridge_plugin.py`
+- `custom/*_engine.py`
 
-## Suggested Reading Order
+验证脚本：
 
-If you are new to this scaffold, read in this order:
+- `validate_scaffold.py`
+- `validate_inner_framework.py`
+- `proactive_presence_smoke.py`
+- `ai_self_iteration_review_bridge_smoke.py`
+- `bridge_probe_smoke.py`
+- `capability_zones_smoke.py`
+- `long_run_status.py`
 
-1. `README.md`
-2. `INDEX.md`
-3. `STRUCTURE-NOTES.md`
-4. `RUNBOOK.md`
-5. `TEST-SCENARIOS.md`
-6. `WRITER-ROUTING.md`
-7. `MEMORY-LINKS.md`
-8. `FAILURE-MODES.md`
-9. `PROMPT-TUNING.md`
-10. `EXPLORATION-LOOP.md`
-11. `SECOND-STAGE-ROADMAP.md`
-12. `SESSION-REVIEW.md`
-13. `FIRST-RUN-PLAN.md`
-14. `RUNTIME-PRIORITIES.md`
-15. `VALIDATION-INDEX.md`
-16. `CHANGELOG-XINYU.md`
-17. `NAMING-CONVENTIONS.md`
-18. `STATE-OF-XINYU.md`
-19. `EXECUTION-ORDER.md`
-20. `OPEN-QUESTIONS.md`
-21. `QUESTION-TO-VALIDATION.md`
+本地私有运行状态：
 
-## Current Limitations
+- `xinyu.local.env`
+- `logs/`
+- `memory/`
 
-This is still a scaffold.
+这些路径已被 Git 忽略，不应该上传。
 
-Not implemented yet:
+## 当前能力
 
-- active dream processing loop
-- reflection scheduling policy
-- structured forgetting/compression
-- automated external exploration loop
-- automatic live timestamp refresh and stronger runtime time-anchor injection
-- runtime plugin behavior still needs real session validation
-- structured archive/dormancy policy beyond the initial scaffold
+已经实现并在本地验证：
 
-## Local Runtime Note
+- 本地 XinYu runtime launcher
+- 记忆导向的 prompt / writer 结构
+- 关系、反思、梦境、归档、上下文层
+- AI self-iteration gate 与 review bridge
+- 主动 QQ 候选消息生成
+- 明确的 proactive claim / ack dispatch 状态
+- Core bridge health、chat、probe、proactive、ack 接口
+- 通过外部 AstrBot shell 插件接入 NapCat / QQ
+- 检查 Core、AstrBot、NapCat、OneBot、主动发送、review 状态的工具
 
-On the current machine used for implementation:
+## 本地启动
 
-- `python` exists
-- `kt` is not currently available in `PATH`
-- this repository copy does not include Python packaging metadata like `pyproject.toml`
-- the supported runtime path is now `run_local_xinyu.py` / `run_local_xinyu.ps1`
-
-So the shortest supported path is:
-
-1. create a local virtual environment
-2. install `requirements-minimal.txt`
-3. set `XINYU_API_KEY` or create `xinyu.local.env`
-4. run Xinyu through the local-source launcher
-
-This avoids the missing package metadata problem and keeps runtime validation focused on the Xinyu scaffold itself.
-
-## Next Steps
-
-- add runtime writer behavior and test the routing quality
-- add specialized reflection and dream writer paths
-- add archive policy and compression heuristics
-- add structured memory templates for additional people
-- add time-aware update mechanics and live timestamp refresh
-
-## Suggested Early Runtime Strategy
-
-- keep the default interaction loop simple
-- let the controller decide when a writer is necessary
-- prefer scheduled reflection over aggressive background churn
-- treat dream updates as rare and explicitly separate from factual memory
-
-## Lightweight Validation
-
-Before full runtime validation, you can run:
-
-```bash
-python validate_scaffold.py
-```
-
-This checks prompt references, plugin module references, memory roots, and required scaffold files without needing the full runtime environment.
-
-For inner-framework validation without relying on the full runtime path:
-
-```bash
-python validate_inner_framework.py
-python manual_inner_sync.py --user "今晚我没有想把话都说完，我只是想让你记住这种安静。"
-python manual_slow_reprocess.py --show-state
-```
-
-To check whether the local machine is actually ready for deeper runtime validation:
-
-```bash
-python check_runtime_env.py
-```
-
-## Minimal Local Runtime
-
-From the `xinyu` directory:
+进入目录：
 
 ```powershell
-.\bootstrap_minimal_env.ps1
-.\run_local_xinyu.ps1 -ApiKey "your-key"
+cd D:\XinYu\KohakuTerrarium-main\examples\agent-apps\xinyu
 ```
 
-Repeatable smoke validation:
+创建本地环境文件：
 
-```bash
-python smoke_run.py --message "你好，心玉。"
+```powershell
+copy xinyu.local.env.example xinyu.local.env
 ```
 
-Or place your key in:
+至少填写：
 
 ```text
-xinyu.local.env
+XINYU_API_KEY=
+XINYU_BASE_URL=
+XINYU_LLM_MODEL=
 ```
 
-using the template:
+运行本地 app：
+
+```powershell
+.\run_local_xinyu.ps1
+```
+
+启动 Core bridge：
+
+```powershell
+.\start_xinyu_core_bridge.ps1
+```
+
+停止 Core bridge：
+
+```powershell
+.\stop_xinyu_core_bridge.ps1
+```
+
+## 状态检查
+
+```powershell
+python xinyu_status.py
+```
+
+给程序读取：
+
+```powershell
+python xinyu_status.py --json
+```
+
+当 QQ 发送、主动消息、Core bridge 或 AstrBot 插件看起来不对时，先跑这个命令。
+
+## Smoke 测试
+
+改行为前后建议跑：
+
+```powershell
+python validate_scaffold.py
+python validate_inner_framework.py
+python proactive_presence_smoke.py
+python ai_self_iteration_review_bridge_smoke.py
+python bridge_probe_smoke.py
+python capability_zones_smoke.py
+```
+
+改 Python bridge 后跑：
+
+```powershell
+python -m py_compile xinyu_core_bridge.py xinyu_proactive_presence.py xinyu_status.py
+```
+
+## QQ 集成
+
+QQ 发送由这个仓库外部的 AstrBot shell 插件负责。
+
+本机预期路径：
 
 ```text
-xinyu.local.env.example
+D:/XinYu/XinYu-AstrBot-Shell/    插件源码
+D:/XinYu/AstrBot/                AstrBot 运行环境
+D:/XinYu/NapCatQQ/               NapCat 运行环境
 ```
 
-Default compatible endpoint:
+Shell 会轮询 Core bridge。只有 shell 明确 claim 到候选消息后，Core 才会返回可发送的 `reply`；发送完成后 shell 必须回报 `sent` 或 `failed`。
 
-```text
-http://llm.ciallo.date:2095/v1
-```
+## 运维文档
 
-Or directly:
-
-```bash
-python run_local_xinyu.py --mode cli
-```
+- `RUNBOOK.md` - 启动、状态检查、QQ 链路恢复
+- `STATE-OF-XINYU.md` - 当前工程状态
+- `VALIDATION-INDEX.md` - 验证地图
+- `CHANGELOG-XINYU.md` - 演进记录
+- `FAILURE-MODES.md` - 已知失败模式
+- `STRUCTURE-NOTES.md` - 文件结构说明

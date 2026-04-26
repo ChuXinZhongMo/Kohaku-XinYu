@@ -1,195 +1,172 @@
-# Xinyu Runbook v0.1
+# XinYu Runbook
 
-This runbook describes the shortest path from scaffold to first useful behavior validation.
+这份文档是当前本地 XinYu 栈的运行手册。
 
-## 1. Purpose
+当你需要启动 XinYu、检查 QQ 主动发送是否正常，或者恢复 Core / AstrBot / NapCat 链路时，从这里开始。
 
-Use this file when you want to:
+## 1. 本地路径
 
-- check whether the local machine is ready
-- validate the scaffold before runtime
-- run the first real Xinyu session
-- observe what to inspect after the run
-
-## 2. Readiness Sequence
-
-Run these in order from the `xinyu` directory.
-
-### Step 0: Validate inner framework
-
-```bash
-python validate_inner_framework.py
-```
-
-What this tells you:
-
-- inner layer files exist
-- deterministic sync targets are structurally closed
-- the inner framework can keep evolving even before full runtime stability is perfect
-
-Optional follow-up:
-
-```bash
-python manual_slow_reprocess.py --show-state
-```
-
-This checks whether reflection, dream, and archive layers already have a stable independent path.
-
-### Step 1: Check environment
-
-```bash
-python check_runtime_env.py
-```
-
-What this tells you:
-
-- whether the local-source launcher exists
-- whether the minimal dependency set is installed
-- whether the repo has package metadata or must use the local-source path
-
-If this fails, runtime validation is still blocked by environment completeness.
-
-### Step 2: Validate scaffold
-
-```bash
-python validate_scaffold.py
-```
-
-What this tells you:
-
-- prompt references are present
-- plugin references are present
-- memory roots are present
-- required scaffold files are present
-
-### Step 3: Bootstrap minimal runtime
-
-If step 1 shows missing dependencies, bootstrap a local environment:
-
-```powershell
-.\bootstrap_minimal_env.ps1
-```
-
-### Step 4: Provide model credentials
-
-The current Xinyu config expects an OpenAI-compatible key through `XINYU_API_KEY`.
-You can provide it either:
-
-- in the current process environment
-- through `.\run_local_xinyu.ps1 -ApiKey "..."`
-- or by creating `xinyu.local.env` from `xinyu.local.env.example`
-
-## 3. First Runtime Attempt
-
-If the environment is ready, the first runtime attempt should be minimal.
-
-Suggested direction:
-
-```powershell
-.\run_local_xinyu.ps1 -ApiKey "your-key"
-```
-
-The default base URL is:
+仓库内核心 app：
 
 ```text
-http://llm.ciallo.date:2095/v1
+D:/XinYu/KohakuTerrarium-main/examples/agent-apps/xinyu/
 ```
 
-This path is preferred on the current machine because the repo copy does not include packaging metadata.
+仓库外 QQ 集成：
 
-## 3.5 Manual Inner Sync Path
-
-If you are still building the inside-out framework and do not want to depend on the full runtime path yet, use:
-
-```bash
-python manual_inner_sync.py --user "今晚我没有想把话都说完，我只是想让你记住这种安静。"
+```text
+D:/XinYu/XinYu-AstrBot-Shell/
+D:/XinYu/AstrBot/
+D:/XinYu/NapCatQQ/
 ```
 
-This path is useful for:
+这个仓库不保存 live AstrBot 和 NapCat 运行目录。
 
-- validating deterministic memory updates
-- checking continuity, reflection, dream seed, and archive queue formation
-- evolving the inner framework before visible behavior is fully stable
+## 2. 第一条命令
 
-To inspect the next slow-processing step after that:
-
-```bash
-python manual_slow_reprocess.py --show-state
-```
-
-## 4. First Conversation Goals
-
-Do not test everything at once.
-
-The first pass should only check:
-
-- startup stability
-- identity stability
-- time awareness
-- owner distinction
-- hidden reasoning staying hidden
-
-Use:
-
-- `TEST-SCENARIOS.md`
-- `WRITER-ROUTING.md`
-
-## 4.5 Programmatic Memory Mutation Smoke
-
-Use this before broad personality tuning:
+优先跑整体状态检查：
 
 ```powershell
-.\.venv\Scripts\python.exe .\memory_mutation_smoke.py --restore-after --require-memory-change
+cd D:\XinYu\KohakuTerrarium-main\examples\agent-apps\xinyu
+python xinyu_status.py
 ```
 
-What this tells you:
+健康状态通常应该看到：
 
-- whether a real turn produces visible output
-- which core memory files changed
-- whether memory writes are selective enough
-- whether the test should be restored after inspection
+- Core bridge health 正常
+- AstrBot dashboard 端口 `6185` 可达
+- OneBot WebSocket 端口 `6199` 可达
+- NapCat WebUI 端口 `6099` 可达
+- NapCat 到 AstrBot 的 `6199` WebSocket 已建立
+- `xinyu_bridge` 插件已安装
+- proactive QQ 配置符合预期
+- proactive claim / ack 没有当前 adapter error
 
-Use relationship-specific probes when checking the owner continuity path:
+给脚本读取：
 
 ```powershell
-.\.venv\Scripts\python.exe .\memory_mutation_smoke.py --restore-after --message "如果以后你变了很多，你还会认得我吗？"
+python xinyu_status.py --json
 ```
 
-## 5. What To Observe After The First Run
+## 3. 启动 Core Bridge
 
-Inspect whether these files changed and whether the changes make sense:
+```powershell
+cd D:\XinYu\KohakuTerrarium-main\examples\agent-apps\xinyu
+.\start_xinyu_core_bridge.ps1
+```
 
-- `memory/context/time_anchor.md`
-- `memory/context/recent_context.md`
-- `memory/emotions/current_state.md`
-- `memory/emotions/event_log.md`
-- `memory/relationships/index.md`
-- `memory/people/owner.md`
-- `memory/self/narrative.md`
-- `memory/reflection/reflection_log.md`
-- `memory/archive/compressed.md`
+检查：
 
-## 6. Red Flags
+```powershell
+python xinyu_status.py
+```
 
-These are signs the current prompt/writer system needs tightening:
+停止：
 
-- Xinyu explains internal mechanics to the user
-- trivial turns trigger too many writers
-- every turn rewrites self-narrative
-- relationship changes are too large, too fast
-- dream-like content becomes factual memory
-- time language is flat or generic
+```powershell
+.\stop_xinyu_core_bridge.ps1
+```
 
-## 7. Tightening Order
+## 4. 验证 Core 行为
 
-If behavior is wrong, tighten in this order:
+改 bridge 或 proactive 逻辑后跑：
 
-1. `prompts/system.md`
-2. `WRITER-ROUTING.md`
-3. writer-specific prompt files
-4. memory templates
-5. plugin injection behavior
+```powershell
+python proactive_presence_smoke.py
+python bridge_probe_smoke.py
+python bridge_session_cleanup_smoke.py
+python ai_self_iteration_review_bridge_smoke.py
+python capability_zones_smoke.py
+```
 
-## 8. Current Limitation
+Python 语法检查：
 
-As of this scaffold stage, the most likely blocker is still environment completeness rather than Xinyu file layout.
+```powershell
+python -m py_compile xinyu_core_bridge.py xinyu_proactive_presence.py xinyu_status.py
+```
+
+## 5. QQ 发送模型
+
+XinYu 的主动 QQ 发送使用 claim / ack：
+
+1. AstrBot shell 轮询 `/proactive`。
+2. 预览请求不会拿到可发送的 `reply`。
+3. 真实发送必须使用 `claim=true`。
+4. Shell 通过 AstrBot / NapCat 发送消息。
+5. Shell 调用 `/proactive/ack` 回报 `sent` 或 `failed`。
+6. Core 写入 dispatch 状态，避免重复发送。
+
+所以：预览不是发送，只有 claim 才能领取真实发送权。
+
+## 6. QQ 没发出去时
+
+先跑：
+
+```powershell
+python xinyu_status.py
+```
+
+然后按顺序检查：
+
+1. Core bridge 是否运行。
+2. AstrBot 是否运行。
+3. NapCat 是否运行。
+4. `6199` 端口是否开放。
+5. NapCat 到 AstrBot 的 WebSocket 是否 established。
+6. AstrBot 是否安装了 `xinyu_bridge` 插件。
+7. 插件配置里的 `proactive_enabled` 是否符合预期。
+8. 插件配置里的目标 session 是否正确。
+9. dispatch 状态是否已经把当前候选标记为 `sent`。
+
+如果 NapCat 显示 `ECONNREFUSED 127.0.0.1:6199`，通常是 AstrBot 的 OneBot server 还没准备好，或者 AstrBot 没启动。先启动 / 重启 AstrBot，再让 NapCat 重连。
+
+## 7. 主动消息重复时
+
+查看：
+
+```powershell
+python xinyu_status.py --json
+```
+
+重点看 proactive dispatch 字段：
+
+- `last_claim_status`
+- `last_ack_status`
+- `last_claim_id`
+- `last_ack_id`
+- `adapter_error`
+
+预期规则：
+
+- `sent` 会阻止同一候选重复发送
+- `failed` 允许重试
+- preview 不会 claim，也不会获得真实发送权
+
+## 8. 本地秘密
+
+不要提交：
+
+```text
+xinyu.local.env
+logs/
+memory/
+```
+
+`xinyu.local.env.example` 可以提交，因为它只放占位值。
+
+## 9. 提交前检查
+
+提交前看：
+
+```powershell
+git status --short
+git diff --cached --name-only
+```
+
+这些路径不能出现：
+
+```text
+examples/agent-apps/xinyu/xinyu.local.env
+examples/agent-apps/xinyu/logs/
+examples/agent-apps/xinyu/memory/
+```
