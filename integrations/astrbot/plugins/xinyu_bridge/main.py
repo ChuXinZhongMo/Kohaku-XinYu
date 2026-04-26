@@ -350,8 +350,9 @@ class XinYuBridgePlugin(Star):
             return
 
         text = _safe_str(getattr(event, "message_str", "")).strip()
-        attachments = await self._extract_file_attachments(event) if self.file_learning_enabled else []
-        if not text and not attachments:
+        components = self._message_components(event) if self.file_learning_enabled else []
+        has_attachments = any(self._is_file_component(component) for component in components)
+        if not text and not has_attachments:
             return
 
         if text and self._is_passthrough_command(text):
@@ -374,7 +375,13 @@ class XinYuBridgePlugin(Star):
                 event.stop_event()
             return
 
-        if attachments:
+        if has_attachments:
+            attachments = await self._extract_file_attachments(event, components=components)
+            if not attachments:
+                yield event.plain_result("收到了文件消息，但 AstrBot 没给到可下载路径或 URL。")
+                if self.stop_astrbot_pipeline:
+                    event.stop_event()
+                return
             replies: list[str] = []
             for attachment in attachments:
                 payload = self._build_learning_payload(
@@ -478,13 +485,21 @@ class XinYuBridgePlugin(Star):
             message_id = _event_attr(event, "message_obj.id")
         return _safe_str(message_id, "")
 
-    async def _extract_file_attachments(self, event: AstrMessageEvent) -> list[FileAttachment]:
+    def _message_components(self, event: AstrMessageEvent) -> list[Any]:
         messages = _maybe_call(event, "get_messages", [])
         if not isinstance(messages, (list, tuple)):
             messages = _event_attr(event, "message_obj.message", [])
         if not isinstance(messages, (list, tuple)):
             return []
+        return list(messages)
 
+    async def _extract_file_attachments(
+        self,
+        event: AstrMessageEvent,
+        *,
+        components: list[Any] | None = None,
+    ) -> list[FileAttachment]:
+        messages = components if components is not None else self._message_components(event)
         attachments: list[FileAttachment] = []
         for component in messages:
             if not self._is_file_component(component):

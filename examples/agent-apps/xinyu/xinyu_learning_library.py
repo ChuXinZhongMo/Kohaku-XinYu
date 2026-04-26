@@ -12,6 +12,7 @@ import sys
 import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
+import zlib
 from datetime import datetime
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -55,6 +56,11 @@ TEXT_EXTENSIONS = {
 
 DOCUMENT_EXTENSIONS = {
     ".docx",
+    ".odt",
+    ".pdf",
+    ".pptx",
+    ".rtf",
+    ".xlsx",
 }
 
 REPO_STUDY_EXTENSIONS = {
@@ -109,6 +115,28 @@ DOCX_CONTENT_TYPES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
+PDF_CONTENT_TYPES = {
+    "application/pdf",
+    "application/x-pdf",
+}
+
+PPTX_CONTENT_TYPES = {
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+}
+
+XLSX_CONTENT_TYPES = {
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
+
+RTF_CONTENT_TYPES = {
+    "application/rtf",
+    "text/rtf",
+}
+
+ODT_CONTENT_TYPES = {
+    "application/vnd.oasis.opendocument.text",
+}
+
 DOCX_TEXT_MEMBERS = (
     "word/document.xml",
     "word/footnotes.xml",
@@ -121,6 +149,12 @@ DOCX_TEXT_MEMBERS = (
     "word/footer2.xml",
     "word/footer3.xml",
 )
+
+LEGACY_BINARY_OFFICE_EXTENSIONS = {
+    ".doc",
+    ".ppt",
+    ".xls",
+}
 
 
 def now_iso() -> str:
@@ -335,10 +369,347 @@ def extract_docx_text(data: bytes) -> str:
         return ""
 
 
+def extract_xml_members_text(data: bytes, members: list[str] | tuple[str, ...]) -> str:
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            names = set(archive.namelist())
+            parts: list[str] = []
+            for member in members:
+                if member not in names:
+                    continue
+                info = archive.getinfo(member)
+                if info.file_size > DEFAULT_MAX_TEXT_BYTES * 4:
+                    continue
+                text = text_from_docx_xml(archive.read(member))
+                if text.strip():
+                    parts.append(text.strip())
+            return "\n\n".join(parts).strip()
+    except (OSError, zipfile.BadZipFile, KeyError):
+        return ""
+
+
+def extract_pptx_text(data: bytes) -> str:
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            members = [
+                name
+                for name in archive.namelist()
+                if (
+                    name.startswith("ppt/slides/slide")
+                    or name.startswith("ppt/notesSlides/notesSlide")
+                    or name.startswith("ppt/comments/comment")
+                )
+                and name.endswith(".xml")
+            ]
+            members.sort(key=natural_sort_key)
+            parts: list[str] = []
+            for member in members:
+                info = archive.getinfo(member)
+                if info.file_size > DEFAULT_MAX_TEXT_BYTES * 4:
+                    continue
+                text = text_from_docx_xml(archive.read(member))
+                if text.strip():
+                    parts.append(f"## {Path(member).stem}\n\n{text.strip()}")
+            return "\n\n".join(parts).strip()
+    except (OSError, zipfile.BadZipFile, KeyError):
+        return ""
+
+
+def natural_sort_key(value: str) -> list[object]:
+    return [int(part) if part.isdigit() else part.lower() for part in re.split(r"(\d+)", value)]
+
+
+def collect_text_nodes(node: ET.Element) -> str:
+    parts: list[str] = []
+    for child in node.iter():
+        if xml_local_name(child.tag) == "t" and child.text:
+            parts.append(child.text)
+    return "".join(parts).strip()
+
+
+def xlsx_shared_strings(archive: zipfile.ZipFile) -> list[str]:
+    if "xl/sharedStrings.xml" not in archive.namelist():
+        return []
+    try:
+        root = ET.fromstring(archive.read("xl/sharedStrings.xml"))
+    except ET.ParseError:
+        return []
+    strings: list[str] = []
+    for item in root.iter():
+        if xml_local_name(item.tag) == "si":
+            strings.append(collect_text_nodes(item))
+    return strings
+
+
+def xlsx_cell_value(cell: ET.Element, shared: list[str]) -> str:
+    cell_type = cell.attrib.get("t", "")
+    if cell_type == "inlineStr":
+        return collect_text_nodes(cell)
+    value = ""
+    for child in cell:
+        if xml_local_name(child.tag) == "v" and child.text:
+            value = child.text.strip()
+            break
+    if not value:
+        return ""
+    if cell_type == "s":
+        try:
+            return shared[int(value)]
+        except (ValueError, IndexError):
+            return value
+    if cell_type == "b":
+        return "TRUE" if value == "1" else "FALSE"
+    return value
+
+
+def extract_xlsx_text(data: bytes) -> str:
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            shared = xlsx_shared_strings(archive)
+            members = [
+                name
+                for name in archive.namelist()
+                if name.startswith("xl/worksheets/sheet") and name.endswith(".xml")
+            ]
+            members.sort(key=natural_sort_key)
+            sheet_parts: list[str] = []
+            for member in members:
+                info = archive.getinfo(member)
+                if info.file_size > DEFAULT_MAX_TEXT_BYTES * 4:
+                    continue
+                try:
+                    root = ET.fromstring(archive.read(member))
+                except ET.ParseError:
+                    continue
+                rows: list[str] = []
+                for row in root.iter():
+                    if xml_local_name(row.tag) != "row":
+                        continue
+                    values = [
+                        xlsx_cell_value(cell, shared)
+                        for cell in row
+                        if xml_local_name(cell.tag) == "c"
+                    ]
+                    values = [value for value in values if value]
+                    if values:
+                        rows.append("\t".join(values))
+                if rows:
+                    sheet_parts.append(f"## {Path(member).stem}\n\n" + "\n".join(rows))
+            return "\n\n".join(sheet_parts).strip()
+    except (OSError, zipfile.BadZipFile, KeyError):
+        return ""
+
+
+def extract_odt_text(data: bytes) -> str:
+    return extract_xml_members_text(data, ("content.xml",))
+
+
+def rtf_hex_to_text(match: re.Match[str]) -> str:
+    try:
+        return bytes.fromhex(match.group(1)).decode("cp1252")
+    except (ValueError, UnicodeDecodeError):
+        return ""
+
+
+def extract_rtf_text(data: bytes) -> str:
+    text = decode_text(data)
+    text = re.sub(r"\\'([0-9a-fA-F]{2})", rtf_hex_to_text, text)
+    text = re.sub(r"\\(par|line|page)\b", "\n", text)
+    text = re.sub(r"{\\(?:fonttbl|colortbl|stylesheet|info|pict|object)[^{}]*(?:{[^{}]*}[^{}]*)*}", " ", text)
+    text = re.sub(r"\\[a-zA-Z]+\d* ?", " ", text)
+    text = re.sub(r"\\[^a-zA-Z0-9]", " ", text)
+    text = text.replace("{", " ").replace("}", " ")
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n\s+", "\n", text)
+    return text.strip()
+
+
+def pdf_unescape_literal(value: str) -> str:
+    result: list[str] = []
+    index = 0
+    while index < len(value):
+        char = value[index]
+        if char != "\\":
+            result.append(char)
+            index += 1
+            continue
+        index += 1
+        if index >= len(value):
+            break
+        escaped = value[index]
+        index += 1
+        replacements = {
+            "n": "\n",
+            "r": "\r",
+            "t": "\t",
+            "b": "\b",
+            "f": "\f",
+            "(": "(",
+            ")": ")",
+            "\\": "\\",
+        }
+        if escaped in replacements:
+            result.append(replacements[escaped])
+        elif escaped in "\r\n":
+            if escaped == "\r" and index < len(value) and value[index] == "\n":
+                index += 1
+        elif escaped.isdigit():
+            octal = escaped
+            for _ in range(2):
+                if index < len(value) and value[index].isdigit():
+                    octal += value[index]
+                    index += 1
+            try:
+                result.append(chr(int(octal[:3], 8)))
+            except ValueError:
+                pass
+        else:
+            result.append(escaped)
+    return "".join(result)
+
+
+def pdf_literal_strings(text: str) -> list[str]:
+    strings: list[str] = []
+    index = 0
+    while index < len(text):
+        if text[index] != "(":
+            index += 1
+            continue
+        index += 1
+        depth = 1
+        value: list[str] = []
+        while index < len(text) and depth > 0:
+            char = text[index]
+            if char == "\\":
+                if index + 1 < len(text):
+                    value.append(char)
+                    value.append(text[index + 1])
+                    index += 2
+                    continue
+            if char == "(":
+                depth += 1
+                value.append(char)
+                index += 1
+                continue
+            if char == ")":
+                depth -= 1
+                if depth == 0:
+                    index += 1
+                    break
+                value.append(char)
+                index += 1
+                continue
+            value.append(char)
+            index += 1
+        if value:
+            strings.append(pdf_unescape_literal("".join(value)))
+    return strings
+
+
+def pdf_hex_strings(text: str) -> list[str]:
+    values: list[str] = []
+    for match in re.finditer(r"<([0-9A-Fa-f\s]{4,})>", text):
+        raw = re.sub(r"\s+", "", match.group(1))
+        if len(raw) % 2:
+            raw += "0"
+        try:
+            data = bytes.fromhex(raw)
+        except ValueError:
+            continue
+        for encoding in ("utf-16-be", "utf-8", "latin-1"):
+            try:
+                decoded = data.decode(encoding).strip("\x00").strip()
+            except UnicodeDecodeError:
+                continue
+            if decoded:
+                values.append(decoded)
+                break
+    return values
+
+
+def pdf_decode_stream(header: bytes, stream: bytes) -> str:
+    data = stream.strip(b"\r\n")
+    if b"/FlateDecode" in header or b"/Fl" in header:
+        try:
+            data = zlib.decompress(data)
+        except zlib.error:
+            return ""
+    return data.decode("latin-1", errors="ignore")
+
+
+def extract_pdf_text_fallback(data: bytes) -> str:
+    parts: list[str] = []
+    pattern = re.compile(rb"(<<.*?>>)\s*stream\r?\n(.*?)\r?\nendstream", re.S)
+    for match in pattern.finditer(data):
+        stream_text = pdf_decode_stream(match.group(1), match.group(2))
+        if not stream_text:
+            continue
+        for text_object in re.findall(r"BT(.*?)ET", stream_text, flags=re.S):
+            strings = pdf_literal_strings(text_object) + pdf_hex_strings(text_object)
+            line = "".join(strings).strip()
+            if line:
+                parts.append(line)
+    if not parts:
+        raw = data.decode("latin-1", errors="ignore")
+        parts = [value.strip() for value in pdf_literal_strings(raw) if value.strip()]
+    text = "\n".join(parts)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def extract_pdf_text(data: bytes) -> str:
+    try:
+        from pypdf import PdfReader  # type: ignore
+
+        reader = PdfReader(io.BytesIO(data))
+        pages = [(page.extract_text() or "").strip() for page in reader.pages]
+        text = "\n\n".join(page for page in pages if page)
+        if text.strip():
+            return text.strip()
+    except Exception:
+        pass
+    try:
+        from PyPDF2 import PdfReader  # type: ignore
+
+        reader = PdfReader(io.BytesIO(data))
+        pages = [(page.extract_text() or "").strip() for page in reader.pages]
+        text = "\n\n".join(page for page in pages if page)
+        if text.strip():
+            return text.strip()
+    except Exception:
+        pass
+    return extract_pdf_text_fallback(data)
+
+
+def media_type_for(content_type: str) -> str:
+    return content_type.lower().split(";", 1)[0].strip()
+
+
 def is_docx_type(filename: str, content_type: str) -> bool:
     suffix = Path(filename).suffix.lower()
-    media_type = content_type.lower().split(";", 1)[0].strip()
+    media_type = media_type_for(content_type)
     return suffix == ".docx" or media_type in DOCX_CONTENT_TYPES
+
+
+def is_pdf_type(filename: str, content_type: str) -> bool:
+    return Path(filename).suffix.lower() == ".pdf" or media_type_for(content_type) in PDF_CONTENT_TYPES
+
+
+def is_pptx_type(filename: str, content_type: str) -> bool:
+    return Path(filename).suffix.lower() == ".pptx" or media_type_for(content_type) in PPTX_CONTENT_TYPES
+
+
+def is_xlsx_type(filename: str, content_type: str) -> bool:
+    return Path(filename).suffix.lower() == ".xlsx" or media_type_for(content_type) in XLSX_CONTENT_TYPES
+
+
+def is_rtf_type(filename: str, content_type: str) -> bool:
+    return Path(filename).suffix.lower() == ".rtf" or media_type_for(content_type) in RTF_CONTENT_TYPES
+
+
+def is_odt_type(filename: str, content_type: str) -> bool:
+    return Path(filename).suffix.lower() == ".odt" or media_type_for(content_type) in ODT_CONTENT_TYPES
 
 
 def extract_text_from_bytes(data: bytes, filename: str, content_type: str) -> str:
@@ -346,6 +717,16 @@ def extract_text_from_bytes(data: bytes, filename: str, content_type: str) -> st
     suffix = Path(filename).suffix.lower()
     if is_docx_type(filename, content_type):
         return extract_docx_text(data)
+    if is_pdf_type(filename, content_type):
+        return extract_pdf_text(data)
+    if is_pptx_type(filename, content_type):
+        return extract_pptx_text(data)
+    if is_xlsx_type(filename, content_type):
+        return extract_xlsx_text(data)
+    if is_rtf_type(filename, content_type):
+        return extract_rtf_text(data)
+    if is_odt_type(filename, content_type):
+        return extract_odt_text(data)
     if "html" in lower_type or suffix in {".html", ".htm"}:
         return clean_html_text(decode_text(data))
     if lower_type.startswith("text/") or suffix in TEXT_EXTENSIONS:
@@ -361,6 +742,11 @@ def can_extract_local_text(path: Path) -> bool:
         or suffix in DOCUMENT_EXTENSIONS
         or content_type.lower().startswith("text/")
         or is_docx_type(path.name, content_type)
+        or is_pdf_type(path.name, content_type)
+        or is_pptx_type(path.name, content_type)
+        or is_xlsx_type(path.name, content_type)
+        or is_rtf_type(path.name, content_type)
+        or is_odt_type(path.name, content_type)
     )
 
 
@@ -409,7 +795,11 @@ def source_type_for_download(url: str, filename: str, content_type: str) -> str:
         return "github_source"
     if suffix == ".pdf" or "pdf" in content_type.lower():
         return "paper_pdf"
-    if suffix in DOCUMENT_EXTENSIONS or is_docx_type(filename, content_type):
+    if (
+        suffix in DOCUMENT_EXTENSIONS
+        or suffix in LEGACY_BINARY_OFFICE_EXTENSIONS
+        or is_docx_type(filename, content_type)
+    ):
         return "document_file"
     if host.endswith(".edu") or host.endswith(".gov"):
         return "public_institutional_source"

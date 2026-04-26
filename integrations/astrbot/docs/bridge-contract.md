@@ -110,6 +110,11 @@ The shell does not parse or learn the file itself. The core copies the file into
 the learning library, extracts readable text when supported, and stages owner
 material into the source-material pipeline.
 
+Supported readable formats currently include `.md`, `.txt`, `.docx`, text
+`.pdf`, `.pptx`, `.xlsx`, `.rtf`, `.odt`, common code files, and common markup
+files. Legacy `.doc`, `.ppt`, `.xls` and scanned/image-only PDFs are accepted as
+source files but need a converter/OCR step before text extraction.
+
 ## Proactive Delivery
 
 The shell may poll:

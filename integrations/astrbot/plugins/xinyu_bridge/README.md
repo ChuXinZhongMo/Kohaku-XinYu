@@ -48,6 +48,11 @@ explicitly:
 }
 ```
 
+The shell accepts QQ file attachments after whitelist checks. The core currently
+extracts readable text from `.md`, `.txt`, `.docx`, text `.pdf`, `.pptx`,
+`.xlsx`, `.rtf`, `.odt`, code files, and markup files. Legacy Office files and
+scanned PDFs are stored but may need conversion or OCR before learning.
+
 To enable proactive private QQ delivery:
 
 ```json

@@ -36,6 +36,58 @@ def _write_docx(path: Path, paragraphs: list[str]) -> None:
         archive.writestr("word/document.xml", document_xml)
 
 
+def _write_pdf(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    escaped = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+    stream = f"BT /F1 12 Tf 72 720 Td ({escaped}) Tj ET".encode("latin-1")
+    data = (
+        b"%PDF-1.4\n"
+        b"1 0 obj\n"
+        + f"<< /Length {len(stream)} >>\n".encode("ascii")
+        + b"stream\n"
+        + stream
+        + b"\nendstream\n"
+        b"endobj\n"
+        b"trailer\n<<>>\n%%EOF\n"
+    )
+    path.write_bytes(data)
+
+
+def _write_pptx(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    slide_xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
+        'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+        f"<p:cSld><p:spTree><p:sp><p:txBody><a:p><a:r><a:t>{escape(text)}</a:t></a:r></a:p>"
+        "</p:txBody></p:sp></p:spTree></p:cSld></p:sld>"
+    )
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("ppt/slides/slide1.xml", slide_xml)
+
+
+def _write_xlsx(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    shared_xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        f"<si><t>{escape(text)}</t></si></sst>"
+    )
+    sheet_xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        '<sheetData><row r="1"><c r="A1" t="s"><v>0</v></c></row></sheetData></worksheet>'
+    )
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("xl/sharedStrings.xml", shared_xml)
+        archive.writestr("xl/worksheets/sheet1.xml", sheet_xml)
+
+
+def _write_rtf(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(r"{\rtf1\ansi " + text + r"\par}", encoding="ascii")
+
+
 def _add_args(root: Path, source: Path, origin: str, reason: str) -> Namespace:
     return Namespace(
         path=str(source),
@@ -60,6 +112,10 @@ def _run_case(root: Path) -> int:
     owner_file = fixture_dir / "owner_supplied_note.md"
     self_file = fixture_dir / "self_found_note.md"
     docx_file = fixture_dir / "owner_persona_memory.docx"
+    pdf_file = fixture_dir / "owner_reference.pdf"
+    pptx_file = fixture_dir / "owner_slides.pptx"
+    xlsx_file = fixture_dir / "owner_sheet.xlsx"
+    rtf_file = fixture_dir / "owner_note.rtf"
     _write(
         owner_file,
         """# Owner Supplied Learning Note
@@ -83,6 +139,10 @@ before learner integration treats it as learned knowledge.
             "The learning library must not treat QQ docx files as unreadable binaries.",
         ],
     )
+    _write_pdf(pdf_file, "XinYu PDF fixture should be extracted from a text PDF.")
+    _write_pptx(pptx_file, "XinYu PPTX fixture should be extracted from slides.")
+    _write_xlsx(xlsx_file, "XinYu XLSX fixture should be extracted from sheets.")
+    _write_rtf(rtf_file, "XinYu RTF fixture should be extracted from rich text.")
 
     rc = command_add(_add_args(root, owner_file, "owner_supplied", "owner supplied fixture"))
     if rc:
@@ -93,13 +153,38 @@ before learner integration treats it as learned knowledge.
     rc = command_add(_add_args(root, docx_file, "owner_supplied", "owner supplied docx fixture"))
     if rc:
         return rc
+    rc = command_add(_add_args(root, pdf_file, "owner_supplied", "owner supplied pdf fixture"))
+    if rc:
+        return rc
+    for path, reason in (
+        (pptx_file, "owner supplied pptx fixture"),
+        (xlsx_file, "owner supplied xlsx fixture"),
+        (rtf_file, "owner supplied rtf fixture"),
+    ):
+        rc = command_add(_add_args(root, path, "owner_supplied", reason))
+        if rc:
+            return rc
 
     manifest = load_manifest(root)
     owner_item = next(item for item in manifest if item["origin"] == "owner_supplied")
     self_item = next(item for item in manifest if item["origin"] == "self_found")
     docx_item = next(item for item in manifest if item["title"] == docx_file.name)
+    pdf_item = next(item for item in manifest if item["title"] == pdf_file.name)
+    pptx_item = next(item for item in manifest if item["title"] == pptx_file.name)
+    xlsx_item = next(item for item in manifest if item["title"] == xlsx_file.name)
+    rtf_item = next(item for item in manifest if item["title"] == rtf_file.name)
+    md_extract_path = root / str(owner_item.get("extracted_text_path") or "")
     docx_extract_path = root / str(docx_item.get("extracted_text_path") or "")
+    pdf_extract_path = root / str(pdf_item.get("extracted_text_path") or "")
+    pptx_extract_path = root / str(pptx_item.get("extracted_text_path") or "")
+    xlsx_extract_path = root / str(xlsx_item.get("extracted_text_path") or "")
+    rtf_extract_path = root / str(rtf_item.get("extracted_text_path") or "")
+    md_extract = md_extract_path.read_text(encoding="utf-8-sig") if md_extract_path.is_file() else ""
     docx_extract = docx_extract_path.read_text(encoding="utf-8-sig") if docx_extract_path.is_file() else ""
+    pdf_extract = pdf_extract_path.read_text(encoding="utf-8-sig") if pdf_extract_path.is_file() else ""
+    pptx_extract = pptx_extract_path.read_text(encoding="utf-8-sig") if pptx_extract_path.is_file() else ""
+    xlsx_extract = xlsx_extract_path.read_text(encoding="utf-8-sig") if xlsx_extract_path.is_file() else ""
+    rtf_extract = rtf_extract_path.read_text(encoding="utf-8-sig") if rtf_extract_path.is_file() else ""
 
     rc = command_stage(_stage_args(root, str(owner_item["id"])))
     if rc:
@@ -116,7 +201,12 @@ before learner integration treats it as learned knowledge.
         "self_not_compared": "- comparison_status: not_compared" in source_materials,
         "owner_item_id": str(owner_item["id"]) in source_materials,
         "self_item_id": str(self_item["id"]) in source_materials,
+        "md_extracted": "Owner-supplied material should enter" in md_extract,
         "docx_extracted": "XinYu docx fixture memory" in docx_extract,
+        "pdf_extracted": "XinYu PDF fixture should be extracted" in pdf_extract,
+        "pptx_extracted": "XinYu PPTX fixture should be extracted" in pptx_extract,
+        "xlsx_extracted": "XinYu XLSX fixture should be extracted" in xlsx_extract,
+        "rtf_extracted": "XinYu RTF fixture should be extracted" in rtf_extract,
     }
 
     print("=== LEARNING LIBRARY SMOKE ===")
@@ -124,6 +214,10 @@ before learner integration treats it as learned knowledge.
     print("owner_item:", owner_item["id"])
     print("self_item:", self_item["id"])
     print("docx_item:", docx_item["id"])
+    print("pdf_item:", pdf_item["id"])
+    print("pptx_item:", pptx_item["id"])
+    print("xlsx_item:", xlsx_item["id"])
+    print("rtf_item:", rtf_item["id"])
     for key, value in checks.items():
         print(f"{key}:", "ok" if value else "missing")
 

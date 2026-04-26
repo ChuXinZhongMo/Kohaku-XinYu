@@ -36,9 +36,17 @@ Register a local file or folder the owner placed on disk:
 python xinyu_learning_library.py add "D:\path\to\file-or-folder" --origin owner_supplied --reason "owner supplied material"
 ```
 
-Local `.docx` files are copied as source files and their Word XML text is
-extracted into `extracted_text.md` when possible. Instruction-style material is
-kept as quoted study material and is not treated as a runtime/system override.
+Common text-bearing formats are copied as source files and extracted into
+`extracted_text.md` when possible:
+
+- text/code/markup: `.md`, `.txt`, `.json`, `.yaml`, `.py`, `.js`, `.html`, `.xml`
+- office/document: `.docx`, `.pdf`, `.pptx`, `.xlsx`, `.rtf`, `.odt`
+- legacy office: `.doc`, `.ppt`, `.xls` are accepted into the library, but need an external converter before text can be extracted.
+
+Text PDFs are extracted locally. Scanned/image-only PDFs are still accepted, but
+will not become readable text until an OCR step is added. Instruction-style
+material is kept as quoted study material and is not treated as a runtime/system
+override.
 
 QQ file attachments enter the same path through the core bridge:
 
