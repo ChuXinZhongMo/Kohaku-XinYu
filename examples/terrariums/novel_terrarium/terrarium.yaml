@@ -1,0 +1,43 @@
+# Novel Writer Terrarium
+# Three creatures collaborate to write a short story:
+#   seed -> brainstorm -> planner -> writer (pipeline topology)
+#   + team_chat broadcast for shared awareness
+#
+# Usage:
+#   kt terrarium run agents/novel_terrarium/ --seed "A story about a lighthouse keeper"
+#   kt terrarium run agents/novel_terrarium/   (interactive prompt)
+
+terrarium:
+  name: novel_writer
+
+  creatures:
+    - name: brainstorm
+      config: ./creatures/brainstorm/
+      channels:
+        listen: [seed, feedback, team_chat]
+        can_send: [ideas, team_chat]
+
+    - name: planner
+      config: ./creatures/planner/
+      channels:
+        listen: [ideas, team_chat]
+        can_send: [outline, team_chat]
+
+    - name: writer
+      config: ./creatures/writer/
+      channels:
+        listen: [outline, team_chat]
+        can_send: [draft, feedback, team_chat]
+
+  channels:
+    seed:       { type: queue, description: "User's story seed prompt" }
+    ideas:      { type: queue, description: "Story concept from brainstorm to planner" }
+    outline:    { type: queue, description: "Chapter outlines from planner to writer" }
+    draft:      { type: queue, description: "Completed chapter summaries" }
+    feedback:   { type: queue, description: "Feedback from writer back to brainstorm" }
+    team_chat:  { type: broadcast, description: "Team-wide shared context and announcements" }
+
+  interface:
+    type: cli
+    observe: [seed, ideas, outline, draft, feedback, team_chat]
+    inject_to: [seed, feedback]

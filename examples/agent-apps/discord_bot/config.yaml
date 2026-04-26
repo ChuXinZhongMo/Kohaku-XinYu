@@ -1,0 +1,150 @@
+# Discord Group Chat Bot Configuration
+# A group chat bot with memory, character, and smart response decisions
+
+name: discord_bot
+version: "1.0"
+
+# LLM Configuration - Controller (orchestration)
+controller:
+  model: "${OPENROUTER_MODEL:google/gemini-3.1-pro-preview}"
+  temperature: 1
+  api_key_env: OPENROUTER_API_KEY
+  base_url: https://openrouter.ai/api/v1
+  tool_format: native
+
+  # Ephemeral mode - clear conversation after each interaction
+  ephemeral: true
+
+  # Context limits
+  max_messages: 256
+
+  # Keep tool list and framework hints in system prompt
+  # Context_format.md adds character/rules/instructions closer to generation
+  include_tools_in_prompt: true
+  include_hints_in_prompt: true
+
+# System prompt (loaded from file) - only basic identity
+system_prompt_file: prompts/system.md
+
+# Note: No startup_trigger in ephemeral mode - conversation is cleared after each interaction
+
+# Custom Input - Discord messages
+input:
+  type: custom
+  module: ./custom/discord_io.py
+  class: DiscordInputModule
+  # Configuration passed to constructor
+  token_env: DISCORD_BOT_TOKEN
+  # Channels to listen and respond to
+  channel_ids: [775002061456408576, 1463611251585450118, 1463109951055462527, 1463507270326554747]
+  # Read-only channels: observe to learn, but cannot respond
+  readonly_channel_ids: []
+  # History: older messages for background context
+  history_limit: 256
+  # Recent: newer messages shown with numbering (respond to these)
+  recent_limit: 32
+  # Instant memory - auto-injected into every prompt
+  instant_memory_file: ./memory/context.md
+  # Context format template (str.format) - controls message structure
+  context_format_file: ./prompts/context_format.md
+  # Context files injected into template (placed AFTER messages for recency)
+  # These override system prompt injection to place character/rules closer to generation
+  context_files:
+    character: ./prompts/character.md
+    rules: ./prompts/rules.md
+  # Enable multimodal
+  include_images: true
+  image_detail: auto
+  max_total_images: 10
+  gif_sample_frames: ["first", "middle", "last"]
+
+# Output Configuration
+# - Default output (stdout): for model reasoning/debug
+# - Named outputs: kept for typing indicator lifecycle (on_processing_start/end)
+#   Actual message sending is handled by the send_discord tool in native mode
+output:
+  type: stdout
+
+  named_outputs:
+    discord:
+      type: custom
+      module: ./custom/discord_io.py
+      class: DiscordOutputModule
+      keywords_file: ./filtered_keywords.txt
+
+# Triggers - autonomous events
+# triggers:
+#   # Idle trigger - fires after chat inactivity
+#   # Note: Ping detection is handled by input module ([PINGED] marker)
+#   - type: custom
+#     module: ./custom/discord_trigger.py
+#     class: DiscordIdleTrigger
+#     prompt: "The chat has been quiet for a while. If you have something interesting to share or a topic to bring up, now might be a good time. But dont force it - only speak if natural."
+#     # Configuration
+#     min_idle_seconds: 1800   # 30 minutes minimum
+#     max_idle_seconds: 28800  # 8 hours maximum
+#     exploration_chance: 0.3  # 30% chance to actually start topic
+
+# Tools for controller (memory sub-agents need tree, read, grep)
+tools:
+  - name: tree
+    type: builtin
+  - name: read
+    type: builtin
+  - name: write
+    type: builtin
+  - name: edit
+    type: builtin
+  - name: glob
+    type: builtin
+  - name: grep
+    type: builtin
+  - name: think
+    type: builtin
+
+  # Discord output - sends messages to the channel
+  - name: send_discord
+    type: custom
+    module: ./custom/send_discord.py
+    class: SendDiscordTool
+    keywords_file: ./filtered_keywords.txt
+    drop_base_chance: 0.25
+    drop_increment: 0.15
+    drop_max_chance: 0.7
+
+  # Emoji tools - search guild emojis
+  - name: emoji_search
+    type: custom
+    module: ./custom/emoji_search.py
+    class: EmojiSearchTool
+
+  - name: emoji_list
+    type: custom
+    module: ./custom/emoji_search.py
+    class: EmojiListTool
+
+  - name: emoji_get
+    type: custom
+    module: ./custom/emoji_search.py
+    class: EmojiGetTool
+
+# Sub-agents
+subagents:
+  # Memory read - retrieve context and facts
+  - name: memory_read
+    type: builtin
+
+  # Memory write - save new information
+  - name: memory_write
+    type: builtin
+
+# Memory configuration
+memory:
+  path: ./memory
+  init_files:
+    - character.md   # Character definition (read-only)
+    - rules.md       # Protected rules (read-only)
+  writable_files:
+    - context.md     # Current conversation context
+    - facts.md       # Remembered facts about users
+    - group_style.md # Learned group communication patterns

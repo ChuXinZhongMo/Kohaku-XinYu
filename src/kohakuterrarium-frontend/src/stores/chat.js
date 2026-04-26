@@ -1,0 +1,1758 @@
+import { terrariumAPI, agentAPI } from "@/utils/api"
+import { createVisibilityInterval } from "@/composables/useVisibilityInterval"
+import { useMessagesStore } from "@/stores/messages"
+import { useInstancesStore } from "@/stores/instances"
+import { useStatusStore } from "@/stores/status"
+import { getHybridPrefSync, setHybridPref } from "@/utils/uiPrefs"
+import { wsUrl } from "@/utils/wsUrl"
+
+function normalizeContentParts(content) {
+  if (!Array.isArray(content)) return null
+  return content.filter(
+    (part) =>
+      part &&
+      typeof part === "object" &&
+      typeof part.type === "string" &&
+      ["text", "image_url", "file"].includes(part.type),
+  )
+}
+
+function extractTextContent(content) {
+  if (typeof content === "string") return content
+  if (!Array.isArray(content)) return ""
+  return content
+    .filter((part) => part?.type === "text")
+    .map((part) => part.text || "")
+    .join("\n")
+}
+
+function normalizeMessageContent(content) {
+  const contentParts = normalizeContentParts(content)
+  return {
+    content: typeof content === "string" ? content : extractTextContent(content),
+    contentParts,
+  }
+}
+
+/**
+ * Convert OpenAI-format conversation history to frontend messages.
+ */
+export function _convertHistory(messages) {
+  const result = []
+  const toolResults = {}
+  for (const msg of messages) {
+    if (msg.role === "tool") toolResults[msg.tool_call_id] = msg.content
+  }
+  for (const msg of messages) {
+    if (msg.role === "system" || msg.role === "tool") continue
+    if (msg.role === "user") {
+      const normalized = normalizeMessageContent(msg.content)
+      result.push({
+        id: "h_" + result.length,
+        role: "user",
+        content: normalized.content,
+        contentParts: normalized.contentParts,
+        timestamp: "",
+      })
+    } else if (msg.role === "assistant") {
+      const tcs = (msg.tool_calls || []).map((tc) => ({
+        id: tc.id,
+        name: tc.function?.name || "unknown",
+        kind: (tc.function?.name || "").startsWith("agent_") ? "subagent" : "tool",
+        args: _parseArgs(tc.function?.arguments),
+        status: "done",
+        result: toolResults[tc.id] || "",
+      }))
+      const normalized = normalizeMessageContent(msg.content)
+      result.push({
+        id: "h_" + result.length,
+        role: "assistant",
+        content: normalized.content,
+        contentParts: normalized.contentParts,
+        timestamp: "",
+        tool_calls: tcs.length ? tcs : undefined,
+      })
+    }
+  }
+  return result
+}
+
+/**
+ * Replay ordered event list to reconstruct chat view.
+ *
+ * Returns { messages, pendingJobs } where pendingJobs is a map of
+ * jobId -> { name, type, startedAt } for tools/sub-agents that started
+ * but never received a done/error event.
+ */
+export function _replayEvents(messages, events) {
+  if (!events?.length) return { messages: _convertHistory(messages), pendingJobs: {} }
+
+  const result = []
+  let cur = null
+  let _n = 0
+  // Track job lifecycle: started jobs and completed jobs
+  const startedJobs = {} // jobId -> tool part reference
+  const completedJobs = new Set() // jobIds that received done/error
+
+  function ensureCur() {
+    if (!cur) {
+      cur = {
+        id: "h_" + result.length,
+        role: "assistant",
+        parts: [],
+        timestamp: "",
+      }
+      result.push(cur)
+    }
+    return cur
+  }
+
+  function appendText(content) {
+    const c = ensureCur()
+    const tail = c.parts.length ? c.parts[c.parts.length - 1] : null
+    if (tail && tail.type === "text") {
+      tail.content += content
+    } else {
+      c.parts.push({ type: "text", content })
+    }
+  }
+
+  function addTool(name, kind, args, jobId) {
+    const c = ensureCur()
+    const tail = c.parts.length ? c.parts[c.parts.length - 1] : null
+    if (tail && tail.type === "text") tail._streaming = false
+    const tool = {
+      type: "tool",
+      id: `tool_${_n++}`,
+      jobId: jobId || "",
+      name,
+      kind,
+      args: args || {},
+      status: "done",
+      result: "",
+      tools_used: [],
+      children: [],
+    }
+    c.parts.push(tool)
+    if (jobId) startedJobs[jobId] = tool
+    return tool
+  }
+
+  // Search ALL messages for a sub-agent part.
+  // Same matching strategy as live _findSubagentPart.
+  function findSubagent(saName, jobId) {
+    // Pass 1: match by job_id (most reliable)
+    if (jobId) {
+      for (let i = result.length - 1; i >= 0; i--) {
+        const msg = result[i]
+        if (!msg.parts) continue
+        for (let j = msg.parts.length - 1; j >= 0; j--) {
+          const p = msg.parts[j]
+          if (p.type === "tool" && p.kind === "subagent" && p.jobId === jobId) return p
+        }
+      }
+    }
+    // Pass 2: match by name (exact, startsWith, or includes)
+    if (saName) {
+      for (let i = result.length - 1; i >= 0; i--) {
+        const msg = result[i]
+        if (!msg.parts) continue
+        for (let j = msg.parts.length - 1; j >= 0; j--) {
+          const p = msg.parts[j]
+          if (p.type !== "tool" || p.kind !== "subagent") continue
+          if (p.name === saName || p.name.includes(saName) || saName.includes(p.name)) return p
+        }
+      }
+    }
+    // Pass 3: any sub-agent (last resort)
+    for (let i = result.length - 1; i >= 0; i--) {
+      const msg = result[i]
+      if (!msg.parts) continue
+      for (let j = msg.parts.length - 1; j >= 0; j--) {
+        const p = msg.parts[j]
+        if (p.type === "tool" && p.kind === "subagent") return p
+      }
+    }
+    return null
+  }
+
+  function addSubagentTool(name, args, saName, saJobId) {
+    const sa = findSubagent(saName, saJobId)
+    if (sa) {
+      const tool = {
+        type: "tool",
+        id: `tool_${_n++}`,
+        name,
+        kind: "tool",
+        args: args || {},
+        status: "done",
+        result: "",
+        tools_used: [],
+      }
+      if (!sa.children) sa.children = []
+      sa.children.push(tool)
+      return tool
+    }
+    return addTool(name, "tool", args)
+  }
+
+  function updateSubagentTool(name, result, opts, saName, saJobId) {
+    const sa = findSubagent(saName, saJobId)
+    if (sa?.children?.length) {
+      const tc = [...sa.children].reverse().find((p) => p.name === name)
+      if (tc) {
+        tc.result = result || ""
+        if (opts?.error) tc.status = "error"
+        return
+      }
+    }
+    updateTool(name, result, opts)
+  }
+
+  function findToolByJobId(jobId) {
+    for (let i = result.length - 1; i >= 0; i--) {
+      const msg = result[i]
+      if (!msg.parts) continue
+      const tc = [...msg.parts].reverse().find((p) => p.type === "tool" && p.jobId === jobId)
+      if (tc) return tc
+    }
+    return null
+  }
+
+  function updateTool(name, result, opts, jobId) {
+    let tc = null
+    if (jobId) {
+      tc = findToolByJobId(jobId)
+    }
+    if (!tc && cur) {
+      tc = [...cur.parts].reverse().find((p) => p.type === "tool" && p.name === name)
+    }
+    if (!tc) {
+      // Search all messages as final fallback (name match, or partial match for sub-agents)
+      for (let i = result.length - 1; i >= 0 && !tc; i--) {
+        const msg = result[i]
+        if (!msg.parts) continue
+        tc = [...msg.parts]
+          .reverse()
+          .find(
+            (p) =>
+              p.type === "tool" &&
+              (p.name === name || p.name.startsWith(name) || name.startsWith(p.name)) &&
+              !p.result,
+          )
+      }
+    }
+    if (tc) {
+      tc.result = result || ""
+      if (opts?.interrupted || opts?.finalState === "interrupted") tc.status = "interrupted"
+      else if (opts?.error) tc.status = "error"
+      if (opts?.tools_used) tc.tools_used = opts.tools_used
+      if (opts?.turns != null) tc.turns = opts.turns
+      if (opts?.duration != null) tc.duration = opts.duration
+      if (opts?.total_tokens != null) tc.total_tokens = opts.total_tokens
+      if (opts?.prompt_tokens != null) tc.prompt_tokens = opts.prompt_tokens
+      if (opts?.completion_tokens != null) tc.completion_tokens = opts.completion_tokens
+      // Track completion for pending-job detection
+      if (tc.jobId) completedJobs.add(tc.jobId)
+      if (jobId) completedJobs.add(jobId)
+    }
+  }
+
+  function findCompactMessage(round, preferRunning = false) {
+    for (let i = result.length - 1; i >= 0; i--) {
+      const msg = result[i]
+      if (msg.role !== "compact") continue
+      if (round && msg.round === round) {
+        if (!preferRunning || msg.status === "running") return msg
+      }
+    }
+    if (!preferRunning) return null
+    for (let i = result.length - 1; i >= 0; i--) {
+      const msg = result[i]
+      if (msg.role === "compact" && msg.status === "running") return msg
+    }
+    return null
+  }
+
+  function upsertCompactMessage(round, summary, status, messagesCompacted) {
+    const existing =
+      findCompactMessage(round, status === "done") || findCompactMessage(round, false)
+    if (existing) {
+      existing.round = round
+      existing.summary = summary
+      existing.status = status
+      existing.messagesCompacted = messagesCompacted
+      return existing
+    }
+    const compact = {
+      id: "compact_" + result.length,
+      role: "compact",
+      round,
+      summary,
+      status,
+      messagesCompacted,
+      timestamp: "",
+    }
+    result.push(compact)
+    return compact
+  }
+
+  for (const evt of events) {
+    const t = evt.type
+
+    // ── Common types (both formats) ──
+    if (t === "user_input") {
+      cur = null
+      const normalized = normalizeMessageContent(evt.content)
+      result.push({
+        id: "h_" + result.length,
+        role: "user",
+        content: normalized.content,
+        contentParts: normalized.contentParts,
+        timestamp: "",
+      })
+    } else if (t === "processing_start") {
+      cur = {
+        id: "h_" + result.length,
+        role: "assistant",
+        parts: [],
+        timestamp: "",
+      }
+      result.push(cur)
+    } else if (t === "text") {
+      appendText(evt.content || "")
+    } else if (t === "processing_end" || t === "idle") {
+      // Do NOT clear cur if sub-agents might still be adding tools to this message
+      // But mark text as done
+      if (cur) {
+        for (const p of cur.parts) {
+          if (p.type === "text") p._streaming = false
+        }
+      }
+      cur = null
+
+      // ── StreamOutput format (live WS): type="activity" wrapper ──
+    } else if (t === "activity") {
+      const at = evt.activity_type
+      if (at === "trigger_fired") {
+        cur = null
+        const ch = evt.channel || ""
+        const sender = evt.sender || ""
+        result.push({
+          id: "h_" + result.length,
+          role: "trigger",
+          content: ch ? `channel: ${ch}${sender ? ` from ${sender}` : ""}` : evt.name,
+          triggerContent: evt.content || "",
+          channel: ch,
+          sender,
+          timestamp: "",
+        })
+      } else if (at === "token_usage" || at === "processing_complete") {
+        // skip
+      } else if (at === "context_cleared") {
+        cur = null
+        result.push({
+          id: "clear_" + result.length,
+          role: "clear",
+          messagesCleared: evt.messages_cleared || 0,
+          timestamp: "",
+        })
+      } else if (at === "processing_error") {
+        cur = null
+        result.push({
+          id: "err_" + result.length,
+          role: "error",
+          errorType: evt.error_type || "Error",
+          content: evt.error || evt.detail || "Unknown error",
+          timestamp: "",
+        })
+      } else if (at === "subagent_start") {
+        addTool(evt.name, "subagent", evt.args || { info: evt.detail }, evt.job_id)
+      } else if (at === "subagent_done") {
+        updateTool(
+          evt.name,
+          evt.result || evt.detail,
+          {
+            tools_used: evt.tools_used,
+            turns: evt.turns,
+            duration: evt.duration,
+            total_tokens: evt.total_tokens,
+            prompt_tokens: evt.prompt_tokens,
+            completion_tokens: evt.completion_tokens,
+          },
+          evt.job_id,
+        )
+      } else if (at === "subagent_error") {
+        updateTool(
+          evt.name,
+          evt.result || evt.error || evt.detail,
+          {
+            error: true,
+            interrupted: !!evt.interrupted,
+            finalState: evt.final_state,
+            tools_used: evt.tools_used,
+            turns: evt.turns,
+            duration: evt.duration,
+            total_tokens: evt.total_tokens,
+            prompt_tokens: evt.prompt_tokens,
+            completion_tokens: evt.completion_tokens,
+          },
+          evt.job_id,
+        )
+      } else if (at === "tool_start") {
+        addTool(evt.name, "tool", evt.args || { info: evt.detail }, evt.job_id)
+      } else if (at === "tool_done") {
+        updateTool(
+          evt.name,
+          evt.result || evt.output || evt.detail,
+          { tools_used: evt.tools_used },
+          evt.job_id,
+        )
+      } else if (at === "tool_error") {
+        updateTool(
+          evt.name,
+          evt.result || evt.error || evt.detail,
+          {
+            error: true,
+            interrupted: !!evt.interrupted,
+            finalState: evt.final_state,
+          },
+          evt.job_id,
+        )
+      } else if (at?.startsWith("subagent_tool_")) {
+        const subAct = at.replace("subagent_", "")
+        const toolName = evt.tool || evt.name || ""
+        const saName = evt.subagent || ""
+        const saJobId = evt.job_id || ""
+        if (subAct === "tool_start") {
+          addSubagentTool(toolName, { info: evt.detail || "" }, saName, saJobId)
+        } else if (subAct === "tool_done") {
+          updateSubagentTool(toolName, evt.detail || "", null, saName, saJobId)
+        } else if (subAct === "tool_error") {
+          updateSubagentTool(toolName, evt.detail || "", { error: true }, saName, saJobId)
+        }
+      }
+
+      // ── SessionStore format (persistent): direct type names ──
+    } else if (t === "trigger_fired") {
+      cur = null
+      const ch = evt.channel || ""
+      const sender = evt.sender || ""
+      result.push({
+        id: "h_" + result.length,
+        role: "trigger",
+        content: ch ? `channel: ${ch}${sender ? ` from ${sender}` : ""}` : "",
+        triggerContent: evt.content || "",
+        channel: ch,
+        sender,
+        timestamp: "",
+      })
+    } else if (t === "tool_call") {
+      addTool(evt.name, "tool", evt.args || {}, evt.call_id || evt.job_id)
+    } else if (t === "tool_result") {
+      updateTool(
+        evt.name,
+        evt.output || evt.error || "",
+        {
+          error: evt.error ? true : false,
+          interrupted: !!evt.interrupted,
+          finalState: evt.final_state,
+        },
+        evt.call_id || evt.job_id,
+      )
+    } else if (t === "subagent_call") {
+      addTool(evt.name, "subagent", { task: evt.task || "" }, evt.job_id)
+    } else if (t === "subagent_result") {
+      updateTool(
+        evt.name,
+        evt.output || evt.error || "",
+        {
+          error: evt.error ? true : false,
+          interrupted: !!evt.interrupted,
+          finalState: evt.final_state,
+          tools_used: evt.tools_used,
+          turns: evt.turns,
+          duration: evt.duration,
+          total_tokens: evt.total_tokens,
+          prompt_tokens: evt.prompt_tokens,
+          completion_tokens: evt.completion_tokens,
+        },
+        evt.job_id,
+      )
+    } else if (t === "subagent_tool") {
+      const toolName = evt.tool_name || ""
+      const saName = evt.subagent || ""
+      const saJobId = evt.job_id || ""
+      if (evt.activity === "tool_start") {
+        addSubagentTool(toolName, { info: evt.detail || "" }, saName, saJobId)
+      } else if (evt.activity === "tool_done") {
+        updateSubagentTool(toolName, evt.detail || "", null, saName, saJobId)
+      } else if (evt.activity === "tool_error") {
+        updateSubagentTool(toolName, evt.detail || "", { error: true }, saName, saJobId)
+      }
+    } else if (t === "channel_message") {
+      const normalized = normalizeMessageContent(evt.content)
+      result.push({
+        id: "ch_" + result.length,
+        role: "channel",
+        sender: evt.sender || "",
+        content: normalized.content,
+        contentParts: normalized.contentParts,
+        timestamp: "",
+      })
+    } else if (t === "compact_summary" || t === "compact_complete") {
+      cur = null
+      upsertCompactMessage(
+        evt.compact_round || evt.round || 0,
+        evt.summary || "",
+        "done",
+        evt.messages_compacted || 0,
+      )
+    } else if (t === "compact_start") {
+      cur = null
+      upsertCompactMessage(evt.compact_round || evt.round || 0, "", "running", 0)
+    } else if (t === "processing_error") {
+      cur = null
+      result.push({
+        id: "err_" + result.length,
+        role: "error",
+        errorType: evt.error_type || "Error",
+        content: evt.error || "",
+        timestamp: "",
+      })
+    } else if (t === "context_cleared") {
+      cur = null
+      result.push({
+        id: "clear_" + result.length,
+        role: "clear",
+        messagesCleared: evt.messages_cleared || 0,
+        timestamp: "",
+      })
+    } else if (t === "assistant_image") {
+      // Replay the image into the current assistant message so resumed
+      // sessions (and plain history reloads) show it in place. Mirrors
+      // the live `_handleAssistantImage` path so shape + meta match.
+      const c = ensureCur()
+      for (const p of c.parts || []) {
+        if (p.type === "text") p._streaming = false
+      }
+      c.parts.push({
+        type: "image_url",
+        image_url: {
+          url: evt.url,
+          detail: evt.detail || "auto",
+        },
+        meta: {
+          source_type: evt.source_type,
+          source_name: evt.source_name,
+          revised_prompt: evt.revised_prompt,
+        },
+      })
+    } else if (t === "token_usage" || t === "processing_complete") {
+      // skip
+    }
+  }
+
+  // Determine which jobs are still pending (started but no done/error).
+  // Mark them as "running" so live WS events can update them.
+  const pendingJobs = {}
+  for (const [jobId, toolPart] of Object.entries(startedJobs)) {
+    if (!completedJobs.has(jobId)) {
+      toolPart.status = "running"
+      toolPart.startedAt = Date.now() // approximate
+      pendingJobs[jobId] = {
+        name: toolPart.name,
+        type: toolPart.kind === "subagent" ? "subagent" : "tool",
+        startedAt: Date.now(),
+      }
+      if (toolPart.children) {
+        for (const child of toolPart.children) {
+          if (child.status === "done" && !child.result) {
+            child.status = "running"
+          }
+        }
+      }
+    }
+  }
+
+  // Only mark sub-agents as interrupted if they have NO job_id tracking
+  // (legacy events without job_id) AND have no result
+  for (const msg of result) {
+    for (const part of msg.parts || []) {
+      if (
+        part.type === "tool" &&
+        part.kind === "subagent" &&
+        part.status === "done" &&
+        !part.result &&
+        !part.jobId
+      ) {
+        part.status = "interrupted"
+      }
+    }
+  }
+
+  // Clean up empty parts
+  for (const msg of result) {
+    if (msg.parts?.length === 0) delete msg.parts
+  }
+  return { messages: result, pendingJobs }
+}
+
+function _parseArgs(args) {
+  if (!args) return {}
+  if (typeof args === "string") {
+    try {
+      return JSON.parse(args)
+    } catch {
+      return { raw: args }
+    }
+  }
+  return args
+}
+
+export const useChatStore = defineStore("chat", {
+  state: () => ({
+    /** @type {Object<string, import('@/utils/api').ChatMessage[]>} */
+    messagesByTab: {},
+    /** @type {string | null} */
+    activeTab: null,
+    /** @type {string[]} */
+    tabs: [],
+    /**
+     * Per-tab processing flag. ``processingByTab[tab]`` is true while
+     * that specific creature/root is mid-stream. Replaces the previous
+     * global ``processing`` boolean — which made tab A's interrupt
+     * button appear on tab B and dropped the indicator on every tab
+     * switch until the next chunk arrived. UI components should read
+     * the ``processing`` getter (active-tab short-cut) or probe
+     * ``processingByTab[tab]`` directly when they care about a
+     * specific creature.
+     * @type {Object<string, boolean>}
+     */
+    processingByTab: {},
+    /** @type {Object<string, {prompt: number, completion: number, total: number, cached: number}>} Per-source token usage */
+    tokenUsage: {},
+    /** @type {Object<string, {name: string, type: string, startedAt: number}>} Running background jobs */
+    runningJobs: {},
+    /** @type {Object<string, number>} Unread message counts per tab */
+    unreadCounts: {},
+    /** @type {{sessionId: string, model: string, llmName: string, agentName: string, compactThreshold: number}} Session metadata */
+    sessionInfo: {
+      sessionId: "",
+      model: "",
+      llmName: "",
+      agentName: "",
+      compactThreshold: 0,
+    },
+    /** Reactive tick counter - incremented every second when jobs are running */
+    _jobTick: 0,
+    /** @type {number | null} */
+    _jobTimer: null,
+    /** @type {string | null} */
+    _instanceId: null,
+    /** @type {string | null} */
+    _instanceType: null,
+    /** @type {WebSocket | null} Single WS for the instance */
+    _ws: null,
+    /** @type {number | null} Pending reconnect timer id */
+    _reconnectTimer: null,
+    /** @type {number} Current reconnect delay (exponential backoff) */
+    _reconnectDelay: 500,
+    /** Connection status for the single instance WS. Used by the UI to
+     *  show "reconnecting" banners. "open" | "reconnecting" | "closed" */
+    wsStatus: "closed",
+    /** @type {Array<{id: string, content: string, timestamp: string}>} Messages queued while agent is processing */
+    queuedMessages: [],
+    /** @type {number} Monotonic token to ignore stale history/WS callbacks after instance switches */
+    _instanceGeneration: 0,
+    /** @type {Record<string, number>} Recent user message signatures for cross-tab dedupe */
+    _recentUserInputs: {},
+  }),
+
+  getters: {
+    currentMessages: (state) => {
+      if (!state.activeTab) return []
+      return state.messagesByTab[state.activeTab] || []
+    },
+    hasRunningJobs: (state) => Object.keys(state.runningJobs).length > 0,
+    /**
+     * Back-compat shim — true when the active tab is processing. Most
+     * UI code that used to read ``chat.processing`` actually wanted
+     * "is the tab I'm looking at streaming?", which is exactly this.
+     * Escape key, interrupt-button visibility, processing banner all
+     * pull from here. Components that need a specific tab's state
+     * (e.g. unread-badge logic) should read
+     * ``chat.processingByTab[tab]`` directly.
+     */
+    processing: (state) => (state.activeTab ? !!state.processingByTab[state.activeTab] : false),
+    /** True when any tab is currently streaming. */
+    anyProcessing: (state) => Object.values(state.processingByTab).some(Boolean),
+    /**
+     * Canonical display form of the active model, preferring the
+     * ``provider/name[@variations]`` identifier so every display surface
+     * shows the same string the user types into ``/model``. Falls back
+     * to the raw API model id when ``llm_name`` hasn't been populated
+     * yet (very first moments before the session_info event arrives).
+     */
+    modelDisplay: (state) => state.sessionInfo.llmName || state.sessionInfo.model || "",
+    terrariumTarget: (state) => {
+      if (state._instanceType !== "terrarium") return null
+      const tab = state.activeTab
+      if (!tab || tab.startsWith("ch:")) return null
+      return tab
+    },
+  },
+
+  actions: {
+    initForInstance(instance) {
+      if (this._instanceId === instance.id && this._ws) return
+      this._cleanup()
+      const generation = ++this._instanceGeneration
+      this._instanceId = instance.id
+      this._instanceType = instance.type
+      this.tabs = []
+      this.messagesByTab = {}
+      this.tokenUsage = {}
+      this.runningJobs = {}
+      this.unreadCounts = {}
+      this.queuedMessages = []
+      this.processingByTab = {}
+      this._recentUserInputs = {}
+      this.sessionInfo = {
+        sessionId: "",
+        model: "",
+        llmName: "",
+        agentName: "",
+        compactThreshold: 0,
+        maxContext: 0,
+      }
+
+      // Reset status store too
+      const statusStore = useStatusStore()
+      statusStore.reset()
+
+      if (instance.type === "terrarium") {
+        if (instance.has_root) {
+          this._addTab("root")
+        } else {
+          this._addTab("ch:tasks")
+        }
+        this._connectTerrarium(instance.id, generation)
+      } else {
+        const name = instance.creatures[0]?.name || instance.config_name
+        this._addTab(name)
+        this._connectCreature(instance.id, generation)
+      }
+
+      // Restore saved tabs/active tab for this instance
+      this._restoreTabs()
+      if (!this.activeTab) this.activeTab = this.tabs[0] || null
+    },
+
+    openTab(tabKey) {
+      this._addTab(tabKey)
+      this.activeTab = tabKey
+      this._saveTabs()
+
+      // Load history for creature/root tabs
+      if (this._instanceType === "terrarium") {
+        this._loadHistory(tabKey)
+      }
+    },
+
+    _addTab(key) {
+      if (!this.tabs.includes(key)) {
+        this.tabs.push(key)
+        this.messagesByTab[key] = []
+      }
+    },
+
+    closeTab(tab) {
+      const idx = this.tabs.indexOf(tab)
+      if (idx === -1) return
+      this.tabs = this.tabs.filter((_, i) => i !== idx)
+      if (this.activeTab === tab) {
+        this.setActiveTab(this.tabs[Math.min(idx, this.tabs.length - 1)] || null)
+      }
+      this._saveTabs()
+    },
+
+    setActiveTab(tab) {
+      this.activeTab = tab
+      if (tab) delete this.unreadCounts[tab]
+      this._saveTabs()
+      if (tab && this._instanceType === "terrarium") {
+        const msgs = this.messagesByTab[tab]
+        if (msgs && msgs.length === 0) {
+          this._loadHistory(tab, this._instanceGeneration)
+        }
+      }
+    },
+
+    /** Interrupt the active tab's agent. Also stops its streaming flag. */
+    async interrupt(tab) {
+      if (!this._instanceId) return
+      const target = tab || this.activeTab
+      if (!target || target.startsWith("ch:")) return
+
+      try {
+        // Interrupt the main agent processing only.
+        // Background jobs (sub-agents, background tools) are NOT cancelled —
+        // they have their own lifecycle and must be stopped individually
+        // via stopTask() from the running jobs panel.
+        if (this.processingByTab[target]) {
+          if (this._instanceType === "terrarium") {
+            await terrariumAPI.interruptCreature(this._instanceId, target)
+          } else {
+            await agentAPI.interrupt(this._instanceId)
+          }
+          this.processingByTab[target] = false
+        }
+        // Do NOT mark running parts as interrupted or remove running jobs.
+        // The backend will send proper done/error events when jobs complete.
+      } catch (err) {
+        console.error("Interrupt failed:", err)
+      }
+    },
+
+    async send(text) {
+      if (!this.activeTab || !this._ws) return
+      if (typeof text === "string" ? !text.trim() : !text.length) return
+
+      const tab = this.activeTab
+      const now = Date.now()
+      const contentParts = typeof text === "string" ? [{ type: "text", text }] : text
+      const normalized = normalizeMessageContent(contentParts)
+      const msg = {
+        id: "u_" + now,
+        role: "user",
+        content: normalized.content,
+        contentParts: normalized.contentParts,
+        timestamp: new Date(now).toISOString(),
+      }
+
+      this._recentUserInputs[`${tab}:${normalized.content}`] = now
+      if (this.processingByTab[tab]) {
+        // Don't put in main chat — hold in queue, shown above input box
+        msg.queued = true
+        this.queuedMessages.push(msg)
+      } else {
+        this._addMsg(tab, msg)
+      }
+
+      if (tab.startsWith("ch:")) {
+        const chName = tab.slice(3)
+        try {
+          await terrariumAPI.sendToChannel(this._instanceId, chName, contentParts, "human")
+        } catch (err) {
+          console.error("Channel send failed:", err)
+        }
+      } else {
+        const target = tab
+        if (this._ws.readyState === WebSocket.OPEN) {
+          this._ws.send(JSON.stringify({ type: "input", target, content: contentParts }))
+          // Flip processing optimistically — the backend's
+          // processing_start event will confirm it; this ensures the
+          // indicator and interrupt button appear immediately on the
+          // correct tab even before the first chunk arrives.
+          this.processingByTab[target] = true
+        }
+      }
+    },
+
+    async _loadHistory(target, generation = this._instanceGeneration) {
+      try {
+        const { messages, events } = await terrariumAPI.getHistory(this._instanceId, target)
+        if (generation !== this._instanceGeneration) return
+        if (events?.length) {
+          const { messages: msgs, pendingJobs } = _replayEvents(messages, events)
+          this.messagesByTab[target] = msgs
+          this._restoreTokenUsage(target, events)
+          this._restoreRunningState(pendingJobs)
+        } else if (messages?.length) {
+          this.messagesByTab[target] = _convertHistory(messages)
+        }
+      } catch (err) {
+        // 404 = session has no prior history, which is fine. Anything
+        // else is a real error and should be surfaced.
+        if (err?.response?.status !== 404) {
+          console.error("Failed to load history for", target, err)
+        }
+      }
+    },
+
+    /** Connect single WS for terrarium */
+    _connectTerrarium(terrariumId, generation) {
+      this._openWs({
+        generation,
+        url: wsUrl(`/ws/terrariums/${terrariumId}`),
+        onOpen: () => {
+          // Load all tab histories, then flush WS buffer
+          const loads = []
+          if (this.tabs[0]) {
+            loads.push(this._loadHistory(this.tabs[0], generation))
+          }
+          for (const tab of this.tabs) {
+            if (tab.startsWith("ch:")) {
+              loads.push(this._loadHistory(tab, generation))
+            }
+          }
+          Promise.all(loads)
+            .catch((err) => console.error("Terrarium history load failed:", err))
+            .finally(() => this._flushWsBuffer(generation))
+        },
+        reconnect: () => this._connectTerrarium(terrariumId, generation),
+      })
+    },
+
+    /** Connect single WS for standalone creature */
+    _connectCreature(agentId, generation) {
+      this._openWs({
+        generation,
+        url: wsUrl(`/ws/creatures/${agentId}`),
+        onOpen: () => {
+          const tabKey = this.tabs[0]
+          if (tabKey) {
+            this._loadAgentHistory(agentId, tabKey, generation)
+          } else {
+            this._flushWsBuffer(generation)
+          }
+        },
+        reconnect: () => this._connectCreature(agentId, generation),
+      })
+    },
+
+    /** Shared WS bootstrap: wires onmessage/onclose, handles generation
+     *  checks, and schedules exponential-backoff reconnects. */
+    _openWs({ generation, url, onOpen, reconnect }) {
+      // Always replace the buffer so history events are re-accumulated
+      // on reconnect — the backend re-replays state on open.
+      this._historyLoaded = false
+      this._wsBuffer = []
+      if (this._reconnectTimer) {
+        clearTimeout(this._reconnectTimer)
+        this._reconnectTimer = null
+      }
+
+      const ws = new WebSocket(url)
+      this._ws = ws
+      this.wsStatus = "reconnecting"
+
+      ws.onopen = () => {
+        if (generation !== this._instanceGeneration || ws !== this._ws) return
+        this.wsStatus = "open"
+        this._reconnectDelay = 500
+        onOpen?.()
+      }
+      ws.onmessage = (event) => {
+        if (generation !== this._instanceGeneration || ws !== this._ws) return
+        let data
+        try {
+          data = JSON.parse(event.data)
+        } catch (err) {
+          console.warn("Failed to parse WS message:", err)
+          return
+        }
+        if (this._historyLoaded) {
+          this._onMessage(data)
+        } else {
+          this._wsBuffer.push(data)
+        }
+      }
+      ws.onclose = () => {
+        if (generation !== this._instanceGeneration || ws !== this._ws) return
+        // Clear processing for every tab — the WS is gone so we can't
+        // be streaming anywhere. Each tab gets its flag reset on
+        // reconnect via processing_start or the text-recovery path.
+        this.processingByTab = {}
+        this.wsStatus = "reconnecting"
+        // Exponential backoff, capped at 10s.
+        const delay = this._reconnectDelay
+        this._reconnectDelay = Math.min(delay * 2, 10000)
+        this._reconnectTimer = setTimeout(() => {
+          this._reconnectTimer = null
+          if (generation !== this._instanceGeneration) return
+          reconnect()
+        }, delay)
+      }
+      ws.onerror = () => {
+        // onclose fires after this; reconnect is scheduled there.
+      }
+    },
+
+    /** Flush any events that arrived while history was still loading. */
+    _flushWsBuffer(generation) {
+      if (generation !== this._instanceGeneration) return
+      this._historyLoaded = true
+      if (this._wsBuffer) {
+        for (const data of this._wsBuffer) {
+          this._onMessage(data)
+        }
+        this._wsBuffer = []
+      }
+    },
+
+    async _loadAgentHistory(agentId, tabKey, generation = this._instanceGeneration) {
+      try {
+        const { messages, events } = await agentAPI.getHistory(agentId)
+        if (generation !== this._instanceGeneration) return
+        if (events?.length) {
+          const { messages: msgs, pendingJobs } = _replayEvents(messages, events)
+          this.messagesByTab[tabKey] = msgs
+          this._restoreTokenUsage(tabKey, events)
+          this._restoreRunningState(pendingJobs)
+        } else if (messages?.length) {
+          this.messagesByTab[tabKey] = _convertHistory(messages)
+        }
+      } catch (err) {
+        if (err?.response?.status !== 404) {
+          console.error("Failed to load agent history:", err)
+        }
+      }
+      this._flushWsBuffer(generation)
+    },
+
+    /** Restore running jobs from replay result. */
+    _restoreRunningState(pendingJobs) {
+      for (const [jobId, job] of Object.entries(pendingJobs)) {
+        this.runningJobs[jobId] = job
+      }
+      if (Object.keys(pendingJobs).length > 0) {
+        this._ensureJobTimer()
+      }
+    },
+
+    /** Restore token usage from event log (for page refresh) */
+    _restoreTokenUsage(source, events) {
+      for (const evt of events) {
+        const isTokenEvt =
+          (evt.type === "activity" && evt.activity_type === "token_usage") ||
+          evt.type === "token_usage"
+        if (isTokenEvt) {
+          const prev = this.tokenUsage[source] || {
+            prompt: 0,
+            completion: 0,
+            total: 0,
+            cached: 0,
+            lastPrompt: 0,
+          }
+          this.tokenUsage[source] = {
+            prompt: prev.prompt + (evt.prompt_tokens || 0),
+            completion: prev.completion + (evt.completion_tokens || 0),
+            total: prev.total + (evt.total_tokens || 0),
+            cached: prev.cached + (evt.cached_tokens || 0),
+            lastPrompt: evt.prompt_tokens || prev.lastPrompt,
+          }
+        }
+      }
+    },
+
+    /** Handle ALL incoming WS messages */
+    _onMessage(data) {
+      const source = data.source || ""
+
+      if (data.type === "user_input") {
+        this._handleUserInput(source, data)
+      } else if (data.type === "text") {
+        // If we get text chunks but the tab isn't marked processing
+        // (e.g. reconnect mid-stream), flip it so the UI shows the
+        // streaming indicator on the correct tab.
+        if (source && !this.processingByTab[source]) {
+          this.processingByTab[source] = true
+        }
+        this._appendStreamChunk(source, data.content)
+      } else if (data.type === "processing_start") {
+        if (source) this.processingByTab[source] = true
+        // Promote queued user messages (agent is now processing them)
+        this._promoteQueuedMessages(source)
+      } else if (data.type === "processing_end") {
+        this._finishStream(source)
+      } else if (data.type === "idle") {
+        if (source) this.processingByTab[source] = false
+        this._finishStream(source)
+      } else if (data.type === "activity") {
+        this._handleActivity(source, data)
+      } else if (data.type === "image") {
+        this._handleAssistantImage(source, data)
+      } else if (data.type === "channel_message") {
+        this._handleChannelMessage(data)
+      } else if (data.type === "error") {
+        this._addMsg(source, {
+          id: "err_" + Date.now(),
+          role: "system",
+          content: "Error: " + (data.content || ""),
+          timestamp: new Date().toISOString(),
+        })
+        if (source) this.processingByTab[source] = false
+      }
+    },
+
+    _handleActivity(source, data) {
+      const at = data.activity_type
+      const name = data.name || "unknown"
+
+      // Forward ALL activities to status store for dashboard
+      const statusStore = useStatusStore()
+      statusStore.handleActivity(data)
+
+      if (at === "session_info") {
+        // Merge — update fields present in the event, keep existing for absent ones
+        if (data.session_id) this.sessionInfo.sessionId = data.session_id
+        if (data.model) this.sessionInfo.model = data.model
+        if (data.llm_name) this.sessionInfo.llmName = data.llm_name
+        if (data.agent_name) this.sessionInfo.agentName = data.agent_name
+        if (data.max_context != null) this.sessionInfo.maxContext = data.max_context
+        if (data.compact_threshold != null)
+          this.sessionInfo.compactThreshold = data.compact_threshold
+        return
+      }
+
+      if (at === "token_usage") {
+        const prev = this.tokenUsage[source] || {
+          prompt: 0,
+          completion: 0,
+          total: 0,
+          cached: 0,
+          lastPrompt: 0,
+        }
+        this.tokenUsage[source] = {
+          prompt: prev.prompt + (data.prompt_tokens || 0),
+          completion: prev.completion + (data.completion_tokens || 0),
+          total: prev.total + (data.total_tokens || 0),
+          cached: prev.cached + (data.cached_tokens || 0),
+          lastPrompt: data.prompt_tokens || prev.lastPrompt,
+        }
+        return
+      }
+
+      // Ensure we have a tab for this source
+      if (!this.messagesByTab[source]) return
+      const msgs = this.messagesByTab[source]
+
+      if (at === "compact_start") {
+        const round = data.compact_round || data.round || 0
+        const existing = [...msgs]
+          .reverse()
+          .find((msg) => msg.role === "compact" && msg.round === round)
+        if (existing) {
+          existing.summary = ""
+          existing.status = "running"
+          existing.messagesCompacted = 0
+        } else {
+          msgs.push({
+            id: "compact_" + round + "_" + Date.now(),
+            role: "compact",
+            round,
+            summary: "",
+            status: "running",
+            messagesCompacted: 0,
+            timestamp: new Date().toISOString(),
+          })
+        }
+        return
+      }
+
+      if (at === "compact_complete") {
+        const round = data.compact_round || data.round || 0
+        const existing =
+          [...msgs].reverse().find((msg) => msg.role === "compact" && msg.round === round) ||
+          [...msgs].reverse().find((msg) => msg.role === "compact" && msg.status === "running")
+        if (existing) {
+          existing.round = round
+          existing.summary = data.summary || ""
+          existing.messagesCompacted = data.messages_compacted || 0
+          existing.status = "done"
+          return
+        }
+        msgs.push({
+          id: "compact_" + round + "_" + Date.now(),
+          role: "compact",
+          round,
+          summary: data.summary || "",
+          status: "done",
+          messagesCompacted: data.messages_compacted || 0,
+          timestamp: new Date().toISOString(),
+        })
+        return
+      }
+
+      if (at === "context_cleared") {
+        msgs.push({
+          id: "clear_" + Date.now(),
+          role: "clear",
+          messagesCleared: data.messages_cleared || 0,
+          timestamp: new Date().toISOString(),
+        })
+        return
+      }
+
+      if (at === "processing_error") {
+        const errorType = data.error_type || "Error"
+        const errorMsg = data.error || data.detail || "Unknown error"
+        msgs.push({
+          id: "err_" + Date.now(),
+          role: "error",
+          errorType,
+          content: errorMsg,
+          timestamp: new Date().toISOString(),
+        })
+        if (source) this.processingByTab[source] = false
+        return
+      }
+
+      if (at === "trigger_fired") {
+        const channel = data.channel || ""
+        const sender = data.sender || ""
+        const label = channel ? `channel: ${channel}` : name
+        const from = sender ? ` from ${sender}` : ""
+        msgs.push({
+          id: "trig_" + Date.now(),
+          role: "trigger",
+          content: `${label}${from}`,
+          triggerContent: data.content || "",
+          channel,
+          sender,
+          timestamp: new Date().toISOString(),
+        })
+        return
+      }
+
+      if (at === "tool_start" || at === "subagent_start") {
+        // Tool/subagent activity means the agent is processing
+        if (source && !this.processingByTab[source]) {
+          this.processingByTab[source] = true
+        }
+        const last = this._ensureAssistantMsg(msgs)
+        if (last.parts.length > 0) {
+          const tail = last.parts[last.parts.length - 1]
+          if (tail.type === "text") tail._streaming = false
+        }
+        const toolId = data.id || "tc_" + Date.now()
+        const jobId = data.job_id || ""
+        last.parts.push({
+          type: "tool",
+          id: toolId,
+          jobId,
+          name,
+          kind: at === "subagent_start" ? "subagent" : "tool",
+          args: data.args || { info: data.detail },
+          status: "running",
+          result: "",
+          tools_used: data.tools_used || [],
+          children: [],
+          startedAt: Date.now(),
+        })
+        // Track all tasks as running jobs (direct tasks are promotable)
+        const runKey = jobId || toolId
+        const isBg = data.background || false
+        this.runningJobs[runKey] = {
+          name,
+          type: at === "subagent_start" ? "subagent" : "tool",
+          startedAt: Date.now(),
+          promotable: !isBg,
+        }
+        this._ensureJobTimer()
+      } else if (at === "tool_done" || at === "subagent_done") {
+        let tc = this._findToolPart(msgs, name, data.job_id)
+        if (!tc) {
+          const last = this._ensureAssistantMsg(msgs)
+          tc = {
+            type: "tool",
+            id: data.id || "tc_" + Date.now(),
+            jobId: data.job_id || "",
+            name,
+            kind: at === "subagent_done" ? "subagent" : "tool",
+            args: {},
+            status: "done",
+            result: "",
+            tools_used: [],
+            children: [],
+          }
+          last.parts.push(tc)
+        }
+        tc.status = "done"
+        tc.result = data.result || data.output || data.detail || ""
+        tc.resultParts = normalizeContentParts(tc.result)
+        if (data.tools_used) tc.tools_used = data.tools_used
+        if (data.turns != null) tc.turns = data.turns
+        if (data.duration != null) tc.duration = data.duration
+        if (data.total_tokens != null) tc.total_tokens = data.total_tokens
+        if (data.prompt_tokens != null) tc.prompt_tokens = data.prompt_tokens
+        if (data.completion_tokens != null) tc.completion_tokens = data.completion_tokens
+        delete this.runningJobs[tc.jobId || tc.id]
+        this._checkJobTimer()
+      } else if (at === "tool_error" || at === "subagent_error") {
+        let tc = this._findToolPart(msgs, name, data.job_id)
+        if (!tc) {
+          const last = this._ensureAssistantMsg(msgs)
+          tc = {
+            type: "tool",
+            id: data.id || "tc_" + Date.now(),
+            jobId: data.job_id || "",
+            name,
+            kind: at === "subagent_error" ? "subagent" : "tool",
+            args: {},
+            status: "error",
+            result: "",
+            tools_used: [],
+            children: [],
+          }
+          last.parts.push(tc)
+        }
+        tc.status = data.interrupted || data.final_state === "interrupted" ? "interrupted" : "error"
+        tc.result = data.result || data.error || data.detail || ""
+        tc.resultParts = normalizeContentParts(tc.result)
+        if (data.tools_used) tc.tools_used = data.tools_used
+        if (data.turns != null) tc.turns = data.turns
+        if (data.duration != null) tc.duration = data.duration
+        if (data.total_tokens != null) tc.total_tokens = data.total_tokens
+        if (data.prompt_tokens != null) tc.prompt_tokens = data.prompt_tokens
+        if (data.completion_tokens != null) tc.completion_tokens = data.completion_tokens
+        delete this.runningJobs[tc.jobId || tc.id]
+        this._checkJobTimer()
+      } else if (at === "subagent_token_update") {
+        // Live token usage update from a running sub-agent
+        const saName = data.subagent || ""
+        const saJobId = data.job_id || ""
+        const sa = this._findSubagentPart(msgs, saName, saJobId)
+        if (sa) {
+          if (data.total_tokens) sa.total_tokens = data.total_tokens
+          if (data.prompt_tokens) sa.prompt_tokens = data.prompt_tokens
+          if (data.completion_tokens) sa.completion_tokens = data.completion_tokens
+        }
+      } else if (at?.startsWith("subagent_tool_")) {
+        // Sub-agent internal tool activity: find parent by job_id or name
+        const saName = data.subagent || ""
+        const saJobId = data.job_id || ""
+        const sa = this._findSubagentPart(msgs, saName, saJobId)
+        if (sa) {
+          if (!sa.children) sa.children = []
+          if (!sa.tools_used) sa.tools_used = []
+          const toolName = data.tool || data.detail || ""
+          const subAct = at.replace("subagent_", "")
+          if (subAct === "tool_start" && toolName) {
+            sa.children.push({
+              type: "tool",
+              name: toolName,
+              kind: "tool",
+              args: { info: data.detail || "" },
+              status: "running",
+              result: "",
+            })
+            if (!sa.tools_used.includes(toolName)) sa.tools_used.push(toolName)
+          } else if (subAct === "tool_done" && toolName) {
+            const child = [...sa.children]
+              .reverse()
+              .find((c) => c.name === toolName && c.status === "running")
+            if (child) {
+              child.status = "done"
+              child.result = data.detail || ""
+            }
+          } else if (subAct === "tool_error" && toolName) {
+            const child = [...sa.children]
+              .reverse()
+              .find((c) => c.name === toolName && c.status === "running")
+            if (child) {
+              child.status = "error"
+              child.result = data.detail || ""
+            }
+          }
+        }
+      } else if (at === "task_promoted") {
+        // Task promoted to background — mark as no longer promotable
+        const promJobId = data.job_id || ""
+        if (promJobId && this.runningJobs[promJobId]) {
+          this.runningJobs[promJobId].promotable = false
+        }
+      }
+    },
+
+    /** Promote a running direct task to background via API. */
+    async promoteTask(jobId) {
+      if (!this._instanceId || !this._instanceType) return
+      if (this.runningJobs[jobId]) {
+        this.runningJobs[jobId].promotable = false
+      }
+      try {
+        if (this._instanceType === "terrarium") {
+          const target = this.activeTab
+          if (target && !target.startsWith("ch:")) {
+            const { terrariumAPI } = await import("@/utils/api")
+            await terrariumAPI.promoteCreatureTask(this._instanceId, target, jobId)
+          }
+        } else {
+          const { agentAPI } = await import("@/utils/api")
+          await agentAPI.promote(this._instanceId, jobId)
+        }
+      } catch (e) {
+        console.warn("Failed to promote task:", e)
+      }
+    },
+
+    /** Regenerate the last assistant response using current settings. */
+    async regenerateLastResponse() {
+      if (!this._instanceId || this._instanceType === "terrarium") {
+        console.warn("Regenerate only supported for standalone creature instances currently")
+        return
+      }
+      try {
+        const { agentAPI } = await import("@/utils/api")
+        // Re-fetch history BEFORE triggering regen so the frontend
+        // state matches the backend's truncated conversation.
+        await agentAPI.regenerate(this._instanceId)
+        await this._resyncHistory()
+      } catch (e) {
+        console.warn("Failed to regenerate:", e)
+      }
+    },
+
+    /** Edit a user message and re-run from that point. */
+    async editMessage(messageIdx, newContent) {
+      if (!this._instanceId || this._instanceType === "terrarium") return
+      if (messageIdx == null) return
+      try {
+        const { agentAPI } = await import("@/utils/api")
+        await agentAPI.editMessage(this._instanceId, messageIdx, newContent)
+        await this._resyncHistory()
+      } catch (e) {
+        console.warn("Failed to edit message:", e)
+      }
+    },
+
+    /** Rewind conversation to a point (drop later messages). */
+    async rewindTo(messageIdx) {
+      if (!this._instanceId || this._instanceType === "terrarium") return
+      try {
+        const { agentAPI } = await import("@/utils/api")
+        await agentAPI.rewindTo(this._instanceId, messageIdx)
+        await this._resyncHistory()
+      } catch (e) {
+        console.warn("Failed to rewind:", e)
+      }
+    },
+
+    /** Re-fetch conversation history from the backend and rebuild the
+     *  local message list. Called after edit/regenerate/rewind so the
+     *  frontend matches the backend's truncated conversation. */
+    async _resyncHistory() {
+      if (!this._instanceId) return
+      try {
+        const { agentAPI } = await import("@/utils/api")
+        const data = await agentAPI.getHistory(this._instanceId)
+        const tab = this.activeTab
+        if (!tab || !data?.events) return
+        // Rebuild messages from the event history.
+        const events = data.events
+        const { messages } = _replayEvents([], events)
+        this.messagesByTab[tab] = messages
+      } catch (e) {
+        console.warn("Failed to resync history:", e)
+      }
+    },
+
+    /**
+     * Find a tool part by job_id (reliable, any status) or name (running only).
+     * Searches all messages backwards.
+     */
+    _findToolPart(msgs, name, jobId) {
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        const msg = msgs[i]
+        if (!msg.parts) continue
+        for (let j = msg.parts.length - 1; j >= 0; j--) {
+          const p = msg.parts[j]
+          if (p.type !== "tool") continue
+          // Match by job_id: any status (handles replay "running" + live "running")
+          if (jobId && p.jobId === jobId) return p
+        }
+      }
+      // Fallback: match by name, running status only
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        const msg = msgs[i]
+        if (!msg.parts) continue
+        for (let j = msg.parts.length - 1; j >= 0; j--) {
+          const p = msg.parts[j]
+          if (p.type === "tool" && p.name === name && p.status === "running") return p
+        }
+      }
+      return null
+    },
+
+    /**
+     * Find a sub-agent part. Match by job_id first, then name, then any running sub-agent.
+     */
+    _findSubagentPart(msgs, saName, saJobId) {
+      // 1. Match by job_id (most reliable - connects sub-agent tool events to parent)
+      if (saJobId) {
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          const msg = msgs[i]
+          if (!msg.parts) continue
+          for (let j = msg.parts.length - 1; j >= 0; j--) {
+            const p = msg.parts[j]
+            if (p.type === "tool" && p.kind === "subagent" && p.jobId === saJobId) return p
+          }
+        }
+      }
+      // 2. Match by name (exact or partial - handles "researcher" matching "agent_researcher[abc]")
+      if (saName) {
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          const msg = msgs[i]
+          if (!msg.parts) continue
+          for (let j = msg.parts.length - 1; j >= 0; j--) {
+            const p = msg.parts[j]
+            if (p.type !== "tool" || p.kind !== "subagent" || p.status !== "running") continue
+            if (p.name === saName) return p
+            // Partial match: "researcher" in "agent_researcher[abc123]"
+            if (p.name.includes(saName)) return p
+          }
+        }
+      }
+      // 3. Last resort: any running sub-agent
+      for (let i = msgs.length - 1; i >= 0; i--) {
+        const msg = msgs[i]
+        if (!msg.parts) continue
+        for (let j = msg.parts.length - 1; j >= 0; j--) {
+          const p = msg.parts[j]
+          if (p.type === "tool" && p.kind === "subagent" && p.status === "running") return p
+        }
+      }
+      return null
+    },
+
+    _handleUserInput(source, data) {
+      if (!source || !this.messagesByTab[source]) return
+      const normalized = normalizeMessageContent(data.content)
+      const signature = `${source}:${normalized.content}`
+      const now = Date.now()
+      const seenAt = this._recentUserInputs[signature] || 0
+      if (now - seenAt < 2000) return
+      const msgs = this.messagesByTab[source]
+      const last = msgs[msgs.length - 1]
+      if (last?.role === "user" && last.content === normalized.content) {
+        this._recentUserInputs[signature] = now
+        return
+      }
+      this._recentUserInputs[signature] = now
+      this._addMsg(source, {
+        id: `u_sync_${now}`,
+        role: "user",
+        content: normalized.content,
+        contentParts: normalized.contentParts,
+        timestamp: data.timestamp || new Date((data.ts || now / 1000) * 1000).toISOString(),
+      })
+    },
+
+    _handleChannelMessage(data) {
+      const tabKey = `ch:${data.channel}`
+
+      if (this.messagesByTab[tabKey]) {
+        const existing = this.messagesByTab[tabKey]
+        if (data.message_id && existing.some((m) => m.id === data.message_id)) {
+          return
+        }
+        const normalized = normalizeMessageContent(data.content)
+        this.messagesByTab[tabKey].push({
+          id: data.message_id || "ch_" + Date.now(),
+          role: "channel",
+          sender: data.sender,
+          content: normalized.content,
+          contentParts: normalized.contentParts,
+          timestamp: data.timestamp,
+        })
+        if (this.activeTab !== tabKey) {
+          this.unreadCounts[tabKey] = (this.unreadCounts[tabKey] || 0) + 1
+        }
+      }
+
+      const msgStore = useMessagesStore()
+      const normalized = normalizeMessageContent(data.content)
+      msgStore.addChannelMessage(data.channel, {
+        channel: data.channel,
+        sender: data.sender,
+        content: normalized.content,
+        contentParts: normalized.contentParts,
+        timestamp: data.timestamp,
+      })
+
+      const instStore = useInstancesStore()
+      if (instStore.current) {
+        const ch = instStore.current.channels.find((c) => c.name === data.channel)
+        if (ch) ch.message_count = (ch.message_count || 0) + 1
+      }
+    },
+
+    /** Move queued messages from the hold queue into the main chat. */
+    _promoteQueuedMessages(source) {
+      if (!this.queuedMessages.length) return
+      const msgs = this.messagesByTab[source]
+      if (!msgs) return
+      for (const msg of this.queuedMessages) {
+        delete msg.queued
+        msgs.push(msg)
+      }
+      this.queuedMessages = []
+    },
+
+    _ensureAssistantMsg(msgs) {
+      let last = msgs[msgs.length - 1]
+      if (!last || last.role !== "assistant" || !last._streaming) {
+        last = {
+          id: "m_" + Date.now(),
+          role: "assistant",
+          parts: [],
+          timestamp: new Date().toISOString(),
+          _streaming: true,
+        }
+        msgs.push(last)
+      }
+      if (!last.parts) last.parts = []
+      return last
+    },
+
+    _appendStreamChunk(source, content) {
+      const msgs = this.messagesByTab[source]
+      if (!msgs) return
+      const last = this._ensureAssistantMsg(msgs)
+      const tail = last.parts.length > 0 ? last.parts[last.parts.length - 1] : null
+      if (tail && tail.type === "text" && tail._streaming) {
+        tail.content += content
+      } else {
+        last.parts.push({ type: "text", content, _streaming: true })
+      }
+    },
+
+    /** Append an assistant-emitted image to the active assistant message.
+     *
+     * Shape matches the user-image render path in ChatMessage.vue:
+     * `{type: "image_url", image_url: {url, detail}, meta: {...}}`.
+     * Any streaming text part loses its _streaming flag so further
+     * text chunks land in a fresh part after the image.
+     */
+    _handleAssistantImage(source, data) {
+      const msgs = this.messagesByTab[source]
+      if (!msgs) return
+      const last = this._ensureAssistantMsg(msgs)
+      for (const p of last.parts || []) {
+        if (p.type === "text") p._streaming = false
+      }
+      last.parts.push({
+        type: "image_url",
+        image_url: {
+          url: data.url,
+          detail: data.detail || "auto",
+        },
+        meta: data.meta || {},
+      })
+    },
+
+    _finishStream(source) {
+      if (source) this.processingByTab[source] = false
+      const msgs = this.messagesByTab[source]
+      if (msgs) {
+        const last = msgs[msgs.length - 1]
+        if (last?._streaming) {
+          last._streaming = false
+          for (const p of last.parts || []) {
+            if (p.type === "text") p._streaming = false
+          }
+        }
+      }
+    },
+
+    _addMsg(tabKey, msg) {
+      if (!this.messagesByTab[tabKey]) this.messagesByTab[tabKey] = []
+      this.messagesByTab[tabKey].push(msg)
+    },
+
+    // ── Job timer (reactive elapsed tracking) ──
+
+    /** Start 1s interval to tick _jobTick, making elapsed times reactive.
+     *
+     * Visibility-aware — while the tab is hidden the tick pauses and
+     * every `getJobElapsed` subscriber stops re-rendering. A stale
+     * elapsed time for a backgrounded tab is fine; what matters is
+     * not burning GPU driving a reactive effect the user can't see.
+     */
+    _ensureJobTimer() {
+      if (this._jobTimer !== null) return
+      const ctrl = createVisibilityInterval(() => {
+        this._jobTick++
+      }, 1000)
+      ctrl.start()
+      this._jobTimer = ctrl
+    },
+
+    /** Stop timer if no more running jobs. */
+    _checkJobTimer() {
+      if (Object.keys(this.runningJobs).length === 0 && this._jobTimer !== null) {
+        this._jobTimer.stop()
+        this._jobTimer = null
+      }
+    },
+
+    /** Get elapsed seconds for a job (reactive via _jobTick). */
+    getJobElapsed(job) {
+      // Reference _jobTick to make this reactive
+      void this._jobTick
+      if (!job?.startedAt) return ""
+      const secs = Math.floor((Date.now() - job.startedAt) / 1000)
+      return secs > 0 ? `${secs}s` : ""
+    },
+
+    _cleanup() {
+      this.activeTab = null
+      this._historyLoaded = false
+      this._wsBuffer = []
+      if (this._reconnectTimer) {
+        clearTimeout(this._reconnectTimer)
+        this._reconnectTimer = null
+      }
+      this._reconnectDelay = 500
+      this.wsStatus = "closed"
+      if (this._ws) {
+        // Null the callbacks first — otherwise onclose will fire during
+        // close() and schedule a reconnect for the old instance.
+        this._ws.onopen = null
+        this._ws.onmessage = null
+        this._ws.onclose = null
+        this._ws.onerror = null
+        try {
+          this._ws.close()
+        } catch {
+          // ignore
+        }
+        this._ws = null
+      }
+      if (this._jobTimer !== null) {
+        this._jobTimer.stop()
+        this._jobTimer = null
+      }
+    },
+
+    _saveTabs() {
+      if (!this._instanceId) return
+      const key = `chat-tabs-${this._instanceId}`
+      setHybridPref(
+        key,
+        {
+          tabs: this.tabs,
+          activeTab: this.activeTab,
+        },
+        { json: true },
+      )
+    },
+
+    _restoreTabs() {
+      if (!this._instanceId) return
+      const key = `chat-tabs-${this._instanceId}`
+      const saved = getHybridPrefSync(key, null, { json: true })
+      if (saved?.tabs?.length) {
+        for (const tab of saved.tabs) {
+          this._addTab(tab)
+        }
+        if (saved.activeTab && this.tabs.includes(saved.activeTab)) {
+          this.activeTab = saved.activeTab
+        }
+      }
+    },
+  },
+})

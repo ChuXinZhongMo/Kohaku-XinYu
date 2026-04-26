@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install ruff black
+      - run: ruff check src/ tests/
+      - run: black --check src/ tests/
+
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        exclude:
+          # pythonnet (pywebview Windows backend) has no 3.14 wheel
+          - os: windows-latest
+            python-version: "3.14"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+      - name: Run unit tests
+        run: pytest tests/unit/ -v --tb=short --ignore=tests/unit/test_file_sizes.py
+
+  test-format-guards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+      - name: Run file size guards
+        run: pytest tests/unit/test_file_sizes.py -v --tb=short
+
+  frontend-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/kohakuterrarium-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run build
+      - name: Verify frontend build output
+        working-directory: .
+        run: test -f src/kohakuterrarium/web_dist/index.html
+
+  package-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build frontend
+        working-directory: src/kohakuterrarium-frontend
+        run: |
+          npm ci
+          npm run build
+      - name: Verify frontend build output
+        run: test -f src/kohakuterrarium/web_dist/index.html
+      - name: Build wheel
+        run: |
+          pip install build
+          python -m build --wheel
+      - name: Verify built wheel install
+        run: |
+          python -m venv .venv-wheel-test
+          source .venv-wheel-test/bin/activate
+          pip install --upgrade pip
+          pip install dist/*.whl
+          kt --help
+          kt app --help

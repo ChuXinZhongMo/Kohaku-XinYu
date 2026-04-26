@@ -1,0 +1,11 @@
+{
+  "repos": [
+    {
+      "name": "kt-biome",
+      "url": "https://github.com/Kohaku-Lab/kt-biome.git",
+      "type": "package",
+      "description": "Official out-of-the-box creatures, terrariums, and plugin pack for KohakuTerrarium",
+      "tags": ["official", "swe", "chat", "multi-agent"]
+    }
+  ]
+}

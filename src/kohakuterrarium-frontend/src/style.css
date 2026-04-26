@@ -1,0 +1,217 @@
+/* KohakuTerrarium - Gemstone Terrarium Theme */
+
+:root {
+  /* Font families */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --font-terminal:
+    "Consolas NF", "CaskaydiaCove NF", "JetBrainsMono NF", "FiraCode NF", "Hack NF",
+    "JetBrains Mono", "Fira Code", "Consolas", monospace;
+
+  /* Light mode surfaces */
+  --color-bg: #f7f5f2;
+  --color-surface: #ffffff;
+  --color-surface-alt: #efece7;
+  --color-border: #e0dbd4;
+  --color-text: #3a3632;
+  --color-text-muted: #8a8480;
+  --color-text-faint: #b5b0aa;
+}
+
+html.dark {
+  --color-bg: #1a1816;
+  --color-surface: #252220;
+  --color-surface-alt: #1e1c1a;
+  --color-border: #3d3835;
+  --color-text: #e8e0d8;
+  --color-text-muted: #8a8078;
+  --color-text-faint: #5a5550;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Reset browser default button styling */
+button {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+html {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100%;
+}
+
+body {
+  height: 100%;
+}
+
+#app {
+  height: 100%;
+  overflow: hidden;
+}
+
+code,
+pre,
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* Element Plus — warm theme overrides for both modes */
+:root {
+  --el-color-primary: #5a4fcf;
+  --el-color-primary-light-3: #8b83db;
+  --el-color-primary-light-5: #ada8e7;
+  --el-color-primary-light-7: #cec9f0;
+  --el-color-primary-light-9: #eeedfa;
+  --el-color-primary-dark-2: #4840a6;
+  --el-bg-color: var(--color-surface);
+  --el-bg-color-overlay: var(--color-surface);
+  --el-bg-color-page: var(--color-bg);
+  --el-fill-color-blank: var(--color-surface);
+  --el-fill-color: var(--color-surface-alt);
+  --el-fill-color-light: var(--color-surface-alt);
+  --el-fill-color-lighter: var(--color-bg);
+  --el-border-color: var(--color-border);
+  --el-border-color-light: var(--color-border);
+  --el-border-color-lighter: var(--color-border);
+  --el-text-color-primary: var(--color-text);
+  --el-text-color-regular: var(--color-text);
+  --el-text-color-secondary: var(--color-text-muted);
+  --el-text-color-placeholder: var(--color-text-faint);
+  --el-mask-color: rgba(0, 0, 0, 0.5);
+}
+
+html.dark {
+  --el-bg-color: #252220;
+  --el-bg-color-overlay: #252220;
+  --el-bg-color-page: #1a1816;
+  --el-fill-color-blank: #252220;
+  --el-fill-color: #1e1c1a;
+  --el-fill-color-light: #1e1c1a;
+  --el-fill-color-lighter: #1a1816;
+  --el-border-color: #3d3835;
+  --el-border-color-light: #3d3835;
+  --el-border-color-lighter: #3d3835;
+  --el-text-color-primary: #e8e0d8;
+  --el-text-color-regular: #e8e0d8;
+  --el-text-color-secondary: #8a8078;
+  --el-text-color-placeholder: #5a5550;
+  --el-mask-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Element Plus specific component overrides */
+.el-dialog {
+  --el-dialog-bg-color: var(--el-bg-color-overlay) !important;
+}
+
+.el-select-dropdown,
+.el-popper {
+  --el-bg-color-overlay: var(--el-bg-color) !important;
+}
+
+.el-select-dropdown__item.is-hovering {
+  background-color: var(--el-fill-color) !important;
+}
+
+.el-message-box {
+  --el-messagebox-title-color: var(--el-text-color-primary) !important;
+  --el-messagebox-content-color: var(--el-text-color-regular) !important;
+}
+
+.el-overlay-message-box .el-message-box,
+.el-overlay-dialog .el-dialog {
+  background-color: var(--el-bg-color-overlay) !important;
+  border-color: var(--el-border-color) !important;
+}
+
+/* Transition utilities */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-enter-active,
+.slide-leave-active {
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.slide-enter-from {
+  transform: translateX(10px);
+  opacity: 0;
+}
+
+.slide-leave-to {
+  transform: translateX(-10px);
+  opacity: 0;
+}
+
+/* Status / activity animations.
+ *
+ * `.kohaku-pulse` — opacity animation on the element itself.
+ * Compositor-friendly, no paint cost. Apply it only to things the
+ * user genuinely wants to see moving: the "Processing..." text, the
+ * WebSocket reconnect banner, an actively-compacting context marker.
+ *
+ * We used to ship a `.kohaku-glow` class (pulsing halo on status
+ * dots) — it got removed. A terrarium view can have 10-30 status
+ * dots on screen at once, and *any* continuous animation on each one
+ * was enough to saturate the compositor and keep the GPU busy even
+ * when the page was idle. The dot's colour already tells you
+ * "running" (aquamarine) vs "idle" (amber) vs "error" (coral);
+ * animation added no information.
+ */
+@keyframes amber-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.kohaku-pulse {
+  animation: amber-pulse 1.5s ease-in-out infinite;
+}

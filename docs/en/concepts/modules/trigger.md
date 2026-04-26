@@ -1,0 +1,111 @@
+---
+title: Trigger
+summary: Anything that wakes the controller without explicit user input — timers, context updates, channels, and custom watchers.
+tags:
+  - concepts
+  - module
+  - trigger
+---
+
+# Trigger
+
+## What it is
+
+A **trigger** is anything that wakes the controller without explicit
+user input. Timers, context-update watchers, channel listeners, and
+custom watcher conditions are all triggers. Each one runs as a
+background task and pushes `TriggerEvent`s onto the event queue when
+its firing condition is met.
+
+## Why it exists
+
+A pure input-driven agent can only work when a user is around. But
+real agents need to:
+
+- run `/loop`-style recurring plans while nobody is watching;
+- react to a channel message from another creature;
+- wake up when shared context changes;
+- schedule a future wake-up from inside the agent itself;
+- poll a resource and fire when a condition flips.
+
+You could bolt each of these on as ad-hoc code. The framework says:
+they are all the same thing — event sources — and they deserve one
+abstraction.
+
+## How we define it
+
+A trigger implements:
+
+- an async generator `fire()` that yields `TriggerEvent`s;
+- `to_resume_dict()` / `from_resume_dict()` so the trigger can be
+  persisted and restored across sessions;
+- a `trigger_id` for addressability (so tools can list / cancel it).
+
+The trigger manager starts one background task per registered trigger.
+Each task loops over `fire()` and pushes events.
+
+## How we implement it
+
+Built-in trigger types:
+
+- **`timer`** — fires every N seconds.
+- **`context`** — fires after debounced context updates.
+- **`channel`** — listens on a named channel; fires on message.
+- **`custom` / `package`** — your own trigger classes loaded from a
+  module.
+
+A clock-aligned scheduler is also shipped as the universal
+`SchedulerTrigger`, but it is exposed as the setup tool `add_schedule`
+rather than as a config-time `triggers:` type.
+
+Common `TriggerEvent` types on the receiving side: `user_input`
+(from input modules), `timer`, `channel_message` (from a channel
+trigger), `tool_complete`, `subagent_output`, `creature_output` (a
+turn-end emission from another creature via `output_wiring` —
+framework-emitted, not triggered by a module), and `error`.
+
+`TriggerManager` (`core/trigger_manager.py`) owns the running tasks,
+wires completions into the agent's event callback, and persists
+trigger state to the session store so `kt resume` can re-create them.
+
+Config-time triggers are declared in `config.triggers[]`. Runtime
+triggers can be installed by the agent itself — each universal
+trigger class (`universal = True` + `setup_*` metadata) is wrapped as
+its own tool (`add_timer`, `watch_channel`, `add_schedule`) that the
+creature lists under `tools: [{ name: add_timer, type: trigger }]` —
+and programmatically via `agent.add_trigger(...)`.
+
+## What you can therefore do
+
+- **Recurring agents.** A `timer` trigger that fires every hour lets a
+  creature self-refresh its view of a file system or a set of metrics.
+- **Cross-creature wiring.** A `channel` trigger is the mechanism that
+  makes channel-based terrarium communication work. For deterministic
+  pipeline edges, the framework also emits `creature_output` events at
+  turn-end when a creature declares `output_wiring` — see
+  [terrariums](../multi-agent/terrarium.md).
+- **Context-driven summaries.** A `context` trigger can debounce rapid
+  updates, then dispatch a `summarize` sub-agent once the shared state
+  settles.
+- **Runtime scheduling.** The `add_schedule` setup tool lets the agent
+  install a clock-aligned recurring wake-up without hard-coding that
+  schedule in `triggers:`.
+- **Adaptive watchers.** A custom trigger whose `fire()` runs a small
+  nested agent can decide *when* to wake the outer creature based on
+  judgement, not a fixed rule. See [patterns](../patterns.md).
+
+## Don't be bounded
+
+A creature can have zero triggers. It can also have only triggers
+(no input). The framework does not rank these configurations; it just
+supports them all. And because a trigger is itself a Python object,
+you can put an agent inside one — a watcher that *thinks* about
+whether to fire rather than following a hand-coded rule. That pattern
+is what makes "agentic ambient behaviour" cheap to build.
+
+## See also
+
+- [Input](input.md) — the specific-case trigger for user content.
+- [Channel](channel.md) — the trigger type that underpins multi-agent communication.
+- [reference/builtins.md — Triggers](../../reference/builtins.md) — full inventory.
+- [patterns.md — adaptive watcher](../patterns.md) — agent-inside-trigger.

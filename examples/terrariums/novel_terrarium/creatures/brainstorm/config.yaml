@@ -1,0 +1,30 @@
+# Brainstorm Creature
+# Receives a seed prompt, generates creative story ideas, sends to planner.
+
+name: brainstorm
+version: "1.0"
+
+controller:
+  model: gpt-5.4
+  temperature: 0.5
+  max_tokens: 65536
+  auth_mode: codex-oauth
+  tool_format: native
+
+system_prompt_file: prompts/system.md
+
+input:
+  type: none
+
+output:
+  type: stdout
+
+tools:
+  - name: send_message
+    type: builtin
+  - name: think
+    type: builtin
+
+
+compact:
+  max_tokens: 272000
