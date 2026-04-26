@@ -36,6 +36,16 @@ Register a local file or folder the owner placed on disk:
 python xinyu_learning_library.py add "D:\path\to\file-or-folder" --origin owner_supplied --reason "owner supplied material"
 ```
 
+Local `.docx` files are copied as source files and their Word XML text is
+extracted into `extracted_text.md` when possible. Instruction-style material is
+kept as quoted study material and is not treated as a runtime/system override.
+
+QQ file attachments enter the same path through the core bridge:
+
+```text
+POST http://127.0.0.1:8765/learning/ingest
+```
+
 Stage one downloaded item into the existing source-material learning pipeline:
 
 ```powershell

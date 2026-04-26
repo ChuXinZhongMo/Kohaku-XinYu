@@ -1,14 +1,15 @@
 # xinyu_bridge
 
-Thin AstrBot plugin for forwarding whitelisted private text to a local XinYu
-core bridge endpoint. It can also poll XinYu's proactive endpoint and deliver
-one gated private message after the core has approved it.
+Thin AstrBot plugin for forwarding whitelisted private text and QQ file
+attachments to a local XinYu core bridge endpoint. It can also poll XinYu's
+proactive endpoint and deliver one gated private message after the core has
+approved it.
 
 This plugin is only the shell:
 
 - no personality logic
 - no direct memory writes
-- no source learning
+- no platform-side learning decisions; files are handed to the core ingest endpoint
 - no image or voice interpretation
 - no platform-side relationship decisions
 
@@ -25,11 +26,25 @@ Recommended early-test settings:
 {
   "enabled": true,
   "bridge_url": "http://127.0.0.1:8765/chat",
+  "file_learning_enabled": true,
+  "file_learning_stage": true,
   "proactive_enabled": false,
   "require_whitelist": true,
   "private_only": true,
   "allow_group_messages": false,
   "stop_astrbot_pipeline": true
+}
+```
+
+QQ file attachments are sent to `/learning/ingest` by default. Leave
+`learning_ingest_url` empty to derive it from `bridge_url`, or set it
+explicitly:
+
+```json
+{
+  "learning_ingest_url": "http://127.0.0.1:8765/learning/ingest",
+  "file_learning_origin": "owner_supplied",
+  "file_learning_max_bytes": 52428800
 }
 ```
 

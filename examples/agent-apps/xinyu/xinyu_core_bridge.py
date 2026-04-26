@@ -14,14 +14,20 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
+from xinyu_learning_library import (
+    DEFAULT_MAX_BYTES,
+    add_local_material,
+    add_url_material,
+    stage_manifest_record,
+)
 from xinyu_proactive_presence import acknowledge_proactive_qq_message, claim_proactive_qq_message
 from xinyu_speech_controller import XinyuSpeechController
 from xinyu_voice_learning import record_voice_correction
 
 
-BRIDGE_VERSION = "0.4.0"
+BRIDGE_VERSION = "0.5.0"
 
 
 class BridgeRequestError(RuntimeError):
@@ -124,6 +130,17 @@ def _as_int(value: Any, default: int) -> int:
         return int(str(value).strip())
     except (TypeError, ValueError):
         return default
+
+
+def _payload_path(value: str) -> Path:
+    text = value.strip()
+    if text.lower().startswith("file://"):
+        parsed = urlparse(text)
+        path_text = parsed.path
+        if os.name == "nt" and len(path_text) > 2 and path_text[0] == "/" and path_text[2] == ":":
+            path_text = path_text[1:]
+        return Path(unquote(path_text))
+    return Path(text)
 
 
 def _contains_any(text: str, markers: tuple[str, ...]) -> bool:
@@ -316,6 +333,98 @@ class XinYuBridgeRuntime:
             "memory_changed": before_memory != after_memory,
             "session_created": False,
             "sessions": len(self._sessions),
+            "notes": notes,
+        }
+
+    async def learning_ingest(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        if self._closed:
+            raise BridgeRequestError(HTTPStatus.SERVICE_UNAVAILABLE, "bridge is shutting down")
+        if payload is not None and not isinstance(payload, dict):
+            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
+
+        payload = payload or {}
+        file_path = _safe_str(payload.get("file_path") or payload.get("path")).strip()
+        file_url = _safe_str(payload.get("file_url") or payload.get("url")).strip()
+        file_name = _safe_str(payload.get("file_name") or payload.get("name")).strip()
+        if not file_path and not file_url:
+            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "file_path or file_url is required")
+
+        origin = _safe_str(payload.get("origin"), "owner_supplied").strip() or "owner_supplied"
+        reason = _safe_str(payload.get("reason"), "owner supplied QQ file").strip() or "owner supplied QQ file"
+        question_id = _safe_str(payload.get("question_id"), "qq-file-learning").strip() or "qq-file-learning"
+        title = _safe_str(payload.get("title") or file_name).strip()
+        label = _safe_str(payload.get("label") or file_name).strip()
+        stage = _as_bool(payload.get("stage"), default=True)
+        curated = _as_bool(payload.get("curated"), default=(origin == "owner_supplied"))
+        max_bytes = _as_int(payload.get("max_bytes"), DEFAULT_MAX_BYTES)
+        if max_bytes <= 0:
+            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "max_bytes must be > 0")
+
+        async with self._global_turn_lock:
+            cleanup = await self._cleanup_idle_sessions()
+            before_memory = _memory_snapshot(self.memory_root)
+            if file_path:
+                source = _payload_path(file_path)
+                metadata = await asyncio.to_thread(
+                    add_local_material,
+                    root=self.xinyu_dir,
+                    path=source,
+                    origin=origin,
+                    reason=reason,
+                    question_id=question_id,
+                    title=title,
+                    label=label,
+                    max_bytes=max_bytes,
+                )
+            else:
+                metadata = await asyncio.to_thread(
+                    add_url_material,
+                    root=self.xinyu_dir,
+                    url=file_url,
+                    origin=origin,
+                    reason=reason,
+                    question_id=question_id,
+                    title=title,
+                    label=label,
+                    max_bytes=max_bytes,
+                )
+            material_id = ""
+            if stage:
+                material_id = await asyncio.to_thread(
+                    stage_manifest_record,
+                    self.xinyu_dir,
+                    metadata,
+                    curated,
+                )
+            after_memory = _memory_snapshot(self.memory_root)
+
+        notes = ["learning_ingest", "no_agent_turn", "session_not_created"]
+        if cleanup["cleaned_sessions"]:
+            notes.append(f"cleaned_idle_sessions:{cleanup['cleaned_sessions']}")
+        if stage:
+            notes.append(f"stage:{material_id}")
+        else:
+            notes.append("stage:skipped")
+
+        title_for_reply = _safe_str(metadata.get("title") or file_name or metadata.get("id")).strip()
+        extracted_text_path = _safe_str(metadata.get("extracted_text_path")).strip()
+        staged_text = "，并登记到学习管道" if stage else ""
+        extracted_text = "，已提取可阅读文本" if extracted_text_path else "，但暂时没有提取到可阅读文本"
+        return {
+            "accepted": True,
+            "reply": f"收到了：{title_for_reply}。已经放进学习资料库{staged_text}{extracted_text}。",
+            "memory_changed": before_memory != after_memory,
+            "library_changed": True,
+            "session_created": False,
+            "sessions": len(self._sessions),
+            "learning_item_id": metadata.get("id", ""),
+            "material_id": material_id,
+            "origin": metadata.get("origin", origin),
+            "item_dir": metadata.get("item_dir", ""),
+            "stored_paths": metadata.get("stored_paths", []),
+            "extracted_text": bool(extracted_text_path),
+            "extracted_text_path": extracted_text_path,
+            "stage_status": material_id or "not_staged",
             "notes": notes,
         }
 
@@ -880,7 +989,7 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         route = urlparse(self.path).path
-        if route not in {"/chat", "/probe", "/proactive", "/proactive/ack"}:
+        if route not in {"/chat", "/probe", "/proactive", "/proactive/ack", "/learning/ingest"}:
             self._send_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
             return
 
@@ -896,6 +1005,11 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
                 result = self._run_on_loop(self.server.runtime.proactive(payload), timeout=10)
             elif route == "/proactive/ack":
                 result = self._run_on_loop(self.server.runtime.proactive_ack(payload), timeout=10)
+            elif route == "/learning/ingest":
+                result = self._run_on_loop(
+                    self.server.runtime.learning_ingest(payload),
+                    timeout=self.server.request_timeout_seconds,
+                )
             else:
                 result = self._run_on_loop(
                     self.server.runtime.chat(payload),

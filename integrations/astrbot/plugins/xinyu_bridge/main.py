@@ -6,16 +6,18 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
 from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, MessageChain, filter
+from astrbot.api.message_components import File
 from astrbot.api.star import Context, Star, register
 
 
 PLUGIN_NAME = "xinyu_bridge"
-SHELL_VERSION = "0.2.0"
+SHELL_VERSION = "0.3.0"
 
 
 class BridgeError(RuntimeError):
@@ -37,6 +39,23 @@ class ProactiveResponse:
     claim_id: str
     candidate_claimed: bool
     notes: list[str]
+
+
+@dataclass(frozen=True)
+class LearningIngestResponse:
+    accepted: bool
+    reply: str
+    learning_item_id: str
+    material_id: str
+    extracted_text: bool
+    notes: list[str]
+
+
+@dataclass(frozen=True)
+class FileAttachment:
+    name: str
+    file_path: str
+    url: str
 
 
 def _as_bool(value: Any, default: bool = False) -> bool:
@@ -99,10 +118,12 @@ class XinYuBridgeClient:
         timeout_seconds: int = 120,
         proactive_url: str = "",
         proactive_ack_url: str = "",
+        learning_ingest_url: str = "",
     ) -> None:
         self.url = url.strip()
         self.proactive_url = proactive_url.strip() or self._derive_url("/proactive")
         self.proactive_ack_url = proactive_ack_url.strip() or self._derive_url("/proactive/ack")
+        self.learning_ingest_url = learning_ingest_url.strip() or self._derive_url("/learning/ingest")
         self.token = token.strip()
         self.timeout_seconds = timeout_seconds
 
@@ -142,6 +163,20 @@ class XinYuBridgeClient:
         if not isinstance(data, dict):
             raise BridgeError("XinYu proactive ack returned non-object JSON")
         return data
+
+    async def learning_ingest(self, payload: dict[str, Any]) -> LearningIngestResponse:
+        data = await asyncio.to_thread(self._post_json, self.learning_ingest_url, payload)
+        if not isinstance(data, dict):
+            raise BridgeError("XinYu learning ingest returned non-object JSON")
+        notes = self._notes(data)
+        return LearningIngestResponse(
+            accepted=_as_bool(data.get("accepted"), default=True),
+            reply=_safe_str(data.get("reply", "")).strip(),
+            learning_item_id=_safe_str(data.get("learning_item_id", "")).strip(),
+            material_id=_safe_str(data.get("material_id", "")).strip(),
+            extracted_text=_as_bool(data.get("extracted_text"), default=False),
+            notes=notes,
+        )
 
     def _derive_url(self, path: str) -> str:
         if not self.url:
@@ -196,7 +231,7 @@ class XinYuBridgeClient:
 @register(
     PLUGIN_NAME,
     "XinYu",
-    "Thin AstrBot shell plugin that forwards whitelisted private text to a local XinYu core bridge.",
+    "Thin AstrBot shell plugin that forwards whitelisted private text and files to a local XinYu core bridge.",
     SHELL_VERSION,
 )
 class XinYuBridgePlugin(Star):
@@ -215,6 +250,11 @@ class XinYuBridgePlugin(Star):
         self.proactive_min_interval_seconds = max(0, _as_int(config.get("proactive_min_interval_seconds"), 21600))
         self.proactive_target_session = _safe_str(config.get("proactive_target_session"), "")
         self.proactive_platform_id = _safe_str(config.get("proactive_platform_id"), "")
+        self.file_learning_enabled = _as_bool(config.get("file_learning_enabled"), default=True)
+        self.learning_ingest_url = _safe_str(config.get("learning_ingest_url"), "")
+        self.file_learning_origin = _safe_str(config.get("file_learning_origin"), "owner_supplied") or "owner_supplied"
+        self.file_learning_stage = _as_bool(config.get("file_learning_stage"), default=True)
+        self.file_learning_max_bytes = max(1, _as_int(config.get("file_learning_max_bytes"), 50 * 1024 * 1024))
         self.require_whitelist = _as_bool(config.get("require_whitelist"), default=True)
         self.whitelist_user_ids = set(_as_str_list(config.get("whitelist_user_ids")))
         self.owner_user_ids = set(_as_str_list(config.get("owner_user_ids")))
@@ -239,16 +279,18 @@ class XinYuBridgePlugin(Star):
             timeout_seconds=self.timeout_seconds,
             proactive_url=self.proactive_url,
             proactive_ack_url=self.proactive_ack_url,
+            learning_ingest_url=self.learning_ingest_url,
         )
         self._proactive_task: asyncio.Task | None = None
         self._last_owner_session = ""
         logger.info(
-            "XinYu bridge shell loaded: enabled=%s private_only=%s whitelist=%d bridge_url=%s proactive=%s",
+            "XinYu bridge shell loaded: enabled=%s private_only=%s whitelist=%d bridge_url=%s proactive=%s file_learning=%s",
             self.enabled,
             self.private_only,
             len(self.whitelist_user_ids),
             self.bridge_url,
             self.proactive_enabled,
+            self.file_learning_enabled,
         )
 
     async def initialize(self) -> None:
@@ -279,6 +321,10 @@ class XinYuBridgePlugin(Star):
             f"proactive_ack_url: {self.client.proactive_ack_url}",
             f"proactive_target_session: {target_session or 'not_ready'}",
             f"proactive_task_running: {bool(self._proactive_task and not self._proactive_task.done())}",
+            f"file_learning_enabled: {self.file_learning_enabled}",
+            f"learning_ingest_url: {self.client.learning_ingest_url}",
+            f"file_learning_origin: {self.file_learning_origin}",
+            f"file_learning_stage: {self.file_learning_stage}",
             f"private_only: {self.private_only}",
             f"allow_group_messages: {self.allow_group_messages}",
             f"require_whitelist: {self.require_whitelist}",
@@ -304,10 +350,11 @@ class XinYuBridgePlugin(Star):
             return
 
         text = _safe_str(getattr(event, "message_str", "")).strip()
-        if not text:
+        attachments = await self._extract_file_attachments(event) if self.file_learning_enabled else []
+        if not text and not attachments:
             return
 
-        if self._is_passthrough_command(text):
+        if text and self._is_passthrough_command(text):
             return
 
         message_kind = self._message_kind(event)
@@ -324,6 +371,38 @@ class XinYuBridgePlugin(Star):
             if message_kind == "private" and self.deny_message:
                 yield event.plain_result(self.deny_message)
             if message_kind == "private" and self.stop_blocked_private_events:
+                event.stop_event()
+            return
+
+        if attachments:
+            replies: list[str] = []
+            for attachment in attachments:
+                payload = self._build_learning_payload(
+                    event,
+                    attachment=attachment,
+                    text=text,
+                    message_kind=message_kind,
+                    sender_id=sender_id,
+                )
+                try:
+                    response = await self.client.learning_ingest(payload)
+                except BridgeError as exc:
+                    logger.error("XinYu learning ingest error: %s", exc)
+                    if self.show_bridge_errors:
+                        replies.append(f"XinYu learning ingest error: {exc}")
+                    continue
+
+                for note in response.notes:
+                    logger.info("XinYu learning ingest note: %s", note)
+
+                if response.accepted:
+                    replies.append(response.reply or self._learning_fallback_reply(attachment, response))
+                else:
+                    replies.append(f"文件没有进入学习库：{attachment.name or 'unnamed file'}")
+
+            if replies:
+                yield event.plain_result("\n".join(replies))
+            if self.stop_astrbot_pipeline:
                 event.stop_event()
             return
 
@@ -398,6 +477,56 @@ class XinYuBridgePlugin(Star):
         if message_id is None:
             message_id = _event_attr(event, "message_obj.id")
         return _safe_str(message_id, "")
+
+    async def _extract_file_attachments(self, event: AstrMessageEvent) -> list[FileAttachment]:
+        messages = _maybe_call(event, "get_messages", [])
+        if not isinstance(messages, (list, tuple)):
+            messages = _event_attr(event, "message_obj.message", [])
+        if not isinstance(messages, (list, tuple)):
+            return []
+
+        attachments: list[FileAttachment] = []
+        for component in messages:
+            if not self._is_file_component(component):
+                continue
+            name = _safe_str(getattr(component, "name", "")).strip()
+            url = _safe_str(getattr(component, "url", "")).strip()
+            file_path = ""
+            get_file = getattr(component, "get_file", None)
+            if callable(get_file):
+                try:
+                    file_path = _safe_str(await get_file(allow_return_url=False)).strip()
+                except TypeError:
+                    try:
+                        file_path = _safe_str(await get_file()).strip()
+                    except Exception as exc:
+                        logger.warning("XinYu bridge failed to read file component: %s", exc)
+                except Exception as exc:
+                    logger.warning("XinYu bridge failed to read file component: %s", exc)
+            if not file_path:
+                file_path = _safe_str(getattr(component, "file_", "")).strip()
+            if file_path.startswith(("http://", "https://")) and not url:
+                url = file_path
+                file_path = ""
+            if not name:
+                name = self._attachment_name(file_path, url)
+            if file_path or url:
+                attachments.append(FileAttachment(name=name, file_path=file_path, url=url))
+        return attachments
+
+    def _is_file_component(self, component: Any) -> bool:
+        if isinstance(component, File):
+            return True
+        component_type = _safe_str(getattr(component, "type", "")).lower()
+        return component_type.endswith("file") or component_type == "componenttype.file"
+
+    def _attachment_name(self, file_path: str, url: str) -> str:
+        if file_path:
+            return Path(file_path).name or "file"
+        path = urlsplit(url).path
+        if path:
+            return Path(path).name or "file"
+        return "file"
 
     async def _remember_owner_session(self, event: AstrMessageEvent) -> None:
         session = _safe_str(getattr(event, "unified_msg_origin", "")).strip()
@@ -506,6 +635,56 @@ class XinYuBridgePlugin(Star):
                 await self.client.proactive_ack(ack_payload)
             except BridgeError as exc:
                 logger.error("XinYu proactive ack failed: %s", exc)
+
+    def _learning_fallback_reply(self, attachment: FileAttachment, response: LearningIngestResponse) -> str:
+        staged = "，并登记到学习管道" if response.material_id else ""
+        extracted = "，已提取可阅读文本" if response.extracted_text else ""
+        return f"收到了：{attachment.name or 'file'}。已经放进学习资料库{staged}{extracted}。"
+
+    def _build_learning_payload(
+        self,
+        event: AstrMessageEvent,
+        *,
+        attachment: FileAttachment,
+        text: str,
+        message_kind: str,
+        sender_id: str,
+    ) -> dict[str, Any]:
+        group_id = self._group_id(event) or None
+        session_id = self._session_id(message_kind=message_kind, sender_id=sender_id, group_id=group_id)
+        platform_session_id = _safe_str(_event_attr(event, "message_obj.session_id"), session_id)
+        unified_msg_origin = _safe_str(getattr(event, "unified_msg_origin", ""))
+        sender_name = self._sender_name(event)
+        reason = text.strip() or f"QQ file attachment from {sender_name or sender_id}"
+
+        return {
+            "platform": "astrbot",
+            "source": "astrbot_file_message",
+            "origin": self.file_learning_origin,
+            "file_name": attachment.name,
+            "file_path": attachment.file_path,
+            "file_url": attachment.url,
+            "reason": reason,
+            "question_id": "qq-file-learning",
+            "stage": self.file_learning_stage,
+            "curated": self.file_learning_origin == "owner_supplied" or sender_id in self.owner_user_ids,
+            "max_bytes": self.file_learning_max_bytes,
+            "metadata": {
+                "plugin": PLUGIN_NAME,
+                "shell_version": SHELL_VERSION,
+                "message_type": f"{message_kind}_file",
+                "session_id": session_id,
+                "platform_session_id": platform_session_id,
+                "unified_msg_origin": unified_msg_origin,
+                "user_id": sender_id,
+                "sender_name": sender_name,
+                "group_id": group_id,
+                "bot_id": self._bot_id(event),
+                "message_id": self._message_id(event),
+                "text": text,
+                "is_owner_user": sender_id in self.owner_user_ids,
+            },
+        }
 
     def _build_payload(
         self,

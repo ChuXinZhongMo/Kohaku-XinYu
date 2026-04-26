@@ -129,8 +129,8 @@ def check_astrbot_config(astrbot_root: Path) -> list[Check]:
         Check("astrbot_plugin_installed", plugin_path.exists(), str(plugin_path)),
         Check(
             "astrbot_plugin_version",
-            'SHELL_VERSION = "0.2.0"' in plugin_text or "version: 0.2.0" in metadata,
-            "expected xinyu_bridge 0.2.0",
+            'SHELL_VERSION = "0.3.0"' in plugin_text or "version: 0.3.0" in metadata,
+            "expected xinyu_bridge 0.3.0",
         ),
         Check("astrbot_config_present", bool(cfg), str(cfg_path)),
         Check("proactive_enabled", proactive_enabled, f"value={proactive_enabled}"),

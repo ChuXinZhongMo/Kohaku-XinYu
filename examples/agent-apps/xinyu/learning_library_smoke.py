@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import argparse
 import tempfile
+import zipfile
 from argparse import Namespace
 from pathlib import Path
+from xml.sax.saxutils import escape
 
 from xinyu_learning_library import command_add, command_stage, load_manifest
 
@@ -17,6 +19,21 @@ def _build_parser() -> argparse.ArgumentParser:
 def _write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text.rstrip() + "\n", encoding="utf-8")
+
+
+def _write_docx(path: Path, paragraphs: list[str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = "".join(
+        f"<w:p><w:r><w:t>{escape(paragraph)}</w:t></w:r></w:p>"
+        for paragraph in paragraphs
+    )
+    document_xml = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        f"<w:body>{body}</w:body></w:document>"
+    )
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("word/document.xml", document_xml)
 
 
 def _add_args(root: Path, source: Path, origin: str, reason: str) -> Namespace:
@@ -42,6 +59,7 @@ def _run_case(root: Path) -> int:
     fixture_dir = root / "fixtures"
     owner_file = fixture_dir / "owner_supplied_note.md"
     self_file = fixture_dir / "self_found_note.md"
+    docx_file = fixture_dir / "owner_persona_memory.docx"
     _write(
         owner_file,
         """# Owner Supplied Learning Note
@@ -58,6 +76,13 @@ Self-found material should be stored, but it should still need comparison or rev
 before learner integration treats it as learned knowledge.
 """,
     )
+    _write_docx(
+        docx_file,
+        [
+            "XinYu docx fixture memory should be extracted from Word XML.",
+            "The learning library must not treat QQ docx files as unreadable binaries.",
+        ],
+    )
 
     rc = command_add(_add_args(root, owner_file, "owner_supplied", "owner supplied fixture"))
     if rc:
@@ -65,10 +90,16 @@ before learner integration treats it as learned knowledge.
     rc = command_add(_add_args(root, self_file, "self_found", "self found fixture"))
     if rc:
         return rc
+    rc = command_add(_add_args(root, docx_file, "owner_supplied", "owner supplied docx fixture"))
+    if rc:
+        return rc
 
     manifest = load_manifest(root)
     owner_item = next(item for item in manifest if item["origin"] == "owner_supplied")
     self_item = next(item for item in manifest if item["origin"] == "self_found")
+    docx_item = next(item for item in manifest if item["title"] == docx_file.name)
+    docx_extract_path = root / str(docx_item.get("extracted_text_path") or "")
+    docx_extract = docx_extract_path.read_text(encoding="utf-8-sig") if docx_extract_path.is_file() else ""
 
     rc = command_stage(_stage_args(root, str(owner_item["id"])))
     if rc:
@@ -85,12 +116,14 @@ before learner integration treats it as learned knowledge.
         "self_not_compared": "- comparison_status: not_compared" in source_materials,
         "owner_item_id": str(owner_item["id"]) in source_materials,
         "self_item_id": str(self_item["id"]) in source_materials,
+        "docx_extracted": "XinYu docx fixture memory" in docx_extract,
     }
 
     print("=== LEARNING LIBRARY SMOKE ===")
     print("manifest_items:", len(manifest))
     print("owner_item:", owner_item["id"])
     print("self_item:", self_item["id"])
+    print("docx_item:", docx_item["id"])
     for key, value in checks.items():
         print(f"{key}:", "ok" if value else "missing")
 

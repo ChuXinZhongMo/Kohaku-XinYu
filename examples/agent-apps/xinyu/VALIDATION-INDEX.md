@@ -41,6 +41,7 @@ Use:
 - `source_comparison_smoke.py`
 - `learner_integration_smoke.py`
 - `learning_quality_smoke.py`
+- `learning_library_smoke.py`
 - `source_quality_repair_smoke.py`
 - `learning_session_smoke.py`
 - `source_learning_chain_smoke.py`
@@ -66,6 +67,7 @@ Use:
 - `local_scope_smoke.py`
 - `bridge_probe_smoke.py`
 - `bridge_session_cleanup_smoke.py`
+- `bridge_learning_ingest_smoke.py`
 - `xinyu_qq_review_smoke.py`
 - `long_run_status.py`
 
@@ -113,11 +115,12 @@ Use `capability_zones_smoke.py` when validating computer-access capability zones
 Use `local_scope_smoke.py` when validating that the approved local filesystem scope exists and path resolution blocks traversal or absolute paths outside `D:\XinYu\XinYu-Local-Scope`.
 Use `bridge_probe_smoke.py` after restarting the bridge to validate `/probe` diagnostics without memory writes or session creation.
 Use `bridge_session_cleanup_smoke.py` when validating bridge idle TTL and max-session cleanup without touching live runtime memory.
+Use `bridge_learning_ingest_smoke.py` when validating that QQ-style owner files enter the learning library, extract readable `.docx` text, and stage as curated source material without creating a chat session.
 Use `xinyu_qq_review_smoke.py` when validating the semi-automatic QQ dialogue labeling tool before using real exported chat snippets.
 Use `long_run_status.py` when auditing milestone status, required docs/scripts, selected current gate states, and known smoke residue markers.
 Use `question_pipeline_smoke.py` when validating that active questions split into internal clarification or exploration candidates before the source gate, without touching self, owner, relationship, or emotion memory.
 Use `source_reliability_gate_smoke.py` when validating that source-gate candidates pass through source reliability and source integration gates before source requests are planned.
-Use `source_request_planner_smoke.py`, `autonomous_search_activation_smoke.py`, `source_search_resolution_smoke.py`, `source_search_provider_smoke.py`, `outward_source_smoke.py`, `source_comparison_smoke.py`, `learner_integration_smoke.py`, `learning_quality_smoke.py`, `source_quality_repair_smoke.py`, `learning_session_smoke.py`, and `source_learning_chain_smoke.py` when validating the controlled external-source path without leaving test material in lived memory. `autonomous_search_activation_smoke.py` validates disabled, dry-run, quality-blocked, no-pending, provider-blocked, and enabled paths. `source_comparison_smoke.py` now also validates same-question, adjacent-question, and unrelated-evidence alignment.
+Use `source_request_planner_smoke.py`, `autonomous_search_activation_smoke.py`, `source_search_resolution_smoke.py`, `source_search_provider_smoke.py`, `outward_source_smoke.py`, `source_comparison_smoke.py`, `learner_integration_smoke.py`, `learning_quality_smoke.py`, `learning_library_smoke.py`, `source_quality_repair_smoke.py`, `learning_session_smoke.py`, and `source_learning_chain_smoke.py` when validating the controlled external-source path without leaving test material in lived memory. `autonomous_search_activation_smoke.py` validates disabled, dry-run, quality-blocked, no-pending, provider-blocked, and enabled paths. `source_comparison_smoke.py` now also validates same-question, adjacent-question, and unrelated-evidence alignment.
 
 ## First Runtime
 

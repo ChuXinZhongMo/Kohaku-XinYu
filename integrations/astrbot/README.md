@@ -68,12 +68,24 @@ Configure in AstrBot's plugin UI or edit AstrBot's generated plugin config:
 {
   "enabled": true,
   "bridge_url": "http://127.0.0.1:8765/chat",
+  "file_learning_enabled": true,
+  "file_learning_stage": true,
   "require_whitelist": true,
   "private_only": true,
   "allow_group_messages": false,
   "stop_astrbot_pipeline": true
 }
 ```
+
+QQ file attachments are forwarded to:
+
+```text
+http://127.0.0.1:8765/learning/ingest
+```
+
+Leave `learning_ingest_url` empty to derive it from `bridge_url`. Owner-sent
+files use `owner_supplied` by default and are staged into the source-material
+learning pipeline.
 
 For proactive private QQ delivery:
 

@@ -40,6 +40,18 @@ class SmokeBridgeHandler(BaseHTTPRequestHandler):
             self.server.acks.append(payload)
             self._send({"accepted": True, "ack_recorded": True, "notes": ["smoke_ack"]})
             return
+        if self.path == "/learning/ingest":
+            self._send(
+                {
+                    "accepted": True,
+                    "reply": "smoke file learned",
+                    "learning_item_id": "learn-smoke",
+                    "material_id": "material-smoke",
+                    "extracted_text": True,
+                    "notes": ["smoke_learning_ingest"],
+                }
+            )
+            return
         self._send({"accepted": False, "reply": "", "notes": ["not_found"]}, HTTPStatus.NOT_FOUND)
 
     def log_message(self, format: str, *args: Any) -> None:
@@ -115,6 +127,37 @@ async def run_case(*, send_ok: bool) -> tuple[bool, FakeContext, SmokeBridgeServ
     return result, ctx, server
 
 
+async def run_learning_ingest_case() -> tuple[Any, SmokeBridgeServer]:
+    server = SmokeBridgeServer()
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base_url = f"http://127.0.0.1:{server.server_port}"
+    ctx = FakeContext(send_ok=True)
+    plugin = XinYuBridgePlugin(
+        ctx,  # type: ignore[arg-type]
+        {
+            "enabled": True,
+            "bridge_url": f"{base_url}/chat",
+            "file_learning_enabled": True,
+            "owner_user_ids": ["owner-id"],
+        },
+    )
+    try:
+        response = await plugin.client.learning_ingest(
+            {
+                "file_name": "owner_memory.docx",
+                "file_path": "D:/tmp/owner_memory.docx",
+                "origin": "owner_supplied",
+                "stage": True,
+            }
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+    return response, server
+
+
 def main() -> int:
     failures: list[str] = []
 
@@ -133,6 +176,14 @@ def main() -> int:
         failures.append("failed proactive poll did not attempt context.send_message")
     if not failed_server.acks or failed_server.acks[-1].get("status") != "failed":
         failures.append(f"failed proactive poll did not ack failed: {failed_server.acks}")
+
+    learning_response, learning_server = asyncio.run(run_learning_ingest_case())
+    if not learning_response.accepted:
+        failures.append("learning ingest client did not accept smoke response")
+    if not learning_response.extracted_text:
+        failures.append("learning ingest client did not parse extracted_text")
+    if not any(path == "/learning/ingest" for path, _payload in learning_server.requests):
+        failures.append(f"learning ingest client did not call /learning/ingest: {learning_server.requests}")
 
     if failures:
         print("XinYu bridge proactive smoke failed")

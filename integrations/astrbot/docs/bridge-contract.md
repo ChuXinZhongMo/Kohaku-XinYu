@@ -27,7 +27,7 @@ POST http://127.0.0.1:8765/chat
     "unified_msg_origin": "...",
     "platform_session_id": "...",
     "plugin": "xinyu_bridge",
-    "shell_version": "0.2.0"
+    "shell_version": "0.3.0"
   }
 }
 ```
@@ -61,6 +61,54 @@ X-XinYu-Bridge-Token: <token>
 ```
 
 The core endpoint should reject mismatched tokens when a token is configured.
+
+## File Learning Ingest
+
+The shell sends QQ file attachments to:
+
+```text
+POST http://127.0.0.1:8765/learning/ingest
+```
+
+Request:
+
+```json
+{
+  "platform": "astrbot",
+  "source": "astrbot_file_message",
+  "origin": "owner_supplied",
+  "file_name": "心玉人格记忆.docx",
+  "file_path": "C:\\Users\\26921\\Desktop\\心玉人格记忆.docx",
+  "file_url": "",
+  "reason": "QQ file attachment from owner",
+  "question_id": "qq-file-learning",
+  "stage": true,
+  "curated": true,
+  "max_bytes": 52428800,
+  "metadata": {
+    "plugin": "xinyu_bridge",
+    "shell_version": "0.3.0",
+    "message_type": "private_file"
+  }
+}
+```
+
+Response:
+
+```json
+{
+  "accepted": true,
+  "reply": "收到了：心玉人格记忆.docx。已经放进学习资料库，并登记到学习管道，已提取可阅读文本。",
+  "learning_item_id": "learn-...",
+  "material_id": "material-...",
+  "extracted_text": true,
+  "notes": ["learning_ingest", "no_agent_turn"]
+}
+```
+
+The shell does not parse or learn the file itself. The core copies the file into
+the learning library, extracts readable text when supported, and stages owner
+material into the source-material pipeline.
 
 ## Proactive Delivery
 

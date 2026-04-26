@@ -10,7 +10,7 @@ class MockBridgeHandler(BaseHTTPRequestHandler):
     server_version = "XinYuMockBridge/0.1"
 
     def do_POST(self) -> None:
-        if self.path != "/chat":
+        if self.path not in {"/chat", "/learning/ingest"}:
             self._send_json({"accepted": False, "reply": "", "notes": ["not_found"]}, status=404)
             return
 
@@ -20,6 +20,20 @@ class MockBridgeHandler(BaseHTTPRequestHandler):
             payload = json.loads(raw_body.decode("utf-8"))
         except json.JSONDecodeError:
             self._send_json({"accepted": False, "reply": "", "notes": ["invalid_json"]}, status=400)
+            return
+
+        if self.path == "/learning/ingest":
+            file_name = str(payload.get("file_name") or "file")
+            self._send_json(
+                {
+                    "accepted": True,
+                    "reply": f"[mock XinYu bridge] learned file: {file_name}",
+                    "learning_item_id": "learn-mock",
+                    "material_id": "material-mock",
+                    "extracted_text": True,
+                    "notes": ["mock_learning_ingest_only"],
+                }
+            )
             return
 
         user_id = str(payload.get("user_id") or "unknown")
@@ -57,7 +71,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
     server = ThreadingHTTPServer((args.host, args.port), MockBridgeHandler)
-    print(f"Mock XinYu bridge listening on http://{args.host}:{args.port}/chat")
+    print(f"Mock XinYu bridge listening on http://{args.host}:{args.port}/chat and /learning/ingest")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

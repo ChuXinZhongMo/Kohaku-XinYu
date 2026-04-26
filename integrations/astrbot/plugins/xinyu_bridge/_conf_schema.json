@@ -71,6 +71,36 @@
     "hint": "Use the id from AstrBot platform config when there is more than one platform.",
     "default": ""
   },
+  "file_learning_enabled": {
+    "description": "Forward QQ file attachments to XinYu's learning ingest endpoint.",
+    "type": "bool",
+    "hint": "When enabled, file-only messages are accepted instead of being ignored.",
+    "default": true
+  },
+  "learning_ingest_url": {
+    "description": "Local XinYu learning ingest endpoint.",
+    "type": "string",
+    "hint": "Leave empty to derive http://host:port/learning/ingest from bridge_url.",
+    "default": ""
+  },
+  "file_learning_origin": {
+    "description": "Learning origin assigned to QQ file attachments.",
+    "type": "string",
+    "hint": "Use owner_supplied for files sent by the owner.",
+    "default": "owner_supplied"
+  },
+  "file_learning_stage": {
+    "description": "Stage accepted files into XinYu's source-material pipeline.",
+    "type": "bool",
+    "hint": "Recommended true so XinYu can review and integrate the material later.",
+    "default": true
+  },
+  "file_learning_max_bytes": {
+    "description": "Maximum file size copied into the learning library.",
+    "type": "int",
+    "hint": "Default is 50 MB.",
+    "default": 52428800
+  },
   "require_whitelist": {
     "description": "Only allow configured user ids.",
     "type": "bool",
