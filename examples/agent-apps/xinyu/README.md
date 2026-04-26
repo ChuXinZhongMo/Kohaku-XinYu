@@ -129,12 +129,17 @@ python -m py_compile xinyu_core_bridge.py xinyu_proactive_presence.py xinyu_stat
 
 ## QQ 集成
 
-QQ 发送由这个仓库外部的 AstrBot shell 插件负责。
+QQ 发送由仓库内的 AstrBot shell 插件源码负责，安装后运行在本地 AstrBot 环境里。
 
-本机预期路径：
+源码路径：
 
 ```text
-D:/XinYu/XinYu-AstrBot-Shell/    插件源码
+integrations/astrbot/
+```
+
+本机运行路径：
+
+```text
 D:/XinYu/AstrBot/                AstrBot 运行环境
 D:/XinYu/NapCatQQ/               NapCat 运行环境
 ```

@@ -1,0 +1,12 @@
+data/
+logs/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+.env
+local.*
+dist/
+build/
+AstrBot/

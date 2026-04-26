@@ -1,0 +1,6 @@
+name: xinyu_bridge
+desc: Thin AstrBot shell plugin that forwards whitelisted private text and gated proactive messages to a local XinYu core bridge.
+help: Configure bridge_url, whitelist_user_ids, and optional proactive delivery settings.
+version: 0.2.0
+author: XinYu
+repo: "https://github.com/ChuXinZhongMo/XinYu"

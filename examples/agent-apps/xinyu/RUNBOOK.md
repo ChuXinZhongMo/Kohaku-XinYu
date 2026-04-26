@@ -15,12 +15,17 @@ D:/XinYu/KohakuTerrarium-main/examples/agent-apps/xinyu/
 仓库外 QQ 集成：
 
 ```text
-D:/XinYu/XinYu-AstrBot-Shell/
 D:/XinYu/AstrBot/
 D:/XinYu/NapCatQQ/
 ```
 
-这个仓库不保存 live AstrBot 和 NapCat 运行目录。
+仓库内 AstrBot 插件源码：
+
+```text
+D:/XinYu/KohakuTerrarium-main/integrations/astrbot/
+```
+
+这个仓库保存插件源码，但不保存 live AstrBot 和 NapCat 运行目录。
 
 ## 2. 第一条命令
 

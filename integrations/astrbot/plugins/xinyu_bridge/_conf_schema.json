@@ -1,0 +1,140 @@
+{
+  "enabled": {
+    "description": "Enable the XinYu bridge plugin.",
+    "type": "bool",
+    "hint": "Keep enabled only after bridge_url and whitelist are configured.",
+    "default": true
+  },
+  "bridge_url": {
+    "description": "Local XinYu core bridge endpoint.",
+    "type": "string",
+    "hint": "Example: http://127.0.0.1:8765/chat",
+    "default": "http://127.0.0.1:8765/chat"
+  },
+  "bridge_token": {
+    "description": "Optional shared secret sent to the XinYu bridge endpoint.",
+    "type": "string",
+    "hint": "Leave empty for local testing only.",
+    "default": ""
+  },
+  "timeout_seconds": {
+    "description": "HTTP timeout while waiting for XinYu to reply.",
+    "type": "int",
+    "hint": "Use a larger value for long model calls.",
+    "default": 120
+  },
+  "proactive_enabled": {
+    "description": "Enable proactive QQ delivery polling.",
+    "type": "bool",
+    "hint": "When enabled, the plugin polls /proactive and sends one claimed message to the owner session.",
+    "default": false
+  },
+  "proactive_url": {
+    "description": "Local XinYu proactive claim endpoint.",
+    "type": "string",
+    "hint": "Leave empty to derive http://host:port/proactive from bridge_url.",
+    "default": ""
+  },
+  "proactive_ack_url": {
+    "description": "Local XinYu proactive send acknowledgement endpoint.",
+    "type": "string",
+    "hint": "Leave empty to derive http://host:port/proactive/ack from bridge_url.",
+    "default": ""
+  },
+  "proactive_poll_seconds": {
+    "description": "Seconds between proactive delivery polls.",
+    "type": "int",
+    "hint": "The XinYu core still enforces its own cooldown; this only controls AstrBot polling.",
+    "default": 300
+  },
+  "proactive_initial_delay_seconds": {
+    "description": "Seconds to wait after plugin load before the first proactive poll.",
+    "type": "int",
+    "hint": "Use a small delay so AstrBot and NapCat can finish startup.",
+    "default": 30
+  },
+  "proactive_min_interval_seconds": {
+    "description": "Minimum seconds XinYu core should enforce between successful proactive sends.",
+    "type": "int",
+    "hint": "Default is six hours.",
+    "default": 21600
+  },
+  "proactive_target_session": {
+    "description": "Explicit AstrBot session for proactive private messages.",
+    "type": "string",
+    "hint": "Example: platform-id:FriendMessage:user-id. Leave empty to learn from owner chat or infer from owner_user_ids.",
+    "default": ""
+  },
+  "proactive_platform_id": {
+    "description": "Platform id used to infer proactive_target_session.",
+    "type": "string",
+    "hint": "Use the id from AstrBot platform config when there is more than one platform.",
+    "default": ""
+  },
+  "require_whitelist": {
+    "description": "Only allow configured user ids.",
+    "type": "bool",
+    "hint": "Recommended true during all early testing.",
+    "default": true
+  },
+  "whitelist_user_ids": {
+    "description": "Platform user ids allowed to talk to XinYu.",
+    "type": "list",
+    "hint": "Use string ids exactly as AstrBot reports them.",
+    "default": []
+  },
+  "owner_user_ids": {
+    "description": "User ids considered owner-side private chat.",
+    "type": "list",
+    "hint": "Forwarded as metadata only; XinYu core still decides memory.",
+    "default": []
+  },
+  "private_only": {
+    "description": "Only accept private messages.",
+    "type": "bool",
+    "hint": "Recommended true until group policy is validated.",
+    "default": true
+  },
+  "allow_group_messages": {
+    "description": "Allow group text events to be forwarded.",
+    "type": "bool",
+    "hint": "Keep false until group memory policy is ready.",
+    "default": false
+  },
+  "stop_astrbot_pipeline": {
+    "description": "Stop other AstrBot handlers after XinYu accepts a message.",
+    "type": "bool",
+    "hint": "Prevents AstrBot's own LLM from answering after XinYu.",
+    "default": true
+  },
+  "stop_blocked_private_events": {
+    "description": "Stop AstrBot's downstream handling for blocked private messages.",
+    "type": "bool",
+    "hint": "Prevents non-whitelisted private chats from reaching default LLM.",
+    "default": true
+  },
+  "deny_message": {
+    "description": "Optional text sent to blocked private users.",
+    "type": "string",
+    "hint": "Leave empty for silent denial.",
+    "default": ""
+  },
+  "show_bridge_errors": {
+    "description": "Send bridge error messages back to the chat.",
+    "type": "bool",
+    "hint": "Useful in testing; disable for normal use.",
+    "default": true
+  },
+  "ignore_prefixes": {
+    "description": "Text prefixes ignored by the bridge.",
+    "type": "list",
+    "hint": "Useful for AstrBot commands that should not go to XinYu.",
+    "default": ["/", "!", "."]
+  },
+  "passthrough_commands": {
+    "description": "Command names ignored by the bridge even after AstrBot strips the wake prefix.",
+    "type": "list",
+    "hint": "Keep sid here so QQ can still report the sender id before whitelist setup.",
+    "default": ["sid", "help", "xinyu_shell_status", "plugin", "cmd", "provider"]
+  }
+}

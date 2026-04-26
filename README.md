@@ -34,17 +34,17 @@ XinYu 当前分成三层：
 ```text
 examples/agent-apps/xinyu/       XinYu 核心 app、提示词、检查脚本、bridge
 docs/xinyu/                      XinYu 相关设计文档
+integrations/astrbot/            AstrBot QQ shell 插件源码和运维脚本
 ```
 
 本机集成路径：
 
 ```text
-D:/XinYu/XinYu-AstrBot-Shell/    AstrBot 插件源码
 D:/XinYu/AstrBot/                AstrBot 运行环境
 D:/XinYu/NapCatQQ/               NapCat 运行环境
 ```
 
-这个仓库只保存 XinYu 核心和文档；AstrBot、NapCat 的实际运行目录属于本地集成环境。
+这个仓库保存 XinYu 核心、文档和 AstrBot 插件源码；AstrBot、NapCat 的实际运行目录属于本地集成环境。
 
 ## 快速启动
 
@@ -152,11 +152,15 @@ examples/agent-apps/xinyu/memory/
 
 ## 文档入口
 
+- `Plan.md`
+- `ROADMAP.md`
 - `examples/agent-apps/xinyu/README.md`
 - `examples/agent-apps/xinyu/RUNBOOK.md`
 - `examples/agent-apps/xinyu/STATE-OF-XINYU.md`
 - `examples/agent-apps/xinyu/VALIDATION-INDEX.md`
 - `examples/agent-apps/xinyu/CHANGELOG-XINYU.md`
+- `integrations/astrbot/README.md`
+- `docs/xinyu/upstream-framework.md`
 - `docs/xinyu/memory-system-v0.1.md`
 - `docs/xinyu/memory-schema-v0.1.md`
 
