@@ -2,7 +2,14 @@
 
 这份文档是当前本地 XinYu 栈的运行手册。
 
-当你需要启动 XinYu、检查 QQ 主动发送是否正常，或者恢复 Core / AstrBot / NapCat 链路时，从这里开始。
+当前 QQ 链路：
+
+```text
+NapCatQQ -> ws://127.0.0.1:6199/ws -> xinyu_qq_gateway.py -> http://127.0.0.1:8765/chat -> XinYu Core
+```
+
+AstrBot 已经不是当前运行链路的一部分。需要部署和端口细节时，优先看
+`DEPLOYMENT-STATUS-RUNBOOK.md`。
 
 ## 1. 本地路径
 
@@ -12,20 +19,19 @@
 D:/XinYu/KohakuTerrarium-main/examples/agent-apps/xinyu/
 ```
 
-仓库外 QQ 集成：
+仓库外 QQ 运行环境：
 
 ```text
-D:/XinYu/AstrBot/
 D:/XinYu/NapCatQQ/
 ```
 
-仓库内 AstrBot 插件源码：
+本地私有 gateway 配置：
 
 ```text
-D:/XinYu/KohakuTerrarium-main/integrations/astrbot/
+D:/XinYu/KohakuTerrarium-main/examples/agent-apps/xinyu/xinyu_qq_gateway.config.json
 ```
 
-这个仓库保存插件源码，但不保存 live AstrBot 和 NapCat 运行目录。
+这个配置文件被 Git 忽略，不应该上传。
 
 ## 2. 第一条命令
 
@@ -39,13 +45,13 @@ python xinyu_status.py
 健康状态通常应该看到：
 
 - Core bridge health 正常
-- AstrBot dashboard 端口 `6185` 可达
-- OneBot WebSocket 端口 `6199` 可达
-- NapCat WebUI 端口 `6099` 可达
-- NapCat 到 AstrBot 的 `6199` WebSocket 已建立
-- `xinyu_bridge` 插件已安装
-- proactive QQ 配置符合预期
-- proactive claim / ack 没有当前 adapter error
+- Core bridge 运行版本与源码版本一致
+- native QQ gateway 源码存在
+- native QQ gateway 配置存在且已启用
+- `6199` gateway 端口可达
+- NapCat WebUI `6099` 可达
+- NapCat 到 native QQ gateway 的 WebSocket 已建立
+- 本地私有文件没有进入 Git
 
 给脚本读取：
 
@@ -53,42 +59,51 @@ python xinyu_status.py
 python xinyu_status.py --json
 ```
 
-## 3. 启动 Core Bridge
+## 3. 启动
+
+从 `D:\XinYu` 使用一键脚本：
 
 ```powershell
-cd D:\XinYu\KohakuTerrarium-main\examples\agent-apps\xinyu
-.\start_xinyu_core_bridge.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Start-XinYu-QQ.ps1
 ```
 
-检查：
+该脚本负责启动：
+
+- XinYu Core bridge: `127.0.0.1:8765`
+- native QQ gateway: `127.0.0.1:6199`
+- NapCat WebUI: `127.0.0.1:6099`
+
+也可以在 app 目录内分开启动：
 
 ```powershell
-python xinyu_status.py
+.\start_xinyu_core_bridge.ps1 -AllowInsecureLlmHttp
+.\start_xinyu_qq_gateway.ps1
 ```
 
 停止：
 
 ```powershell
+.\stop_xinyu_qq_gateway.ps1
 .\stop_xinyu_core_bridge.ps1
 ```
 
-## 4. 验证 Core 行为
+## 4. 验证 Core 和 Gateway
 
-改 bridge 或 proactive 逻辑后跑：
+改 bridge、gateway 或 proactive 逻辑后跑：
 
 ```powershell
-python proactive_presence_smoke.py
+python deployment_status_smoke.py
+python runtime_readiness_smoke.py
+python xinyu_qq_gateway_smoke.py
 python bridge_probe_smoke.py
 python bridge_session_cleanup_smoke.py
-python ai_self_iteration_review_bridge_smoke.py
-python learning_library_smoke.py
-python capability_zones_smoke.py
+python runtime_security_smoke.py
 ```
 
 Python 语法检查：
 
 ```powershell
-python -m py_compile xinyu_core_bridge.py xinyu_proactive_presence.py xinyu_status.py
+python -m py_compile xinyu_core_bridge.py xinyu_qq_gateway.py xinyu_status.py
 ```
 
 ## 5. 学习资料库
@@ -102,7 +117,7 @@ D:/XinYu/KohakuTerrarium-main/examples/agent-apps/xinyu/learning/
 两个资料桶：
 
 - `self_found/`：XinYu 自己找的资料。
-- `owner_supplied/`：主人给她、让她找、或手动放进去的资料。
+- `owner_supplied/`：owner 给她、让她找、或手动放进去的资料。
 
 初始化：
 
@@ -113,19 +128,19 @@ python xinyu_learning_library.py init
 下载论文 / 文件 / 网页：
 
 ```powershell
-python xinyu_learning_library.py url "https://example.com/paper.pdf" --origin owner_supplied --reason "主人要求学习这篇论文"
+python xinyu_learning_library.py url "https://example.com/paper.pdf" --origin owner_supplied --reason "owner 要求学习这篇论文"
 ```
 
-下载 GitHub 仓库用于插件学习：
+下载 GitHub 仓库用于学习：
 
 ```powershell
 python xinyu_learning_library.py github "https://github.com/user/repo" --origin owner_supplied --reason "学习这个插件结构"
 ```
 
-登记主人手动放入的文件或文件夹：
+登记 owner 手动放入的文件或文件夹：
 
 ```powershell
-python xinyu_learning_library.py add "D:\path\to\file-or-folder" --origin owner_supplied --reason "主人手动放入的资料"
+python xinyu_learning_library.py add "D:\path\to\file-or-folder" --origin owner_supplied --reason "owner 手动放入的资料"
 ```
 
 进入学习管道：
@@ -140,18 +155,25 @@ python xinyu_learning_library.py stage --id learn-...
 - 入库只是保存资料，不等于已经学会。
 - `owner_supplied` 默认按 curated material stage。
 - `self_found` 默认 `comparison_status: not_compared`，必须经过比较或审查。
-- 学习资料不能直接改写人格、关系、主人记忆或情绪状态。
+- 学习资料不能直接改写人格、关系、owner 记忆或情绪状态。
 
 ## 6. QQ 发送模型
 
-XinYu 的主动 QQ 发送使用 claim / ack：
+普通 QQ 回复链路：
 
-1. AstrBot shell 轮询 `/proactive`。
+1. NapCat 通过 OneBot 反向 WebSocket 把消息送到 `xinyu_qq_gateway.py`。
+2. native gateway 检查白名单、群触发和消息类型。
+3. native gateway 把规范化后的 payload 发到 Core `/chat`。
+4. Core 生成回复。
+5. native gateway 通过 OneBot `send_private_msg` 或 `send_group_msg` 发回 QQ。
+
+主动 QQ 发送仍使用 claim / ack：
+
+1. 发送方查询 `/proactive`。
 2. 预览请求不会拿到可发送的 `reply`。
 3. 真实发送必须使用 `claim=true`。
-4. Shell 通过 AstrBot / NapCat 发送消息。
-5. Shell 调用 `/proactive/ack` 回报 `sent` 或 `failed`。
-6. Core 写入 dispatch 状态，避免重复发送。
+4. 发送完成后调用 `/proactive/ack` 回报 `sent` 或 `failed`。
+5. Core 写入 dispatch 状态，避免重复发送。
 
 所以：预览不是发送，只有 claim 才能领取真实发送权。
 
@@ -161,21 +183,27 @@ XinYu 的主动 QQ 发送使用 claim / ack：
 
 ```powershell
 python xinyu_status.py
+python deployment_status_smoke.py
 ```
 
 然后按顺序检查：
 
 1. Core bridge 是否运行。
-2. AstrBot 是否运行。
+2. native QQ gateway 是否运行。
 3. NapCat 是否运行。
 4. `6199` 端口是否开放。
-5. NapCat 到 AstrBot 的 WebSocket 是否 established。
-6. AstrBot 是否安装了 `xinyu_bridge` 插件。
-7. 插件配置里的 `proactive_enabled` 是否符合预期。
-8. 插件配置里的目标 session 是否正确。
-9. dispatch 状态是否已经把当前候选标记为 `sent`。
+5. NapCat 是否连接到 `ws://127.0.0.1:6199/ws`。
+6. `xinyu_qq_gateway.config.json` 是否启用并包含正确白名单。
+7. Core `/chat` 是否能返回普通回复。
+8. dispatch 状态是否已经把当前主动候选标记为 `sent`。
 
-如果 NapCat 显示 `ECONNREFUSED 127.0.0.1:6199`，通常是 AstrBot 的 OneBot server 还没准备好，或者 AstrBot 没启动。先启动 / 重启 AstrBot，再让 NapCat 重连。
+如果 NapCat 显示 `ECONNREFUSED 127.0.0.1:6199`，通常是 native QQ
+gateway 没启动，或端口被占用。先重启 gateway：
+
+```powershell
+.\stop_xinyu_qq_gateway.ps1
+.\start_xinyu_qq_gateway.ps1
+```
 
 ## 8. 主动消息重复时
 
@@ -205,8 +233,10 @@ python xinyu_status.py --json
 
 ```text
 xinyu.local.env
+xinyu_qq_gateway.config.json
 logs/
 memory/
+runtime/
 learning/self_found/
 learning/owner_supplied/
 ```
@@ -226,8 +256,10 @@ git diff --cached --name-only
 
 ```text
 examples/agent-apps/xinyu/xinyu.local.env
+examples/agent-apps/xinyu/xinyu_qq_gateway.config.json
 examples/agent-apps/xinyu/logs/
 examples/agent-apps/xinyu/memory/
+examples/agent-apps/xinyu/runtime/
 examples/agent-apps/xinyu/learning/self_found/
 examples/agent-apps/xinyu/learning/owner_supplied/
 ```

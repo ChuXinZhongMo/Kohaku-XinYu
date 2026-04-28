@@ -1,7 +1,8 @@
 # XinYu Roadmap
 
-This roadmap describes XinYu's own direction. KohakuTerrarium is the underlying
-runtime framework, but this repository is now organized around XinYu.
+This roadmap describes XinYu's own direction. KohakuTerrarium remains the
+underlying runtime framework snapshot, but this repository is organized around
+XinYu.
 
 ## v0.1 - Local Working System
 
@@ -9,32 +10,38 @@ Status: shipped locally
 
 - XinYu core app lives under `examples/agent-apps/xinyu/`.
 - Local environment file is separated into `xinyu.local.env`.
-- Core bridge exposes health, probe, chat, proactive, and ack endpoints.
+- Core bridge exposes health, probe, chat, proactive, ack, learning, and
+  maintenance endpoints.
 - Proactive QQ dispatch uses explicit claim / ack semantics.
-- AstrBot shell can send a claimed proactive message through NapCat / OneBot.
-- `xinyu_status.py` checks the local Core + AstrBot + NapCat stack.
-- Runtime secrets, logs, and memory state are excluded from Git.
-- Local learning library separates self-found material from owner-supplied material.
+- Native QQ gateway receives NapCat / OneBot events and forwards normalized
+  turns to XinYu Core.
+- `xinyu_status.py` checks the local Core + native QQ gateway + NapCat stack.
+- Runtime secrets, logs, runtime traces, local gateway config, and memory state
+  are excluded from Git.
+- Local learning library separates self-found material from owner-supplied
+  material.
 
-## v0.2 - Repository Consolidation
+## v0.2 - Repository Presentation
 
-Status: in progress
+Status: shipped
 
 - Make the GitHub repository read as XinYu first.
 - Keep vendored KohakuTerrarium source clearly marked as an implementation
   dependency.
-- Bring the AstrBot shell plugin source into `integrations/astrbot/`.
+- Remove stale repository-managed AstrBot integration paths.
 - Replace upstream issue templates and release automation.
-- Keep local runtime docs focused on XinYu commands and recovery paths.
+- Update GitHub About, topics, README, app README, runbook, CI, and architecture
+  diagram for the native QQ gateway chain.
 
 ## v0.3 - Long-Run Stability
 
-Status: planned
+Status: in progress
 
 - Harden Core bridge restart behavior.
+- Keep native QQ gateway restart behavior simple and observable.
 - Make status checks stricter around stale proactive dispatch state.
-- Add a single operator command for "start everything, then verify".
-- Add a single operator command for "stop everything cleanly".
+- Keep `Start-XinYu-QQ.ps1` as the practical one-command local startup path.
+- Keep `deployment_status_smoke.py` and `runtime_readiness_smoke.py` green.
 - Expand smoke tests for repeated proactive cycles and failed-send retries.
 - Add runtime scheduling around `xinyu_learning_library.py` so approved learning
   requests can download materials without manual shell commands.
@@ -47,6 +54,7 @@ Status: planned
 - Separate durable memory from temporary runtime traces more cleanly.
 - Add memory review tools that summarize proposed changes before they persist.
 - Keep private memory local by default.
+- Keep seed memory portable without leaking private account identifiers.
 
 ## v0.5 - Operator UI
 
@@ -54,7 +62,7 @@ Status: exploratory
 
 - Build a small local dashboard for:
   - Core bridge health
-  - AstrBot / NapCat connection status
+  - native QQ gateway / NapCat connection status
   - proactive candidate state
   - last claim / ack result
   - AI self-iteration review state

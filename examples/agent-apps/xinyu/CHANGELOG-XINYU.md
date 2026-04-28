@@ -4,12 +4,18 @@
 
 ### Phase 5: Deployment, Security, Ingest Scope, And Validation Hardening
 
-- added live deployment truth checks for Core bridge version, AstrBot shell plugin version/hash, plugin source-set hash, live ports, and masked target diagnostics
+- added live deployment truth checks for Core bridge version, native QQ gateway source/config, live ports, and masked target diagnostics
 - added `runtime_security_smoke.py` and startup guards for explicit insecure HTTP LLM override and non-loopback bridge-token enforcement
 - enforced scoped learning ingest paths, traversal blocking, internal URL blocking, max-byte clamping, and redacted local source URLs for new learning material
 - added `runtime_readiness_smoke.py` as the one-command live readiness gate
-- split Core bridge responsibilities into focused `xinyu_bridge_*.py` modules and split AstrBot shell client/event helpers
+- split Core bridge responsibilities into focused `xinyu_bridge_*.py` modules and added the native QQ gateway path
 - added `xinyu_state_io.py` and grouped smoke manifests in `smoke_run.py`
+
+### Native QQ Gateway Presentation Sync
+
+- updated public repository presentation, GitHub About metadata, CI, templates, roadmap, and runbook to reflect the current native QQ gateway chain
+- removed active documentation references to the deleted repository-managed AstrBot integration path
+- kept historical project-plan references as legacy context unless they are used as current status
 
 ### Persona Contract Cleanup
 

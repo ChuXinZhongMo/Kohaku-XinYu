@@ -9,11 +9,11 @@ Phase 5 deployment, transport, ingest-scope, validation, and maintainability har
 Completed now:
 
 - The old separate persona prompt artifact is deleted; identity, voice, and reality boundaries now come from ordinary memory/policy layers.
-- Milestone 34 Deployment Truth Gate: running Core bridge `BRIDGE_VERSION`, repository source, installed AstrBot shell plugin version/hash, plugin source-set hash, live ports, and masked target diagnostics are checked by `xinyu_status.py --json` and `deployment_status_smoke.py`.
+- Milestone 34 Deployment Truth Gate: running Core bridge `BRIDGE_VERSION`, repository source, native QQ gateway source/config, live ports, and masked target diagnostics are checked by `xinyu_status.py --json` and `deployment_status_smoke.py`.
 - Milestone 35 Transport And Bridge Auth Hardening: plain HTTP model endpoints with API keys now require explicit `XINYU_ALLOW_INSECURE_LLM_HTTP=1`, and non-loopback Core bridge exposure requires a non-empty bridge token.
-- Milestone 36 Learning Ingest Scope Enforcement: `/learning/ingest` local files must resolve through owner-designated read roots, approved local scope, or explicit AstrBot attachment directories; traversal/outside paths and internal URLs are blocked; max bytes are clamped; new local material uses redacted learning URLs.
+- Milestone 36 Learning Ingest Scope Enforcement: `/learning/ingest` local files must resolve through owner-designated read roots, approved local scope, or explicit gateway attachment directories; traversal/outside paths and internal URLs are blocked; max bytes are clamped; new local material uses redacted learning URLs.
 - Milestone 37 Validation Reality Upgrade: `runtime_readiness_smoke.py` is the current one-command live readiness gate for deployment status, bridge probe, session cleanup, mojibake guard, long-run status, and redacted sensitive sweep.
-- Milestone 38 Bridge File Split: Core bridge responsibilities are split into `xinyu_bridge_http.py`, `xinyu_bridge_runtime.py`, `xinyu_bridge_learning.py`, `xinyu_bridge_renderer.py`, and `xinyu_bridge_proactive.py`; AstrBot shell client/event helpers are split out while config stays stable.
+- Milestone 38 Bridge File Split: Core bridge responsibilities are split into `xinyu_bridge_http.py`, `xinyu_bridge_runtime.py`, `xinyu_bridge_learning.py`, `xinyu_bridge_renderer.py`, and `xinyu_bridge_proactive.py`; QQ transport now lives in the native `xinyu_qq_gateway.py`.
 - Milestone 39 Shared State IO And Smoke Consolidation: `xinyu_state_io.py` centralizes common markdown-state helpers, and `smoke_run.py` now provides grouped `deployment`, `runtime`, `voice`, `learning`, and `privacy` smoke manifests.
 - Milestone 27 Live Voice Card: `prompts/live_voice_card.md` is tracked, loaded before deeper memory context, injected into `prompts/system.md`, included in runtime renderer context, and tracked by session prompt signature.
 - Runtime and guard code now treats the live voice card as the active surface-speech guide.
@@ -22,12 +22,12 @@ Completed now:
 - Milestone 28 Voice Calibration Promotion Gate: repeated owner corrections become review-only voice-profile candidates.
 - Milestone 30 Dynamic Life Posture Layer: compact current-life posture is injected into runtime and renderer context.
 - Milestone 29 Concrete Proactive QQ: abstract proactive questions are replaced with one concrete private-chat bubble unless deeper questioning is explicit.
-- Milestone 32 Deployment And Status Consistency: status checks expect the current AstrBot shell version from source, compare source/installed plugin hashes, and mask target-session diagnostics.
+- Milestone 32 Deployment And Status Consistency: status checks expect the current Core bridge and native QQ gateway source/config, compare running/source versions where available, and mask target-session diagnostics.
 - Milestone 33 Tracked Seed Memory Packaging: portable persona seed memory lives under `memory-seeds/` with a safe sync/check script.
 
 Next validation target:
 
-- Keep `runtime_readiness_smoke.py` green after every Core/AstrBot restart.
+- Keep `runtime_readiness_smoke.py` green after every Core/native-gateway restart.
 - Observe the next real QQ owner pressure turn and tune classifier/controller wording only if visible speech still self-postmortems under owner style pressure.
 - Review or fix the current q-006 semantic-mismatch hold before re-enabling broader autonomous search; current live learning quality is `review_needed` with zero warnings because held source material remains staged for semantic review.
 - After any default-persona or prompt-priority change, run `persona_contract_absence_smoke.py` and `smoke_run.py --group voice` before live QQ observation.

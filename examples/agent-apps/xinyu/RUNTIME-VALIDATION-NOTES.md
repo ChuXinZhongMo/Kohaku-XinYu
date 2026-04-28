@@ -1019,7 +1019,7 @@ long_run_status.py --require-no-residue
 Observed:
 
 - Core bridge was running `BRIDGE_VERSION 0.7.0` for the Phase 5 hardening validation, and `xinyu_status.py --json` reported `ok=true`.
-- Installed AstrBot shell plugin matches source version `0.5.0`; installed/source main, metadata, and source-set hashes match.
+- Legacy AstrBot shell plugin hash checks are retired for the current runtime chain. The active deployment check now verifies Core bridge source/running version, native QQ gateway source/config, live gateway port, NapCat WebUI, and NapCat -> gateway WebSocket state.
 - Live readiness checks can be run through `runtime_readiness_smoke.py`; deployment status, `/probe`, session cleanup, mojibake guard, and long-run status passed.
 - Transport guards are covered by `runtime_security_smoke.py`: API-key traffic over plain HTTP needs explicit local/test override, and non-loopback Core bridge exposure needs a token.
 - Learning ingest scope is covered by `bridge_learning_ingest_smoke.py`: allowed owner-designated paths work, outside-scope absolute paths and traversal are blocked, internal URLs are blocked, `max_bytes` is clamped, and new local metadata/source material paths are redacted.

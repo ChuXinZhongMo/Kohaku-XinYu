@@ -1,12 +1,12 @@
 # XinYu v1.0-RC Core Refactor Plan
 
 Version target: v1.0-RC  
-Current baseline: v0.8.10, NapCatQQ + AstrBot shell + Python Core Bridge  
+Current baseline: v0.8.14, NapCatQQ + native QQ gateway + Python Core Bridge
 Design goal: build a low-latency, memory-centered, emotionally continuous digital-life runtime while preserving the current safety gates, QQ bridge contract, and review-only stable-memory mutation rules.
 
 ## 1. Architectural Direction
 
-XinYu v1.0-RC will split the current large bridge-and-state implementation into a small asynchronous core package named `xinyu_v1`. The existing `xinyu_core_bridge.py`, `custom/*_engine.py`, Markdown memory files, and AstrBot shell plugin will remain compatible during the migration, but new runtime decisions will flow through typed services:
+XinYu v1.0-RC will split the current large bridge-and-state implementation into a small asynchronous core package named `xinyu_v1`. The existing `xinyu_core_bridge.py`, `xinyu_qq_gateway.py`, `custom/*_engine.py`, and Markdown memory files will remain compatible during the migration, but new runtime decisions will flow through typed services:
 
 1. `Gateway` receives a normalized turn from QQ, CLI, maintenance, or proactive triggers.
 2. `HybridRouter` decides Fast Path or Slow Path using intent, risk, memory pressure, emotional intensity, and required tool depth.
@@ -14,7 +14,7 @@ XinYu v1.0-RC will split the current large bridge-and-state implementation into 
 4. `EmotionStateMachine` updates continuous emotional vectors with inertia, decay, saturation limits, and contradiction handling.
 5. `ReasoningRuntime` runs either a deterministic/local response path or the existing core model path.
 6. `AutoHealingScheduler` runs only when idle, consolidating memories, checking deadlocks, and producing reviewable maintenance artifacts.
-7. `ResponseController` applies final voice, safety, QQ bubble, and no-service-tone gates before returning to AstrBot.
+7. `ResponseController` applies final voice, safety, QQ bubble, and no-service-tone gates before returning to the gateway.
 
 ## 2. Target Directory Tree
 
@@ -95,7 +95,6 @@ KohakuTerrarium-main/examples/agent-apps/xinyu/
       safety.py
     integrations/
       __init__.py
-      astrbot_contract.py
       napcat_contract.py
       kohaku_runtime.py
       legacy_custom_engines.py
@@ -138,7 +137,7 @@ KohakuTerrarium-main/examples/agent-apps/xinyu/
   Adds optional v1 dependencies such as `qdrant-client`, `chromadb`, `numpy`, `pydantic`, and `anyio`. Qdrant is the preferred production backend; Chroma is the local fallback; JSONL remains the emergency degraded mode.
 
 - `xinyu_core_bridge.py`  
-  Remains the public HTTP bridge entrypoint for AstrBot. In v1.0-RC it becomes a thin compatibility shell that normalizes incoming payloads, calls `xinyu_v1.app.XinYuV1App`, and preserves current `/chat`, `/probe`, `/proactive`, `/learning/ingest`, and maintenance behavior.
+  Remains the public HTTP bridge entrypoint for the native QQ gateway and other local callers. In v1.0-RC it becomes a thin compatibility shell that normalizes incoming payloads, calls `xinyu_v1.app.XinYuV1App`, and preserves current `/chat`, `/probe`, `/proactive`, `/learning/ingest`, and maintenance behavior.
 
 ### `xinyu_v1` Core Package
 
@@ -172,19 +171,19 @@ KohakuTerrarium-main/examples/agent-apps/xinyu/
   Defines typed inbound and outbound turn models: `InboundTurn`, `ActorContext`, `AttachmentRef`, `BridgeReply`, and `GatewayMetadata`.
 
 - `xinyu_v1/gateway/normalizer.py`  
-  Converts raw AstrBot, CLI, proactive, and maintenance payloads into a canonical `InboundTurn` with privacy scope, source channel, ownership markers, and attachment metadata.
+  Converts raw native gateway, CLI, proactive, and maintenance payloads into a canonical `InboundTurn` with privacy scope, source channel, ownership markers, and attachment metadata.
 
 - `xinyu_v1/gateway/bridge_gateway.py`  
   Implements the HTTP bridge-facing adapter used by `xinyu_core_bridge.py`, including token validation boundaries and async request handling.
 
 - `xinyu_v1/gateway/qq_gateway.py`  
-  Encodes QQ/NapCat/AstrBot-specific session semantics, private/group distinctions, owner-user hints, and message-type normalization.
+  Encodes QQ/NapCat-specific session semantics, private/group distinctions, owner-user hints, and message-type normalization.
 
 - `xinyu_v1/gateway/maintenance_gateway.py`  
   Creates synthetic maintenance and idle turns without letting them masquerade as human conversation.
 
 - `xinyu_v1/gateway/compatibility.py`  
-  Preserves v0.8.10 response fields, notes, claim IDs, memory mutation flags, and error shapes so the current AstrBot shell does not need a hard cutover.
+  Preserves v0.8 response fields, notes, claim IDs, memory mutation flags, and error shapes so the current native gateway does not need a hard cutover.
 
 ### Hybrid Routing Layer
 
@@ -323,11 +322,8 @@ KohakuTerrarium-main/examples/agent-apps/xinyu/
 
 ### Integrations Layer
 
-- `xinyu_v1/integrations/astrbot_contract.py`  
-  Documents and validates the exact JSON contract shared with `XinYu-AstrBot-Shell/plugins/xinyu_bridge/main.py`.
-
 - `xinyu_v1/integrations/napcat_contract.py`  
-  Holds QQ/NapCat assumptions that must remain stable across AstrBot adapter changes.
+  Holds QQ/NapCat/native-gateway assumptions that must remain stable across gateway changes.
 
 - `xinyu_v1/integrations/kohaku_runtime.py`  
   Wraps the existing KohakuTerrarium runtime invocation, controller config, and app session lifecycle.
@@ -535,7 +531,7 @@ Required new tests:
 - Auto-healing refuses to run while a human request is active.
 - Deadlock inspector reports stale queues without mutating protected layers.
 - Response controller blocks service-tone and blank outputs.
-- Existing AstrBot shell contract remains compatible.
+- Existing native QQ gateway contract remains compatible.
 
 Existing smoke tests to preserve:
 
@@ -592,7 +588,7 @@ The initial RC should run in shadow mode first: v1 computes route, retrieval, an
 
 XinYu v1.0-RC is acceptable when:
 
-- The HTTP bridge remains compatible with the current AstrBot shell plugin.
+- The HTTP bridge remains compatible with the current native QQ gateway.
 - Simple greetings and no-memory probes complete through Fast Path.
 - Relationship, learning, and conflict turns route through Slow Path.
 - Semantic memory retrieval works through Qdrant or Chroma, with JSONL fallback.
@@ -601,4 +597,3 @@ XinYu v1.0-RC is acceptable when:
 - Idle auto-healing can run a dry-run maintenance pass without visible chat.
 - Existing Phase 5 readiness and behavior smokes still pass.
 - New v1 unit tests cover gateway, routing, memory, emotion, auto-healing, and response gates.
-

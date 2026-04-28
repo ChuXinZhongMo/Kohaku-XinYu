@@ -1,14 +1,16 @@
 # XinYu Repository Consolidation Plan
 
-This plan tracks the work needed to turn this repository from a KohakuTerrarium
-source snapshot with a XinYu app into a clearly presented XinYu project.
+This plan tracks the work needed to keep the repository presented as XinYu
+instead of a generic KohakuTerrarium source snapshot.
 
 ## Principles
 
 - Keep XinYu runnable.
-- Do not commit local secrets, logs, QQ runtime data, or live memory state.
-- Do not delete the vendored KohakuTerrarium source until XinYu has a clean
-  dependency path.
+- Do not commit local secrets, logs, QQ runtime data, live memory state, or local
+  gateway configuration.
+- Keep the vendored KohakuTerrarium source until XinYu has a clean dependency
+  path.
+- Keep public docs aligned with the current native QQ gateway chain.
 - Move in small commits that can be reviewed and reverted independently.
 
 ## Phase 1 - Project Identity
@@ -18,24 +20,24 @@ Status: completed
 - [x] Replace root `README.md` with a XinYu-facing overview.
 - [x] Replace root `ROADMAP.md` with a XinYu roadmap.
 - [x] Add this `Plan.md` as the execution plan.
-- [x] Add a short upstream-framework note so the vendored source snapshot is
-  intentional instead of confusing.
-- [x] Replace GitHub issue / PR templates that still speak as KohakuTerrarium.
+- [x] Mark the vendored KohakuTerrarium source as an implementation dependency.
+- [x] Replace GitHub issue / PR templates that still speak as upstream
+  KohakuTerrarium.
 - [x] Replace upstream framework CI with a lightweight XinYu syntax and privacy
   check.
-- [x] Disable or rewrite release automation that is meant for upstream
-  KohakuTerrarium publishing.
 
-## Phase 2 - Bring QQ Adapter Into The Repository
+## Phase 2 - QQ Runtime Chain
 
 Status: completed
 
-- [x] Add `integrations/astrbot/`.
-- [x] Copy the XinYu AstrBot shell plugin source into the integration directory.
-- [x] Copy install / start / stop scripts that are useful for local operation.
-- [x] Copy shell smoke-test tools.
-- [x] Exclude shell logs, live AstrBot data, caches, and local secrets.
-- [x] Link the integration from the root README and XinYu app README.
+- [x] Remove the old repository-managed AstrBot integration source.
+- [x] Add the native QQ gateway: `xinyu_qq_gateway.py`.
+- [x] Add start / stop scripts for the native QQ gateway.
+- [x] Document the current chain:
+  `NapCatQQ -> xinyu_qq_gateway.py -> xinyu_core_bridge.py -> XinYu Core`.
+- [x] Keep `xinyu_qq_gateway.config.json` ignored because it contains local
+  runtime configuration.
+- [x] Update GitHub About, README, app README, and architecture diagram.
 
 ## Phase 3 - Repository Structure Cleanup
 
@@ -54,32 +56,27 @@ Status: completed
 - [x] Add `examples/agent-apps/xinyu/learning/`.
 - [x] Split learning material into `self_found/` and `owner_supplied/`.
 - [x] Keep downloaded materials, papers, repository snapshots, extracted text,
-  and manifest data out of Git.
+  and private manifest data out of Git.
 - [x] Add `xinyu_learning_library.py` for URL, GitHub, file, and folder intake.
 - [x] Add stage support to move registered items into `source_materials`.
 - [x] Add `learning_library_smoke.py`.
 
 ## Phase 4 - Runtime Polish
 
-Status: pending
+Status: in progress
 
-- [ ] Add a single startup checklist for Core + AstrBot + NapCat.
-- [ ] Add a single recovery checklist for proactive QQ delivery.
-- [ ] Make `xinyu_status.py` the canonical health command in all docs.
-- [ ] Keep smoke checks green after every bridge or integration change.
+- [x] Add a single deployment runbook for Core + native QQ gateway + NapCat.
+- [x] Make `xinyu_status.py` the canonical health command in public docs.
+- [x] Add `deployment_status_smoke.py` and `runtime_readiness_smoke.py`.
+- [ ] Keep smoke checks green after every bridge or gateway change.
+- [ ] Reduce stale historical references to the removed AstrBot chain in old
+  project-plan documents.
 
 ## Phase 5 - Release Marker
 
 Status: pending
 
-- [ ] Tag `v0.1.0` after docs, integration layout, and privacy boundaries are
-  stable.
+- [ ] Tag `v0.1.0` after docs, native QQ gateway layout, and privacy boundaries
+  are stable.
 - [ ] Add release notes describing what is real, what is local-only, and what is
   still experimental.
-
-## Current Execution Scope
-
-This pass executed Phase 1 and the safe parts of Phase 2.
-
-The cleanup that could remove or move upstream framework files is intentionally
-left for a later pass because XinYu still depends on the local framework source.
