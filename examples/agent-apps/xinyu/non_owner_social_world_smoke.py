@@ -49,6 +49,16 @@ def _read(root: Path, rel: str) -> str:
     return path.read_text(encoding="utf-8-sig")
 
 
+def _person_profile_rels(root: Path) -> set[str]:
+    people_dir = root / "memory/people"
+    if not people_dir.exists():
+        return set()
+    return {
+        path.relative_to(root).as_posix()
+        for path in people_dir.glob("person_*.md")
+    }
+
+
 def _score(text: str, key: str) -> int:
     for line in text.splitlines():
         if line.strip().startswith(f"- {key}: "):
@@ -154,6 +164,7 @@ def main() -> int:
     tracked = sorted(set(CORE_MEMORY_FILES + BASE_TRACKED_FILES + [repeated_profile, negative_profile]))
     restore_paths = _discover_restore_files(root, tracked) if args.restore_after else tracked
     before_restore = _snapshot(root, restore_paths)
+    before_person_profiles = _person_profile_rels(root)
     before = {rel: before_restore.get(rel) for rel in tracked}
     failures: list[str] = []
     adapter_result = {"decisions": [], "allowed_events": 0, "blocked_events": 0, "held_events": 0}
@@ -239,6 +250,11 @@ def main() -> int:
                 print("-", failure)
     finally:
         if args.restore_after:
+            root_resolved = root.resolve()
+            for rel in sorted(_person_profile_rels(root) - before_person_profiles):
+                path = (root / rel).resolve()
+                if path.is_relative_to(root_resolved):
+                    path.unlink()
             _restore_snapshot(root, before_restore)
             print("=== RESTORE ===")
             print("tracked and volatile runtime files restored")

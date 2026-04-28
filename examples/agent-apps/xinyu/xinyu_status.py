@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import socket
@@ -12,9 +13,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from xinyu_runtime_security import bridge_source_version
+
 
 DEFAULT_CORE_URL = "http://127.0.0.1:8765"
-DEFAULT_ASTRBOT_ROOT = Path("D:/XinYu/AstrBot")
+DEFAULT_QQ_GATEWAY_CONFIG = Path(__file__).resolve().with_name("xinyu_qq_gateway.config.json")
 
 
 @dataclass
@@ -35,6 +38,32 @@ def extract_value(text: str, field: str, default: str = "unknown") -> str:
     return match.group(1).strip() if match else default
 
 
+def mask_private_identifier(value: str) -> str:
+    return re.sub(r"\d{5,}", lambda m: m.group(0)[:2] + "***" + m.group(0)[-2:], value)
+
+
+def redact_local_path(value: str) -> str:
+    text = str(value)
+    lowered = text.lower()
+    if lowered.endswith("xinyu_core_bridge.py"):
+        return "<xinyu_core_bridge.py>"
+    if "xinyu_qq_gateway" in lowered:
+        return "<xinyu_qq_gateway>"
+    if "kohakuterrarium-main" in lowered and "examples" in lowered and "xinyu" in lowered:
+        return "<xinyu_dir>"
+    if re.search(r"(?i)([a-z]:\\|/users/|/home/|\\\\)", text):
+        return "<local_path>"
+    return text
+
+
+def redact_core_data(data: dict[str, Any]) -> dict[str, Any]:
+    redacted = dict(data)
+    for key in ("xinyu_dir", "memory_root"):
+        if key in redacted:
+            redacted[key] = redact_local_path(str(redacted[key]))
+    return redacted
+
+
 def load_json(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
@@ -43,6 +72,42 @@ def load_json(path: Path) -> dict[str, Any]:
     except Exception:
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def file_sha256(path: Path) -> str:
+    if not path.exists() or not path.is_file():
+        return ""
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def plugin_source_digest(path: Path) -> str:
+    if not path.exists() or not path.is_dir():
+        return ""
+    digest = hashlib.sha256()
+    for file_path in sorted(path.iterdir(), key=lambda p: p.name.lower()):
+        if not file_path.is_file() or file_path.suffix.lower() not in {".py", ".yaml", ".json"}:
+            continue
+        digest.update(file_path.name.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(file_sha256(file_path).encode("ascii"))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def extract_shell_version(path: Path) -> str:
+    text = read_text(path)
+    match = re.search(r'(?m)^SHELL_VERSION\s*=\s*["\']([^"\']+)["\']', text)
+    return match.group(1).strip() if match else "unknown"
+
+
+def extract_gateway_version(path: Path) -> str:
+    text = read_text(path)
+    match = re.search(r'(?m)^GATEWAY_VERSION\s*=\s*["\']([^"\']+)["\']', text)
+    return match.group(1).strip() if match else "unknown"
 
 
 def http_json(url: str, timeout: float = 3.0) -> tuple[bool, dict[str, Any] | str]:
@@ -87,28 +152,45 @@ def has_established_local(port: int) -> bool:
     return any("ESTABLISHED" in line and "127.0.0.1" in line for line in netstat_lines(port))
 
 
-def check_core(core_url: str) -> tuple[list[Check], dict[str, Any]]:
+def check_core(core_url: str, expected_version: str) -> tuple[list[Check], dict[str, Any]]:
     ok, data = http_json(f"{core_url.rstrip('/')}/health")
     if not ok:
         return [Check("core_bridge", False, str(data))], {}
     assert isinstance(data, dict)
+    autonomous = data.get("autonomous_maintenance")
+    auto_detail = ""
+    if isinstance(autonomous, dict):
+        auto_detail = (
+            f" autonomous={autonomous.get('enabled', 'unknown')}"
+            f"/task={autonomous.get('task_running', 'unknown')}"
+            f" runs={autonomous.get('run_count', 'unknown')}"
+            f" next={autonomous.get('next_run_at', 'unknown')}"
+        )
     detail = (
         f"version={data.get('version', 'unknown')} "
         f"sessions={data.get('sessions', 'unknown')} "
         f"closed={data.get('closed', 'unknown')}"
+        f"{auto_detail}"
     )
-    return [Check("core_bridge", bool(data.get("ok")), detail)], data
+    running_version = str(data.get("version", "unknown"))
+    return [
+        Check("core_bridge", bool(data.get("ok")), detail),
+        Check(
+            "core_bridge_version",
+            bool(running_version == expected_version),
+            f"running={running_version} source={expected_version}",
+        ),
+    ], data
 
 
 def check_ports() -> list[Check]:
     checks = [
-        Check("astrbot_dashboard_6185", tcp_connect("127.0.0.1", 6185), "tcp connect 127.0.0.1:6185"),
-        Check("astrbot_onebot_6199", tcp_connect("127.0.0.1", 6199), "tcp connect 127.0.0.1:6199"),
+        Check("xinyu_qq_gateway_6199", tcp_connect("127.0.0.1", 6199), "tcp connect 127.0.0.1:6199"),
         Check("napcat_webui_6099", tcp_connect("127.0.0.1", 6099), "tcp connect 127.0.0.1:6099"),
     ]
     checks.append(
         Check(
-            "napcat_to_astrbot_ws",
+            "napcat_to_xinyu_qq_gateway_ws",
             has_established_local(6199),
             "local ESTABLISHED connection on 6199",
         )
@@ -116,25 +198,27 @@ def check_ports() -> list[Check]:
     return checks
 
 
-def check_astrbot_config(astrbot_root: Path) -> list[Check]:
-    cfg_path = astrbot_root / "data/config/xinyu_bridge_config.json"
-    plugin_path = astrbot_root / "data/plugins/xinyu_bridge/main.py"
-    metadata_path = astrbot_root / "data/plugins/xinyu_bridge/metadata.yaml"
-    cfg = load_json(cfg_path)
-    proactive_enabled = bool(cfg.get("proactive_enabled"))
-    target = str(cfg.get("proactive_target_session") or "")
-    plugin_text = read_text(plugin_path)
-    metadata = read_text(metadata_path)
+def check_qq_gateway_config(root: Path, config_path: Path) -> list[Check]:
+    cfg = load_json(config_path)
+    gateway_path = root / "xinyu_qq_gateway.py"
+    version = extract_gateway_version(gateway_path)
+    owner_ids = cfg.get("owner_user_ids")
+    whitelist_ids = cfg.get("whitelist_user_ids")
+    owner_count = len(owner_ids) if isinstance(owner_ids, list) else 0
+    whitelist_count = len(whitelist_ids) if isinstance(whitelist_ids, list) else 0
+    group_prefixes = cfg.get("group_trigger_prefixes")
+    group_prefix_count = len(group_prefixes) if isinstance(group_prefixes, list) else 0
     return [
-        Check("astrbot_plugin_installed", plugin_path.exists(), str(plugin_path)),
+        Check("qq_gateway_source_present", gateway_path.exists(), f"version={version}"),
+        Check("qq_gateway_config_present", bool(cfg), redact_local_path(str(config_path)) if cfg else "missing"),
+        Check("qq_gateway_enabled", bool(cfg.get("enabled")), f"value={cfg.get('enabled', 'missing')}"),
+        Check("qq_gateway_core_url", str(cfg.get("core_chat_url", "")).endswith("/chat"), str(cfg.get("core_chat_url", ""))),
+        Check("qq_gateway_whitelist", owner_count > 0 and whitelist_count > 0, f"owners={owner_count} whitelist={whitelist_count}"),
         Check(
-            "astrbot_plugin_version",
-            'SHELL_VERSION = "0.3.0"' in plugin_text or "version: 0.3.0" in metadata,
-            "expected xinyu_bridge 0.3.0",
+            "qq_gateway_group_trigger",
+            group_prefix_count > 0,
+            f"mode={cfg.get('group_trigger_mode', 'missing')} prefixes={group_prefix_count}",
         ),
-        Check("astrbot_config_present", bool(cfg), str(cfg_path)),
-        Check("proactive_enabled", proactive_enabled, f"value={proactive_enabled}"),
-        Check("proactive_target_session", bool(target), target or "missing"),
     ]
 
 
@@ -151,7 +235,7 @@ def status_fields(root: Path) -> dict[str, str]:
         "qq_send_permission": extract_value(proactive, "qq_send_permission", "missing"),
         "candidate_message": extract_value(proactive, "candidate_message", "missing"),
         "last_claim_status": extract_value(dispatch, "last_claim_status", "missing"),
-        "last_claim_id": extract_value(dispatch, "last_claim_id", "missing"),
+        "last_claim_id": mask_private_identifier(extract_value(dispatch, "last_claim_id", "missing")),
         "last_ack_status": extract_value(dispatch, "last_ack_status", "missing"),
         "adapter_error": extract_value(dispatch, "adapter_error", "missing"),
         "ai_gate_status": extract_value(gate, "gate_status", "missing"),
@@ -160,6 +244,15 @@ def status_fields(root: Path) -> dict[str, str]:
         "ai_review_stable_profile": extract_value(review, "stable_profile_write_permission", "missing"),
         "capability_proactive_qq_send": extract_value(capability, "proactive_qq_send", "missing"),
         "capability_private_scope": extract_value(capability, "private_file_scope", "missing"),
+        "capability_codex_operator": extract_value(capability, "codex_as_eye_and_hand", "missing"),
+        "capability_codex_workspace": redact_local_path(extract_value(capability, "codex_download_workspace", "missing")),
+        "capability_qq_external_private": extract_value(capability, "qq_external_private_bridge", "missing"),
+        "capability_qq_group": extract_value(capability, "qq_group_bridge", "missing"),
+        "capability_qq_priority_passive_group": extract_value(
+            capability,
+            "qq_priority_passive_learning_group",
+            "missing",
+        ),
     }
 
 
@@ -184,7 +277,11 @@ def check_state(root: Path) -> list[Check]:
         Check(
             "capability_zones",
             fields["capability_proactive_qq_send"] != "missing",
-            f"proactive_qq_send={fields['capability_proactive_qq_send']}",
+            (
+                f"proactive_qq_send={fields['capability_proactive_qq_send']} "
+                f"codex={fields['capability_codex_operator']} group={fields['capability_qq_group']} "
+                f"passive_group={fields['capability_qq_priority_passive_group']}"
+            ),
         ),
     ]
 
@@ -203,7 +300,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Read-only XinYu runtime status summary.")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parent)
     parser.add_argument("--core-url", default=DEFAULT_CORE_URL)
-    parser.add_argument("--astrbot-root", type=Path, default=DEFAULT_ASTRBOT_ROOT)
+    parser.add_argument("--qq-config", type=Path, default=DEFAULT_QQ_GATEWAY_CONFIG)
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
     return parser
 
@@ -213,14 +310,15 @@ def main() -> int:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     args = build_parser().parse_args()
     root = args.root.resolve()
-    astrbot_root = args.astrbot_root.resolve()
+    qq_config = args.qq_config.resolve()
 
-    core_checks, core_data = check_core(args.core_url)
+    expected_core_version = bridge_source_version(root / "xinyu_core_bridge.py")
+    core_checks, core_data = check_core(args.core_url, expected_core_version)
     port_checks = check_ports()
-    astrbot_checks = check_astrbot_config(astrbot_root)
+    qq_gateway_checks = check_qq_gateway_config(root, qq_config)
     state_checks = check_state(root)
     fields = status_fields(root)
-    all_checks = core_checks + port_checks + astrbot_checks + state_checks
+    all_checks = core_checks + port_checks + qq_gateway_checks + state_checks
 
     if args.json:
         print(
@@ -228,7 +326,7 @@ def main() -> int:
                 {
                     "ok": all(check.ok for check in all_checks if check.name != "dispatch_state"),
                     "checks": [check.__dict__ for check in all_checks],
-                    "core": core_data,
+                    "core": redact_core_data(core_data),
                     "fields": fields,
                 },
                 ensure_ascii=False,
@@ -240,8 +338,8 @@ def main() -> int:
     print_section("XinYu Runtime")
     print_checks(core_checks)
     print_checks(port_checks)
-    print_section("AstrBot Shell")
-    print_checks(astrbot_checks)
+    print_section("XinYu QQ Gateway")
+    print_checks(qq_gateway_checks)
     print_section("XinYu State")
     print_checks(state_checks)
     print_section("Key Fields")

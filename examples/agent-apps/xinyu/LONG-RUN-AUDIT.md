@@ -1,4 +1,4 @@
-# Xinyu Long-Run Audit
+﻿# Xinyu Long-Run Audit
 
 updated_at: 2026-04-26
 status: phase-2-completed
@@ -32,7 +32,7 @@ It should let a reader understand what exists, what passed, and what remains ris
 - Social/human inquiry is no-network policy only; owner privacy requires explicit consent.
 - Real-life input adapters are no-device/no-network policy only; staged events cannot bypass turn mode, interpretation, privacy, or memory thresholds.
 - Dreams can strengthen residue but cannot create reality facts.
-- Negative emotion, distance, disappointment, grievance, and repair residue are allowed.
+- Negative emotion, distance, disappointment, grievance, and return residue are allowed.
 
 ## Residual Risks
 
@@ -47,7 +47,7 @@ It should let a reader understand what exists, what passed, and what remains ris
 - Milestone 13 long-lived session harness is complete: 30 real turns passed with restore, no timeouts, no blank outputs, owner residue visible, and no non-volatile trivial-detail pollution.
 - Milestone 14 owner relationship lived stress suite is complete: 5 owner stress scenarios passed, continuity passed, emotion vector sync passed, and pressure gate passed.
 - Milestone 15 personality voice calibration is complete: 6 voice-calibration scenarios passed, expression tone/runtime passed, behavior regression passed 9/9, and personality detail passed 24/24.
-- Milestone 16 choice and initiative loop is complete: initiative state now covers ask_owner, ask_external_later, stay_silent, defer, refuse, repair_attempt, and step_back with cooldown, source-gate protection, and protected-memory checks.
+- Milestone 16 choice and initiative loop is complete: initiative state now covers ask_owner, ask_external_later, stay_silent, defer, refuse, settle_after_hurt, and step_back with cooldown, source-gate protection, and protected-memory checks.
 - Milestone 17 dream/reflection/growth cycle is complete: multi-day cycle validation passed with dream reality boundary intact, reflection consuming dream residue, archive holding under active residue, and personality growth remaining review-only.
 - Milestone 18 non-owner social world deepening is complete: repeated non-owner familiarity, capped ordinary closeness, negative guardedness, group-context routing, non-owner adapter candidates, and owner-memory protection are validated.
 - Milestone 19 AI self-iteration review path is complete: q-006 now produces owner-visible review proposals for architecture, personality pressure, expression preference, and safety boundaries without direct stable-memory mutation.

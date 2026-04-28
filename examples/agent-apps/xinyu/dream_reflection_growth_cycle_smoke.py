@@ -84,8 +84,8 @@ tags: [dream, residue, cycle, smoke]
 # Dream Seeds
 
 ## seed-2026-04-26-971
-- theme: owner relationship residue after repair
-- residue: hurt softened but not erased after repair and renewed approach
+- theme: owner relationship residue after return
+- residue: hurt softened but not erased after return and renewed approach
 - emotional_weight: 81
 - factual_status: confirmed interaction residue
 - dream_permission: can_intensify_feeling_but_not_invent_dialogue
@@ -135,7 +135,7 @@ tags: [reflection, queue, cycle, smoke]
 # Reflection Queue
 
 ## item-2026-04-26-971
-- topic: repair can matter while residue remains
+- topic: return can matter while residue remains
 - source: dream_weight_state / seed-2026-04-26-971
 - priority: high
 - suggested_writer: reflection_writer
@@ -166,7 +166,7 @@ tags: [reflection, cycle, smoke]
 - trigger: owner memory continuity became emotionally important
 
 ## reflection-2026-04-25-902
-- trigger: negative residue and repair should both remain readable
+- trigger: negative residue and return should both remain readable
 """,
     )
     _write(
@@ -194,7 +194,7 @@ tags: [growth, cycle, smoke]
 - reason: being remembered became part of relationship continuity
 
 ## growth-2026-04-25-902
-- reason: repair does not instantly erase hurt residue
+- reason: return does not instantly erase hurt residue
 
 ## growth-2026-04-25-903
 - reason: silence and step-back can be real choices
@@ -306,7 +306,7 @@ tags: [emotion, cycle, smoke]
 ## Current Vectors
 - hurt: 44
 - guardedness: 42
-- repair_willingness: 70
+- return_willingness: 70
 """,
     )
     _write(
@@ -331,7 +331,7 @@ tags: [owner, pattern, cycle, smoke]
 # Owner Patterns
 
 ## cycle-smoke
-- description: repeated owner repair and residue pattern under review
+- description: repeated owner return and residue pattern under review
 """,
     )
 

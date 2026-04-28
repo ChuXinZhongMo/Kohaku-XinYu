@@ -1,4 +1,4 @@
-# 新加项目计划（桌面 docx 提取）
+﻿# 新加项目计划（桌面 docx 提取）
 
 - source_file: C:\Users\26921\Desktop\新加项目计划.docx
 - copied_docx: project-plans/xinyu-new-project-plan.docx
@@ -9,7 +9,7 @@
 - Xinyu 待补方向
 - P0：证明 Xinyu 不是普通 persona bot
 - 1. 关系变化长期记忆
-- - 让 Xinyu 能持续记住 owner 和她之间发生过的靠近、伤害、修复、沉默、回归。
+- - 让 Xinyu 能持续记住 owner 和她之间发生过的靠近、伤害、回到身边、沉默、回归。
 - - 后续对话必须能自然继承这些变化，而不是每轮重置。
 - 2. 情绪残留机制稳定化
 - - 道歉、安慰、重新靠近不应立刻清空负面残留。

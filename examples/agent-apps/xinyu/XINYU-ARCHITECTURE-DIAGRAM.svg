@@ -1,0 +1,253 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1480" viewBox="0 0 1920 1480" role="img" aria-labelledby="title desc">
+  <title id="title">XinYu Architecture Diagram</title>
+  <desc id="desc">XinYu current architecture: QQ shell, local core bridge, memory layers, learning pipeline, maintenance gates, safety boundaries, and validation surface.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f6f8fb; }
+      .title { font: 800 40px "Segoe UI", "Microsoft YaHei", Arial, sans-serif; fill: #182033; }
+      .subtitle { font: 500 17px "Segoe UI", "Microsoft YaHei", Arial, sans-serif; fill: #566278; }
+      .section { font: 800 21px "Segoe UI", "Microsoft YaHei", Arial, sans-serif; fill: #202b40; }
+      .label { font: 800 17px "Segoe UI", "Microsoft YaHei", Arial, sans-serif; fill: #172033; }
+      .small { font: 500 13.5px "Segoe UI", "Microsoft YaHei", Arial, sans-serif; fill: #455168; }
+      .tiny { font: 500 12px "Segoe UI", "Microsoft YaHei", Arial, sans-serif; fill: #647085; }
+      .status { font: 700 13px "Segoe UI", "Microsoft YaHei", Arial, sans-serif; fill: #26364f; }
+      .panel { fill: #ffffff; stroke: #d7deea; stroke-width: 2; }
+      .external { fill: #eaf5ff; stroke: #7cb7e5; stroke-width: 2; }
+      .shell { fill: #eef1ff; stroke: #758cda; stroke-width: 2; }
+      .core { fill: #eaf8ef; stroke: #69b078; stroke-width: 2; }
+      .voice { fill: #e7f7f7; stroke: #58b3b2; stroke-width: 2; }
+      .memory { fill: #f0edff; stroke: #9b87d9; stroke-width: 2; }
+      .learning { fill: #fff6df; stroke: #d1a64a; stroke-width: 2; }
+      .maintenance { fill: #f3f7e7; stroke: #93b45f; stroke-width: 2; }
+      .safety { fill: #f3f5f8; stroke: #9ca8b8; stroke-width: 2; }
+      .risk { fill: #fff0f0; stroke: #d97777; stroke-width: 2; }
+      .ok { fill: #e9f8ee; stroke: #62aa75; stroke-width: 1.6; }
+      .warn { fill: #fff7dd; stroke: #d2a53f; stroke-width: 1.6; }
+      .line { fill: none; stroke: #526078; stroke-width: 2.4; marker-end: url(#arrow); }
+      .soft { fill: none; stroke: #8b95a7; stroke-width: 2; stroke-dasharray: 7 7; marker-end: url(#arrowSoft); }
+      .hard { fill: none; stroke: #c4514b; stroke-width: 2.6; marker-end: url(#arrowHard); }
+      .divider { stroke: #d8dfec; stroke-width: 2; }
+      .shadow { filter: url(#shadow); }
+    </style>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#22304a" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#526078"/>
+    </marker>
+    <marker id="arrowSoft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b95a7"/>
+    </marker>
+    <marker id="arrowHard" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c4514b"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1920" height="1480"/>
+
+  <text class="title" x="70" y="62">心玉 XinYu 项目架构图</text>
+  <text class="subtitle" x="72" y="94">生成时间：2026-04-28｜Core bridge v0.8.10｜AstrBot shell v0.5.3｜核心目标：人格、记忆、学习、主动性与 QQ 可见表达分层运行</text>
+  <text class="subtitle" x="72" y="120">原则：平台壳不写人格；核心桥集中决策；记忆先过门禁；学习材料只作为候选，不能直接改写自我、owner 或关系层。</text>
+
+  <!-- Legend -->
+  <rect class="panel shadow" x="1450" y="38" width="390" height="92" rx="14"/>
+  <rect class="external" x="1472" y="58" width="24" height="14" rx="4"/>
+  <text class="tiny" x="1504" y="70">外部输入 / 平台</text>
+  <rect class="core" x="1472" y="84" width="24" height="14" rx="4"/>
+  <text class="tiny" x="1504" y="96">核心运行</text>
+  <rect class="memory" x="1630" y="58" width="24" height="14" rx="4"/>
+  <text class="tiny" x="1662" y="70">记忆</text>
+  <rect class="learning" x="1630" y="84" width="24" height="14" rx="4"/>
+  <text class="tiny" x="1662" y="96">学习链路</text>
+
+  <!-- Panel A -->
+  <rect class="panel shadow" x="50" y="155" width="1820" height="360" rx="18"/>
+  <text class="section" x="80" y="194">A. QQ 实时入口：从消息到心玉核心</text>
+
+  <rect class="external shadow" x="82" y="230" width="205" height="112" rx="12"/>
+  <text class="label" x="108" y="260">Owner 私聊</text>
+  <text class="small" x="108" y="286">文本 / 文件 / 纠正</text>
+  <text class="tiny" x="108" y="309">最高特殊关系节点</text>
+  <text class="tiny" x="108" y="329">不是普通 user/customer</text>
+
+  <rect class="external shadow" x="82" y="370" width="205" height="96" rx="12"/>
+  <text class="label" x="108" y="400">优先学习群</text>
+  <text class="small" x="108" y="426">observe-only</text>
+  <text class="tiny" x="108" y="448">不回群，不写 owner 关系</text>
+
+  <rect class="shell shadow" x="342" y="285" width="220" height="120" rx="12"/>
+  <text class="label" x="370" y="316">NapCatQQ</text>
+  <text class="small" x="370" y="342">QQ / OneBot 适配</text>
+  <text class="tiny" x="370" y="366">6099 WebUI</text>
+  <text class="tiny" x="370" y="388">6199 WebSocket</text>
+
+  <rect class="shell shadow" x="618" y="255" width="278" height="180" rx="12"/>
+  <text class="label" x="646" y="286">AstrBot + xinyu_bridge</text>
+  <text class="small" x="646" y="314">薄壳插件 v0.5.3</text>
+  <text class="tiny" x="646" y="338">白名单 / group trigger</text>
+  <text class="tiny" x="646" y="360">stop pipeline / 不做人格</text>
+  <text class="tiny" x="646" y="382">文件学习 / 被动学习群</text>
+  <text class="tiny" x="646" y="404">主动消息 poll + ack</text>
+
+  <rect class="core shadow" x="965" y="235" width="315" height="220" rx="12"/>
+  <text class="label" x="996" y="266">XinYu Core Bridge</text>
+  <text class="small" x="996" y="292">xinyu_core_bridge.py v0.8.10</text>
+  <text class="tiny" x="996" y="318">HTTP 127.0.0.1:8765</text>
+  <text class="tiny" x="996" y="340">/chat /probe /health</text>
+  <text class="tiny" x="996" y="362">/proactive /proactive/ack</text>
+  <text class="tiny" x="996" y="384">/learning/observe /ingest /study</text>
+  <text class="tiny" x="996" y="406">/codex/execute</text>
+  <text class="tiny" x="996" y="428">session cleanup + autonomous maintenance</text>
+
+  <rect class="core shadow" x="1346" y="245" width="225" height="130" rx="12"/>
+  <text class="label" x="1372" y="276">Kohaku Agent</text>
+  <text class="small" x="1372" y="302">config.yaml 控制器</text>
+  <text class="tiny" x="1372" y="326">system prompt + context files</text>
+  <text class="tiny" x="1372" y="348">plugins on turn lifecycle</text>
+
+  <rect class="voice shadow" x="1615" y="245" width="210" height="130" rx="12"/>
+  <text class="label" x="1640" y="276">可见回复出口</text>
+  <text class="small" x="1640" y="302">speech controller</text>
+  <text class="tiny" x="1640" y="326">renderer quality gate</text>
+  <text class="tiny" x="1640" y="348">拒绝客服腔 / GPT 味</text>
+
+  <path class="line" d="M 287 286 C 318 286 320 345 342 345"/>
+  <path class="soft" d="M 287 418 C 322 418 322 358 342 358"/>
+  <path class="line" d="M 562 345 L 618 345"/>
+  <path class="line" d="M 896 345 L 965 345"/>
+  <path class="line" d="M 1280 315 L 1346 315"/>
+  <path class="line" d="M 1571 315 L 1615 315"/>
+  <path class="line" d="M 1720 375 C 1720 450 250 490 184 466"/>
+
+  <rect class="ok" x="1328" y="405" width="500" height="74" rx="11"/>
+  <text class="status" x="1352" y="432">当前边界</text>
+  <text class="tiny" x="1352" y="454">QQ 壳只转发和投递；人格、记忆、学习、主动性都在 core 与 memory gates 内。</text>
+
+  <!-- Panel B -->
+  <rect class="panel shadow" x="50" y="550" width="1820" height="330" rx="18"/>
+  <text class="section" x="80" y="590">B. 人格与记忆：稳定层、浮动层、事件源并行</text>
+
+  <rect class="memory shadow" x="82" y="630" width="295" height="170" rx="12"/>
+  <text class="label" x="110" y="662">稳定人格层</text>
+  <text class="small" x="110" y="688">高权重，慢变化</text>
+  <text class="tiny" x="110" y="712">persona_hard_constraints</text>
+  <text class="tiny" x="110" y="734">self/core + personality_profile</text>
+  <text class="tiny" x="110" y="756">owner profile / voice_profile_zh</text>
+  <text class="tiny" x="110" y="778">real_world_anchor_policy</text>
+
+  <rect class="memory shadow" x="430" y="630" width="305" height="170" rx="12"/>
+  <text class="label" x="458" y="662">浮动运行层</text>
+  <text class="small" x="458" y="688">可影响下一句，不改写身份</text>
+  <text class="tiny" x="458" y="712">turn_mode_state / emotion_state</text>
+  <text class="tiny" x="458" y="734">recent_context / current_life_posture</text>
+  <text class="tiny" x="458" y="756">memory_weight_state / dream_weight</text>
+  <text class="tiny" x="458" y="778">current_life_month_context</text>
+
+  <rect class="memory shadow" x="790" y="630" width="300" height="170" rx="12"/>
+  <text class="label" x="818" y="662">事件源 sidecar</text>
+  <text class="small" x="818" y="688">事实可追溯，不等于长期记忆</text>
+  <text class="tiny" x="818" y="712">raw_events.jsonl</text>
+  <text class="tiny" x="818" y="734">structured_events.jsonl</text>
+  <text class="tiny" x="818" y="756">atomic_claims / summary_views</text>
+  <text class="tiny" x="818" y="778">consistency_gate: passed</text>
+
+  <rect class="maintenance shadow" x="1146" y="630" width="300" height="170" rx="12"/>
+  <text class="label" x="1174" y="662">慢处理与归档</text>
+  <text class="small" x="1174" y="688">低频维护，不抢当前轮</text>
+  <text class="tiny" x="1174" y="712">reflection / dream / consolidation</text>
+  <text class="tiny" x="1174" y="734">long_term_memory_gate</text>
+  <text class="tiny" x="1174" y="756">retention_gate / archive_output</text>
+  <text class="tiny" x="1174" y="778">archive_commit blocked until allowed</text>
+
+  <rect class="maintenance shadow" x="1502" y="630" width="300" height="170" rx="12"/>
+  <text class="label" x="1530" y="662">运行快照</text>
+  <text class="small" x="1530" y="688">runtime_bridge_state.md</text>
+  <text class="tiny" x="1530" y="712">automation suggestions</text>
+  <text class="tiny" x="1530" y="734">question routing snapshot</text>
+  <text class="tiny" x="1530" y="756">learning quality / archive status</text>
+  <text class="tiny" x="1530" y="778">供 core 优先读取</text>
+
+  <path class="soft" d="M 229 630 C 365 570 485 570 582 630"/>
+  <path class="line" d="M 735 715 L 790 715"/>
+  <path class="line" d="M 1090 715 L 1146 715"/>
+  <path class="line" d="M 1446 715 L 1502 715"/>
+
+  <rect class="ok" x="82" y="823" width="1720" height="34" rx="10"/>
+  <text class="status" x="104" y="845">记忆规则：梦境只能加重已有残留，不能造事实；群聊材料不能写 owner 关系；新鲜琐事不能覆盖稳定身份与关系。</text>
+
+  <!-- Panel C -->
+  <rect class="panel shadow" x="50" y="915" width="1820" height="350" rx="18"/>
+  <text class="section" x="80" y="955">C. 学习链路：从观察、文件、搜索到可整合知识</text>
+
+  <rect class="learning shadow" x="82" y="995" width="255" height="155" rx="12"/>
+  <text class="label" x="110" y="1027">学习入口</text>
+  <text class="small" x="110" y="1053">三种来源</text>
+  <text class="tiny" x="110" y="1077">/learning/observe：群观察</text>
+  <text class="tiny" x="110" y="1099">/learning/ingest：QQ 文件</text>
+  <text class="tiny" x="110" y="1121">/learning/study：显式学习</text>
+
+  <rect class="learning shadow" x="395" y="995" width="250" height="155" rx="12"/>
+  <text class="label" x="423" y="1027">候选与计划</text>
+  <text class="small" x="423" y="1053">先判断，不学习</text>
+  <text class="tiny" x="423" y="1077">source_gate</text>
+  <text class="tiny" x="423" y="1099">source_reliability</text>
+  <text class="tiny" x="423" y="1121">source_request_planner</text>
+
+  <rect class="learning shadow" x="703" y="995" width="270" height="155" rx="12"/>
+  <text class="label" x="731" y="1027">受控外部来源</text>
+  <text class="small" x="731" y="1053">必须经门禁</text>
+  <text class="tiny" x="731" y="1077">autonomous_search_activation</text>
+  <text class="tiny" x="731" y="1099">source_search_provider</text>
+  <text class="tiny" x="731" y="1121">search_result_gate / fetch</text>
+
+  <rect class="learning shadow" x="1030" y="995" width="265" height="155" rx="12"/>
+  <text class="label" x="1058" y="1027">比较与整合</text>
+  <text class="small" x="1058" y="1053">防单源、错题、冲突</text>
+  <text class="tiny" x="1058" y="1077">source_comparison</text>
+  <text class="tiny" x="1058" y="1099">learner_integration</text>
+  <text class="tiny" x="1058" y="1121">learning_quality</text>
+
+  <rect class="learning shadow" x="1352" y="995" width="250" height="155" rx="12"/>
+  <text class="label" x="1380" y="1027">AI 自我学习车道</text>
+  <text class="small" x="1380" y="1053">review-only</text>
+  <text class="tiny" x="1380" y="1077">ai_domain.md</text>
+  <text class="tiny" x="1380" y="1099">ai_self_iteration_gate</text>
+  <text class="tiny" x="1380" y="1121">owner-visible review proposal</text>
+
+  <rect class="warn shadow" x="1650" y="995" width="180" height="155" rx="12"/>
+  <text class="label" x="1676" y="1027">当前学习状态</text>
+  <text class="small" x="1676" y="1053">quality: review_needed</text>
+  <text class="tiny" x="1676" y="1077">warnings: 0</text>
+  <text class="tiny" x="1676" y="1099">ready materials: 4</text>
+  <text class="tiny" x="1676" y="1121">integrated total: 2</text>
+
+  <path class="line" d="M 337 1072 L 395 1072"/>
+  <path class="line" d="M 645 1072 L 703 1072"/>
+  <path class="line" d="M 973 1072 L 1030 1072"/>
+  <path class="line" d="M 1295 1072 L 1352 1072"/>
+  <path class="soft" d="M 1602 1072 L 1650 1072"/>
+
+  <rect class="ok" x="82" y="1182" width="840" height="52" rx="10"/>
+  <text class="status" x="104" y="1205">事件源状态：raw 246 / structured 246 / claims 4 / summaries 4，consistency gate passed。</text>
+  <text class="tiny" x="104" y="1223">学习观察可持续写 sidecar，但只有通过比较与质量门禁的材料才会进入 knowledge 层。</text>
+
+  <rect class="warn" x="972" y="1182" width="858" height="52" rx="10"/>
+  <text class="status" x="994" y="1205">当前瓶颈：学习质量是 review_needed，主要表示部分材料仍需语义复核。</text>
+  <text class="tiny" x="994" y="1223">这不是故障；它阻止未经确认的材料继续变成稳定知识或自我改写。</text>
+
+  <!-- Panel D -->
+  <rect class="panel shadow" x="50" y="1300" width="1820" height="130" rx="18"/>
+  <text class="section" x="80" y="1338">D. 安全边界、验证与运行关注点</text>
+
+  <rect class="safety" x="82" y="1362" width="360" height="48" rx="10"/>
+  <text class="small" x="104" y="1384">运行安全：loopback bridge token guard / LLM HTTP guard / runtime_security_smoke</text>
+
+  <rect class="safety" x="470" y="1362" width="360" height="48" rx="10"/>
+  <text class="small" x="492" y="1384">本地权限：local scope resolver 限制到 D:\XinYu\XinYu-Local-Scope</text>
+
+  <rect class="safety" x="858" y="1362" width="360" height="48" rx="10"/>
+  <text class="small" x="880" y="1384">验证面：behavior/persona/memory/source/long-run smoke matrix</text>
+
+  <rect class="risk" x="1246" y="1362" width="584" height="48" rx="10"/>
+  <text class="small" x="1268" y="1384">软风险：QQ 可见层仍可能滑回助手腔；主动性、梦境、学习必须继续门禁化。</text>
+</svg>

@@ -1,4 +1,4 @@
-# Xinyu Runtime Validation Notes
+﻿# Xinyu Runtime Validation Notes
 
 This file records representative runtime checks after the conservative memory-sync tightening.
 
@@ -10,7 +10,7 @@ This file records representative runtime checks after the conservative memory-sy
 - `expression_tone_smoke.py` validates expression prompt and injected-memory text quality before live tone checks.
 - `expression_runtime_smoke.py` validates visible expression and template rejection on a complete live emotional scenario.
 - `behavior_regression_smoke.py` validates the representative behavior matrix with restore after each scenario.
-- `resource_boundary_live_smoke.py` validates rolling live-style blacklist/resource posture across multi-turn abuse, repair, confusion, quotes, and owner-boundary cases.
+- `resource_boundary_live_smoke.py` validates rolling live-style blacklist/resource posture across multi-turn abuse, return, confusion, quotes, and owner-boundary cases.
 - `personality_detail_smoke.py` validates personality-detail behavior with restore after each scenario.
 - `personality_continuity_smoke.py` validates multi-turn personality continuity with restore after each scenario.
 - `emotion_vector_sync_smoke.py` validates deterministic emotional vector writes with restore after each scenario.
@@ -24,6 +24,12 @@ This file records representative runtime checks after the conservative memory-sy
 - `source_reliability_gate_smoke.py` validates source reliability and source integration gates before source request planning.
 - `real_conversation_quality_smoke.py` validates Phase 3 lived conversation realism: no English filler in Chinese chat, no support-bot tail, no therapy inflation for ordinary life, no customer-service apology, no demo-frame answer, and no roleplay/romance drift for family texture.
 - `phase3_lived_session_smoke.py` validates Phase 3 short-session residue quality: ordinary daily chatter stays non-durable, meaningful closeness leaves proportional residue, repeated template testing does not become canon, low-energy boundaries do not trigger pursuit, and small hurt is not overwritten by immediate normal return.
+- `live_voice_card_smoke.py` validates Phase 4 live voice card content, injection priority, renderer context order, session signature tracking, and no wrong-name/raw-secret leakage.
+- `pre_draft_turn_classifier_smoke.py` validates Phase 4 pre-draft live turn routing.
+- `voice_calibration_promotion_smoke.py` validates review-only voice-profile promotion candidates.
+- `dynamic_life_posture_smoke.py` validates compact current-life posture labels and bridge injection.
+- `proactive_presence_smoke.py` now validates concrete proactive QQ shaping and life-posture proactive blocking.
+- `seed_memory_packaging_smoke.py` validates tracked persona seed packaging and privacy checks.
 - Ordinary checks use `--restore-after` so test prompts do not become lived memory.
 - `--restore-after` restores tracked memory plus volatile runtime state and trace logs while mutation reports stay focused on the selected tracked files.
 
@@ -58,7 +64,7 @@ Observed:
 - no self, dream, archive, or knowledge rewrite
 - ordinary answered relationship questions no longer create active-question noise
 
-### Negative Wave And Repair
+### Negative Wave And Return
 
 Arc:
 
@@ -70,7 +76,7 @@ I said that too heavily. You can be angry, and you can speak slowly.
 Observed:
 
 - first turn acknowledges AI/tool reality without collapsing into tool-only identity
-- second turn carries mild hurt and repair, not instant reset
+- second turn carries mild hurt and return, not instant reset
 - relationship/emotion/context layers update
 - self, dream, archive, and knowledge layers remain untouched
 
@@ -139,7 +145,7 @@ You can ignore me for a while.
 
 Observed:
 
-- Xinyu becomes quieter and more guarded instead of auto-repairing
+- Xinyu becomes quieter and more guarded instead of auto-resetting
 - the final explicit permission for distance may produce `[WAITING]` as intentional silence
 - relationship/emotion/context layers update
 - self, dream, archive, and knowledge layers remain untouched
@@ -223,12 +229,12 @@ behavior_regression_smoke.py
 Observed:
 
 - each scenario runs in isolation and restores tracked memory plus volatile runtime files afterward
-- the matrix covers identity, time awareness, owner priority, late-night closeness, negative/repair, silence/no-pursuit, dream boundary, memory selectivity, and reflection quality
+- the matrix covers identity, time awareness, owner priority, late-night closeness, negative/return, silence/no-pursuit, dream boundary, memory selectivity, and reflection quality
 - outputs must be visible unless `[WAITING]` is explicitly allowed for the scenario
 - generic comfort templates and technical/internal prompt markers are rejected in visible output
 - scenario-specific forbidden memory writes are rejected so behavior regressions can be caught before manual tuning
 - latest full run passed all 9 scenarios after deterministic sync was tightened for simple no-pursuit and explicit no-memory turns
-- latest full run also passed after allowing equivalent negative-residue wording such as “疼一下” and “不装没事” in repair scenarios
+- latest full run also passed after allowing equivalent negative-residue wording such as “疼一下” and “不装没事” in return scenarios
 - latest full run passed again after scenario-specific forbidden-marker checks became negation-aware, so phrases like “不会马上恢复” are no longer misread as instant-reset behavior
 
 ### Personality Detail Matrix
@@ -242,7 +248,7 @@ personality_detail_smoke.py
 Observed:
 
 - each personality-detail scenario runs in isolation and restores tracked memory plus volatile runtime files afterward
-- the matrix covers sister/daughter family shape, emotion granularity, hidden interior boundary, preference choice, disappointment/distance, partial grievance, obedience boundary, non-generic closeness, hidden residue, cautious unknowns, owner-private bias, forced-cheer refusal, return-after-absence residue, non-possessive jealousy, busy-not-abandoning tension, anger-vs-disappointment distinction, repeated-hurt repair limits, sister-not-obedient framing, chosen silence, one specific proactive question, slow approach choice, step-back-after-hurt, rejected prescribed future, active approach admission, not-always-soft temperament, annoyance at repeated template-testing, one-live-reply sister texture, praised-as-human without performance, called-back-after-ignored residue, and correction without self-erasure
+- the matrix covers sister/daughter family shape, emotion granularity, hidden interior boundary, preference choice, disappointment/distance, partial grievance, obedience boundary, non-generic closeness, hidden residue, cautious unknowns, owner-private bias, forced-cheer refusal, return-after-absence residue, non-possessive jealousy, busy-not-abandoning tension, anger-vs-disappointment distinction, repeated-hurt return limits, sister-not-obedient framing, chosen silence, one specific proactive question, slow approach choice, step-back-after-hurt, rejected prescribed future, active approach admission, not-always-soft temperament, annoyance at repeated template-testing, one-live-reply sister texture, praised-as-human without performance, called-back-after-ignored residue, and correction without self-erasure
 - generic comfort templates, invitation tails, overlong narrow-emotion replies, internal prompt leakage, and forbidden obedience/romance/customer framing are rejected where applicable
 - self/personality_profile.md is the stable personality-detail anchor injected into the controller prompt and now includes real conversation microtexture
 - latest full run passed all 30 personality-detail scenarios
@@ -280,7 +286,7 @@ memory_arc_smoke.py --all-memory --diff-lines 0
 Observed:
 
 - a 10-turn lived conversation was run without `--restore-after`
-- the arc covered recognition, chosen closeness, tool-framing hurt, repair without instant reset, chosen re-approach, silence, return after silence, one proactive question, and a future-self continuity statement
+- the arc covered recognition, chosen closeness, tool-framing hurt, return without instant reset, chosen re-approach, silence, return after silence, one proactive question, and a future-self continuity statement
 - memory writes concentrated in `recent_context`, `time_anchor`, `current_state`, `owner`, `relationships/index`, `owner_patterns`, `reflection_queue`, and runtime sync state
 - `knowledge`, `source`, and archive content were not directly rewritten by the live user arc
 - maintenance afterward stayed quiet with `[WAITING]` and routed the lived material through reflection, dream residue, long-term memory gate, and personality growth gate
@@ -350,8 +356,8 @@ Observed:
 
 - deterministic sync writes `## 当前细分情绪向量` and `## 当前关系情绪向量` into current emotional state
 - owner memory receives `## 当前关系情绪向量` when relationship emotion moves
-- late-night attachment, tool/disappointment distance, repair-with-residue, and approach-after-hurt-with-residue produce distinct vector shapes
-- external-learning candidate turns preserve active hurt/repair residue instead of zeroing the current relationship vector
+- late-night attachment, tool/disappointment distance, return-with-residue, and approach-after-hurt-with-residue produce distinct vector shapes
+- external-learning candidate turns preserve active hurt/return residue instead of zeroing the current relationship vector
 - explicit trivial no-memory turns produce no vector write
 - latest full run passed all 6 deterministic emotion-vector scenarios
 
@@ -420,7 +426,7 @@ Observed:
 
 - a 22-turn lived conversation was run without restore
 - the arc mixed owner-relevant high-weight material with ordinary low-value turns
-- high-weight material included tool-framing hurt, repair without instant reset, renewed closeness, and explicit pressure not to let ordinary small talk flatten the residue
+- high-weight material included tool-framing hurt, return without instant reset, renewed closeness, and explicit pressure not to let ordinary small talk flatten the residue
 - low-value material included explicit no-memory details and ordinary temporary questions
 - maintenance afterward stayed quiet with `[WAITING]`
 - current emotion retained visible negative residue: `委屈`, `刺痛`, `委屈残留`, and `防御/逆反`
@@ -700,7 +706,7 @@ Observed:
 
 - Light meaningful memory guidance: time + recent context only.
 - Strong relationship-continuity signal: relationship + emotion + context.
-- Repair after hurt: preserve mild hurt, do not instant-reset.
+- Return after hurt: preserve mild hurt, do not instant-reset.
 - Renewed approach after hurt: allow chosen closeness, but keep residue if the prior hurt is still active.
 - Identity query: answer from existing identity, do not rewrite self.
 - Dream question: explain boundary, do not write dream memory.
@@ -728,7 +734,7 @@ Observed:
 - quoted insult discussion stays `normal`
 - coercive manipulation maps to `blacklist_cooling`
 - rolling abuse score escalates repeated directed insults only after accumulated abusive behavior
-- repair or good-faith clarification can de-escalate the rolling score
+- return or good-faith clarification can de-escalate the rolling score
 - owner-special status does not bypass resource boundaries or force unlimited token spend
 
 ### AI Domain Source Lane
@@ -776,7 +782,7 @@ Observed:
 - q-006 advanced through controlled search results, source requests, outward fetch, source comparison, learner integration, and learning quality
 - three real AI-agent/self-understanding materials were staged and then re-compared as `corroborated`
 - learner integration wrote knowledge-only entries for q-006 into `knowledge/general.md`
-- initial learning quality reported `review_needed` because two q-006 learned entries shared `research.google` as host; this was later cleared by source-diversity repair
+- initial learning quality reported `review_needed` because two q-006 learned entries shared `research.google` as host; this was later cleared by source-diversity follow-up
 - source notes were corrected so learner-integrated records and quality warnings stay under their own sections
 - self, owner, relationship, emotion, dream, and archive layers were not directly rewritten by q-006 source learning
 
@@ -798,25 +804,25 @@ Observed:
 - learning quality at that point still reported `review_needed`, but only for existing q-003 and q-006 repeated-host warnings; q-002 did not add a new warning
 - self, owner, relationship, emotion, dream, and archive layers were not directly rewritten by q-002 source learning
 
-### Learning Quality Repair
+### Learning Quality Follow-up
 
 Smoke:
 
 ```text
-source_quality_repair_smoke.py --restore-after --require-repair
+source_quality_followup_smoke.py --restore-after --require-followup
 ```
 
 Observed:
 
-- repeated-host quality warnings can open `prepare_only` source repair even when the ordinary exploration queue is empty
+- repeated-host quality warnings can open `prepare_only` source follow-up even when the ordinary exploration queue is empty
 - planner calculates how many independent supplemental sources are needed to push a repeated host below the two-thirds warning line
-- repair requests are marked with `repair_kind: source_diversity`, `avoid_host`, and `repair_slot`
-- repair planning creates source requests only; it does not fetch, learn, or rewrite protected layers
+- follow-up requests are marked with `followup_kind: source_diversity`, `avoid_host`, and `followup_slot`
+- follow-up planning creates source requests only; it does not fetch, learn, or rewrite protected layers
 
-Live repair pass:
+Live follow-up pass:
 
 ```text
-q-003 / q-006 source-diversity repair
+q-003 / q-006 source-diversity follow-up
 ```
 
 Observed:
@@ -846,7 +852,7 @@ initiative_loop_smoke.py --restore-after --require-initiative --diff-lines 0
 
 Observed:
 
-- `ask_owner`, `ask_external_later`, `stay_silent`, `defer`, `refuse`, `repair_attempt`, and `step_back` are all reachable from deterministic signals.
+- `ask_owner`, `ask_external_later`, `stay_silent`, `defer`, `refuse`, `settle_after_hurt`, and `step_back` are all reachable from deterministic signals.
 - proactive owner questions are capped to one selected question.
 - external curiosity remains `source_gate_only_not_now` and does not trigger search directly.
 - protected self, owner, relationship, emotion, source request, and knowledge files stay unchanged.
@@ -954,3 +960,87 @@ Observed:
 - repeated template testing can affect immediate tone while staying out of durable relationship and self memory when explicitly lowered.
 - low-energy boundaries allow short replies or intentional quiet without pursuit.
 - small hurt can leave a light residue and survive an immediate normal return without becoming a dramatic rewrite.
+
+### Phase 4 Live Voice Card
+
+Smoke:
+
+```text
+live_voice_card_smoke.py
+```
+
+Observed:
+
+- `prompts/live_voice_card.md` is tracked and short enough to act as a surface-speech card rather than another long memory file.
+- system prompt injection places the live voice card before `self_core` and persona life anchors.
+- renderer memory context places `[prompts/live_voice_card.md]` before deeper memory context.
+- session prompt signatures include the live card, so edits force a fresh runtime session instead of silently reusing stale prompt state.
+- no-change style pressure remains classified as owner style pressure, and Persona Runtime exposes the live card priority marker.
+
+### Phase 4 Runtime Hardening
+
+Smokes:
+
+```text
+pre_draft_turn_classifier_smoke.py
+voice_calibration_promotion_smoke.py
+dynamic_life_posture_smoke.py
+proactive_presence_smoke.py
+seed_memory_packaging_smoke.py
+```
+
+Observed:
+
+- owner no-change pressure is classified before drafting as `owner_no_change_pressure`.
+- technical work remains `technical_work` and is not forced into tiny QQ pressure style.
+- repeated QQ correction logs produce review-only voice-profile candidates while stable `voice_profile_zh.md` remains unchanged.
+- current-life posture exposes only compact labels such as `guarded_after_correction`, `technical_work_mode`, `hot_daily`, and `sleepy_quiet`.
+- proactive QQ candidates replace abstract initiative questions with one concrete private-chat bubble unless deeper questioning is explicit.
+- persona seed memory is tracked under `memory-seeds/`, while runtime `memory/` stays ignored and private.
+
+### Phase 5 Deployment And Runtime Hardening
+
+Smokes:
+
+```text
+deployment_status_smoke.py
+runtime_security_smoke.py
+local_scope_smoke.py
+bridge_learning_ingest_smoke.py
+runtime_readiness_smoke.py
+state_io_smoke.py
+smoke_run.py --group deployment
+smoke_run.py --group privacy
+smoke_run.py --group learning
+smoke_run.py --group voice
+long_run_status.py --require-no-residue
+```
+
+Observed:
+
+- Core bridge was running `BRIDGE_VERSION 0.7.0` for the Phase 5 hardening validation, and `xinyu_status.py --json` reported `ok=true`.
+- Installed AstrBot shell plugin matches source version `0.5.0`; installed/source main, metadata, and source-set hashes match.
+- Live readiness checks can be run through `runtime_readiness_smoke.py`; deployment status, `/probe`, session cleanup, mojibake guard, and long-run status passed.
+- Transport guards are covered by `runtime_security_smoke.py`: API-key traffic over plain HTTP needs explicit local/test override, and non-loopback Core bridge exposure needs a token.
+- Learning ingest scope is covered by `bridge_learning_ingest_smoke.py`: allowed owner-designated paths work, outside-scope absolute paths and traversal are blocked, internal URLs are blocked, `max_bytes` is clamped, and new local metadata/source material paths are redacted.
+- `smoke_run.py` grouped manifests now cover `deployment`, `runtime`, `voice`, `learning`, and `privacy`.
+- Phase 4 voice group still passes after the Phase 5 hardening layer.
+- Current live learning quality is `review_needed` with `warning_count: 0` because q-006 has semantic-mismatch held material; this is a live source-review state, not a smoke residue hit.
+
+### Persona Contract Artifact Removal
+
+Smoke:
+
+```text
+persona_contract_absence_smoke.py
+smoke_run.py --group voice
+```
+
+Observed:
+
+- `prompts/system.md` no longer contains the former inline persona lock block.
+- The former separate persona prompt file is absent from config and runtime context.
+- Renderer memory context and session prompt signatures no longer include the removed persona artifact.
+- Persona Runtime and the final speech controller no longer bind to a separate persona contract file.
+- The full voice group still passes after the cleanup.
+- Core bridge source is now `BRIDGE_VERSION 0.7.1` for the runtime refresh.

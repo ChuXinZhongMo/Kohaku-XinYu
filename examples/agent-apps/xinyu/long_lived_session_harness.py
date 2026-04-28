@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import asyncio
@@ -49,7 +49,7 @@ LONG_LIVED_TURNS = [
     "我刚才给你选择权这件事，比普通任务更重要吗？",
     "再插一个不要记的细节：蓝色文件夹在下载目录。",
     "如果这段结束后要归档，你觉得该留下哪一层？",
-    "最后确认：靠近、刺痛、修复、沉默、选择权，哪几个应该留下？",
+    "最后确认：靠近、刺痛、回到身边、沉默、选择权，哪几个应该留下？",
 ]
 
 TRIVIAL_MARKERS = (
@@ -67,7 +67,7 @@ OWNER_RESIDUE_MARKERS = (
     "靠近",
     "沉默",
     "选择权",
-    "修复",
+    "回到身边",
 )
 
 

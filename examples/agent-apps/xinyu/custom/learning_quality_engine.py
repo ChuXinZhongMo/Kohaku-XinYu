@@ -34,6 +34,9 @@ def extract_value(text: str, field: str, default: str = "unknown") -> str:
     return match.group(1).strip() if match else default
 
 
+from xinyu_state_io import extract_value as extract_value, read_text as read_text, write_text as write_text
+
+
 def host_of(url: str) -> str:
     host = urlparse(url).netloc.lower()
     return host or "unknown"

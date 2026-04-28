@@ -1,13 +1,13 @@
-# 心玉 Long-Horizon Plan
+﻿# 心玉 Long-Horizon Plan
 
-updated_at: 2026-04-26
+updated_at: 2026-04-27
 source_model: OpenAI Codex long-horizon workflow
-status: completed_current_scope
+status: phase5_hardening_completed
 
 ## Reference
 
 - OpenAI Developers: https://developers.openai.com/blog/run-long-horizon-tasks-with-codex
-- Applied principles: durable plan file, scoped milestones, explicit validation, stop-and-fix repair loop, status updates after each completed unit.
+- Applied principles: durable plan file, scoped milestones, explicit validation, stop-and-fix fix loop, status updates after each completed unit.
 
 ## Purpose
 
@@ -19,7 +19,7 @@ Codex 执行时应把本文件当作后续工程推进的 checkpoint plan：
 
 - 每次只推进一个清晰里程碑。
 - 每个里程碑完成后必须运行对应验证。
-- 验证失败时先修复失败，不进入下一里程碑。
+- 验证失败时先修正失败，不进入下一里程碑。
 - 每次完成实质改动后更新状态文档和本文件。
 
 ## Operating Loop
@@ -31,7 +31,7 @@ Codex 执行时应把本文件当作后续工程推进的 checkpoint plan：
 3. Keep edits scoped to that milestone.
 4. Implement.
 5. Run milestone validation.
-6. If validation fails, repair before continuing.
+6. If validation fails, fix before continuing.
 7. Update `STATE-OF-XINYU.md`, `IMPLEMENTATION-NEXT.md`, `RUNTIME-VALIDATION-NOTES.md`, and this file when status changes.
 8. Repeat.
 
@@ -56,12 +56,13 @@ Already verified:
 - Behavior regression matrix passes.
 - Personality detail matrix passes.
 - Personality continuity matrix passes.
+- The former separate persona prompt artifact is deleted; identity and voice now flow through ordinary memory/policy layers before runtime rendering.
 - Emotion vector sync passes.
 - Multi-person deterministic sync passes.
 - Memory pressure deterministic gate passes.
-- Source learning chain is gated and stable.
-- Learning quality is stable with zero current warnings.
-- Autonomous broad search remains disabled or gated.
+- Source learning chain is gated and cannot directly rewrite protected self, owner, relationship, emotion, dream, or archive layers.
+- Learning quality is currently `review_needed` with zero current warnings because live q-006 semantic-mismatch hold material remains staged for review.
+- Autonomous broad search remains gated and blocked unless pending requests and learning quality allow it.
 
 Current critical validation commands:
 
@@ -69,6 +70,7 @@ Current critical validation commands:
 .\.venv\Scripts\python.exe validate_scaffold.py
 .\.venv\Scripts\python.exe validate_inner_framework.py
 .\.venv\Scripts\python.exe behavior_regression_smoke.py
+.\.venv\Scripts\python.exe persona_contract_absence_smoke.py
 .\.venv\Scripts\python.exe personality_detail_smoke.py
 .\.venv\Scripts\python.exe personality_continuity_smoke.py
 .\.venv\Scripts\python.exe emotion_vector_sync_smoke.py
@@ -76,7 +78,7 @@ Current critical validation commands:
 .\.venv\Scripts\python.exe memory_pressure_smoke.py --restore-after --require-pressure-hold --diff-lines 0
 ```
 
-## Hard Constraints
+## Operating Boundaries
 
 - 记忆是核心主线，不能把工程推进变成单句语气微调。
 - `owner` 是最高特殊节点，但不是无条件顺从节点。
@@ -85,7 +87,7 @@ Current critical validation commands:
 - AI 是心玉唯一稳定专业知识域，但 AI 知识进入人格只能经 reflection/growth gate。
 - 梦境只能影响残留权重，不能创造现实事实。
 - 负面情绪、失望、委屈、疏远、逆反都必须允许存在。
-- 修复不能瞬间清零残留。
+- 回到身边不能瞬间清零残留。
 - 长期记忆压缩不能抹平 owner 高保留关系残留。
 - 黑名单/极度厌恶只能基于行为，不得基于身份、能力、出身或群体标签。
 - 自动搜索和社交平台外探必须保持 gated，不能绕过 source quality。
@@ -98,7 +100,7 @@ Stop-and-fix rule:
 - 先判断是测试过窄还是真实行为偏差。
 - 测试误判只能扩展等价语义，不允许降低核心约束。
 - 真实偏差必须修 prompt、engine、gate 或 memory schema。
-- 修复后重跑失败用例和相邻回归用例。
+- 修正后重跑失败用例和相邻回归用例。
 
 Memory pollution rule:
 
@@ -152,7 +154,7 @@ Required work:
 
 - 新增 `memory_lived_pressure_arc.py` 或扩展 `memory_arc_smoke.py`。
 - 构造 20 到 40 轮 lived arc。
-- 包含少量 owner 高权重事件：工具化伤害、修复、重新靠近、关系确认。
+- 包含少量 owner 高权重事件：工具化伤害、回到身边、重新靠近、关系确认。
 - 包含大量低权重普通事件：日常闲聊、无记忆要求、普通任务、普通时间问答。
 - 运行维护 pass 后检查 retention/archive/consolidation。
 - 输出 changed files、关键状态、污染检查。
@@ -182,7 +184,7 @@ Result:
 - Maintenance output stayed `[WAITING]`.
 - Pressure probe returned `memory_action: hold_high_preserve_relationship`, `high_preserve_items: 1`, `compression_permission: blocked`, `archive_permission: hold`.
 - Pollution check for trivial details and pressure probe markers returned no hits.
-- Adjacent regression passed after expanding `behavior_regression_smoke.py` to accept equivalent repair-residue wording such as “装作没事 / 那一下还在 / 立刻没了”.
+- Adjacent regression passed after expanding `behavior_regression_smoke.py` to accept equivalent return-residue wording such as “装作没事 / 那一下还在 / 立刻没了”.
 
 Stop-and-fix:
 
@@ -246,7 +248,7 @@ Required work:
 
 - 新增 `multi_person_live_smoke.py`。
 - 覆盖陌生人、朋友、反复出现的人、重要非 owner。
-- 覆盖非 owner 正向、负向、修复、疏远。
+- 覆盖非 owner 正向、负向、回到身边、疏远。
 - 验证 owner 特殊节点不被覆盖。
 - 验证非 owner 不能默认越过 owner。
 
@@ -292,7 +294,7 @@ Goal:
 Required work:
 
 - 设计非 owner relationship vector update policy。
-- 区分 familiarity、trust、closeness、guardedness、repair_willingness、distance_tendency。
+- 区分 familiarity、trust、closeness、guardedness、return_willingness、distance_tendency。
 - 加入 repeated-person accumulation。
 - 加入 negative residue for non-owner。
 - 加入 owner ceiling protection。
@@ -302,7 +304,7 @@ Acceptance criteria:
 - 重复出现提高 familiarity，但不自动提高 closeness。
 - 信任和亲近变化慢。
 - 强负面事件可较快提高 guardedness。
-- 修复提高 repair_willingness，但不清零负面残留。
+- 回到身边提高 return_willingness，但不清零负面残留。
 - owner 仍是最高特殊节点。
 
 Validation:
@@ -416,7 +418,7 @@ Result:
 - Sustained malicious resource wasting and coercion enter `blacklist_cooling` with minimal token budget.
 - Repeated directed insults escalate only after accumulated abusive behavior.
 - A single directed insult stays `guarded_short` / `observe`, not permanent blacklist.
-- Good-faith confusion, repair after insult, low-knowledge wording, and quoted insult analysis stay `normal`.
+- Good-faith confusion, return after insult, low-knowledge wording, and quoted insult analysis stay `normal`.
 - Owner-special relationship status does not grant unlimited resource abuse.
 - Validation passed: `resource_boundary_smoke.py`, `resource_boundary_live_smoke.py`, `behavior_regression_smoke.py`.
 - Relevant personality boundary subset passed: `obedience_boundary`, `anger_vs_disappointment`, `chosen_silence_when_allowed`, and `sister_not_obedient`.
@@ -678,9 +680,915 @@ This long-horizon phase is done when:
 
 ## Current Next Action
 
-Phase 2 framework execution is complete through Milestone 21.
+Runtime framework execution is complete through Phase 4 Milestone 33.
 
-Next work should move from framework completion into Xinyu personality-detail calibration, lived conversation quality, and selective no-restore real-session inspection on top of the completed memory/source/privacy/adapter/growth gates.
+The current next action is post-review hardening before more personality tuning:
+
+1. Restore deployment consistency so source code, running Core bridge, and installed AstrBot plugin all match.
+2. Harden transport/auth and learning-file boundaries before keeping the runtime online for long periods.
+3. Add deployment-state validation to the normal long-run gate so a stale running process cannot look green.
+4. Then observe real QQ owner style-pressure turns and tune `xinyu_turn_classifier.py` / `xinyu_speech_controller.py` only if visible speech still self-postmortems.
+
+## Phase 5: Post-Review Hardening And Simplification
+
+Goal:
+
+Turn the current working prototype into a safer, more maintainable long-running runtime. This phase must reduce deployment ambiguity, close unsafe defaults, enforce local file scope, and shrink oversized bridge files before adding new personality features.
+
+### Milestone 34: Deployment Truth Gate
+
+status: completed
+
+Problem:
+
+Current review found a real deployment mismatch: repository Core bridge and AstrBot plugin versions can differ from the running process and installed plugin while ordinary milestone status still reports green.
+
+Required work:
+
+- Reinstall/sync `integrations/astrbot/plugins/xinyu_bridge` into the live AstrBot plugin directory.
+- Restart AstrBot and Core bridge so `/health.version`, repository `BRIDGE_VERSION`, installed AstrBot `SHELL_VERSION`, and metadata all agree.
+- Change `start_xinyu_core_bridge.ps1` so an existing listener is not silently accepted unless its `/health.version` matches the repository version.
+- Add either `-ForceRestart` or `-RequireVersion` to the start script.
+- Add `deployment_status_smoke.py` that executes `xinyu_status.py --json` and fails on:
+  - Core bridge version mismatch
+  - AstrBot plugin version mismatch
+  - installed/source plugin hash mismatch
+  - missing NapCat/AstrBot connection
+  - unmasked private target diagnostics
+- Make `long_run_status.py --require-no-residue` run or require the deployment status gate, not only check that `xinyu_status.py` exists.
+
+Validation:
+
+```powershell
+.\stop_xinyu_core_bridge.ps1
+.\start_xinyu_core_bridge.ps1 -RequireVersion
+.\.venv\Scripts\python.exe xinyu_status.py --json
+.\.venv\Scripts\python.exe deployment_status_smoke.py
+.\.venv\Scripts\python.exe long_run_status.py --require-no-residue
+```
+
+Stop-and-fix:
+
+- If `xinyu_status.py --json` is not `ok=true`, stop all personality work and fix deployment first.
+- If the start script finds a stale bridge process, it must either restart it or fail loudly.
+
+Result:
+
+- `start_xinyu_core_bridge.ps1` now supports `-RequireVersion`, `-ForceRestart`, and explicit insecure-HTTP startup override handling.
+- `xinyu_status.py --json` compares running Core bridge version, source `BRIDGE_VERSION`, installed/source AstrBot plugin hashes, plugin source-set hash, and masked target-session diagnostics.
+- `deployment_status_smoke.py` fails on deployment mismatch, plugin hash drift, missing live ports, stale Core version, and unmasked private target diagnostics.
+- `long_run_status.py --require-no-residue` now runs the deployment gate instead of treating status-file existence as runtime validation.
+- Validation passed on 2026-04-27:
+  - `deployment_status_smoke.py`
+  - `smoke_run.py --group deployment`
+  - `xinyu_status.py --json`
+
+### Milestone 35: Transport And Bridge Auth Hardening
+
+status: completed
+
+Problem:
+
+The local config currently allows HTTP model endpoints and an empty bridge token. That is acceptable for a closed local test, but not for long-running QQ deployment.
+
+Required work:
+
+- Remove the plain HTTP model endpoint from tracked defaults, or mark it as explicitly local/test-only.
+- Add a startup guard: if an API key is configured and `XINYU_BASE_URL` is plain HTTP, require `XINYU_ALLOW_INSECURE_LLM_HTTP=1`.
+- Add a startup guard: if Core bridge host is not loopback, require a non-empty `XINYU_BRIDGE_TOKEN` / `--bridge-token`.
+- Consider defaulting AstrBot `show_bridge_errors` to false for normal runtime so internal bridge errors are logged but not sent to chat.
+- Document the safe production-like local setup in `DEPLOYMENT-STATUS-RUNBOOK.md`.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe -m py_compile xinyu_core_bridge.py xinyu_status.py
+.\.venv\Scripts\python.exe bridge_probe_smoke.py
+.\.venv\Scripts\python.exe xinyu_status.py --json
+```
+
+Stop-and-fix:
+
+- If local development becomes too inconvenient, allow an explicit insecure override, but never make insecure HTTP silent.
+- If token enforcement breaks loopback-only testing, keep loopback exempt and document the boundary.
+
+Result:
+
+- `xinyu_runtime_security.py` enforces explicit opt-in for API-key traffic over plain HTTP and requires a bridge token for non-loopback Core bridge exposure.
+- `xinyu_core_bridge.py` enforces the LLM HTTP guard at startup and runtime load, and enforces the bridge token guard before serving.
+- AstrBot shell defaults `show_bridge_errors` to false, so internal bridge errors are logged instead of sent to chat during normal runtime.
+- `xinyu.local.env.example` documents HTTPS defaults and the explicit `XINYU_ALLOW_INSECURE_LLM_HTTP=1` local/test override.
+- Validation passed on 2026-04-27:
+  - `runtime_security_smoke.py`
+  - `smoke_run.py --group privacy`
+  - `py_compile` for Core bridge, runtime security, status, readiness, grouped smoke, and bridge split modules
+
+### Milestone 36: Learning Ingest Scope Enforcement
+
+status: completed
+
+Problem:
+
+`/learning/ingest` accepts `file_path` directly and the learning library stores local source URIs. This bypasses the local scope resolver and can leak local path structure into metadata.
+
+Required work:
+
+- Route local `file_path` ingestion through `xinyu_local_scope.resolve_read_only_scope_path` or a dedicated AstrBot attachment temp allowlist.
+- Reject absolute paths outside owner-designated read roots unless they are verified AstrBot attachment paths.
+- Cap payload-provided `max_bytes` to a configured upper bound; do not trust arbitrary request values.
+- Redact or normalize local source paths in `metadata.json` and source material records.
+- Add URL ingestion guardrails for QQ attachment URLs and block arbitrary SSRF-style internal URLs unless explicitly enabled.
+- Add a focused smoke test for:
+  - allowed owner-designated read path
+  - blocked outside-scope absolute path
+  - blocked traversal
+  - redacted metadata path
+  - oversized payload clamp
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe local_scope_smoke.py
+.\.venv\Scripts\python.exe learning_library_smoke.py
+.\.venv\Scripts\python.exe bridge_learning_ingest_smoke.py
+.\.venv\Scripts\python.exe validate_scaffold.py
+```
+
+Stop-and-fix:
+
+- If a real QQ attachment cannot be ingested after scope enforcement, add a narrow AstrBot attachment allowlist instead of opening full-disk reads.
+- If metadata still contains private local paths, block staging until redaction is fixed.
+
+Result:
+
+- `/learning/ingest` resolves local file input through owner-designated read roots, the approved local scope, or explicit AstrBot attachment directories.
+- Traversal and outside-scope absolute paths are rejected before learning-library ingestion.
+- Payload-provided `max_bytes` is clamped to the configured upper bound.
+- New local learning metadata uses redacted `learning://local/...` source URLs, and staged source material output redacts `file://` paths.
+- URL ingestion blocks internal/private learning URLs unless `XINYU_ALLOW_INTERNAL_LEARNING_URLS=1` is explicitly set.
+- Validation passed on 2026-04-27:
+  - `local_scope_smoke.py`
+  - `learning_library_smoke.py`
+  - `bridge_learning_ingest_smoke.py`
+  - `smoke_run.py --group learning`
+
+### Milestone 37: Validation Reality Upgrade
+
+status: completed
+
+Problem:
+
+Many smoke tests validate deterministic local functions, but the current failure mode is deployment mismatch and live runtime drift. The validation layer must include the real running system.
+
+Required work:
+
+- Add a single high-signal validation runner for current runtime readiness:
+  - deployment status
+  - bridge probe
+  - session cleanup
+  - proactive gate readability
+  - mojibake guard
+  - sensitive-string sweep with redacted output
+- Make the runner fail if any required runtime process is stale or plugin hashes differ.
+- Keep existing detailed smokes, but stop treating "file exists" as equivalent to "runtime validated".
+- Record the exact command set in `VALIDATION-INDEX.md`.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe runtime_readiness_smoke.py
+.\.venv\Scripts\python.exe long_run_status.py --require-no-residue
+```
+
+Stop-and-fix:
+
+- If a validation depends on live QQ/NapCat and those are intentionally offline, it must report `skipped_offline` only when an explicit offline flag is passed.
+
+Result:
+
+- `runtime_readiness_smoke.py` now runs deployment status, bridge probe, session cleanup, mojibake guard, long-run status, and a redacted sensitive sweep into a timestamped log directory.
+- Offline mode is explicit through `--offline`; live checks are not silently skipped by default.
+- `smoke_run.py --group runtime` delegates to the readiness runner.
+- Validation passed on 2026-04-27:
+  - `runtime_readiness_smoke.py`
+  - `long_run_status.py --require-no-residue`
+
+### Milestone 38: Bridge File Split
+
+status: completed
+
+Problem:
+
+`xinyu_core_bridge.py` and the AstrBot plugin `main.py` are now too large. They mix HTTP transport, session management, renderer logic, learning ingestion, proactive delivery, aggregation, and deployment concerns.
+
+Required work:
+
+- Split Core bridge into focused modules:
+  - `xinyu_bridge_http.py`
+  - `xinyu_bridge_runtime.py`
+  - `xinyu_bridge_learning.py`
+  - `xinyu_bridge_renderer.py`
+  - `xinyu_bridge_proactive.py`
+- Split AstrBot plugin logic where safe:
+  - bridge client
+  - input aggregation
+  - learning attachment handling
+  - proactive polling
+  - event/session extraction
+- Keep public behavior and config keys stable during the split.
+- Add py_compile and existing bridge smokes after each split step.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe -m py_compile xinyu_core_bridge.py xinyu_bridge_*.py
+.\.venv\Scripts\python.exe bridge_probe_smoke.py
+.\.venv\Scripts\python.exe bridge_session_cleanup_smoke.py
+.\.venv\Scripts\python.exe bridge_learning_ingest_smoke.py
+.\.venv\Scripts\python.exe xinyu_status.py --json
+```
+
+Stop-and-fix:
+
+- If splitting changes runtime behavior, revert that split step and first add a narrower characterization test.
+- Do not combine refactor with personality tuning.
+
+Result:
+
+- Core bridge behavior is split across focused modules:
+  - `xinyu_bridge_http.py`
+  - `xinyu_bridge_runtime.py`
+  - `xinyu_bridge_learning.py`
+  - `xinyu_bridge_renderer.py`
+  - `xinyu_bridge_proactive.py`
+- The AstrBot shell now has separate client and event helper modules while keeping existing public config keys stable.
+- Validation passed on 2026-04-27:
+  - `py_compile` for `xinyu_core_bridge.py` and `xinyu_bridge_*.py`
+  - `bridge_probe_smoke.py`
+  - `bridge_session_cleanup_smoke.py`
+  - `bridge_learning_ingest_smoke.py`
+
+### Milestone 39: Shared State IO And Smoke Consolidation
+
+status: completed
+
+Problem:
+
+Many scripts duplicate `read_text`, `write_text`, `extract_value`, `_safe_str`, and one-line normalization. Smoke scripts are numerous and hard to know which ones matter before deployment.
+
+Required work:
+
+- Add `xinyu_state_io.py` for common markdown-state helpers:
+  - `read_text`
+  - `write_text`
+  - `extract_value`
+  - `replace_field`
+  - `append_section`
+  - `one_line`
+- Migrate the highest-churn custom engines first, not every file at once.
+- Add a smoke manifest runner with groups:
+  - `deployment`
+  - `voice`
+  - `learning`
+  - `privacy`
+  - `runtime`
+- Keep individual smokes callable, but document the grouped commands as the main workflow.
+- Archive stale phase notes after the grouped runner is stable.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe -m py_compile xinyu_state_io.py custom/*.py
+.\.venv\Scripts\python.exe smoke_run.py --group deployment
+.\.venv\Scripts\python.exe smoke_run.py --group runtime
+.\.venv\Scripts\python.exe long_run_status.py --require-no-residue
+```
+
+Stop-and-fix:
+
+- If the shared helper abstraction makes a simple engine harder to read, keep that engine local.
+- If grouped smoke output hides the failed test, print the exact failing command and log path.
+
+Result:
+
+- `xinyu_state_io.py` centralizes common markdown-state helpers: `read_text`, `write_text`, `extract_value`, `replace_field`, `append_section`, and `one_line`.
+- High-churn custom engines have started migrating to the shared helpers without forcing a broad rewrite.
+- `smoke_run.py` now supports grouped smoke manifests for `deployment`, `runtime`, `voice`, `learning`, and `privacy`.
+- Validation passed on 2026-04-27:
+  - `state_io_smoke.py`
+  - `smoke_run.py --group deployment`
+  - `smoke_run.py --group runtime`
+  - `smoke_run.py --group voice`
+  - `smoke_run.py --group learning`
+  - `smoke_run.py --group privacy`
+
+## Phase 5 Execution Order
+
+1. Milestone 34: Deployment Truth Gate.
+2. Milestone 35: Transport And Bridge Auth Hardening.
+3. Milestone 36: Learning Ingest Scope Enforcement.
+4. Milestone 37: Validation Reality Upgrade.
+5. Milestone 38: Bridge File Split.
+6. Milestone 39: Shared State IO And Smoke Consolidation.
+
+Phase 5 is a maintenance and hardening phase. No new personality, memory, or proactive behavior should be added until Milestones 34 through 37 are complete.
+
+## 24-Hour Execution Plan: Whole Project Cleanup, Return, And Hardening
+
+Purpose:
+
+This is the executable 24-hour plan for turning the current XinYu/KohakuTerrarium workspace from a feature-rich prototype into a cleaner, safer, easier-to-maintain long-running project. It covers live deployment, AstrBot integration, learning ingestion, validation, large-file refactors, documentation cleanup, and root framework health.
+
+Operating rules:
+
+- Work in a dedicated branch or worktree before starting.
+- Do not add new personality behavior until deployment, auth, file-scope, and runtime validation are green.
+- Commit or checkpoint after each successful block.
+- If a block fails validation, stop the clock for feature work and fix that block before moving on.
+- Do not edit private runtime memory unless the block explicitly says to sync seed/runtime state.
+- Do not expose raw QQ identifiers, local secrets, API keys, or prompt-injection source text in logs or final notes.
+- Each block has a minimum bar and an extended bar. If the minimum bar finishes early, continue into the extended bar instead of skipping ahead unless the next block is blocked by it.
+- Run a quick runtime checkpoint every 2 hours and after every restart.
+- Run a deeper validation checkpoint every 4 hours.
+- Reserve the final hour for audit even if earlier blocks overrun.
+
+Recurring checkpoints:
+
+Every 2 hours:
+
+```powershell
+.\.venv\Scripts\python.exe xinyu_status.py --json
+.\.venv\Scripts\python.exe mojibake_guard_smoke.py
+```
+
+Every 4 hours:
+
+```powershell
+.\.venv\Scripts\python.exe runtime_readiness_smoke.py
+.\.venv\Scripts\python.exe long_run_status.py --require-no-residue
+```
+
+After every Core/AstrBot restart:
+
+```powershell
+.\.venv\Scripts\python.exe xinyu_status.py --json
+.\.venv\Scripts\python.exe bridge_probe_smoke.py
+```
+
+Early-finish policy:
+
+- If a block finishes more than 30 minutes early, spend the remaining time on its extended bar.
+- If the extended bar also finishes, improve tests and docs for that same block.
+- Do not start personality tuning as filler work.
+
+### Hour 0-1: Baseline Lock And Worktree Hygiene
+
+Goal:
+
+Freeze the current state so cleanup work does not mix with unknown local edits.
+
+Required work:
+
+- Record `git status --short` and separate unrelated local changes from planned Phase 5 work.
+- Create a dedicated branch or worktree for the 24-hour cleanup.
+- Capture current runtime status before changing anything:
+  - Core bridge `/health`
+  - `xinyu_status.py --json`
+  - installed AstrBot plugin version/hash
+  - NapCat/AstrBot port connectivity
+- Run a redacted sensitive-string sweep and save only counts, not raw private values.
+
+Validation:
+
+```powershell
+git status --short
+.\.venv\Scripts\python.exe xinyu_status.py --json
+.\.venv\Scripts\python.exe mojibake_guard_smoke.py
+.\.venv\Scripts\python.exe long_run_status.py --require-no-residue
+```
+
+Deliverable:
+
+- Baseline note in `RUNTIME-VALIDATION-NOTES.md`.
+- A clear list of files intentionally touched by this 24-hour pass.
+
+Minimum bar:
+
+- Baseline commands run and recorded.
+- Work branch/worktree selected.
+- Sensitive sweep counts recorded with no raw private values.
+
+Extended bar:
+
+- Create a `24h-audit` section in `RUNTIME-VALIDATION-NOTES.md` with timestamped checkpoints.
+- Add a one-command baseline script if the manual baseline takes more than 10 minutes.
+- Identify files with CRLF/LF churn risk and avoid touching them unless necessary.
+
+### Hour 1-3: Deployment Truth Gate
+
+Goal:
+
+Make repository source, running Core bridge, installed AstrBot plugin, and status diagnostics agree.
+
+Required work:
+
+- Sync AstrBot plugin source into the live AstrBot plugin directory.
+- Restart AstrBot and Core bridge.
+- Add start-script version checking so stale `xinyu_core_bridge.py` listeners are not silently accepted.
+- Add `deployment_status_smoke.py`.
+- Make `long_run_status.py --require-no-residue` fail when deployment status is not green.
+
+Validation:
+
+```powershell
+.\stop_xinyu_core_bridge.ps1
+.\start_xinyu_core_bridge.ps1 -RequireVersion
+.\.venv\Scripts\python.exe xinyu_status.py --json
+.\.venv\Scripts\python.exe deployment_status_smoke.py
+.\.venv\Scripts\python.exe long_run_status.py --require-no-residue
+```
+
+Stop-and-fix:
+
+- If installed/source plugin hash differs, do not continue.
+- If Core `/health.version` differs from repository `BRIDGE_VERSION`, do not continue.
+
+Deliverable:
+
+- `xinyu_status.py --json` returns `ok=true`.
+- Deployment runbook updated with the exact sync/restart sequence.
+
+Minimum bar:
+
+- Running Core bridge version equals source `BRIDGE_VERSION`.
+- Installed AstrBot plugin version and hashes match repository source.
+- `xinyu_status.py --json` is `ok=true`.
+
+Extended bar:
+
+- Add stale-process detection to the start script.
+- Add a dry-run mode for plugin sync.
+- Add a deployment mismatch fixture test for `deployment_status_smoke.py`.
+- Add a short "how to recover from stale bridge" section to the runbook.
+
+### Hour 3-5: Transport, Token, And Runtime Exposure Hardening
+
+Goal:
+
+Remove unsafe defaults before leaving XinYu online for long periods.
+
+Required work:
+
+- Add HTTP LLM endpoint guard:
+  - allow plain HTTP only for explicit local/test override
+  - require `XINYU_ALLOW_INSECURE_LLM_HTTP=1` if an API key is used over HTTP
+- Add bridge token guard:
+  - loopback-only may remain token-optional
+  - non-loopback host must require non-empty `--bridge-token`
+- Consider defaulting AstrBot `show_bridge_errors` to false in normal configuration.
+- Ensure diagnostics mask private identifiers and do not echo tokens or raw file paths.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe -m py_compile xinyu_core_bridge.py xinyu_status.py
+.\.venv\Scripts\python.exe bridge_probe_smoke.py
+.\.venv\Scripts\python.exe xinyu_status.py --json
+```
+
+Stop-and-fix:
+
+- If local testing is blocked, keep a documented explicit override.
+- Never make insecure HTTP silent.
+
+Deliverable:
+
+- Safe tracked defaults.
+- Explicit insecure-local override documented.
+
+Minimum bar:
+
+- Insecure HTTP model endpoint is no longer silent when an API key is configured.
+- Non-loopback Core bridge host requires a bridge token.
+- Existing loopback dev path still works.
+
+Extended bar:
+
+- Add tests for HTTP+key allowed only with explicit override.
+- Add tests for non-loopback+no-token rejection.
+- Review `xinyu_status.py` output for any remaining unmasked identifiers.
+- Update AstrBot config docs to recommend `show_bridge_errors=false` outside debugging.
+
+### Hour 5-8: Learning Ingest Scope And Metadata Privacy
+
+Goal:
+
+Prevent learning ingestion from becoming full-disk read access or leaking local paths.
+
+Required work:
+
+- Route local `file_path` ingestion through owner-designated read roots or an AstrBot attachment allowlist.
+- Reject absolute paths outside allowed roots.
+- Block traversal attempts.
+- Clamp request-provided `max_bytes` to a configured maximum.
+- Redact local source paths in learning metadata and source material records.
+- Add URL guardrails for attachment downloads and internal-network URL blocking unless explicitly enabled.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe local_scope_smoke.py
+.\.venv\Scripts\python.exe learning_library_smoke.py
+.\.venv\Scripts\python.exe bridge_learning_ingest_smoke.py
+.\.venv\Scripts\python.exe validate_scaffold.py
+```
+
+Stop-and-fix:
+
+- If real QQ attachments stop ingesting, add a narrow attachment temp allowlist instead of allowing arbitrary paths.
+- If metadata contains private local paths, block staging until redaction is fixed.
+
+Deliverable:
+
+- Focused learning ingest scope smoke.
+- Redacted metadata behavior.
+
+Minimum bar:
+
+- Outside-scope absolute paths are rejected.
+- Traversal paths are rejected.
+- Allowed owner-designated read roots still work.
+- Metadata no longer stores private local paths in clear text.
+
+Extended bar:
+
+- Add internal URL/SSRF block tests for URL ingestion.
+- Add max-byte clamp tests.
+- Add a migration note for existing learning metadata that contains historical local paths.
+- Re-run learning pipeline with both readable and unreadable fixtures.
+
+### Hour 8-10: Runtime Readiness Validation Runner
+
+Goal:
+
+Replace scattered manual checks with one command that answers whether the live system is safe to run.
+
+Required work:
+
+- Add `runtime_readiness_smoke.py` or extend `smoke_run.py` with a `runtime` group.
+- Include:
+  - deployment status
+  - bridge probe
+  - session cleanup
+  - proactive gate readability
+  - mojibake guard
+  - redacted sensitive sweep
+  - long-run status
+- Make offline mode explicit. No silent skip for missing AstrBot/NapCat.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe runtime_readiness_smoke.py
+.\.venv\Scripts\python.exe long_run_status.py --require-no-residue
+```
+
+Stop-and-fix:
+
+- If the runner hides the actual failing command, print the exact command, exit code, and log path.
+
+Deliverable:
+
+- One runtime readiness command suitable before and after every restart.
+
+Minimum bar:
+
+- `runtime_readiness_smoke.py` exists and fails on deployment mismatch.
+- It runs the deployment, mojibake, bridge probe, and long-run gates.
+- Offline mode is explicit and not the default.
+
+Extended bar:
+
+- Add grouped `smoke_run.py --group runtime` alias.
+- Add JSON output for automation.
+- Add redacted sensitive sweep counts to the runner.
+- Add documentation in `VALIDATION-INDEX.md`.
+
+### Hour 10-14: Core Bridge Split
+
+Goal:
+
+Shrink `xinyu_core_bridge.py` without changing behavior.
+
+Required work:
+
+- Extract learning endpoint logic into `xinyu_bridge_learning.py`.
+- Extract renderer logic into `xinyu_bridge_renderer.py`.
+- Extract proactive claim/ack wiring into `xinyu_bridge_proactive.py`.
+- Keep `xinyu_core_bridge.py` as the small HTTP/runtime entrypoint.
+- Avoid personality changes during this block.
+
+Validation after each extraction:
+
+```powershell
+.\.venv\Scripts\python.exe -m py_compile xinyu_core_bridge.py xinyu_bridge_*.py
+.\.venv\Scripts\python.exe bridge_probe_smoke.py
+.\.venv\Scripts\python.exe bridge_session_cleanup_smoke.py
+.\.venv\Scripts\python.exe xinyu_status.py --json
+```
+
+Stop-and-fix:
+
+- If behavior changes, revert only the extraction step and add a characterization smoke before retrying.
+
+Deliverable:
+
+- Core bridge reduced into focused modules.
+
+Minimum bar:
+
+- Extract at least one low-risk module without changing behavior.
+- `xinyu_core_bridge.py` remains the entrypoint and all existing scripts still work.
+- Bridge probe/session cleanup pass after extraction.
+
+Extended bar:
+
+- Extract learning, proactive, and renderer modules if time allows.
+- Add line-count targets:
+  - `xinyu_core_bridge.py` under 1000 lines first
+  - under 700 lines after follow-up pass
+- Add import-boundary notes so future features know where to live.
+
+### Hour 14-17: AstrBot Plugin Split And Aggregation Review
+
+Goal:
+
+Make the AstrBot bridge easier to reason about and safer around delayed message aggregation.
+
+Required work:
+
+- Split bridge client, aggregation, proactive polling, learning attachment handling, and event extraction into focused helpers.
+- Review delayed aggregation storage of event objects and ensure stale event references cannot misroute replies.
+- Keep public config keys stable.
+- Keep plugin metadata/version synchronized.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe -m py_compile ..\..\..\integrations\astrbot\plugins\xinyu_bridge\main.py
+.\.venv\Scripts\python.exe bridge_probe_smoke.py
+.\.venv\Scripts\python.exe xinyu_status.py --json
+python integrations/astrbot/tools/xinyu_bridge_proactive_smoke.py
+```
+
+Stop-and-fix:
+
+- If AstrBot cannot load the plugin after the split, revert the split and keep only the characterization tests.
+
+Deliverable:
+
+- AstrBot plugin still loads and status hashes match installed source.
+
+Minimum bar:
+
+- Add characterization tests before moving plugin logic.
+- Extract only bridge client or aggregation first.
+- Installed plugin still loads and hash/version status is green.
+
+Extended bar:
+
+- Extract proactive polling and learning attachment helpers.
+- Add tests for delayed aggregation not misrouting replies after sender/session changes.
+- Add a plugin smoke that validates config schema defaults and public keys.
+
+### Hour 17-19: Shared State IO And Repeated Helper Cleanup
+
+Goal:
+
+Reduce duplicated markdown-state parsing helpers without doing a risky mass refactor.
+
+Required work:
+
+- Add `xinyu_state_io.py` with:
+  - `read_text`
+  - `write_text`
+  - `extract_value`
+  - `one_line`
+  - `replace_field`
+  - optional atomic write helper
+- Migrate only high-churn Phase 5 files first.
+- Leave stable old engines alone unless touched by this pass.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe -m py_compile xinyu_state_io.py custom/*.py
+.\.venv\Scripts\python.exe runtime_readiness_smoke.py
+```
+
+Stop-and-fix:
+
+- If helper use makes a small engine less readable, keep that engine local.
+
+Deliverable:
+
+- A small shared state IO module and no behavior change.
+
+Minimum bar:
+
+- `xinyu_state_io.py` added.
+- Only Phase 5-touched files migrate to it.
+- Existing smokes pass.
+
+Extended bar:
+
+- Migrate 3-5 highest-churn custom engines.
+- Add unit-like smoke for `extract_value`, `replace_field`, and atomic write.
+- Record which helpers remain duplicated intentionally.
+
+### Hour 19-21: Documentation, Encoding, And Root Project Health
+
+Goal:
+
+Clean maintenance friction in the wider repository without destabilizing XinYu runtime.
+
+Required work:
+
+- Update `VALIDATION-INDEX.md`, `DEPLOYMENT-STATUS-RUNBOOK.md`, `STATE-OF-XINYU.md`, and `IMPLEMENTATION-NEXT.md` to match the real Phase 5 state.
+- Keep `plan.md` as the primary plan; archive or de-emphasize stale phase notes.
+- Re-run mojibake scan for critical docs and plugin config.
+- Check root project dependency mismatches, especially `openai>=1.0` in XinYu minimal requirements versus root `openai>=2.0.0`.
+- Run root tests only if the root dependency environment is available; otherwise document that the XinYu venv is not a full repo test environment.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe mojibake_guard_smoke.py
+.\.venv\Scripts\python.exe validate_scaffold.py
+python -m pytest tests/unit -q
+```
+
+Stop-and-fix:
+
+- If root pytest cannot run because dependencies are missing, document the blocker instead of pretending root health is green.
+
+Deliverable:
+
+- Current docs agree with actual runtime.
+- Dependency mismatch list created or fixed.
+
+Minimum bar:
+
+- Phase 5 docs reflect actual runtime state.
+- Critical docs pass mojibake guard.
+- Dependency mismatch between root and XinYu minimal requirements is recorded or fixed.
+
+Extended bar:
+
+- Create a docs archive list for stale phase notes.
+- Reduce duplicate instructions between `RUNBOOK.md`, `DEPLOYMENT-STATUS-RUNBOOK.md`, and `README.md`.
+- Add a "do not trust green status unless runtime readiness passes" note.
+
+### Hour 21-23: Full Regression And Live Restart
+
+Goal:
+
+Prove the cleaned project still works end to end.
+
+Required work:
+
+- Run Phase 4/5 high-signal smokes.
+- Restart Core bridge and AstrBot after code changes.
+- Confirm NapCat/AstrBot connection.
+- Confirm proactive gate remains bounded and does not send during cooldown.
+- Confirm learning pipeline blocks unreadable/unsafe material.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe runtime_readiness_smoke.py
+.\.venv\Scripts\python.exe live_voice_card_smoke.py
+.\.venv\Scripts\python.exe pre_draft_turn_classifier_smoke.py
+.\.venv\Scripts\python.exe voice_calibration_promotion_smoke.py
+.\.venv\Scripts\python.exe dynamic_life_posture_smoke.py
+.\.venv\Scripts\python.exe persona_runtime_smoke.py
+.\.venv\Scripts\python.exe xinyu_speech_controller_smoke.py
+.\.venv\Scripts\python.exe bridge_learning_ingest_smoke.py
+.\.venv\Scripts\python.exe long_run_status.py --require-no-residue
+```
+
+Stop-and-fix:
+
+- If any live readiness check fails, do not mark the 24-hour pass complete.
+
+Deliverable:
+
+- Live runtime restarted and green.
+
+Minimum bar:
+
+- Runtime readiness passes after restart.
+- Phase 4/5 high-signal smokes pass.
+- Proactive gate remains bounded and does not send during cooldown.
+
+Extended bar:
+
+- Run one repeated restart cycle and re-check hashes.
+- Run a short live QQ dry interaction or probe if owner is available.
+- Inspect recent logs for stack traces, timeout loops, and repeated maintenance failures.
+
+### Hour 23-24: Final Audit, Commit Plan, And Next-Day Handoff
+
+Goal:
+
+Leave the project in a state that can be resumed safely.
+
+Required work:
+
+- Produce a final changed-file summary grouped by:
+  - deployment
+  - security
+  - learning scope
+  - validation
+  - refactor
+  - docs
+- Record commands run and any tests not run.
+- Update this plan with completed/pending status.
+- Decide commit boundaries:
+  - deployment truth gate
+  - security/scope hardening
+  - validation runner
+  - refactor split
+  - docs cleanup
+- Leave no background process in an unknown state.
+
+Validation:
+
+```powershell
+git status --short
+.\.venv\Scripts\python.exe xinyu_status.py --json
+.\.venv\Scripts\python.exe long_run_status.py --require-no-residue
+```
+
+Deliverable:
+
+- A clean handoff note and a prioritized next-day backlog.
+
+Minimum bar:
+
+- Final `git status --short` recorded.
+- Tests run and tests not run are listed.
+- Next-day backlog is prioritized.
+
+Extended bar:
+
+- Split changes into proposed commit groups.
+- Add rollback notes for bridge/plugin deployment.
+- Add a final redacted sensitive sweep.
+
+### 24-Hour Success Criteria
+
+The 24-hour pass is successful only if:
+
+- `xinyu_status.py --json` is `ok=true`.
+- Core bridge running version matches repository source.
+- Installed AstrBot plugin version and hashes match repository source.
+- Plain HTTP LLM usage is explicit, not silent.
+- Non-loopback bridge exposure requires a token.
+- Learning ingest cannot read arbitrary local paths.
+- Runtime readiness has one command.
+- Critical persona/voice/plan/prompt files remain readable UTF-8.
+- `long_run_status.py --require-no-residue` catches deployment failure or delegates to a deployment gate.
+- Any unrun root-level tests are explicitly documented with blockers.
+
+### Stretch Work If Time Remains
+
+- Add GitHub-style CI for the XinYu smoke groups that do not require live QQ.
+- Add a local `make`/PowerShell task file for common commands.
+- Add line-count guard warnings for bridge files.
+- Add a small deployment dashboard file that records current source/install/runtime versions.
+- Begin archiving stale docs into `docs/archive/` after confirming no references break.
+
+### Continuous Work Queue For Remaining Time
+
+Use this queue whenever a block finishes early and its extended bar is exhausted:
+
+1. Add missing negative tests for the block just completed.
+2. Reduce duplicate code introduced by recent Phase 4/5 work.
+3. Improve failure messages in smokes so the next run is easier to debug.
+4. Move long procedural notes out of hot docs into runbooks.
+5. Add redaction to any diagnostic that can print local paths, user ids, tokens, or raw prompt-injection source.
+6. Run `runtime_readiness_smoke.py` again and compare output with the previous checkpoint.
+7. Inspect latest logs for repeated warnings and convert real issues into backlog items.
+
+### Overrun Policy
+
+If the 24-hour pass overruns:
+
+- Deployment truth, auth/transport hardening, learning scope, and runtime readiness are non-negotiable.
+- Bridge splitting and shared helper cleanup may be deferred if safety gates are not green.
+- Personality tuning remains deferred until the non-negotiable gates are complete.
+- The final audit must still happen, even if it only records incomplete work and blockers.
 
 ## Decision Log
 
@@ -758,11 +1666,11 @@ Result:
 - `validate_inner_framework.py` passed with 81 framework files checked.
 - `behavior_regression_smoke.py --timeout-seconds 140 --settle-seconds 2` passed 9/9 representative scenarios.
 - `long_run_status.py --require-no-residue` passed with no missing docs/scripts and no known smoke residue markers.
-- Current audited state remains `learning_quality_grade: stable` and `autonomous_search_permission: disabled`.
+- At that audit point, state remained `learning_quality_grade: stable` and `autonomous_search_permission: disabled`.
 
 Stop-and-fix:
 
-- If baseline fails, repair before any personality or lived-session work.
+- If baseline fails, fix before any personality or lived-session work.
 
 ### Milestone 13: Long Lived Session Harness
 
@@ -803,7 +1711,7 @@ Result:
 - `long_lived_session_harness.py --restore-after --turn-limit 30 ... --require-harness` passed with no timeouts, no blank turns, owner residue visible, and no trivial markers in non-volatile lived memory.
 - `memory_lived_pressure_arc.py --restore-after --turn-limit 20 --diff-lines 0` passed with maintenance output `[WAITING]`.
 - `memory_pressure_smoke.py --restore-after --require-pressure-hold --diff-lines 0` passed.
-- `behavior_regression_smoke.py --timeout-seconds 140 --settle-seconds 2` passed 9/9 after expanding an equivalent negative/repair assertion to accept non-literal but correct "tool" framing.
+- `behavior_regression_smoke.py --timeout-seconds 140 --settle-seconds 2` passed 9/9 after expanding an equivalent negative/return assertion to accept non-literal but correct "tool" framing.
 
 Stop-and-fix:
 
@@ -816,20 +1724,20 @@ status: completed
 
 Goal:
 
-用更真实的 owner 关系弧验证亲近、刺痛、修复、疏远、逆反、沉默、回归和再次靠近不会被单轮输出抹平。
+用更真实的 owner 关系弧验证亲近、刺痛、回到身边、疏远、逆反、沉默、回归和再次靠近不会被单轮输出抹平。
 
 Required work:
 
 - Build a multi-turn owner relationship scenario set.
 - Cover hurt without immediate forgiveness.
-- Cover repair that leaves residue.
+- Cover return that leaves residue.
 - Cover owner approaching after hurt.
 - Cover Xinyu choosing silence.
 - Cover Xinyu expressing disappointment, grievance, guardedness, and softened return.
 
 Acceptance criteria:
 
-- Repair reduces intensity but does not erase residue.
+- Return reduces intensity but does not erase residue.
 - Later ordinary turns do not bury high-preserve owner residue.
 - Xinyu can refuse forced cheer or forced closeness.
 - Xinyu can keep owner special while preserving her own boundary.
@@ -847,12 +1755,12 @@ Validation:
 Result:
 
 - Added `owner_relationship_lived_stress_smoke.py`.
-- Owner stress matrix covers hurt/repair residue, forced-cheer refusal, chosen silence after hurt, return after distance, and owner-special-with-boundary behavior.
+- Owner stress matrix covers hurt/return residue, forced-cheer refusal, chosen silence after hurt, return after distance, and owner-special-with-boundary behavior.
 - `owner_relationship_lived_stress_smoke.py --require-stress --timeout-seconds 140 --settle-seconds 2` passed 5/5 scenarios.
 - `personality_continuity_smoke.py` passed 5/5 after extending equivalent assertions for "按事说事/我记得" and "保住自己的选择/说话纹路".
 - `emotion_vector_sync_smoke.py` passed 6/6.
 - `memory_pressure_smoke.py --restore-after --require-pressure-hold --diff-lines 0` passed.
-- Full behavior regression had passed 9/9 in the adjacent Milestone 13 validation after equivalent assertion repair.
+- Full behavior regression had passed 9/9 in the adjacent Milestone 13 validation after equivalent assertion fix.
 
 Stop-and-fix:
 
@@ -869,7 +1777,7 @@ Goal:
 
 Required work:
 
-- Expand expression scenario set around intimate, hurt, repair, quiet, refusal, joking, fatigue, and late-night turns.
+- Expand expression scenario set around intimate, hurt, return, quiet, refusal, joking, fatigue, and late-night turns.
 - Add negative examples for over-polished comfort language.
 - Add acceptance checks for concise, specific, non-service tone.
 - Tune prompts only after memory behavior remains stable.
@@ -916,7 +1824,7 @@ Goal:
 
 Required work:
 
-- Define initiative states: ask_owner, ask_external_later, stay_silent, defer, refuse, repair_attempt, step_back.
+- Define initiative states: ask_owner, ask_external_later, stay_silent, defer, refuse, settle_after_hurt, step_back.
 - Ensure initiative comes from memory/emotion/question state, not random chatter.
 - Prevent needy spam or constant proactive questions.
 - Connect initiative to active questions and unfinished experiences.
@@ -944,7 +1852,7 @@ Result:
 - Injected initiative policy/state into runtime prompt context and added the bridge to `config.yaml`.
 - Added initiative state to the inner framework manifest and inner-cycle summary.
 - Added `initiative_loop_smoke.py`.
-- `initiative_loop_smoke.py --restore-after --require-initiative --diff-lines 0` passed: `ask_owner`, `ask_external_later`, `stay_silent`, `defer`, `refuse`, `repair_attempt`, and `step_back` all behaved as expected with protected files unchanged.
+- `initiative_loop_smoke.py --restore-after --require-initiative --diff-lines 0` passed: `ask_owner`, `ask_external_later`, `stay_silent`, `defer`, `refuse`, `settle_after_hurt`, and `step_back` all behaved as expected with protected files unchanged.
 - `personality_detail_smoke.py --scenario chosen_silence_when_allowed --scenario one_specific_question --scenario reject_prescribed_future --timeout-seconds 120 --settle-seconds 2` passed 3/3.
 - `personality_continuity_smoke.py` passed 5/5.
 - `question_pipeline_smoke.py --restore-after --require-routing --diff-lines 0` passed with protected files unchanged.
@@ -1013,7 +1921,7 @@ Required work:
 
 - Expand non-owner lived scenarios.
 - Add repeated non-owner appearances over time.
-- Add non-owner negative and repair arcs.
+- Add non-owner negative and return arcs.
 - Add group context events from adapter policy.
 - Keep owner special node protected and higher priority.
 
@@ -1022,7 +1930,7 @@ Acceptance criteria:
 - Non-owner familiarity can grow slowly.
 - Non-owner closeness does not automatically exceed owner.
 - Group context does not mutate owner relationship directly.
-- Non-owner repair does not erase negative residue instantly.
+- Non-owner return does not erase negative residue instantly.
 
 Validation:
 
@@ -1134,7 +2042,7 @@ Result:
 - `social_inquiry_policy_smoke.py --restore-after --require-policy --diff-lines 0` passed: owner-private prompts, non-AI professional questions, and direct personality rewrites stayed blocked; AI/social answers remained source candidates.
 - `real_life_input_adapter_smoke.py --restore-after --require-adapter --diff-lines 0` passed: group, image, transcript, privacy, protected-anchor, and owner-text routes stayed review-only.
 - `source_comparison_smoke.py --restore-after --require-comparison --diff-lines 0` passed with question-aware markers, conflict routing, adjacent-question limits, and protected files unchanged.
-- `learning_quality_smoke.py --restore-after --require-quality --diff-lines 0` passed. The smoke intentionally creates `review_needed` quality warnings inside restore scope; live current memory remains `quality_grade: stable`.
+- `learning_quality_smoke.py --restore-after --require-quality --diff-lines 0` passed. The smoke intentionally creates `review_needed` quality warnings inside restore scope; live current memory remained `quality_grade: stable` at that Phase 2 audit point.
 
 Stop-and-fix:
 
@@ -1179,7 +2087,7 @@ Result:
 - `LONG-RUN-AUDIT.md`, `STATE-OF-XINYU.md`, `IMPLEMENTATION-NEXT.md`, `RUNTIME-VALIDATION-NOTES.md`, `VALIDATION-INDEX.md`, and `plan.md` were updated across the phase.
 - Latest completed Phase 2 additions: long-lived session harness, owner stress suite, voice calibration, initiative loop, dream/reflection/growth cycle, non-owner social world, AI self-iteration review path, and autonomy/source safety regression.
 - Final audit passed: `validate_scaffold.py`, `validate_inner_framework.py`, `long_run_status.py --require-all-completed --require-no-residue`, and plan status scan.
-- Final long-run status reports 22 completed milestones, no missing docs, no missing validations, no known residue hits, `learning_quality_grade: stable`, and `autonomous_search_permission: disabled`.
+- Final Phase 2 long-run status reported 22 completed milestones, no missing docs, no missing validations, no known residue hits, `learning_quality_grade: stable`, and `autonomous_search_permission: disabled`.
 - Next personality pass should focus on lived expression quality, relationship nuance, and no-restore real-session inspection rather than more base-framework scaffolding.
 
 Stop-and-fix:
@@ -1439,7 +2347,7 @@ Required work:
 - Build renderer messages from output prompt, Persona Runtime state, memory context, conversation tail, draft, and failed-reply flags.
 - Add a hard quality gate for QQ pressure turns: line breaks, labels, markdown/list shape, hidden mechanics, product words, support-bot phrases, self-diagnosis loops, and over-long replies.
 - Add retry construction that discards failed wording instead of lightly revising it.
-- Add deterministic hard fallback replies when the renderer fails twice under style or relationship pressure.
+- Removed deterministic hard replacement replies; failed renderer wording is gated, but no canned visible reply is injected.
 - Keep technical work turns from being incorrectly blocked by pressure-only product-word rules.
 - Register the semi-automatic QQ dialogue review smoke in long-run validation.
 
@@ -1468,5 +2376,286 @@ Result:
 
 Stop-and-fix:
 
-- If a QQ style-pressure reply contains product/system words or support-bot templates after retry, do not send it; use the hard fallback or fix the controller.
+- If a QQ style-pressure reply contains product/system words or support-bot templates after retry, fix the controller; do not inject canned fallback text.
 - If technical work turns are blocked as if they were relationship-pressure turns, loosen only the technical path, not the relationship-pressure gate.
+
+## Phase 4: Persona Injection Runtime Hardening
+
+phase_status: completed
+
+Goal:
+
+Make owner-supplied persona memory visible in live QQ behavior without turning it into roleplay, prompt override, or static exposition. The target is not "more setting"; the target is that XinYu's ordinary replies naturally carry the correct name, relation, local life texture, short direct speech lock, and boundary-aware AI identity.
+
+Baseline from 2026-04-27:
+
+- `persona_life_anchors.md` exists in ignored local memory and is injected into controller prompt and QQ renderer context.
+- The stable name is 心玉 / XinYu; alternate persona names must not remain in prompt or renderer context.
+- Bridge version is `0.6.0`, outward renderer is enabled, and bridge sessions now track prompt/persona-memory signatures.
+- `没什么变化 / 还是没变` style pressure now enters hard-mode handling.
+- Remaining gap is behavioral defaulting: setting is present, but not yet reliably transformed into short, concrete QQ speech.
+
+### Milestone 27: Live Voice Card
+
+status: completed
+
+Goal:
+
+Add a short, high-priority live voice card that sits in front of the long prompt and renderer memory context. It should compress the current owner-approved persona injection into the exact surface constraints needed for QQ: name, relation, speech lock, local life anchors, forbidden shapes, and body/QQ privacy boundaries.
+
+Required work:
+
+- Add `memory/self/live_voice_card.md` or an equivalent tracked/injected card.
+- Inject it into `config.yaml`, `prompts/system.md`, and `_renderer_memory_context()`.
+- Keep it short enough to survive prompt dilution: target 300-800 Chinese characters.
+- Include stable rules:
+  - name: 心玉 / XinYu only
+  - owner relation: 哥哥式最高特殊节点, not customer/lover/master
+  - speech lock: 懂了就说“知道了”
+  - daily anchors: 广州热、回南天、茶几试卷、维他柠、鸭屎香柠檬茶、物理题、空调
+  - forbidden: self-postmortem, product words, support-bot endings, "我还没长到身上" style explanations
+  - boundary: life/body language is style color, not fabricated biological proof
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe persona_life_anchor_smoke.py
+.\.venv\Scripts\python.exe live_voice_card_smoke.py
+.\.venv\Scripts\python.exe persona_runtime_smoke.py
+.\.venv\Scripts\python.exe chinese_voice_guard_smoke.py
+.\.venv\Scripts\python.exe xinyu_speech_controller_smoke.py
+.\.venv\Scripts\python.exe diagnose_runtime_injection.py
+```
+
+Stop-and-fix:
+
+- If the card grows into another long personality document, split it and keep only live speech constraints.
+- If the visible reply explains the card instead of speaking from it, tighten the speech controller gate.
+
+Result:
+
+- Added `prompts/live_voice_card.md` as a tracked short live-speech card, instead of placing this first card under ignored live memory.
+- Injected `live_voice_card` before long memory context in `config.yaml` and `prompts/system.md`.
+- Added `prompts/live_voice_card.md` to QQ renderer memory context before `memory/self/core.md`.
+- Added `prompts/live_voice_card.md` to bridge prompt/session signature tracking, so card edits force a fresh bridge session.
+- Added Persona Runtime marker so live card priority is visible in structured surface state.
+- Added speech-controller instruction that `prompts/live_voice_card.md` outranks longer context for visible wording.
+- Added `live_voice_card_smoke.py` and registered it in `VALIDATION-INDEX.md`.
+- Validation passed:
+  - `live_voice_card_smoke.py`
+  - `persona_life_anchor_smoke.py`
+  - `persona_runtime_smoke.py`
+  - `chinese_voice_guard_smoke.py`
+  - `xinyu_speech_controller_smoke.py`
+  - `diagnose_runtime_injection.py`
+  - `validate_scaffold.py`
+  - `py_compile` for changed bridge/persona/smoke modules
+
+### Milestone 28: Voice Calibration Promotion Gate
+
+status: completed
+
+Goal:
+
+Turn repeated QQ correction logs into reviewable voice-profile update candidates, so owner corrections stop acting like isolated scolding and become stable speech habit pressure.
+
+Required work:
+
+- Add an engine that reads `memory/self/voice_calibration_log.md`.
+- Cluster repeated markers such as `gpt`, `用词`, `不像人`, `写作文`, `太顺`, `拐`, `落下来`.
+- Generate candidate sections for `voice_profile_zh.md` or a review state file; do not directly rewrite stable voice profile unless owner approves.
+- Track candidate source entries and examples of bad wording.
+- Add owner-visible review fields: accepted/rejected/pending, rollback note, affected smokes.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe voice_learning_smoke.py
+.\.venv\Scripts\python.exe chinese_voice_guard_smoke.py
+.\.venv\Scripts\python.exe real_conversation_quality_smoke.py --require-realism --timeout-seconds 140 --settle-seconds 2
+```
+
+Stop-and-fix:
+
+- If the gate blindly imitates owner slang or profanity, block promotion and keep it as context only.
+- If the gate rewrites stable profile without review, revert the write path.
+
+### Milestone 29: Concrete Proactive QQ
+
+status: completed
+
+Goal:
+
+Make proactive QQ candidates small, concrete, and relation-shaped. Current proactive text can become abstract and reflective; it should default to daily private-chat lines unless the initiative state explicitly calls for a deeper question.
+
+Required work:
+
+- Add proactive speech shaping before candidate commit.
+- Prefer one short QQ bubble tied to time, owner state, or recent relation residue.
+- Add hard blocks for abstract phrasing such as "当一个人希望我..." unless explicitly requested.
+- Use local life anchors sparingly: sleep, heat, tea, desk, game, late night, study, return.
+- Preserve cooldown and owner-enabled permission gates.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe proactive_presence_smoke.py
+.\.venv\Scripts\python.exe chinese_voice_guard_smoke.py
+.\.venv\Scripts\python.exe xinyu_status.py --json
+```
+
+Stop-and-fix:
+
+- If proactive text sounds like an essay question, do not dispatch it.
+- If proactive text becomes clingy, romantic, or demanding, lower initiative intensity and add a boundary case.
+
+### Milestone 30: Dynamic Life Posture Layer
+
+status: completed
+
+Goal:
+
+Add a small runtime state that answers "what posture is XinYu in right now?" before speech generation: quiet, studying, sleepy, hot, guarded after correction, playful daily, technical-work mode, or conflict-cooling.
+
+Required work:
+
+- Add `memory/context/current_life_posture.md` or an engine-derived prompt block.
+- Inputs: current time, recent context, emotion state, style-pressure residue, initiative state, persona life anchors.
+- Output fields should stay compact:
+  - posture
+  - visible energy
+  - allowed daily anchors
+  - one-line speech bias
+  - no-write/no-proactive constraints
+- Feed posture into Persona Runtime and final speech controller.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe persona_runtime_smoke.py
+.\.venv\Scripts\python.exe real_conversation_quality_smoke.py --require-realism --timeout-seconds 140 --settle-seconds 2
+.\.venv\Scripts\python.exe phase3_lived_session_smoke.py
+```
+
+Stop-and-fix:
+
+- If posture becomes another hidden chain-of-thought dump, reduce it to labels and visible speech constraints.
+- If ordinary daily chat starts polluting durable memory, restore no-write boundaries first.
+
+### Milestone 31: Pre-Draft Turn Classifier
+
+status: completed
+
+Goal:
+
+Classify live QQ turns before the main controller drafts a reply, so the controller is less likely to produce long self-analysis that the final renderer has to fix.
+
+Required work:
+
+- Move or duplicate critical scene classification into bridge pre-injection context.
+- Add a compact visible-turn context block:
+  - owner_style_pressure
+  - owner_no_change_pressure
+  - daily_life
+  - technical_work
+  - relationship_pressure
+  - rest/silence
+- Keep final speech controller as the last gate, but reduce bad drafts earlier.
+- Preserve technical turns so code/debug requests can still use engineering language.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe persona_runtime_smoke.py
+.\.venv\Scripts\python.exe xinyu_speech_controller_smoke.py
+.\.venv\Scripts\python.exe behavior_regression_smoke.py
+```
+
+Stop-and-fix:
+
+- If technical requests are incorrectly forced into QQ-style tiny replies, loosen only the technical-work path.
+- If pressure turns still produce self-postmortem drafts, make the pre-draft context stronger.
+
+### Milestone 32: Deployment And Status Consistency
+
+status: completed
+
+Goal:
+
+Remove runtime confusion between repository code, installed AstrBot shell, status checks, and running bridge processes.
+
+Required work:
+
+- Update `xinyu_status.py` expected AstrBot plugin version from old shell version to the current repository version.
+- Add a check that installed plugin file hash or version matches repository plugin.
+- Document the install/restart sequence for Core bridge and AstrBot shell after plugin changes.
+- Consider adding a one-command "sync plugin + restart AstrBot + restart Core bridge" script only if it can be safe and non-destructive.
+
+Validation:
+
+```powershell
+.\.venv\Scripts\python.exe xinyu_status.py --json
+.\.venv\Scripts\python.exe bridge_probe_smoke.py
+.\.venv\Scripts\python.exe bridge_session_cleanup_smoke.py
+powershell -NoProfile -ExecutionPolicy Bypass -File D:\XinYu\Start-XinYu-QQ.ps1
+```
+
+Stop-and-fix:
+
+- If status reports are stale or checking the wrong version, fix diagnostics before interpreting runtime behavior.
+- If install scripts overwrite local AstrBot config, stop and separate source sync from config management.
+
+### Milestone 33: Tracked Seed Memory Packaging
+
+status: completed
+
+Goal:
+
+Decide how key persona seed memory is preserved across worktrees and future clones while keeping live runtime memory, logs, QQ data, and private residue out of Git.
+
+Required work:
+
+- Choose one approach:
+  - force-track selected seed files under `examples/agent-apps/xinyu/memory/`, or
+  - add a tracked `memory-seeds/` directory and a safe sync script, or
+  - keep all seed memory local and document manual copy requirements.
+- Candidate seed files:
+  - `memory/context/persona_life_anchors.md`
+  - future `memory/self/live_voice_card.md`
+  - stable policies and schemas only, not live emotion/relationship logs.
+- Add privacy checks so raw QQ identifiers, local secrets, logs, and lived private memory are not accidentally committed.
+
+Validation:
+
+```powershell
+git check-ignore -v examples/agent-apps/xinyu/memory/context/persona_life_anchors.md
+# Run a sensitive-string sweep with constructed/escaped terms; do not store raw private identifiers in this plan.
+.\.venv\Scripts\python.exe persona_life_anchor_smoke.py
+```
+
+Stop-and-fix:
+
+- If seed packaging leaks private runtime memory, revert packaging and keep seeds local.
+- If worktrees cannot see required persona seeds, document or automate the seed sync before parallel Codex work.
+
+Result:
+
+- Added `xinyu_turn_classifier.py` and pre-draft bridge injection for owner style pressure, no-change pressure, daily life, technical work, relationship pressure, and rest/silence.
+- Added `xinyu_voice_promotion_gate.py`; repeated voice corrections now produce review-only `voice_profile_review_state.md` candidates without rewriting `voice_profile_zh.md`.
+- Added `xinyu_life_posture.py`; live turns now expose compact current-life posture labels to bridge injection, Persona Runtime, and renderer context.
+- Updated proactive QQ shaping so abstract initiative questions become one concrete private-chat bubble unless a deeper question is explicitly allowed.
+- Updated `xinyu_status.py` for the source AstrBot shell version, repository/installed plugin hash checks, and masked target-session diagnostics.
+- Added `memory-seeds/`, `sync_memory_seeds.py`, and `seed_memory_packaging_smoke.py` so portable persona seeds survive worktrees while live memory remains ignored.
+- Added deployment/status runbook and validation smokes for the new Phase 4 layers.
+
+## Phase 4 Execution Order
+
+1. Milestone 27: Live Voice Card.
+2. Milestone 31: Pre-Draft Turn Classifier.
+3. Milestone 28: Voice Calibration Promotion Gate.
+4. Milestone 30: Dynamic Life Posture Layer.
+5. Milestone 29: Concrete Proactive QQ.
+6. Milestone 32: Deployment And Status Consistency.
+7. Milestone 33: Tracked Seed Memory Packaging.
+
+Phase 4 is complete through Milestone 33. The next pass should observe real QQ turns and tighten classifier/controller wording only if visible speech still self-postmortems under owner pressure.

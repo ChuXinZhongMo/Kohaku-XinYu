@@ -8,6 +8,7 @@ from xinyu_local_scope import (
     LocalScopeError,
     ensure_local_scope,
     local_scope_status,
+    resolve_read_only_scope_path,
     resolve_local_scope_path,
 )
 
@@ -41,8 +42,28 @@ def main() -> int:
                 continue
             failures.append(f"outside path was not blocked: {case}")
 
+        read_root = Path(temp_dir) / "read-only"
+        read_root.mkdir()
+        read_allowed = resolve_read_only_scope_path([read_root], "notes/example.txt")
+        if read_allowed != (read_root / "notes" / "example.txt").resolve():
+            failures.append("allowed read-only path resolved incorrectly")
+        read_absolute = resolve_read_only_scope_path([read_root], read_root / "notes" / "example.txt")
+        if read_absolute != (read_root / "notes" / "example.txt").resolve():
+            failures.append("absolute read-only path resolved incorrectly")
+        for case in outside_cases:
+            try:
+                resolve_read_only_scope_path([read_root], case)
+            except LocalScopeError:
+                continue
+            failures.append(f"outside read-only path was not blocked: {case}")
+
     if live_status["write_policy"] != "allowed_inside_scope_only":
         failures.append("unexpected local scope write policy")
+    if live_status["read_only_policy"] not in {
+        "not_configured",
+        "allowed_inside_explicit_owner_dirs_only",
+    }:
+        failures.append("unexpected read-only policy")
     if "blocked_outside_scope" not in live_status["private_file_policy"]:
         failures.append("unexpected private file policy")
 

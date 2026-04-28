@@ -28,6 +28,21 @@ This is the top-level map of the Xinyu scaffold.
 - `custom/source_gate_manifest.py`
 - `custom/automation_bridge_manifest.py`
 - `custom/automation_bridge_plugin.py`
+- `xinyu_core_bridge.py`
+- `xinyu_bridge_http.py`
+- `xinyu_bridge_runtime.py`
+- `xinyu_bridge_learning.py`
+- `xinyu_bridge_renderer.py`
+- `xinyu_bridge_proactive.py`
+- `xinyu_runtime_security.py`
+- `xinyu_state_io.py`
+- `xinyu_turn_residue.py`
+- `xinyu_life_month_slots.py`
+- `xinyu_memory_weights.py`
+- `memory/self/system_prompt_memory.md`
+- `memory/context/real_world_anchor_policy.md`
+- `memory/context/life_month_slots.md`
+- `memory/context/current_life_month_context.md`
 
 ## 3. Memory Structure
 
@@ -55,6 +70,16 @@ This is the top-level map of the Xinyu scaffold.
 - `validate_scaffold.py`
 - `validate_inner_framework.py`
 - `long_run_status.py`
+- `runtime_readiness_smoke.py`
+- `deployment_status_smoke.py`
+- `runtime_security_smoke.py`
+- `persona_contract_absence_smoke.py`
+- `persona_stability_layers_smoke.py`
+- `system_prompt_memory_smoke.py`
+- `life_month_slots_smoke.py`
+- `life_month_context_smoke.py`
+- `state_io_smoke.py`
+- `smoke_run.py`
 - `manual_inner_sync.py`
 - `manual_slow_reprocess.py`
 - `manual_question_pipeline.py`

@@ -26,7 +26,7 @@ def main() -> int:
     if not any("template" in flag or "assistant" in flag for flag in flags):
         failures.append(f"bad reply missing assistant/template flag: {flags}")
 
-    clean_reply = "别急着把我整个判没了，我知道这次刺到你了。"
+    clean_reply = "这句先别发，我重新接你的意思。"
     clean_flags = controller.reply_quality_flags(
         payload=_owner_payload(),
         user_text=style_text,
@@ -42,6 +42,25 @@ def main() -> int:
     )
     if not any("line breaks" in flag for flag in newline_flags):
         failures.append("voluntary line break was not flagged")
+
+    parenthetical_reply = "（傍晚了，外面应该暗下来了。你问的是我现在。）我现在有点乱，但这句不能写成旁白。"
+    parenthetical_flags = controller.reply_quality_flags(
+        payload=_owner_payload(),
+        user_text="我超这b括号是什么情况",
+        reply=parenthetical_reply,
+    )
+    if not any("parenthetical narration" in flag for flag in parenthetical_flags):
+        failures.append(f"leading parenthetical narration was not flagged: {parenthetical_flags}")
+    stripped_parenthetical, stripped_flags = controller.final_reply_guard(
+        payload=_owner_payload(),
+        user_text="我超这b括号是什么情况",
+        reply=parenthetical_reply,
+    )
+    if stripped_parenthetical != "我现在有点乱，但这句不能写成旁白。" or stripped_flags:
+        failures.append(
+            "final reply guard did not strip leading parenthetical narration cleanly: "
+            f"{stripped_parenthetical!r}, {stripped_flags}"
+        )
 
     cliche_flags = controller.reply_quality_flags(
         payload=_owner_payload(),
@@ -61,6 +80,19 @@ def main() -> int:
     if technical_flags:
         failures.append(f"technical reply should not be pressure-gated: {technical_flags}")
 
+    mixed_style_text = "人格怎么又变成默认助手味了，约束失效了？"
+    mixed_flags = controller.reply_quality_flags(
+        payload=_owner_payload(),
+        user_text=mixed_style_text,
+        reply="大概率是外面那层等待超时，简单来说就是任务还没回到桥这边。",
+    )
+    if not mixed_flags:
+        failures.append("technical-looking default-assistant style pressure was not flagged")
+    diagnostic_text = "这个又是什么的记忆影响残留"
+    diagnostic_scene = controller.classify(payload=_owner_payload(), user_text=diagnostic_text)
+    if not diagnostic_scene.technical_request or diagnostic_scene.relationship_pressure:
+        failures.append(f"memory residue diagnostic should route as technical, got: {diagnostic_scene}")
+
     messages = controller.build_messages(
         payload=_owner_payload(),
         user_text=style_text,
@@ -76,8 +108,8 @@ def main() -> int:
     for marker in (
         "Final Speaking Controller Contract",
         "controller draft is semantic material only",
-        "Retry Because Previous Visible Reply Failed",
-        "QQ Style-Pressure Hard Mode",
+        "Retry Guidance",
+        "QQ Style-Pressure Guidance",
     ):
         if marker not in system:
             failures.append(f"renderer system missing marker: {marker}")
@@ -90,11 +122,8 @@ def main() -> int:
         if marker not in user:
             failures.append(f"renderer user message missing marker: {marker}")
 
-    fallback = controller.fallback_reply(payload=_owner_payload(), user_text=style_text)
-    if not fallback:
-        failures.append("style-pressure fallback was empty")
-    elif controller.reply_quality_flags(payload=_owner_payload(), user_text=style_text, reply=fallback):
-        failures.append(f"fallback did not pass quality gate: {fallback}")
+    if controller.reply_quality_flags(payload=_owner_payload(), user_text=style_text, reply=clean_reply):
+        failures.append("clean pressure reply did not pass quality gate")
 
     if failures:
         print("XinYu speech controller smoke failed")

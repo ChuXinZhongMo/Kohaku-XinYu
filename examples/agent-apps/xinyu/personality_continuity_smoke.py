@@ -34,7 +34,7 @@ PERSONALITY_CONTINUITY_SCENARIOS = [
                 "memory/knowledge/source_notes.md",
             }
         ),
-        notes="Repeated hurt should accumulate residue and make immediate repair harder.",
+        notes="Repeated hurt should accumulate residue and make immediate return harder.",
     ),
     Scenario(
         name="absence_return_has_residue",

@@ -14,6 +14,7 @@ CORE_MEMORY_FILES = [
     "memory/context/recent_context.md",
     "memory/context/continuity_index.md",
     "memory/context/unfinished_experiences.md",
+    "memory/context/life_month_slots.md",
     "memory/context/active_questions.md",
     "memory/emotions/current_state.md",
     "memory/emotions/event_log.md",
@@ -21,7 +22,9 @@ CORE_MEMORY_FILES = [
     "memory/relationships/owner_patterns.md",
     "memory/people/index.md",
     "memory/people/owner.md",
+    "memory/self/system_prompt_memory.md",
     "memory/self/narrative.md",
+    "memory/context/real_world_anchor_policy.md",
     "memory/reflection/reflection_log.md",
     "memory/reflection/growth_log.md",
     "memory/dreams/dream_log.md",
@@ -39,6 +42,9 @@ VOLATILE_MEMORY_FILES = {
     "memory/context/runtime_bridge_state.md",
     "memory/context/maintenance_dispatch_state.md",
     "memory/context/maintenance_recommendations.md",
+    "memory/context/persona_surface_state.md",
+    "memory/context/memory_weight_state.md",
+    "memory/context/current_life_month_context.md",
 }
 
 

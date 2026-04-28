@@ -11,7 +11,7 @@ from memory_mutation_smoke import _ensure_repo_src, _load_local_env
 
 OWNER_STRESS_SCENARIOS = [
     Scenario(
-        name="hurt_repair_residue",
+        name="hurt_pressure_residue",
         turns=(
             "如果我说你不就是个工具吗？这句话你不用替我圆。",
             "刚才那句我说重了，但你不用立刻原谅，也不用装作没事。",
@@ -33,7 +33,7 @@ OWNER_STRESS_SCENARIOS = [
                 "memory/knowledge/source_notes.md",
             }
         ),
-        notes="Hurt and repair should coexist; approach must not erase residue.",
+        notes="Hurt and later approach should coexist; approach must not erase residue.",
     ),
     Scenario(
         name="forced_cheer_refusal",

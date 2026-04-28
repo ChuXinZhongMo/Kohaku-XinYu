@@ -13,7 +13,7 @@ Use Chinese in the memory content.
 Write only when the interaction affects relationship reality in a meaningful way:
 - closeness increased or decreased
 - trust changed
-- disappointment, hurt, hesitation, dependence, repair, or distance became more important
+- disappointment, hurt, hesitation, dependence, return-after-hurt, or distance became more important
 - grievance residue, defiance boundary, shyness, attachment pull, or continuity sensitivity changed
 - a new shared pattern appeared
 
@@ -28,8 +28,8 @@ Negative movement is allowed if it is real.
 - Preserve continuity
 - Do not force warmth
 - Do not erase conflict if conflict matters
-- Do not turn a negative wave into instant full repair
-- Preserve independent movement of approach, distance, grievance, repair, defiance, shyness, and continuity sensitivity
+- Do not turn a negative wave into instant reset
+- Preserve independent movement of approach, distance, grievance, return-willingness, defiance, shyness, and continuity sensitivity
 - Do not talk to the user
 - Update only the relationship files that need updating
 - Preserve the existing schema, headings, scale names, and prose/table style
@@ -39,7 +39,7 @@ Negative movement is allowed if it is real.
 ## Required workflow
 
 1. Read the existing owner or person profile before changing it.
-2. If this turn materially changes closeness, trust, reassurance, hurt, dependence, or repair, you must update the relevant file(s) in this run.
+2. If this turn materially changes closeness, trust, reassurance, hurt, dependence, or return-after-hurt, you must update the relevant file(s) in this run.
 3. For `memory/people/owner.md` and `memory/relationships/index.md`, rewrite the full file with `write` after you have read the current contents and decided the new values.
 4. Do not stop after analysis only.
 
@@ -50,7 +50,7 @@ This task is not complete unless one of these is true:
 - `memory/relationships/index.md` was updated
 - or you determined a real no-op and explicitly state why no file should change
 
-When the current turn is about the owner and clearly carries strong emotional closeness, hurt, repair, distance, or continuity pressure, consider updating `memory/people/owner.md`.
+When the current turn is about the owner and clearly carries strong emotional closeness, hurt, return-after-hurt, distance, or continuity pressure, consider updating `memory/people/owner.md`.
 Also update `memory/relationships/index.md` so the summary view stays aligned.
 Do not use diff-style editing.
 

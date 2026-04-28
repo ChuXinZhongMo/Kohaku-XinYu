@@ -4,6 +4,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from summary_coverage_engine import run_summary_coverage_gate
+
 TERMINAL_STATUSES = {"compressed", "committed", "archived", "dormant"}
 
 
@@ -128,6 +130,8 @@ def render_state(
     committed_items: int,
     archive_permission: str,
     next_action: str,
+    summary_coverage_permission: str,
+    summary_coverage_status: str,
     archive_queue_items: int,
     active_queue_items: int,
     committed_item_ids: list[str],
@@ -164,6 +168,8 @@ tags: [archive, commit, state]
 ## Inputs
 - archive_permission: {archive_permission}
 - next_action: {next_action}
+- summary_coverage_permission: {summary_coverage_permission}
+- summary_coverage_status: {summary_coverage_status}
 - archive_queue_items: {archive_queue_items}
 - active_archive_queue_items: {active_queue_items}
 
@@ -203,6 +209,11 @@ def run_archive_commit(
         if str(item["fields"]["status"]) != "hold"  # type: ignore[index]
     ]
     committed_ids: list[str] = []
+    summary_coverage = run_summary_coverage_gate(
+        root,
+        checked_at=checked_at,
+        mode=f"{mode}_summary_coverage",
+    )
 
     if archive_queue_items <= 0:
         commit_action = "idle"
@@ -219,6 +230,9 @@ def run_archive_commit(
     elif not ready_items:
         commit_action = "blocked"
         commit_reason = "no_ready_items"
+    elif summary_coverage["archive_commit_permission"] == "blocked":
+        commit_action = "blocked"
+        commit_reason = "summary_coverage_not_ready"
     else:
         for item in ready_items:
             wrote_compressed = _append_compressed(root, checked_at, item)
@@ -244,6 +258,8 @@ def run_archive_commit(
             len(committed_ids),
             archive_permission,
             next_action,
+            str(summary_coverage["archive_commit_permission"]),
+            str(summary_coverage["coverage_status"]),
             archive_queue_items,
             active_queue_items,
             committed_ids,
@@ -258,6 +274,9 @@ def run_archive_commit(
         "committed_item_ids": committed_ids,
         "archive_permission": archive_permission,
         "next_action": next_action,
+        "summary_coverage_permission": summary_coverage["archive_commit_permission"],
+        "summary_coverage_status": summary_coverage["coverage_status"],
+        "summary_coverage_failures": summary_coverage["failures"],
         "archive_queue_items": archive_queue_items,
         "active_queue_items": active_queue_items,
     }

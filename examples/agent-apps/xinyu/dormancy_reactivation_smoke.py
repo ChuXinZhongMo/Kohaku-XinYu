@@ -22,6 +22,8 @@ TRACKED_FILES = [
     "memory/archive/compressed.md",
     "memory/archive/dormant.md",
     "memory/archive/dormant_reactivation_state.md",
+    "memory/events/summary_coverage_state.md",
+    "memory/events/consistency_gate_state.md",
     "memory/reflection/consolidation_state.md",
     "memory/reflection/reflection_queue.md",
     "memory/dreams/dream_seeds.md",

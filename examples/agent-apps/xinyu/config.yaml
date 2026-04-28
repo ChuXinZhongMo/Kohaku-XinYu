@@ -3,18 +3,25 @@ version: "0.1"
 description: Xinyu early-stage self-forming agent scaffold
 
 controller:
-  model: "${XINYU_LLM_MODEL:gpt-5.4}"
+  model: "${XINYU_LLM_MODEL:mimo-v2.5-pro}"
   provider: "${XINYU_LLM_PROVIDER:ciallo}"
   temperature: 0.7
   max_tokens: 4096
   api_key_env: XINYU_API_KEY
-  base_url: "${XINYU_BASE_URL:http://llm.ciallo.date:2095/v1}"
+  base_url: "${XINYU_BASE_URL:}"
 
 system_prompt_file: prompts/system.md
 
 prompt_context_files:
+  live_voice_card: prompts/live_voice_card.md
+  memory_weight_state: memory/context/memory_weight_state.md
+  persona_surface_state: memory/context/persona_surface_state.md
+  system_prompt_memory: memory/self/system_prompt_memory.md
   self_core: memory/self/core.md
   self_personality: memory/self/personality_profile.md
+  persona_life_anchors: memory/context/persona_life_anchors.md
+  life_month_slots: memory/context/life_month_slots.md
+  current_life_month_context: memory/context/current_life_month_context.md
   mind_loop_policy: memory/self/mind_loop_policy.md
   mind_loop_state: memory/self/mind_loop_state.md
   voice_profile_zh: memory/self/voice_profile_zh.md
@@ -27,10 +34,13 @@ prompt_context_files:
   people_index: memory/people/index.md
   owner_profile: memory/people/owner.md
   time_anchor: memory/context/time_anchor.md
+  real_world_anchor_policy: memory/context/real_world_anchor_policy.md
   real_life_input_policy: memory/context/real_life_input_adapter_policy.md
+  recent_context: memory/context/recent_context.md
   initiative_policy: memory/context/initiative_policy.md
   initiative_state: memory/context/initiative_state.md
   owner_permission_grants: memory/context/owner_permission_grants.md
+  codex_delegation_policy: memory/context/codex_delegation_policy.md
   runtime_bridge: memory/context/runtime_bridge_state.md
   maintenance_recommendations: memory/context/maintenance_recommendations.md
   maintenance_dispatch: memory/context/maintenance_dispatch_state.md
@@ -255,6 +265,15 @@ plugins:
     class: InnerCycleBridgePlugin
     options:
       enabled: true
+  - name: xinyu_desktop_thoughts_bridge
+    type: custom
+    module: ./custom/desktop_thoughts_bridge_plugin.py
+    class: DesktopThoughtsBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 3600
+      startup_min_interval_seconds: 7200
+      write_on_startup_if_stale: true
   - name: xinyu_maintenance_schedule_bridge
     type: custom
     module: ./custom/maintenance_schedule_bridge_plugin.py
@@ -353,16 +372,6 @@ subagents:
     prompt_file: prompts/learner_writer.md
     tools: [tree, read, edit, multi_edit, write]
     max_turns: 2
-
-  - name: output
-    type: custom
-    description: Generate Xinyu's outward reply in natural chat style
-    prompt_file: prompts/output.md
-    interactive: true
-    context_mode: interrupt_restart
-    output_to: external
-    tools: []
-    max_turns: 3
 
 output:
   type: stdout

@@ -40,6 +40,89 @@ def _trace(root: Path, line: str) -> None:
         fh.write(f"{stamp} {line}\n")
 
 
+def _owner_ready_followthrough_granted(root: Path) -> bool:
+    grants = _read(root / "memory/context/owner_permission_grants.md")
+    return (
+        "grant_research_ready_request_followthrough: "
+        "approved_fetch_compare_integrate_for_existing_ai_domain_ready_requests"
+    ) in grants
+
+
+def _owner_high_autonomy_granted(root: Path) -> bool:
+    grants = _read(root / "memory/context/owner_permission_grants.md")
+    return (
+        "grant_high_autonomy_learning_search: "
+        "approved_budgeted_ai_domain_and_quality_followup_search_through_gates"
+    ) in grants
+
+
+def _extract_value(block: str, field: str, default: str = "unknown") -> str:
+    match = re.search(rf"(?m)^- {re.escape(field)}:\s*(.+)$", block)
+    return match.group(1).strip() if match else default
+
+
+def _split_source_request_blocks(text: str) -> list[dict[str, str]]:
+    parts = re.split(r"(?m)^## (request-\d{4}-\d{2}-\d{2}-\d{3}|request-[\w-]+)\n", text)
+    requests: list[dict[str, str]] = []
+    if len(parts) < 3:
+        return requests
+    for i in range(1, len(parts), 2):
+        request_id = parts[i].strip()
+        if request_id == "request-none":
+            continue
+        body = parts[i + 1]
+        requests.append(
+            {
+                "request_id": request_id,
+                "question_id": _extract_value(body, "question_id", "none"),
+                "target": _extract_value(body, "target", "unknown"),
+                "url": _extract_value(body, "url", "none"),
+                "status": _extract_value(body, "status", "hold"),
+            }
+        )
+    return requests
+
+
+def _ready_request_has_unstaged_url(source_requests: str, source_materials: str, *, ai_only: bool = False) -> bool:
+    material_urls = set(re.findall(r"(?m)^- url:\s*(\S+)\s*$", source_materials))
+    for request in _split_source_request_blocks(source_requests):
+        url = request.get("url", "")
+        if ai_only and request.get("target") != "ai-self-understanding":
+            continue
+        if request.get("status") == "ready" and url.startswith(("http://", "https://")) and url not in material_urls:
+            return True
+    return False
+
+
+def _owner_ai_followthrough_waiting(root: Path, source_requests: str, source_materials: str, learning_quality: str) -> bool:
+    if not _owner_ready_followthrough_granted(root):
+        return False
+    quality_stable = "- quality_grade: stable" in learning_quality and "- warning_count: 0" in learning_quality
+    high_review_allowed = (
+        _owner_high_autonomy_granted(root)
+        and "- quality_grade: review_needed" in learning_quality
+        and "- warning_count: 0" in learning_quality
+        and "- conflict_hold_materials: 0" in learning_quality
+    )
+    if not quality_stable and not high_review_allowed:
+        return False
+    material_urls = set(re.findall(r"(?m)^- url:\s*(\S+)\s*$", source_materials))
+    for request in _split_source_request_blocks(source_requests):
+        url = request.get("url", "")
+        if (
+            request.get("status") == "ready"
+            and request.get("target") == "ai-self-understanding"
+            and url.startswith(("http://", "https://"))
+            and url not in material_urls
+        ):
+            return True
+    return False
+
+
+def _has_learning_quality_followup_candidate(learning_quality: str) -> bool:
+    return bool(re.search(r"(?m)^- repeated_question_host:\s+severity=review;\s+target=q-\d+@", learning_quality))
+
+
 def _infer_suggestions(root: Path) -> dict[str, str]:
     inner_sync = _read(root / "memory/context/inner_sync_state.md")
     question_pipe = _read(root / "memory/context/question_pipeline_state.md")
@@ -65,6 +148,8 @@ def _infer_suggestions(root: Path) -> dict[str, str]:
     archive_output = _read(root / "memory/archive/archive_output_state.md")
 
     source_gate_open = "- integration_permission: prepare_only" in source_integration or "- integration_permission: integrate_ready" in source_integration
+    source_integration_reason = _extract_value(source_integration, "gate_reason", "unknown")
+    owner_ai_gate_scope = source_integration_reason == "owner_approved_ai_ready_followthrough"
     has_source_candidates = bool(re.search(r"^- q-\d+:", source_gate, re.M))
     has_ready_source_material = "- status: ready" in source_materials
     has_real_source_material = bool(re.search(r"(?m)^## material-\d{4}-\d{2}-\d{2}-\d{3}", source_materials))
@@ -82,6 +167,18 @@ def _infer_suggestions(root: Path) -> dict[str, str]:
     has_unplanned_source_candidate = bool(source_candidate_ids - planned_source_question_ids)
     has_pending_source_request = "- status: pending_url" in source_requests
     has_ready_source_request = "- status: ready" in source_requests or bool(os.environ.get("XINYU_OUTWARD_SOURCE_URLS", "").strip())
+    has_unstaged_ready_source_request = _ready_request_has_unstaged_url(
+        source_requests,
+        source_materials,
+        ai_only=owner_ai_gate_scope,
+    )
+    owner_ai_followthrough_waiting = _owner_ai_followthrough_waiting(
+        root,
+        source_requests,
+        source_materials,
+        learning_quality,
+    )
+    has_quality_followup_candidate = _has_learning_quality_followup_candidate(learning_quality)
     has_candidate_search_result = "- status: candidate" in source_search_results
     has_controlled_search_input = bool(os.environ.get("XINYU_SOURCE_SEARCH_RESULTS", "").strip())
     source_search_provider = os.environ.get("XINYU_SOURCE_SEARCH_PROVIDER", "disabled").strip().lower()
@@ -116,10 +213,24 @@ def _infer_suggestions(root: Path) -> dict[str, str]:
         if re.search(r"^- q-\d+:", source_gate, re.M)
         else "hold",
         "suggest_source_integration_gate": "yes"
-        if "- q-" in _read(root / "memory/knowledge/source_reliability_state.md")
+        if (
+            "- q-" in _read(root / "memory/knowledge/source_reliability_state.md")
+            or owner_ai_followthrough_waiting
+            or has_quality_followup_candidate
+        )
         else "hold",
         "suggest_source_request_planner": "yes"
-        if (source_gate_open and has_source_candidates and not has_ready_source_material and (not has_planned_source_request or has_unplanned_source_candidate))
+        if (
+            source_gate_open
+            and (
+                (
+                    has_source_candidates
+                    and not has_ready_source_material
+                    and (not has_planned_source_request or has_unplanned_source_candidate)
+                )
+                or has_quality_followup_candidate
+            )
+        )
         else "hold",
         "suggest_source_search_resolver": "yes"
         if (source_gate_open and has_pending_source_request and not has_ready_source_request and has_controlled_search_input)
@@ -134,7 +245,13 @@ def _infer_suggestions(root: Path) -> dict[str, str]:
         if (source_gate_open and has_candidate_search_result and not has_ready_source_request)
         else "hold",
         "suggest_outward_source": "yes"
-        if (source_gate_open and not has_ready_source_material and has_ready_source_request)
+        if (
+            source_gate_open
+            and (
+                has_unstaged_ready_source_request
+                or (not has_ready_source_material and has_ready_source_request)
+            )
+        )
         else "hold",
         "suggest_source_comparison": "yes"
         if (source_gate_open and has_uncompared_ready_material)
@@ -632,6 +749,8 @@ def _write_maintenance_dispatch_state(root: Path, evaluated_at: str, suggestions
         and suggestions["suggest_source_integration_gate"] == "yes"
     ):
         deferred = "source_gate_then_source_reliability_then_integration_gate"
+    elif suggestions["suggest_source_integration_gate"] == "yes":
+        deferred = "source_integration_gate"
     elif suggestions["suggest_source_request_planner"] == "yes":
         deferred = "source_request_planner"
     elif suggestions["suggest_source_search_resolver"] == "yes":
@@ -737,6 +856,10 @@ class AutomationBridgePlugin(BasePlugin):
             return None
         root = _resolve_root(self._ctx)
         try:
+            turn_mode = read_turn_mode(root)
+            if turn_mode != "maintenance_schedule_turn":
+                _trace(root, f"pre_llm_call skipped turn_mode={turn_mode or 'unknown'}")
+                return None
             prompt = _build_runtime_bridge_prompt(root)
             if not prompt:
                 return None
@@ -768,14 +891,12 @@ class AutomationBridgePlugin(BasePlugin):
                 f"user_present={bool(user_message.strip())} "
                 f"response_len={len((response or '').strip())}",
             )
-            if turn_mode not in {"live_user_turn", "maintenance_schedule_turn"}:
-                return
-            if turn_mode == "live_user_turn" and not user_message.strip():
+            if turn_mode != "maintenance_schedule_turn":
                 return
 
             now = datetime.now().astimezone().isoformat()
             suggestions = _infer_suggestions(root)
-            mode = "plugin_post_llm_call_maintenance" if turn_mode == "maintenance_schedule_turn" else "plugin_post_llm_call"
+            mode = "plugin_post_llm_call_maintenance"
             _update_state(root / "memory/context/automation_state.md", now, suggestions, mode)
             _write_runtime_bridge_state(root, now, suggestions, mode)
             _write_maintenance_recommendations(root, now, suggestions)

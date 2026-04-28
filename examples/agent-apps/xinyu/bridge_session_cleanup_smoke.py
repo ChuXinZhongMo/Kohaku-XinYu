@@ -33,8 +33,8 @@ async def run_smoke() -> list[str]:
     old_agent = DummyAgent()
     fresh_agent = DummyAgent()
     runtime._sessions = {
-        "old": AgentSession("old", old_agent, last_used_at=now - 30),
-        "fresh": AgentSession("fresh", fresh_agent, last_used_at=now),
+        "old": AgentSession("old", old_agent, prompt_signature="smoke", last_used_at=now - 30),
+        "fresh": AgentSession("fresh", fresh_agent, prompt_signature="smoke", last_used_at=now),
     }
     result = await runtime._cleanup_idle_sessions()
     if result["cleaned_sessions"] != 1 or "old" in runtime._sessions or "fresh" not in runtime._sessions:
@@ -54,15 +54,42 @@ async def run_smoke() -> list[str]:
     )
     agents = {key: DummyAgent() for key in ("a", "b", "c")}
     runtime._sessions = {
-        "a": AgentSession("a", agents["a"], last_used_at=now - 30),
-        "b": AgentSession("b", agents["b"], last_used_at=now - 20),
-        "c": AgentSession("c", agents["c"], last_used_at=now - 10),
+        "a": AgentSession("a", agents["a"], prompt_signature="smoke", last_used_at=now - 30),
+        "b": AgentSession("b", agents["b"], prompt_signature="smoke", last_used_at=now - 20),
+        "c": AgentSession("c", agents["c"], prompt_signature="smoke", last_used_at=now - 10),
     }
     result = await runtime._cleanup_idle_sessions(preserve_keys={"c"})
     if result["cleaned_sessions"] != 1 or set(runtime._sessions) != {"b", "c"}:
         failures.append("max-session cleanup did not remove the oldest non-preserved session")
     if not agents["a"].stopped or agents["b"].stopped or agents["c"].stopped:
         failures.append("max-session cleanup stopped the wrong dummy agent")
+
+    runtime = XinYuBridgeRuntime(
+        xinyu_dir=root,
+        turn_timeout_seconds=1,
+        max_text_chars=100,
+        settle_seconds=0,
+        outward_renderer=False,
+        render_timeout_seconds=1,
+        session_idle_ttl_seconds=10,
+        max_sessions=0,
+    )
+    autonomous_agent = DummyAgent()
+    other_agent = DummyAgent()
+    runtime._sessions = {
+        runtime.autonomous_maintenance_session_key: AgentSession(
+            runtime.autonomous_maintenance_session_key,
+            autonomous_agent,
+            prompt_signature="smoke",
+            last_used_at=now - 30,
+        ),
+        "other": AgentSession("other", other_agent, prompt_signature="smoke", last_used_at=now - 30),
+    }
+    result = await runtime._cleanup_idle_sessions()
+    if result["cleaned_sessions"] != 1 or runtime.autonomous_maintenance_session_key not in runtime._sessions:
+        failures.append("autonomous maintenance session was not preserved during cleanup")
+    if autonomous_agent.stopped or not other_agent.stopped:
+        failures.append("autonomous cleanup preservation stopped the wrong dummy agent")
 
     return failures
 

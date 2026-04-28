@@ -37,7 +37,7 @@ def extract_source_candidates(source_gate_text: str) -> list[tuple[str, str]]:
     return pairs
 
 
-def extract_request_urls(request_text: str) -> list[tuple[str, str]]:
+def extract_request_urls(request_text: str, *, ai_only: bool = False) -> list[tuple[str, str]]:
     results: list[tuple[str, str]] = []
     parts = re.split(r"(?m)^## (request-\d{4}-\d{2}-\d{2}-\d{3}|request-[\w-]+)\n", request_text)
     if len(parts) < 3:
@@ -45,8 +45,11 @@ def extract_request_urls(request_text: str) -> list[tuple[str, str]]:
     for i in range(1, len(parts), 2):
         body = parts[i + 1]
         qid = extract_value(body, "question_id", "none")
+        target = extract_value(body, "target", "unknown")
         url = extract_value(body, "url", "none")
         status = extract_value(body, "status", "hold")
+        if ai_only and target != "ai-self-understanding":
+            continue
         if status == "ready" and url not in {"", "none"}:
             results.append((qid, url))
     return results
@@ -313,13 +316,15 @@ def run_outward_source(
     fetched_at = fetched_at or datetime.now().astimezone().isoformat()
     integration_gate = read_text(root / "memory/knowledge/source_integration_gate_state.md")
     permission = extract_value(integration_gate, "integration_permission", "hold")
+    gate_reason = extract_value(integration_gate, "gate_reason", "unknown")
+    ai_only = gate_reason == "owner_approved_ai_ready_followthrough"
     source_gate = read_text(root / "memory/knowledge/source_gate_state.md")
     candidates = extract_source_candidates(source_gate)
     default_qid = candidates[0][0] if candidates else "none"
 
     request_pairs = [(default_qid, url) for url in (urls or [])]
     if not request_pairs:
-        request_pairs = extract_request_urls(read_text(root / "memory/knowledge/source_requests.md"))
+        request_pairs = extract_request_urls(read_text(root / "memory/knowledge/source_requests.md"), ai_only=ai_only)
     if not request_pairs:
         request_pairs = env_urls()
     request_pairs = [(qid if qid != "none" else default_qid, url) for qid, url in request_pairs]

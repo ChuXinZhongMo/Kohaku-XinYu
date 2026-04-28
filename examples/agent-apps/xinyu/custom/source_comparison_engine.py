@@ -308,6 +308,11 @@ def group_needs_comparison(group: list[dict[str, object]]) -> bool:
     return False
 
 
+def material_needs_comparison(material: dict[str, object]) -> bool:
+    fields = dict(material["fields"])
+    return fields.get("comparison_status", "not_compared") not in FINAL_READY_COMPARISONS
+
+
 def compare_group(
     group_id: str,
     compared_at: str,
@@ -418,7 +423,8 @@ def compare_group(
         }
 
     for material in group:
-        apply_updates(material, updates)
+        if material_needs_comparison(material):
+            apply_updates(material, updates)
 
     return {
         "group_id": group_id,

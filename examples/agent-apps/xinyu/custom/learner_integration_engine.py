@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 
@@ -32,6 +33,9 @@ def extract_value(text: str, field: str, default: str = "unknown") -> str:
     return match.group(1).strip() if match else default
 
 
+from xinyu_state_io import extract_value as extract_value, read_text as read_text, write_text as write_text
+
+
 def split_materials(text: str) -> list[dict[str, str]]:
     parts = re.split(r"(?m)^## (material-\d{4}-\d{2}-\d{2}-\d{3})\n", text)
     materials: list[dict[str, str]] = []
@@ -51,6 +55,7 @@ def split_materials(text: str) -> list[dict[str, str]]:
             "comparison_status": "not_compared",
             "evidence_hosts": "0",
             "claim": "none",
+            "extraction_status": "unknown",
         }
         for line in body.splitlines():
             stripped = line.strip()
@@ -64,6 +69,7 @@ def split_materials(text: str) -> list[dict[str, str]]:
                 "comparison_status",
                 "evidence_hosts",
                 "claim",
+                "extraction_status",
             ]:
                 prefix = f"- {key}: "
                 if stripped.startswith(prefix):
@@ -84,7 +90,63 @@ def ready_materials(materials: list[dict[str, str]]) -> list[dict[str, str]]:
         and item["reliability"] in allowed_reliability
         and item["integration_scope"] in allowed_scope
         and item.get("comparison_status") in allowed_comparison
+        and not claim_looks_garbled(item.get("claim", ""))
+        and not claim_is_placeholder(item.get("claim", ""))
+        and not claim_is_too_thin(item.get("claim", ""))
+        and item.get("extraction_status") != "unreadable"
     ]
+
+
+def material_is_ready_except_claim_quality(item: dict[str, str]) -> bool:
+    allowed_reliability = {"medium_ready", "high_ready", "verified", "curated"}
+    allowed_scope = {"knowledge_only", "question_answer", "conceptual_only"}
+    allowed_comparison = {"corroborated", "limited_independence", "curated"}
+    return (
+        item["status"] == "ready"
+        and item["reliability"] in allowed_reliability
+        and item["integration_scope"] in allowed_scope
+        and item.get("comparison_status") in allowed_comparison
+    )
+
+
+def claim_looks_garbled(claim: str) -> bool:
+    sample = claim.strip()[:2000]
+    mojibake_markers = sum(sample.count(marker) for marker in ("锟斤拷", "锟斤", "斤拷", "��", "���"))
+    chars = [char for char in sample if not char.isspace()]
+    if len(chars) < 24:
+        return False
+    control_or_replacement = sum(
+        1
+        for char in chars
+        if char == "\ufffd" or unicodedata.category(char) in {"Cc", "Cf", "Cs"}
+    )
+    private_use = sum(1 for char in chars if 0xE000 <= ord(char) <= 0xF8FF or unicodedata.category(char) == "Co")
+    rare_cjk = sum(
+        1
+        for char in chars
+        if 0x3400 <= ord(char) <= 0x4DBF or 0x20000 <= ord(char) <= 0x2FA1F
+    )
+    uncommon_latin = sum(1 for char in chars if 0x1D00 <= ord(char) <= 0x1EFF or 0xA720 <= ord(char) <= 0xABFF)
+    total = len(chars)
+    if mojibake_markers >= 2 and (mojibake_markers * 3) / total > 0.01:
+        return True
+    if control_or_replacement and control_or_replacement / total > 0.004:
+        return True
+    if private_use and private_use / total > 0.003:
+        return True
+    if total >= 80 and (rare_cjk + uncommon_latin + private_use + control_or_replacement) / total > 0.18:
+        return True
+    return False
+
+
+def claim_is_placeholder(claim: str) -> bool:
+    normalized = re.sub(r"\s+", " ", claim.strip().lower())
+    return normalized.startswith("owner/local material copied from ") or normalized.startswith("downloaded ")
+
+
+def claim_is_too_thin(claim: str) -> bool:
+    tokens = [token for token in re.findall(r"[a-z0-9]+", claim.lower()) if len(token) > 2]
+    return len(tokens) < 8
 
 
 def integrated_source_material_ids(text: str) -> set[str]:
@@ -244,6 +306,8 @@ def render_state(
     total_integrated_materials: int,
     already_integrated_ready_materials: int,
     pending_ready_materials: int,
+    blocked_unreadable_materials: int,
+    held_unreadable_materials: int,
     skipped_reason: str,
 ) -> str:
     ids = "\n".join(f"- {item['material_id']}" for item in integrated) or "- none"
@@ -276,6 +340,8 @@ tags: [knowledge, learner, integration]
 - total_integrated_materials: {total_integrated_materials}
 - already_integrated_ready_materials: {already_integrated_ready_materials}
 - pending_ready_materials: {pending_ready_materials}
+- blocked_unreadable_materials: {blocked_unreadable_materials}
+- held_unreadable_materials: {held_unreadable_materials}
 - skipped_reason: {skipped_reason}
 
 ## Last Integrated Material Ids
@@ -299,6 +365,26 @@ def run_learner_integration(
     permission = extract_value(gate_text, "integration_permission", "hold")
     materials = split_materials(read_text(root / "memory/knowledge/source_materials.md"))
     ready = ready_materials(materials)
+    blocked_unreadable = [
+        item for item in materials
+        if material_is_ready_except_claim_quality(item)
+        and (
+            claim_looks_garbled(item.get("claim", ""))
+            or claim_is_placeholder(item.get("claim", ""))
+            or claim_is_too_thin(item.get("claim", ""))
+            or item.get("extraction_status") == "unreadable"
+        )
+    ]
+    held_unreadable = [
+        item for item in materials
+        if item.get("status") != "ready"
+        and (
+            item.get("extraction_status") == "unreadable"
+            or claim_looks_garbled(item.get("claim", ""))
+            or claim_is_placeholder(item.get("claim", ""))
+            or claim_is_too_thin(item.get("claim", ""))
+        )
+    ]
     general_path = root / "memory/knowledge/general.md"
 
     integrated: list[dict[str, str]] = []
@@ -306,7 +392,7 @@ def run_learner_integration(
     if permission not in {"prepare_only", "integrate_ready"}:
         skipped_reason = "integration_gate_not_open"
     elif not ready:
-        skipped_reason = "no_ready_materials"
+        skipped_reason = "unreadable_claim_quality_hold" if blocked_unreadable else "no_ready_materials"
     else:
         for item in ready:
             if append_general_knowledge(general_path, integrated_at, item):
@@ -334,6 +420,8 @@ def run_learner_integration(
             len(integrated_ids),
             len(already_integrated_ready),
             len(pending_ready),
+            len(blocked_unreadable),
+            len(held_unreadable),
             skipped_reason,
         ),
     )
@@ -346,6 +434,8 @@ def run_learner_integration(
         "total_integrated_materials": len(integrated_ids),
         "already_integrated_ready_materials": len(already_integrated_ready),
         "pending_ready_materials": len(pending_ready),
+        "blocked_unreadable_materials": len(blocked_unreadable),
+        "held_unreadable_materials": len(held_unreadable),
         "integrated_ids": [item["material_id"] for item in integrated],
         "skipped_reason": skipped_reason,
     }

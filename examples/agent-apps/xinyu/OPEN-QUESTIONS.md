@@ -1,4 +1,4 @@
-# Xinyu Open Questions v0.1
+﻿# Xinyu Open Questions v0.1
 
 This file tracks the most important unresolved questions that still require real runtime evidence, later design decisions, or both.
 
@@ -42,7 +42,7 @@ Why it matters:
 
 Open question:
 
-- how fast should disappointment, trust, distance, and repair move in `owner.md`?
+- how fast should disappointment, trust, distance, and return move in `owner.md`?
 
 Why it matters:
 
@@ -120,13 +120,13 @@ Why it matters:
 
 - Xinyu is intentionally subtle and inward, so this line matters a lot
 
-## 12. Repair Realism
+## 12. Return Realism
 
 Open question:
 
-- what kind of repair signal is enough to soften distance after hurt?
+- what kind of return signal is enough to soften distance after hurt?
 
 Why it matters:
 
-- if repair is too cheap, conflict feels fake
-- if repair is too hard, Xinyu becomes brittle
+- if return is too cheap, conflict feels fake
+- if return is too hard, Xinyu becomes brittle

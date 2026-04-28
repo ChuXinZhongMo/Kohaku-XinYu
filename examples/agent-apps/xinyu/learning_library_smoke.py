@@ -9,7 +9,7 @@ from argparse import Namespace
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-from xinyu_learning_library import command_add, command_stage, load_manifest
+from xinyu_learning_library import command_add, command_stage, load_manifest, pdf_text_looks_garbled
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -305,6 +305,15 @@ before learner integration treats it as learned knowledge.
         "pptx_extracted": "XinYu PPTX fixture should be extracted" in pptx_extract,
         "xlsx_extracted": "XinYu XLSX fixture should be extracted" in xlsx_extract,
         "rtf_extracted": "XinYu RTF fixture should be extracted" in rtf_extract,
+        "pdf_plain_quality_ok": not pdf_text_looks_garbled("XinYu PDF fixture should be extracted from a text PDF."),
+        "pdf_garbled_quality_hold": pdf_text_looks_garbled(
+            "\uf6b2.\x01$POUFYU\x01\u035b\x01\u4ef0\u4a63\ua75a\u962d\u4453\x01"
+            "\u2623\x01%FFQ4FFL\u0017\u0014\u0015\u0016\u4d07\ua75a\u2515\u2516\u4e44"
+        ),
+        "pdf_mojibake_quality_hold": pdf_text_looks_garbled(
+            "IM Context 锟斤拷 锟斤拷 DeepSeek-V4 锟斤拷 attention 锟斤拷 "
+            "Sliding Window 锟斤拷 Attention Sink 锟斤拷 Partial ROPE 锟斤拷"
+        ),
     }
     if ocr_fixture_enabled:
         checks["image_ocr_extracted"] = _has_tokens(ocr_image_extract, "xinyu", "ocr", "123")

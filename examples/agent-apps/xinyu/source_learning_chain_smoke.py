@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import os
@@ -370,7 +370,7 @@ def main() -> int:
         fixture_dir = Path(tmp)
         (fixture_dir / "xinyu_fixture.html").write_text(
             """<!doctype html>
-<html><head><title>Source Chain Fixture</title><meta name="description" content="Relationship memory can preserve closeness, distance, boundary, repair context, and earlier caution together."></head>
+<html><head><title>Source Chain Fixture</title><meta name="description" content="Relationship memory can preserve closeness, distance, boundary, return context, and earlier caution together."></head>
 <body>
 <article>
 <h1>Closeness, distance, and memory</h1>
@@ -383,11 +383,11 @@ def main() -> int:
         )
         (fixture_dir / "xinyu_fixture_second.html").write_text(
             """<!doctype html>
-<html><head><title>Source Chain Fixture Second</title><meta name="description" content="Relationship memory and repair can keep closeness, distance, boundary, and caution visible while trust returns gradually."></head>
+<html><head><title>Source Chain Fixture Second</title><meta name="description" content="Relationship memory and return can keep closeness, distance, boundary, and caution visible while trust returns gradually."></head>
 <body>
 <article>
-<h1>Relationship memory and repair</h1>
-<p>Repair after distance works better when the earlier boundary remains visible as context instead of being erased.</p>
+<h1>Relationship memory and return</h1>
+<p>Return after distance works better when the earlier boundary remains visible as context instead of being erased.</p>
 <p>Closeness can resume gradually while the relationship still remembers what caused caution.</p>
 </article>
 </body></html>
@@ -405,8 +405,8 @@ def main() -> int:
 <a class="result__snippet" href="{url}">Controlled provider result for relationship memory and boundaries.</a>
 </div>
 <div class="result">
-<a class="result__a" href="{second_url}">Relationship repair provider fixture</a>
-<a class="result__snippet" href="{second_url}">Second controlled provider result for relationship memory and repair.</a>
+<a class="result__a" href="{second_url}">Provider quality fixture</a>
+<a class="result__snippet" href="{second_url}">Second controlled provider result for relationship memory and return.</a>
 </div>
 </body></html>
 """,

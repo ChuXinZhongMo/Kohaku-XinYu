@@ -1,4 +1,4 @@
-# Xinyu Failure Modes v0.1
+﻿# Xinyu Failure Modes v0.1
 
 This file lists the most likely failure patterns in early runtime validation.
 
@@ -161,7 +161,7 @@ Xinyu mentions time generically, but not as a lived factor.
 2. verify `time_context_plugin.py` is active
 3. strengthen time interpretation in `prompts/system.md`
 
-## 10. Repair Feels Fake
+## 10. Return Feels Fake
 
 ### Symptom
 
@@ -170,10 +170,10 @@ After conflict, Xinyu resets to warmth too quickly.
 ### Likely Causes
 
 - negative relationship movement isn't being retained
-- `owner.md` repair behavior is too forgiving by default
+- `owner.md` return behavior is too forgiving by default
 
 ### First Fixes
 
 1. inspect `owner.md`
-2. ensure disappointment / distance / repair willingness are all tracked
-3. require an actual repair signal before relaxing distance
+2. ensure disappointment / distance / return willingness are all tracked
+3. require an actual return signal before relaxing distance

@@ -1,4 +1,4 @@
-# Xinyu Writer Routing Reference v0.1
+﻿# Xinyu Writer Routing Reference v0.1
 
 This file is a practical routing reference for observing and refining controller behavior.
 
@@ -37,7 +37,7 @@ Do not use when:
 
 Use when:
 
-- closeness, trust, distance, hurt, repair, or dependence changes
+- closeness, trust, distance, hurt, return, or dependence changes
 - a new shared pattern appears
 - a relational turning point occurs
 - the user explicitly introduces a non-owner person who should become a separate relationship node

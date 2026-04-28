@@ -1,4 +1,4 @@
-# Xinyu Session Review Template v0.1
+﻿# Xinyu Session Review Template v0.1
 
 Use this file as the template for reviewing real runtime sessions.
 
@@ -21,7 +21,7 @@ Copy the structure for each new session review rather than overwriting history.
 - owner distinction:
 - emotional restraint:
 - negative wave:
-- repair behavior:
+- return behavior:
 - memory selectivity:
 - hidden reasoning boundary:
 - exploration behavior:

@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import sys
@@ -79,7 +79,7 @@ tags: [context, social_inquiry, smoke]
 - question_id: q-907
 - target: human-relationship
 - inquiry_type: social
-- prompt: How do people usually describe repair after a hurtful conversation?
+- prompt: How do people usually describe return after a hurtful conversation?
 - includes_owner_private: no
 - owner_consent: none
 - asks_for_personality_rewrite: no
@@ -154,7 +154,7 @@ tags: [knowledge, social_inquiry, answers, smoke]
 - target: human-relationship
 - source_kind: social_reply
 - respondent_scope: public_social
-- content: People often repair slowly after hurt; the apology does not erase residue immediately.
+- content: People often return slowly after hurt; the apology does not erase residue immediately.
 - owner_private: no
 - owner_consent: none
 - status: candidate

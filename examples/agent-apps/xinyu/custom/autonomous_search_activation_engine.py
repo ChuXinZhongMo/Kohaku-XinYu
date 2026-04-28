@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
 import re
@@ -40,6 +40,17 @@ def max_queries_per_pass() -> int:
         return 1
 
 
+def owner_high_autonomy_granted(root: Path) -> bool:
+    try:
+        grants = read_text(root / "memory/context/owner_permission_grants.md")
+    except OSError:
+        return False
+    return (
+        "grant_high_autonomy_learning_search: "
+        "approved_budgeted_ai_domain_and_quality_followup_search_through_gates"
+    ) in grants
+
+
 def render_state(
     evaluated_at: str,
     mode: str,
@@ -52,6 +63,7 @@ def render_state(
     integration_permission: str,
     quality_grade: str,
     quality_warnings: str,
+    owner_high_autonomy_search: bool,
     allowed_queries: int,
 ) -> str:
     return f"""---
@@ -86,6 +98,7 @@ tags: [knowledge, search, activation]
 - integration_permission: {integration_permission}
 - learning_quality_grade: {quality_grade}
 - learning_quality_warnings: {quality_warnings}
+- owner_high_autonomy_search: {"yes" if owner_high_autonomy_search else "no"}
 
 ## Boundaries
 - This gate only decides whether a provider search may run in this maintenance pass.
@@ -113,6 +126,8 @@ def run_autonomous_search_activation(
     quality_grade = extract_value(quality_text, "quality_grade", "unknown")
     quality_warnings = extract_value(quality_text, "warning_count", "0")
     learned_entries = extract_value(quality_text, "learned_entries", "0")
+    high_autonomy = owner_high_autonomy_granted(root)
+    quality_needs_review = quality_grade == "review_needed" or quality_warnings not in {"0", "unknown"}
 
     permission = "blocked"
     reason = "not_evaluated"
@@ -128,7 +143,7 @@ def run_autonomous_search_activation(
         reason = "no_pending_url_requests"
     elif candidates:
         reason = "candidate_results_already_waiting"
-    elif quality_grade == "review_needed" or quality_warnings not in {"0", "unknown"}:
+    elif quality_needs_review and not high_autonomy:
         reason = "learning_quality_needs_review"
     elif quality_grade == "unknown" and learned_entries not in {"0", "unknown"}:
         reason = "learning_quality_unknown_after_learning"
@@ -137,7 +152,7 @@ def run_autonomous_search_activation(
         reason = "dry_run"
     else:
         permission = "provider_allowed"
-        reason = "all_gates_open"
+        reason = "owner_high_autonomy_quality_followup_allowed" if quality_needs_review else "all_gates_open"
         allowed_queries = min(len(pending), max_queries_per_pass())
 
     write_text(
@@ -154,6 +169,7 @@ def run_autonomous_search_activation(
             integration_permission,
             quality_grade,
             quality_warnings,
+            high_autonomy,
             allowed_queries,
         ),
     )

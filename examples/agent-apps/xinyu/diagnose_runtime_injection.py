@@ -73,8 +73,10 @@ def main() -> int:
 
     print("=== SYSTEM_PROMPT_MARKERS ===")
     for label, needle in [
+        ("live_voice_card", "# XinYu Live Voice Card"),
         ("self_core", "memory_type: self_core"),
         ("personality_profile", "# 心玉人格细节画像"),
+        ("persona_life_anchors", "# 心玉人格生活锚点"),
         ("emotion_state", "# 当前状态"),
         ("relationship_index", "# 关系索引"),
         ("owner_profile", "# owner"),

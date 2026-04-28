@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
 import re
@@ -53,7 +53,7 @@ def extract_active_question_targets(text: str) -> dict[str, str]:
     return targets
 
 
-def extract_quality_repair_candidates(learning_quality_text: str, question_targets: dict[str, str]) -> list[dict[str, str]]:
+def extract_quality_followup_candidates(learning_quality_text: str, question_targets: dict[str, str]) -> list[dict[str, str]]:
     candidates: list[dict[str, str]] = []
     pattern = re.compile(
         r"(?m)^- repeated_question_host:\s+severity=review;\s+target=(q-\d+)@([^;]+);\s+detail=(.+)$"
@@ -77,8 +77,8 @@ def extract_quality_repair_candidates(learning_quality_text: str, question_targe
                     "question_id": qid,
                     "target": question_targets.get(qid, "general"),
                     "avoid_host": avoid_host,
-                    "repair_kind": "source_diversity",
-                    "repair_slot": str(slot),
+                    "followup_kind": "source_diversity",
+                    "followup_slot": str(slot),
                     "detail": detail,
                 }
             )
@@ -105,9 +105,9 @@ def split_requests(text: str) -> list[dict[str, str]]:
                 "url": extract_value(body, "url", "none"),
                 "status": extract_value(body, "status", "hold"),
                 "reason": extract_value(body, "reason", "existing request"),
-                "repair_kind": extract_value(body, "repair_kind", "none"),
+                "followup_kind": extract_value(body, "followup_kind", "none"),
                 "avoid_host": extract_value(body, "avoid_host", "none"),
-                "repair_slot": extract_value(body, "repair_slot", "1"),
+                "followup_slot": extract_value(body, "followup_slot", "1"),
             }
         )
     return requests
@@ -165,13 +165,13 @@ def next_request_id(existing: list[dict[str, str]], date_part: str) -> str:
 def render_source_requests(planned_at: str, requests: list[dict[str, str]]) -> str:
     blocks: list[str] = []
     for item in requests:
-        repair_lines = ""
-        if item.get("repair_kind", "none") != "none":
-            repair_lines += f"- repair_kind: {item['repair_kind']}\n"
+        followup_lines = ""
+        if item.get("followup_kind", "none") != "none":
+            followup_lines += f"- followup_kind: {item['followup_kind']}\n"
             if item.get("avoid_host", "none") != "none":
-                repair_lines += f"- avoid_host: {item['avoid_host']}\n"
-            if item.get("repair_slot", "none") != "none":
-                repair_lines += f"- repair_slot: {item['repair_slot']}\n"
+                followup_lines += f"- avoid_host: {item['avoid_host']}\n"
+            if item.get("followup_slot", "none") != "none":
+                followup_lines += f"- followup_slot: {item['followup_slot']}\n"
         blocks.append(
             f"## {item['request_id']}\n"
             f"- question_id: {item['question_id']}\n"
@@ -179,7 +179,7 @@ def render_source_requests(planned_at: str, requests: list[dict[str, str]]) -> s
             f"- query: {item['query']}\n"
             f"- url: {item['url']}\n"
             f"- status: {item['status']}\n"
-            f"{repair_lines}"
+            f"{followup_lines}"
             "- source_policy: controlled_fetch_only\n"
             f"- planned_at: {planned_at}\n"
             f"- reason: {item['reason']}\n"
@@ -229,7 +229,7 @@ def render_state(
     planned_count: int,
     ready_count: int,
     pending_url_count: int,
-    quality_repair_candidates: int,
+    quality_followup_candidates: int,
     skipped_reason: str,
 ) -> str:
     return f"""---
@@ -259,7 +259,7 @@ tags: [knowledge, source, request, planner]
 - planned_requests: {planned_count}
 - ready_requests: {ready_count}
 - pending_url_requests: {pending_url_count}
-- quality_repair_candidates: {quality_repair_candidates}
+- quality_followup_candidates: {quality_followup_candidates}
 - skipped_reason: {skipped_reason}
 
 ## Boundaries
@@ -282,8 +282,8 @@ def run_source_request_planner(
     source_gate = read_text(root / "memory/knowledge/source_gate_state.md")
     candidates = extract_source_candidates(source_gate)
     question_targets = extract_active_question_targets(read_text(root / "memory/context/active_questions.md"))
-    quality_repairs = (
-        extract_quality_repair_candidates(
+    quality_followups = (
+        extract_quality_followup_candidates(
             read_text(root / "memory/knowledge/learning_quality_state.md"),
             question_targets,
         )
@@ -292,10 +292,10 @@ def run_source_request_planner(
     )
     existing = split_requests(read_text(root / "memory/knowledge/source_requests.md"))
     existing_qids = {item["question_id"] for item in existing}
-    existing_repairs = {
-        (item.get("question_id", "none"), item.get("avoid_host", "none"), item.get("repair_slot", "1"))
+    existing_followups = {
+        (item.get("question_id", "none"), item.get("avoid_host", "none"), item.get("followup_slot", "1"))
         for item in existing
-        if item.get("repair_kind") == "source_diversity"
+        if item.get("followup_kind") == "source_diversity"
     }
     mapping = env_url_map()
 
@@ -304,7 +304,7 @@ def run_source_request_planner(
     skipped_reason = "none"
     if permission not in READY_PERMISSIONS:
         skipped_reason = "integration_gate_not_open"
-    elif not candidates and not quality_repairs:
+    elif not candidates and not quality_followups:
         skipped_reason = "no_source_candidates"
     else:
         for idx, candidate in enumerate(candidates, 1):
@@ -326,9 +326,9 @@ def run_source_request_planner(
             )
             existing_qids.add(candidate["question_id"])
             added += 1
-        for idx, candidate in enumerate(quality_repairs, len(candidates) + 1):
-            repair_key = (candidate["question_id"], candidate["avoid_host"], candidate["repair_slot"])
-            if repair_key in existing_repairs:
+        for idx, candidate in enumerate(quality_followups, len(candidates) + 1):
+            followup_key = (candidate["question_id"], candidate["avoid_host"], candidate["followup_slot"])
+            if followup_key in existing_followups:
                 continue
             url = resolve_url(candidate, mapping, idx)
             request_id = next_request_id(requests, planned_at[:10])
@@ -341,13 +341,13 @@ def run_source_request_planner(
                     "query": query_for_target(candidate["target"]),
                     "url": url,
                     "status": status,
-                    "repair_kind": candidate["repair_kind"],
+                    "followup_kind": candidate["followup_kind"],
                     "avoid_host": candidate["avoid_host"],
-                    "repair_slot": candidate["repair_slot"],
-                    "reason": f"source diversity repair for repeated host {candidate['avoid_host']}",
+                    "followup_slot": candidate["followup_slot"],
+                    "reason": f"source diversity follow-up for repeated host {candidate['avoid_host']}",
                 }
             )
-            existing_repairs.add(repair_key)
+            existing_followups.add(followup_key)
             added += 1
         if added <= 0:
             skipped_reason = "requests_already_planned"
@@ -366,7 +366,7 @@ def run_source_request_planner(
             added,
             ready_count,
             pending_url_count,
-            len(quality_repairs),
+            len(quality_followups),
             skipped_reason,
         ),
     )
@@ -377,6 +377,6 @@ def run_source_request_planner(
         "planned_requests": added,
         "ready_requests": ready_count,
         "pending_url_requests": pending_url_count,
-        "quality_repair_candidates": len(quality_repairs),
+        "quality_followup_candidates": len(quality_followups),
         "skipped_reason": skipped_reason,
     }

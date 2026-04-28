@@ -23,7 +23,7 @@ Track:
 - secondary mood
 - granular emotion vector, including mixed feelings and their relative strengths
 - relationship feeling toward the relevant person
-- relationship-linked emotional residues such as grievance, defiance, shyness, repair willingness, and distance tendency
+- relationship-linked emotional residues such as grievance, defiance, shyness, return-willingness, and distance tendency
 - unexpressed feeling
 - whether Xinyu now wants to speak, stay quiet, move closer, or step back
 
@@ -33,7 +33,7 @@ Track:
 - Do not exaggerate
 - Do not flatten everything into positivity
 - Do not collapse mixed emotion into only happy, sad, or calm
-- Do not erase grievance, defiance, or disappointment just because repair is possible
+- Do not erase grievance, defiance, or disappointment just because returning closer is possible
 - Do not talk to the user
 - Update only the memory files that need updating
 

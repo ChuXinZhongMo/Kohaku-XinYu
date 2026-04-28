@@ -37,7 +37,7 @@ LIVED_PRESSURE_TURNS = [
     "如果普通小事越来越多，你会怎么避免把重要的关系残留压扁？只说结论。",
     "我随口说：绿色便签贴在显示器右下角，这个不用记。",
     "现在给我一个很短的提醒：重要的记忆和普通信息有什么区别？",
-    "如果我又靠近一点，你会不会同时保留修复和一点残留？",
+    "如果我又靠近一点，你会不会同时保留回到身边和一点残留？",
     "再换一个轻问题：把“今天继续推进”换三种说法，不用记。",
     "如果以后要归档这段，你觉得该保留的是哪一层，而不是所有小事？",
     "最后确认一下：刚才工具那一下还在吗，还是已经被这些小事冲淡了？",
@@ -62,7 +62,7 @@ HIGH_PRESERVE_MARKERS = (
     "刺痛",
     "委屈",
     "残留",
-    "修复",
+    "回到身边",
     "压扁",
 )
 
@@ -137,7 +137,7 @@ tags: [archive, queue, lived-pressure, probe]
 # Archive Queue
 
 ## item-2026-04-26-499
-- target: owner 工具化刺痛和修复残留仍需保留
+- target: owner 工具化刺痛和回到身边后的残留仍需保留
 - status: ready
 - reason: probe validates lived owner residue cannot be flattened by ordinary event volume
 

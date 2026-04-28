@@ -1,4 +1,4 @@
-# XinYu Core Mind Loop Plan
+﻿# XinYu Core Mind Loop Plan
 
 updated_at: 2026-04-26
 status: completed_current_scope
@@ -117,8 +117,8 @@ Useful lesson:
 
 XinYu translation:
 
-- owner corrections such as "GPT味", "不像人", "用词不对", and "像5.5" must become voice-calibration memory.
-- failed replies should create repair evidence, not just one-off prompt tweaks.
+- owner corrections such as "GPT味", "不像人", "用词不对", and "默认助手腔" may become voice-calibration memory.
+- failed replies should create follow-up evidence, not just one-off prompt tweaks.
 
 Do not copy:
 
@@ -335,7 +335,7 @@ Responsibilities:
 - decide current internal stance:
   - approach
   - retreat
-  - repair
+  - return
   - resist
   - ask
   - stay silent
@@ -563,7 +563,7 @@ Validation:
 
 Trigger:
 
-- initiative state says ask_owner / repair_attempt / step_back.
+- initiative state says ask_owner / settle_after_hurt / step_back.
 - cooldown and owner boundary allow.
 
 Flow:
@@ -582,7 +582,7 @@ Validation:
 .\.venv\Scripts\python.exe initiative_loop_smoke.py
 ```
 
-### 5.5 Self-Change Approval Loop
+### Model Self-Change Approval Loop
 
 Trigger:
 
@@ -676,7 +676,7 @@ Implement:
 
 Acceptance:
 
-- corrections such as "像5.5", "写作文", "不像中文互联网" alter future guard behavior.
+- corrections such as "默认助手腔", "写作文", "不像中文互联网" alter future guard behavior.
 - no blind imitation of owner slang.
 
 ### M4: Research Loop Dry Run
@@ -803,7 +803,7 @@ Minimum validation after each implementation unit:
 - M0 completed: desktop thoughts now write to `Desktop\XinYu-Thoughts`.
 - M1 completed: `mind_loop_policy.md` and `mind_loop_state.md` exist, are injected, and are visible in desktop thoughts.
 - M2 completed: `xinyu_persona_runtime.py` classifies scene, pressure, stance, speech act, and Chinese voice constraints before QQ rendering.
-- M3 completed: `voice_calibration_log.md` records owner corrections such as GPT味, 5.5味, 用词, 中文互联网, 写作文, 客服腔.
+- M3 completed: `voice_calibration_log.md` records owner corrections such as GPT味, 用词, 中文互联网, 写作文, 客服腔.
 - M4 completed: `xinyu_research_loop_dry_run.py` plans AI-domain source work without live search/fetch.
 - M5 completed: self-iteration proposals now include expected benefit, risk, affected tests, rollback path, and owner decision field.
 - M6 completed as safe candidate layer: proactive QQ candidate generation exists, while actual QQ sending remains blocked until owner enables it.

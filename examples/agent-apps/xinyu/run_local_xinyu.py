@@ -6,6 +6,8 @@ import os
 import sys
 from pathlib import Path
 
+from xinyu_runtime_security import enforce_llm_http_guard
+
 
 def _load_local_env(xinyu_dir: Path) -> None:
     env_path = xinyu_dir / "xinyu.local.env"
@@ -92,6 +94,7 @@ def main() -> int:
 
     xinyu_dir = Path(__file__).resolve().parent
     _load_local_env(xinyu_dir)
+    enforce_llm_http_guard()
     os.chdir(xinyu_dir)
     repo_root = xinyu_dir.parents[2]
     run_mod = _load_run_module(repo_root)

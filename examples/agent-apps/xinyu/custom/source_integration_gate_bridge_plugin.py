@@ -57,11 +57,14 @@ class SourceIntegrationGateBridgePlugin(BasePlugin):
             return False, f"turn_mode:{turn_mode or 'unknown'}"
 
         dispatch = _read(root / "memory/context/maintenance_dispatch_state.md")
-        if "- deferred: source_gate_then_source_reliability" not in dispatch:
+        if (
+            "- deferred: source_gate_then_source_reliability" not in dispatch
+            and "- deferred: source_integration_gate" not in dispatch
+        ):
             return False, "dispatch_not_source_chain"
 
         recommendations = _read(root / "memory/context/maintenance_recommendations.md")
-        if "- source_reliability: yes" not in recommendations:
+        if "- source_reliability: yes" not in recommendations and "- source_integration_gate: yes" not in recommendations:
             return False, "recommendation_not_yes"
 
         last_run = self._ctx.get_state("source_integration_gate_last_run")

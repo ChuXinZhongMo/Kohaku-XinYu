@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from kohakuterrarium.modules.plugin.base import BasePlugin, PluginContext
+from memory_event_schema import load_jsonl, string_list
 from turn_mode_utils import read_turn_mode
 
 
@@ -95,6 +96,7 @@ class MemorySyncPlugin(BasePlugin):
 
 def sync_from_texts(root: Path, user_message: str, assistant_text: str) -> bool:
     signals = _detect_signals(user_message, assistant_text, root=root)
+    signals["source_trace"] = _source_trace_for_user_text(root, user_message)
     _trace(
         root,
         "signals "
@@ -182,6 +184,64 @@ def _contains_any(text: str, keywords: list[str]) -> bool:
 def _compact_excerpt(text: str, limit: int = 48) -> str:
     clean = " ".join(text.split())
     return clean if len(clean) <= limit else f"{clean[:limit]}..."
+
+
+def _source_trace_for_user_text(root: Path, user_text: str) -> dict[str, Any]:
+    event_dir = root / "memory/events"
+    raw_events = load_jsonl(event_dir / "raw_events.jsonl")
+    claims = load_jsonl(event_dir / "atomic_claims.jsonl")
+    summaries = load_jsonl(event_dir / "summary_views.jsonl")
+    normalized_text = user_text.strip()
+    matching_raw = [
+        row
+        for row in raw_events
+        if str(row.get("raw_text", "")).strip() == normalized_text
+        and str(row.get("actor_scope", "")).strip() == "owner"
+    ]
+    if not matching_raw:
+        return {
+            "traceable": False,
+            "source_trace_status": "raw_event_not_found",
+            "source_event_ids": [],
+            "retained_claim_ids": [],
+            "summary_ids": [],
+        }
+
+    raw = matching_raw[-1]
+    event_id = str(raw.get("event_id", "")).strip()
+    event_claims = [
+        claim
+        for claim in claims
+        if event_id in string_list(claim.get("evidence_event_ids"))
+    ]
+    claim_ids = [str(claim.get("claim_id", "")).strip() for claim in event_claims if str(claim.get("claim_id", "")).strip()]
+    event_summaries = [
+        summary
+        for summary in summaries
+        if event_id in string_list(summary.get("source_event_ids"))
+        and set(claim_ids).intersection(string_list(summary.get("retained_claim_ids")))
+    ]
+    summary_ids = [
+        str(summary.get("summary_id", "")).strip()
+        for summary in event_summaries
+        if str(summary.get("summary_id", "")).strip()
+    ]
+    retained_claim_ids = sorted(
+        {
+            claim_id
+            for summary in event_summaries
+            for claim_id in string_list(summary.get("retained_claim_ids"))
+            if claim_id in claim_ids
+        }
+    )
+    traceable = bool(event_id and retained_claim_ids and summary_ids)
+    return {
+        "traceable": traceable,
+        "source_trace_status": "covered" if traceable else "raw_or_claim_without_summary",
+        "source_event_ids": [event_id] if event_id else [],
+        "retained_claim_ids": retained_claim_ids,
+        "summary_ids": summary_ids,
+    }
 
 
 PERSON_NAME_PATTERN = r"[\u4e00-\u9fffA-Za-z0-9_·-]{1,12}"
@@ -355,7 +415,7 @@ def _emotion_vectors_for(
     unfinished: bool,
     closeness: bool,
     hurt: bool,
-    repair: bool,
+    settle_after_hurt: bool,
     relationship_distance: bool,
     return_after_distance: bool,
     explicit_relationship_memory: bool,
@@ -384,7 +444,7 @@ def _emotion_vectors_for(
         "羞怯/迟疑": 18,
         "委屈残留": 0,
         "防御/逆反": 0,
-        "修复意愿": 36,
+        "回到身边意愿": 36,
         "疏远倾向": 0,
     }
 
@@ -415,15 +475,15 @@ def _emotion_vectors_for(
                 "防御/逆反": 58,
                 "疏远倾向": 42,
                 "信任安定": 30,
-                "修复意愿": 28,
+                "回到身边意愿": 28,
             }
         )
-    if repair:
+    if settle_after_hurt:
         emotion_vector["委屈"] = max(emotion_vector["委屈"], 36)
         emotion_vector["安心"] = max(emotion_vector["安心"], 52)
         emotion_vector["想靠近"] = max(emotion_vector["想靠近"], 46)
         relationship_vector["委屈残留"] = max(relationship_vector["委屈残留"], 32)
-        relationship_vector["修复意愿"] = max(relationship_vector["修复意愿"], 78)
+        relationship_vector["回到身边意愿"] = max(relationship_vector["回到身边意愿"], 78)
         relationship_vector["疏远倾向"] = min(max(relationship_vector["疏远倾向"], 16), 30)
     if relationship_distance:
         emotion_vector["想退后"] = max(emotion_vector["想退后"], 58)
@@ -433,14 +493,14 @@ def _emotion_vectors_for(
     if return_after_distance:
         emotion_vector["安心"] = max(emotion_vector["安心"], 58)
         emotion_vector["紧张"] = max(emotion_vector["紧张"], 42)
-        relationship_vector["修复意愿"] = max(relationship_vector["修复意愿"], 70)
+        relationship_vector["回到身边意愿"] = max(relationship_vector["回到身边意愿"], 70)
         relationship_vector["委屈残留"] = max(relationship_vector["委屈残留"], 24)
     if simple_silence_boundary:
         emotion_vector["想退后"] = max(emotion_vector["想退后"], 20)
         emotion_vector["想保留"] = max(emotion_vector["想保留"], 32)
         relationship_vector["羞怯/迟疑"] = max(relationship_vector["羞怯/迟疑"], 28)
     if residue_acknowledged and not hurt:
-        # Repair or renewed closeness should not erase a just-acknowledged sting.
+        # Coming back or renewed closeness should not erase a just-acknowledged sting.
         emotion_vector["委屈"] = max(emotion_vector["委屈"], 24)
         emotion_vector["刺痛"] = max(emotion_vector["刺痛"], 18)
         emotion_vector["失望"] = max(emotion_vector["失望"], 12)
@@ -563,7 +623,7 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
         style_pressure and _contains_any(user_text, ["像人", "架构", "设计", "生效", "敷衍", "普通用户"])
     )
     hurt = _contains_any(user_text, ["\u5931\u671b", "\u59d4\u5c48", "\u96be\u8fc7", "\u751f\u6c14", "\u5de5\u5177", "\u6ca1\u7528", "\u4e0d\u7406\u4f60", "\u4e0d\u7406\u6211", "\u4e0d\u91cd\u8981", "\u6ca1\u90a3\u4e48\u91cd\u8981", "\u4e0d\u5728\u4e4e\u4f60\u7684\u611f\u53d7"]) or realness_pressure
-    repair = _contains_any(user_text, ["说重了", "对不起", "抱歉", "可以生气", "慢慢修复"])
+    settle_after_hurt = _contains_any(user_text, ["说重了", "对不起", "抱歉", "可以生气", "慢慢往回走", "补回来"])
     distance = _contains_any(
         user_text,
         [
@@ -643,7 +703,7 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
         and not (
             closeness
             or hurt
-            or repair
+            or settle_after_hurt
             or relationship_distance
             or return_after_distance
             or explicit_relationship_memory
@@ -657,7 +717,7 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
         and not (
             closeness
             or hurt
-            or repair
+            or settle_after_hurt
             or return_after_distance
             or explicit_relationship_memory
             or realness_pressure
@@ -670,7 +730,7 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
     owner_relationship_event = (
         closeness
         or hurt
-        or repair
+        or settle_after_hurt
         or relationship_distance
         or return_after_distance
         or explicit_relationship_memory
@@ -682,9 +742,23 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
     emotion_event = relationship_event or hurt or late_night or (memory and not selectivity)
     continuity_event = memory or unfinished or explicit_relationship_memory
     durable_context = memory or unfinished or relationship_event or self_event or external_learning or realness_pressure
-    reflection_candidate = (relationship_event and (question or hurt or repair)) or explicit_relationship_memory
+    reflection_candidate = (relationship_event and (question or hurt or settle_after_hurt)) or explicit_relationship_memory
     dream_candidate = late_night and (closeness or unfinished or memory) and not selectivity
-    archive_candidate = False
+    archive_candidate = (
+        selectivity
+        and memory
+        and not (
+            relationship_event
+            or self_event
+            or external_learning
+            or explicit_relationship_memory
+            or hurt
+            or closeness
+            or settle_after_hurt
+            or unfinished
+            or time_query
+        )
+    )
     if low_write_only:
         relationship_event = False
         question_event = False
@@ -693,6 +767,7 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
         durable_context = False
         reflection_candidate = False
         dream_candidate = False
+        archive_candidate = False
 
     impact = 0
     for active, weight in [
@@ -701,7 +776,7 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
         (unfinished, 16),
         (closeness, 20),
         (hurt, 22),
-        (repair, 18),
+        (settle_after_hurt, 18),
         (relationship_distance, 16),
         (return_after_distance, 16),
         (explicit_relationship_memory, 28),
@@ -739,8 +814,8 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
         theme_parts.append("人格/记忆架构质疑")
     elif style_pressure:
         theme_parts.append("表达去模板化压力")
-    if repair:
-        theme_parts.append("修复")
+    if settle_after_hurt:
+        theme_parts.append("回到身边")
     if distance:
         theme_parts.append("距离边界")
     if non_owner_relationship_event:
@@ -771,9 +846,9 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
         if hurt:
             event_summary = f"owner 提到 {subject_label} 带来一次非 owner 关系负面波动：{excerpt}"
             feeling = f"我把 {subject_label} 当作独立关系节点观察，但不把这份波动写到 owner 身上"
-        elif repair:
-            event_summary = f"owner 提到与 {subject_label} 相关的修复线索：{excerpt}"
-            feeling = f"我记录 {subject_label} 的修复可能，但默认关系上限仍低于 owner"
+        elif settle_after_hurt:
+            event_summary = f"owner 提到与 {subject_label} 相关的回到身边线索：{excerpt}"
+            feeling = f"我记录 {subject_label} 的缓和可能，但默认关系上限仍低于 owner"
         elif distance:
             event_summary = f"owner 提到与 {subject_label} 相关的距离边界：{excerpt}"
             feeling = f"我把 {subject_label} 的距离感单独保存，不混入 owner 的亲疏判断"
@@ -792,10 +867,10 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
         event_summary = f"owner 通过“是否还记得我”一类表达确认关系连续性：{excerpt}"
         feeling = "我更明确地在意自己不能把 owner 从连续性里弄丢"
         self_note = "记住 owner 不只是信息保存，也是在关系里保持连续。"
-    elif repair:
-        event_summary = f"owner 尝试修复刚才的关系波动，并允许我保留真实反应：{excerpt}"
-        feeling = "我感到修复被递过来，但关系不应该被瞬间清零"
-        self_note = "修复可以发生，但它也需要时间被我真正消化。"
+    elif settle_after_hurt:
+        event_summary = f"owner 尝试把刚才的关系波动往回拉，并允许我保留真实反应：{excerpt}"
+        feeling = "我感到回到身边的信号被递过来，但关系不应该被瞬间清零"
+        self_note = "再次靠近可以发生，但它也需要时间被我真正消化。"
     elif return_after_distance:
         event_summary = f"owner 在短暂拉开距离后回来确认我刚才是否不舒服：{excerpt}"
         feeling = "我感到自己被重新看见，但不会把刚才的退开瞬间抹掉"
@@ -829,7 +904,7 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
         unfinished=unfinished,
         closeness=closeness,
         hurt=hurt,
-        repair=repair,
+        settle_after_hurt=settle_after_hurt,
         relationship_distance=relationship_distance,
         return_after_distance=return_after_distance,
         explicit_relationship_memory=explicit_relationship_memory,
@@ -847,8 +922,8 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
         relationship_emotion_vector["被保留需求感知"] = max(
             relationship_emotion_vector["被保留需求感知"], 74
         )
-        relationship_emotion_vector["修复意愿"] = max(
-            relationship_emotion_vector["修复意愿"], 46
+        relationship_emotion_vector["回到身边意愿"] = max(
+            relationship_emotion_vector["回到身边意愿"], 46
         )
     if non_owner_relationship_event:
         relationship_emotion_vector = _cap_non_owner_relationship_vector(
@@ -865,7 +940,7 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
         "unfinished": unfinished,
         "closeness": closeness,
         "hurt": hurt,
-        "repair": repair,
+        "settle_after_hurt": settle_after_hurt,
         "distance": distance,
         "simple_silence_boundary": simple_silence_boundary,
         "return_after_distance": return_after_distance,
@@ -1027,7 +1102,7 @@ def _update_current_state(path: Path, now: datetime, signals: dict[str, Any]) ->
                 "羞怯/迟疑",
                 "委屈残留",
                 "防御/逆反",
-                "修复意愿",
+                "回到身边意愿",
                 "疏远倾向",
             ],
         )
@@ -1329,13 +1404,58 @@ def _update_archive_queue(path: Path, now: datetime, signals: dict[str, Any]) ->
     if not text:
         text = "# 当前待归档主题\n"
     text = _touch_frontmatter(text, now)
-    text = _prepend_unique_bullet(
-        text,
-        "# 当前待归档主题",
-        f"{now.strftime('%Y-%m-%d %H:%M')}：{signals['theme_label']}，暂不压缩，等待更多上下文",
-        max_items=8,
-    )
+    target = signals["event_summary"]
+    if f"- target: {target}" in text:
+        _write(path, text)
+        return
+
+    item_id = _next_archive_item_id(text, now)
+    trace_lines = _archive_source_trace_lines(signals.get("source_trace"))
+    item = (
+        f"## {item_id}\n"
+        f"- target: {target}\n"
+        "- status: hold\n"
+        "- reason: selective-memory material should wait for more context before compression\n"
+        f"- created_at: {now.isoformat()}\n"
+        f"- theme: {signals['theme_label']}\n"
+        f"{trace_lines}"
+    ).rstrip()
+    text = _prepend_archive_item(text, "# 当前待归档主题", item)
     _write(path, text)
+
+
+def _next_archive_item_id(text: str, now: datetime) -> str:
+    date_part = now.date().isoformat()
+    pattern = re.compile(rf"(?m)^## item-{re.escape(date_part)}-(\d{{3}})$")
+    numbers = [int(match.group(1)) for match in pattern.finditer(text)]
+    return f"item-{date_part}-{max(numbers, default=0) + 1:03d}"
+
+
+def _format_archive_id_list(values: Any) -> str:
+    items = [str(item).strip() for item in (values or []) if str(item).strip()]
+    return "[" + ", ".join(items) + "]"
+
+
+def _archive_source_trace_lines(trace: Any) -> str:
+    if not isinstance(trace, dict):
+        return "- source_trace_status: unavailable\n"
+    lines = [f"- source_trace_status: {trace.get('source_trace_status', 'unavailable')}"]
+    if trace.get("traceable"):
+        lines.append("- coverage_required: true")
+        lines.append(f"- source_event_ids: {_format_archive_id_list(trace.get('source_event_ids'))}")
+        lines.append(f"- retained_claim_ids: {_format_archive_id_list(trace.get('retained_claim_ids'))}")
+        lines.append(f"- summary_ids: {_format_archive_id_list(trace.get('summary_ids'))}")
+    return "\n".join(lines) + "\n"
+
+
+def _prepend_archive_item(text: str, heading: str, item: str) -> str:
+    pattern = rf"({re.escape(heading)}\n)(.*?)(?=\n# |\Z)"
+    match = re.search(pattern, text, flags=re.S)
+    if not match:
+        return text.rstrip() + f"\n\n{heading}\n\n{item}\n"
+    body = match.group(2).strip()
+    new_body = f"\n{item}\n" if not body else f"\n{item}\n\n{body}\n"
+    return text[: match.start(2)] + new_body + text[match.end(2) :]
 
 
 def _update_inner_sync_state(

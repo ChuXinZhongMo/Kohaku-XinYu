@@ -1,5 +1,21 @@
 # Xinyu Changelog
 
+## 2026-04-27
+
+### Phase 5: Deployment, Security, Ingest Scope, And Validation Hardening
+
+- added live deployment truth checks for Core bridge version, AstrBot shell plugin version/hash, plugin source-set hash, live ports, and masked target diagnostics
+- added `runtime_security_smoke.py` and startup guards for explicit insecure HTTP LLM override and non-loopback bridge-token enforcement
+- enforced scoped learning ingest paths, traversal blocking, internal URL blocking, max-byte clamping, and redacted local source URLs for new learning material
+- added `runtime_readiness_smoke.py` as the one-command live readiness gate
+- split Core bridge responsibilities into focused `xinyu_bridge_*.py` modules and split AstrBot shell client/event helpers
+- added `xinyu_state_io.py` and grouped smoke manifests in `smoke_run.py`
+
+### Persona Contract Cleanup
+
+- deleted the old separate persona prompt artifact; identity, voice, and reality boundaries now flow through ordinary memory/policy layers
+- added `persona_contract_absence_smoke.py` and registered it in the voice smoke group
+
 ## 2026-04-22
 
 ### Phase 1: Foundational Memory Scaffold

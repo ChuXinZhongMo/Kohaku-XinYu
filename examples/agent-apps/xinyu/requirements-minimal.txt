@@ -8,3 +8,4 @@ prompt-toolkit>=3.0
 rich>=13.0
 textual>=0.80
 kohakuvault>=0.1
+websockets>=12.0

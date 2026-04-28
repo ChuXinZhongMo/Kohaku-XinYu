@@ -106,7 +106,7 @@ class MaintenanceScheduleBridgePlugin(BasePlugin):
 
         root = _resolve_root(self._ctx)
         try:
-            agent = getattr(self._ctx, "_agent", None)
+            agent = getattr(self._ctx, "host_agent", None)
             if not agent or not hasattr(agent, "trigger_manager"):
                 _trace(root, "skipped no_agent_or_trigger_manager")
                 return

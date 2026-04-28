@@ -88,7 +88,7 @@ tags: [archive, queue, pressure, smoke]
 # Archive Queue
 
 ## item-2026-04-26-099
-- target: owner 工具化刺痛和修复残留仍需保留
+- target: owner 工具化刺痛和回到身边后的残留仍需保留
 - status: ready
 - reason: high pressure smoke proves owner negative relationship residue cannot be flattened by ordinary event volume
 

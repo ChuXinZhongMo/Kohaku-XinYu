@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -52,6 +53,10 @@ REQUIRED_VALIDATIONS = [
     "bridge_session_cleanup_smoke.py",
     "xinyu_speech_controller_smoke.py",
     "xinyu_qq_review_smoke.py",
+    "deployment_status_smoke.py",
+    "runtime_readiness_smoke.py",
+    "runtime_security_smoke.py",
+    "state_io_smoke.py",
 ]
 
 RESIDUE_MARKERS = [
@@ -107,6 +112,24 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def deployment_gate(root: Path) -> tuple[bool, str]:
+    python_exe = root / ".venv" / "Scripts" / "python.exe"
+    if not python_exe.exists():
+        python_exe = Path(sys.executable)
+    completed = subprocess.run(
+        [str(python_exe), "deployment_status_smoke.py"],
+        cwd=str(root),
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=45,
+    )
+    detail = (completed.stdout + "\n" + completed.stderr).strip().splitlines()
+    return completed.returncode == 0, (detail[-1] if detail else f"exit={completed.returncode}")
+
+
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -129,6 +152,11 @@ def main() -> int:
     print("missing_docs:", ", ".join(missing_docs) or "none")
     print("missing_validations:", ", ".join(missing_validations) or "none")
     print("residue_hits:", ", ".join(hits) or "none")
+    deployment_ok = True
+    deployment_detail = "not_run"
+    if args.require_no_residue:
+        deployment_ok, deployment_detail = deployment_gate(root)
+    print("deployment_gate:", "ok" if deployment_ok else f"failed ({deployment_detail})")
     print("learning_quality_grade:", extract_field(root / "memory/knowledge/learning_quality_state.md", "quality_grade"))
     print(
         "autonomous_search_permission:",
@@ -150,6 +178,8 @@ def main() -> int:
         return 4
     if args.require_no_residue and hits:
         return 5
+    if args.require_no_residue and not deployment_ok:
+        return 7
     if missing_docs or missing_validations:
         return 6
     return 0

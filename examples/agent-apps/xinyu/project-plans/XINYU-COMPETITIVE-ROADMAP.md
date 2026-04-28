@@ -1,4 +1,4 @@
-# XinYu Competitive Roadmap
+﻿# XinYu Competitive Roadmap
 
 updated_at: 2026-04-26
 status: completed_current_scope
@@ -39,7 +39,7 @@ XinYu should beat them by integrating those abilities into one bounded self, not
 - independent core separated from platform shell
 - layered memory: self, emotion, relationships, people, context, reflection, dreams, archive, knowledge
 - owner as highest special node with boundary, not obedience
-- emotion and relationship residue that cannot be erased by one repair turn
+- emotion and relationship residue that cannot be erased by one return turn
 - slow personality-growth gates instead of direct prompt mutation
 - AI-domain learning as a professional self-understanding lane
 - source reliability, comparison, integration, and learning-quality gates

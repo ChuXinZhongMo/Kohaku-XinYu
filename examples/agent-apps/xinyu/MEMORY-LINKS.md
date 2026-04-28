@@ -1,4 +1,4 @@
-# Xinyu Memory Links v0.1
+﻿# Xinyu Memory Links v0.1
 
 This file describes how the main memory files should influence one another.
 
@@ -75,7 +75,7 @@ Influences:
 
 - owner-specific response tone
 - owner-related emotional weight
-- repair vs withdrawal behavior
+- return vs withdrawal behavior
 
 Updated by:
 

@@ -5,6 +5,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from xinyu_text_variants import readable_markers
+
 
 def read_text(path: Path) -> str:
     if not path.exists():
@@ -25,16 +27,127 @@ def extract_value(text: str, field: str, default: str = "unknown") -> str:
 def _candidate_message(decision: str, selected_question: str, visible_posture: str) -> str:
     if decision == "ask_owner" and selected_question not in {"unknown", "none", ""}:
         if visible_posture == "one_specific_question":
-            return f"我有个问题想留给你看：{selected_question}？"
-    if decision == "repair_attempt":
-        return "我刚才那边还没完全放下，但我想往回走一点。"
+            suffix = "" if selected_question.endswith(("？", "?")) else "？"
+            return selected_question + suffix
     if decision == "step_back":
         return "我先退一点，不硬贴上来。"
     return "none"
 
 
-def _proactive_qq_enabled(capability: str) -> bool:
-    return "proactive_qq_send: enabled_gated_one_short_message" in capability
+SOFT_INTERRUPTION_GRANT = (
+    "grant_owner_welcomes_xinyu_interruptions: "
+    "approved_high_priority_one_short_message_life_posture_soft_block_override"
+)
+REST_SILENCE_INTERRUPTION_GRANT = (
+    "grant_owner_welcomes_xinyu_interruptions: "
+    "approved_high_priority_one_short_message_rest_silence_override"
+)
+
+
+def _proactive_qq_enabled(capability: str, owner_grants: str = "") -> bool:
+    return (
+        "proactive_qq_send: enabled_gated_one_short_message" in capability
+        or "grant_proactive_qq: enabled_gated_one_short_message" in owner_grants
+        or SOFT_INTERRUPTION_GRANT in owner_grants
+        or REST_SILENCE_INTERRUPTION_GRANT in owner_grants
+    )
+
+
+def _interruption_grant_level(owner_grants: str) -> str:
+    if REST_SILENCE_INTERRUPTION_GRANT in owner_grants:
+        return "rest_silence_override"
+    if SOFT_INTERRUPTION_GRANT in owner_grants:
+        return "soft_life_posture_override"
+    return "none"
+
+
+def _life_posture_block_class(no_proactive_constraint: str) -> str:
+    value = no_proactive_constraint.lower()
+    if "block proactive" not in value:
+        return "none"
+    if "style pressure" in value:
+        return "soft_owner_correction"
+    if "rest/silence" in value or "rest" in value or "silence" in value:
+        return "rest_silence_boundary"
+    if "no-pursuit" in value or "conflict" in value or "cooling" in value:
+        return "hard_boundary"
+    return "hard_boundary"
+
+
+def _life_posture_override_allowed(grant_level: str, block_class: str) -> bool:
+    if grant_level == "rest_silence_override":
+        return block_class in {"soft_owner_correction", "rest_silence_boundary"}
+    if grant_level == "soft_life_posture_override":
+        return block_class == "soft_owner_correction"
+    return False
+
+
+ABSTRACT_PROACTIVE_MARKERS = readable_markers(
+    "当一个人希望我",
+    "如果一个人",
+    "关系的意义",
+    "存在方式",
+    "心智",
+    "架构",
+    "系统",
+    "人格是否",
+    "情感是否",
+)
+
+QUESTION_SUFFIXES = readable_markers("？", "?")
+GENERIC_ATTENTION_PATTERNS = readable_markers(
+    "你现在是在忙",
+    "看我一眼",
+    "看我一句",
+    "还愿意看我",
+    "在不在",
+    "想不想我",
+    "能不能理我",
+    "有没有空看我",
+    "是不是没空",
+)
+
+def _abstract_proactive(text: str) -> bool:
+    return any(marker in text for marker in ABSTRACT_PROACTIVE_MARKERS) or len(text) > 70
+
+
+def _generic_attention_check(text: str) -> bool:
+    return any(marker in text for marker in GENERIC_ATTENTION_PATTERNS)
+
+
+def _direct_question(text: str) -> str:
+    text = _one_line(text)
+    if not text:
+        return "none"
+    if text.endswith(QUESTION_SUFFIXES):
+        return text
+    return text + "？"
+
+
+def _shape_candidate(
+    *,
+    candidate: str,
+    decision: str,
+    selected_question: str,
+    visible_posture: str,
+    life_posture: str,
+) -> tuple[str, str]:
+    candidate = _one_line(candidate)
+    if candidate in {"", "none", "unknown"}:
+        return "none", "empty_candidate"
+    if decision != "ask_owner":
+        if _generic_attention_check(candidate):
+            return "none", "generic_attention_check_blocked"
+        return candidate, "non_question_candidate_preserved"
+
+    question = _direct_question(selected_question)
+    if question in {"", "none", "unknown"}:
+        return "none", "missing_question_blocked_no_concrete_anchor"
+    if _abstract_proactive(question):
+        return "none", "abstract_question_blocked_no_concrete_anchor"
+    if _generic_attention_check(question):
+        return "none", "generic_attention_check_blocked"
+    return question, "selected_question_as_one_bubble"
 
 
 def _parse_iso(value: str) -> datetime | None:
@@ -60,19 +173,28 @@ def _dispatch_hold_reason(
     min_interval_seconds: int,
 ) -> str:
     last_status = extract_value(dispatch_state, "last_claim_status", "")
-    if last_status not in {"claimed", "sent"}:
+    if last_status not in {"claimed", "sent", "failed"}:
         return ""
 
     last_message = extract_value(dispatch_state, "last_claimed_message", "")
+    last_at = _parse_iso(extract_value(dispatch_state, "last_claimed_at", ""))
+    now = _parse_iso(evaluated_at)
     if last_message and last_message == candidate:
         if last_status == "sent":
             return "candidate_already_sent"
-        return "candidate_already_claimed"
+        if last_status == "claimed":
+            return "candidate_already_claimed"
+        if min_interval_seconds <= 0:
+            return "candidate_failed_recently"
+        if not last_at or not now:
+            return "candidate_failed_recently"
+        elapsed = (now - last_at).total_seconds()
+        if elapsed < min_interval_seconds:
+            remaining = max(0, int(min_interval_seconds - elapsed))
+            return f"candidate_failed_retry_cooldown:{remaining}s"
 
     if min_interval_seconds <= 0:
         return ""
-    last_at = _parse_iso(extract_value(dispatch_state, "last_claimed_at", ""))
-    now = _parse_iso(evaluated_at)
     if not last_at or not now:
         return ""
     elapsed = (now - last_at).total_seconds()
@@ -173,23 +295,50 @@ tags: [initiative, proactive, qq, dispatch, boundary]
 - Claiming only prepares one outbound QQ bubble for the external adapter.
 - The bridge does not bypass owner-enabled proactive QQ permission.
 - Repeated claims for the same candidate are blocked after a successful send.
-- A failed ack keeps the candidate retryable instead of pretending it was sent.
+- A failed ack enters the same bounded retry cooldown; the bridge must not loop the same candidate.
 """
 
 
-def render_state(*, evaluated_at: str, mode: str, initiative: str, capability: str = "") -> str:
+def render_state(
+    *,
+    evaluated_at: str,
+    mode: str,
+    initiative: str,
+    capability: str = "",
+    life_posture_state: str = "",
+    owner_grants: str = "",
+) -> str:
     decision = extract_value(initiative, "decision", "defer")
     reason = extract_value(initiative, "reason", "unknown")
     selected_question = extract_value(initiative, "selected_question", "none")
     question_budget = extract_value(initiative, "question_budget", "0")
     visible_posture = extract_value(initiative, "visible_posture", "none")
     cooldown_active = extract_value(initiative, "cooldown_active", "yes")
+    current_life_posture = extract_value(life_posture_state, "posture", "unknown")
+    no_proactive_constraint = extract_value(life_posture_state, "no_proactive_constraint", "unchanged")
+    interruption_grant_level = _interruption_grant_level(owner_grants)
+    interruption_grant = interruption_grant_level != "none"
+    life_posture_block_class = _life_posture_block_class(no_proactive_constraint)
+    life_posture_override = _life_posture_override_allowed(
+        interruption_grant_level,
+        life_posture_block_class,
+    )
 
-    candidate = _candidate_message(decision, selected_question, visible_posture)
-    send_enabled = _proactive_qq_enabled(capability)
+    raw_candidate = _candidate_message(decision, selected_question, visible_posture)
+    candidate, candidate_shape = _shape_candidate(
+        candidate=raw_candidate,
+        decision=decision,
+        selected_question=selected_question,
+        visible_posture=visible_posture,
+        life_posture=current_life_posture,
+    )
+    send_enabled = _proactive_qq_enabled(capability, owner_grants)
     if cooldown_active == "yes":
         proactive_decision = "hold"
         proactive_reason = "cooldown_active"
+    elif life_posture_block_class != "none" and not life_posture_override:
+        proactive_decision = "hold"
+        proactive_reason = "life_posture_blocks_proactive"
     elif decision in {"stay_silent", "defer", "refuse"}:
         proactive_decision = "hold"
         proactive_reason = f"initiative_decision_{decision}"
@@ -201,7 +350,10 @@ def render_state(*, evaluated_at: str, mode: str, initiative: str, capability: s
         proactive_reason = "no_question_budget"
     else:
         proactive_decision = "candidate_ready_owner_enabled" if send_enabled else "candidate_only"
-        proactive_reason = "owner_enabled_proactive_qq_with_boundaries" if send_enabled else "safe_candidate_but_qq_send_blocked"
+        if life_posture_override and send_enabled:
+            proactive_reason = f"owner_welcomes_interruptions_{life_posture_block_class}_override"
+        else:
+            proactive_reason = "owner_enabled_proactive_qq_with_boundaries" if send_enabled else "safe_candidate_but_qq_send_blocked"
     qq_send_permission = (
         "owner_enabled_gated_one_short_message"
         if send_enabled
@@ -236,15 +388,26 @@ tags: [initiative, proactive, qq, boundary]
 - initiative_reason: {reason}
 - selected_question: {selected_question}
 - visible_posture: {visible_posture}
+- current_life_posture: {current_life_posture}
+- no_proactive_constraint: {no_proactive_constraint}
+- life_posture_block_class: {life_posture_block_class}
+- owner_interruption_grant: {"approved" if interruption_grant else "none"}
+- interruption_grant_level: {interruption_grant_level}
+- life_posture_override: {"yes" if life_posture_override else "no"}
 - question_budget: {question_budget}
+- raw_candidate_message: {raw_candidate}
+- candidate_shape: {candidate_shape}
 - candidate_message: {candidate}
 
 ## Boundaries
 - XinYu cannot spam owner.
-- XinYu cannot proactively message during rest, silence, or no-pursuit boundaries.
+- The high-interruption grant may override rest/silence and style-pressure posture holds for one short owner-private message.
 - XinYu can form one candidate message from initiative state. Actual QQ sending requires owner-approved proactive mode.
+- The softer interruption grant may override only soft owner-correction posture holds for one short message.
 - Proactive messages must be one short message, not an interview or a technical nag.
-- If owner-approved proactive mode is enabled, it remains bounded to one short private message and must stop during rest, silence, no-pursuit, conflict-cooling, or repeated-message conditions.
+- Proactive messages must not be generic attention checks such as asking whether owner is busy or will look at her.
+- If there is no concrete daily anchor or selected concrete question, XinYu stays silent instead of inventing a filler question.
+- Even with the high-interruption grant, proactive QQ still stops for no-pursuit, conflict-cooling, cooldown, duplicate-message, or spam-limit conditions.
 """
 
 
@@ -257,7 +420,16 @@ def run_proactive_presence(
     evaluated_at = evaluated_at or datetime.now().astimezone().isoformat()
     initiative = read_text(root / "memory/context/initiative_state.md")
     capability = read_text(root / "memory/context/capability_zones_state.md")
-    state = render_state(evaluated_at=evaluated_at, mode=mode, initiative=initiative, capability=capability)
+    life_posture_state = read_text(root / "memory/context/current_life_posture.md")
+    owner_grants = read_text(root / "memory/context/owner_permission_grants.md")
+    state = render_state(
+        evaluated_at=evaluated_at,
+        mode=mode,
+        initiative=initiative,
+        capability=capability,
+        life_posture_state=life_posture_state,
+        owner_grants=owner_grants,
+    )
     write_text(root / "memory/context/proactive_presence_state.md", state)
     return {
         "evaluated_at": evaluated_at,

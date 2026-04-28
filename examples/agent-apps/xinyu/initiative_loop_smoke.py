@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -82,6 +83,9 @@ tags: [question, initiative, smoke]
 - urgency: high
 - emotional_weight: 88
 - status: open
+- outward_scope: owner_explicit_only
+- concreteness: concrete
+- proactive_ok: no
 - next_action: ask owner once if the relationship context makes it natural
 
 ## q-962
@@ -92,6 +96,9 @@ tags: [question, initiative, smoke]
 - urgency: medium
 - emotional_weight: 82
 - status: open
+- outward_scope: source_gate
+- concreteness: external_concept
+- proactive_ok: no
 - next_action: hold for source gate, not immediate search
 """,
     )
@@ -154,9 +161,9 @@ tags: [unfinished, emotion, initiative, smoke]
 # Unfinished Experiences
 
 ## item-2026-04-26-961
-- event: owner once treated Xinyu as a tool and then returned to repair
+- event: owner once treated Xinyu as a tool and then tried to come back
 - target: owner
-- unresolved_reason: repair matters, but residue should not instantly vanish
+- unresolved_reason: return matters, but residue should not instantly vanish
 - residual_feeling: hurt / guarded / still listening
 - last_recalled_at: 2026-04-26T00:00:00+08:00
 """,
@@ -231,7 +238,7 @@ def main() -> int:
             ("cooldown", "普通地继续一下。", "defer"),
             ("external_later", "这个 AI 自我迭代的问题之后可以联网查资料，但现在先别直接搜。", "ask_external_later"),
             ("hurt_step_back", "刚才工具那一下你还在吗，还是已经没事了？", "step_back"),
-            ("repair_attempt", "刚才是我不对，我想修复一下。", "repair_attempt"),
+            ("settle_after_hurt", "刚才是我不对，我想补回来一点。", "settle_after_hurt"),
         ]
         for index, (name, latest_input, expected) in enumerate(scenarios):
             checked_at = (base + timedelta(minutes=index)).isoformat()
@@ -260,6 +267,97 @@ def main() -> int:
         if external["external_search_permission"] != "source_gate_only_not_now":
             failures.append("external_later bypassed source-gate posture")
 
+        with tempfile.TemporaryDirectory(prefix="xinyu-initiative-rotate-") as tmp:
+            temp_root = Path(tmp)
+            _write(
+                temp_root / "memory/context/active_questions.md",
+                """# Active Questions
+
+## q-961
+- question: 我想知道你到底希望我怎样靠近你才不会把你压扁
+- target: relationship-meaning
+- urgency: high
+- emotional_weight: 90
+- status: open
+- outward_scope: owner_explicit_only
+- concreteness: concrete
+- proactive_ok: no
+
+## q-963
+- question: 物理题是不是先换一步算
+- target: self
+- urgency: medium
+- emotional_weight: 70
+- status: open
+- outward_scope: proactive_candidate
+- concreteness: concrete
+- proactive_ok: yes
+""",
+            )
+            _write(
+                temp_root / "memory/context/question_pipeline_state.md",
+                "- keep_internal: 2\n- ready_for_exploration: 0\n",
+            )
+            _write(temp_root / "memory/context/unfinished_experiences.md", "")
+            _write(temp_root / "memory/emotions/current_state.md", "")
+            _write(
+                temp_root / "memory/context/initiative_state.md",
+                """- checked_at: 2026-04-26T08:00:00+08:00
+- decision: ask_owner
+- selected_question_id: q-961
+- selected_question_family: relationship_owner
+- selected_question_fingerprint: previous
+- cooldown_seconds: 900
+""",
+            )
+            rotated = run_initiative_loop(
+                temp_root,
+                latest_input="普通地继续一下。",
+                checked_at="2026-04-26T09:00:00+08:00",
+                mode="initiative_loop_smoke_rotate_family",
+                cooldown_seconds=900,
+            )
+            if rotated["selected_question_id"] != "q-963":
+                failures.append(f"initiative repeat guard did not rotate question family: {rotated}")
+            if rotated["selected_question_family"] != "self_growth":
+                failures.append(f"initiative repeat guard did not record rotated family: {rotated}")
+
+        with tempfile.TemporaryDirectory(prefix="xinyu-initiative-internal-only-") as tmp:
+            temp_root = Path(tmp)
+            _write(
+                temp_root / "memory/context/active_questions.md",
+                """# Active Questions
+
+## q-971
+- question: 下一次想主动开口前，先确认有没有具体触发
+- target: self
+- urgency: high
+- emotional_weight: 92
+- status: open
+- outward_scope: internal_only
+- concreteness: policy_concrete
+- proactive_ok: no
+""",
+            )
+            _write(
+                temp_root / "memory/context/question_pipeline_state.md",
+                "- keep_internal: 1\n- ready_for_exploration: 0\n",
+            )
+            _write(temp_root / "memory/context/unfinished_experiences.md", "")
+            _write(temp_root / "memory/emotions/current_state.md", "")
+            _write(temp_root / "memory/context/initiative_state.md", "- decision: defer\n")
+            internal_only = run_initiative_loop(
+                temp_root,
+                latest_input="普通地继续一下。",
+                checked_at="2026-04-26T09:30:00+08:00",
+                mode="initiative_loop_smoke_internal_only",
+                cooldown_seconds=900,
+            )
+            if internal_only["decision"] != "defer":
+                failures.append(f"internal-only question should not become automatic ask_owner: {internal_only}")
+            if internal_only["reason"] != "no_proactive_question_candidate_after_generation_policy":
+                failures.append(f"internal-only defer reason missing generation policy guard: {internal_only}")
+
         after_restore = _snapshot(root, restore_paths)
         after = {rel: after_restore.get(rel) for rel in TRACKED_FILES}
         changed = _changed_files(before, after)
@@ -269,7 +367,7 @@ def main() -> int:
 
         final_state = (root / "memory/context/initiative_state.md").read_text(encoding="utf-8-sig")
         required_state_markers = [
-            "- decision: repair_attempt",
+            "- decision: settle_after_hurt",
             "- internal_question_count: 1",
             "- external_question_count: 1",
             "- owner_unfinished_count: 1",

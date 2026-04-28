@@ -104,9 +104,16 @@ def append_dream_log(
     if seed["seed_id"] == "none":
         return False
     text = read_text(path)
-    dream_id = f"dream-{produced_at[:10]}-auto"
+    base_dream_id = f"dream-{produced_at[:10]}-auto"
+    dream_id = base_dream_id
     if dream_id in text:
-        return False
+        for index in range(2, 1000):
+            candidate = f"{base_dream_id}-{index:03d}"
+            if candidate not in text:
+                dream_id = candidate
+                break
+        else:
+            return False
     addition = (
         f"\n## {dream_id}\n"
         f"- dreamed_at: {produced_at}\n"

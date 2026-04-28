@@ -25,6 +25,7 @@ def extract_question_blocks(text: str) -> list[dict[str, str]]:
         question = ""
         target = ""
         status = ""
+        outward_scope = ""
         for line in body.splitlines():
             if line.startswith("- question: "):
                 question = line.removeprefix("- question: ").strip()
@@ -32,12 +33,15 @@ def extract_question_blocks(text: str) -> list[dict[str, str]]:
                 target = line.removeprefix("- target: ").strip()
             elif line.startswith("- status: "):
                 status = line.removeprefix("- status: ").strip()
+            elif line.startswith("- outward_scope: "):
+                outward_scope = line.removeprefix("- outward_scope: ").strip()
         blocks.append(
             {
                 "id": qid,
                 "question": question,
                 "target": target,
                 "status": status,
+                "outward_scope": outward_scope,
             }
         )
     return blocks
@@ -69,7 +73,13 @@ def learned_question_ids(text: str) -> set[str]:
 
 def classify_question(question: dict[str, str]) -> str:
     target = (question.get("target") or "").strip().lower()
+    outward_scope = (question.get("outward_scope") or "").strip().lower()
     text = f"{question.get('question', '')} {target}"
+
+    if outward_scope == "source_gate":
+        return "future_exploration"
+    if outward_scope in {"internal_only", "owner_explicit_only", "proactive_candidate"}:
+        return "internal_clarification"
 
     exploration_markers = [
         "memory-emotion",
@@ -306,8 +316,18 @@ tags: [knowledge, sources]
     write_text(path, text)
 
 
-def question_is_resolved(qid: str, existing_records: dict[str, dict[str, str]], learned_qids: set[str]) -> bool:
-    return qid in learned_qids or existing_records.get(qid, {}).get("state", "") in RESOLVED_STATES
+def question_is_resolved(
+    question: dict[str, str],
+    existing_records: dict[str, dict[str, str]],
+    learned_qids: set[str],
+) -> bool:
+    qid = question["id"]
+    active_status = (question.get("status") or "").strip().lower()
+    return (
+        active_status in RESOLVED_STATES
+        or qid in learned_qids
+        or existing_records.get(qid, {}).get("state", "") in RESOLVED_STATES
+    )
 
 
 def update_question_states_preserving_resolved(
@@ -413,7 +433,7 @@ def run_question_pipeline(
     existing_records = extract_question_state_records(read_text(root / "memory/context/question_states.md"))
     learned_qids = learned_question_ids(read_text(root / "memory/knowledge/general.md"))
     active_questions = [
-        q for q in questions if not question_is_resolved(q["id"], existing_records, learned_qids)
+        q for q in questions if not question_is_resolved(q, existing_records, learned_qids)
     ]
     classifications = {q["id"]: classify_question(q) for q in active_questions}
 

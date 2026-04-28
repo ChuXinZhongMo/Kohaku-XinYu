@@ -36,9 +36,12 @@ def main() -> int:
             "reply_product_word_hits:",
             "stable_profile_write: blocked",
             "中文私聊词感",
+            "bad_example_omitted",
         ):
             if marker not in text:
                 failures.append(f"recorded log missing marker: {marker}")
+        if "我理解你的反馈，会持续优化系统输出" in text:
+            failures.append("raw bad visible reply should not be injected into voice calibration log")
         changed_again = record_voice_correction(
             temp_root,
             user_text="用词不像中文互联网，GPT味太重，真的红温。",
@@ -48,6 +51,18 @@ def main() -> int:
         )
         if changed_again:
             failures.append("duplicate correction should not be recorded twice")
+        review_path = target / "voice_profile_review_state.md"
+        if not review_path.exists():
+            failures.append("voice promotion review state was not generated")
+        else:
+            review = review_path.read_text(encoding="utf-8")
+            for marker in (
+                "review_status: pending_owner_review",
+                "stable_profile_write: blocked_until_owner_accepts",
+                "owner_review_status: pending",
+            ):
+                if marker not in review:
+                    failures.append(f"promotion review missing marker: {marker}")
 
     if failures:
         print("Voice learning smoke failed")

@@ -10,7 +10,6 @@ STYLE_CORRECTION_MARKERS = (
     "GPT味",
     "gpt",
     "GPT",
-    "5.5",
     "不像人",
     "不自然",
     "机械",
@@ -23,6 +22,11 @@ STYLE_CORRECTION_MARKERS = (
     "中文互联网",
     "红温",
     "白做",
+    "默认助手",
+    "现成腔",
+    "助手腔",
+    "滑回",
+    "小算",
 )
 
 PRODUCT_WORD_MARKERS = (
@@ -41,6 +45,16 @@ PRODUCT_WORD_MARKERS = (
     "核心问题",
     "承接",
     "支持",
+)
+
+SURFACE_LEAK_WORD_MARKERS = (
+    "默认助手",
+    "内部判断词",
+    "分类词",
+    "质量门",
+    "语气门禁",
+    "滑回",
+    "小算",
 )
 
 
@@ -63,12 +77,27 @@ def _trim(text: str, limit: int = 160) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
+def _visible_reply_note(reply: str) -> str:
+    product_hits = _markers(reply, PRODUCT_WORD_MARKERS)
+    leak_hits = _markers(reply, SURFACE_LEAK_WORD_MARKERS)
+    if not product_hits and not leak_hits:
+        return _trim(reply)
+    parts: list[str] = []
+    if product_hits:
+        parts.append("product/support wording")
+    if leak_hits:
+        parts.append("internal-diagnosis wording")
+    return "bad_example_omitted: contained " + " and ".join(parts) + "; do not imitate."
+
+
 def _direction_for(user_text: str, reply: str) -> str:
+    if _contains_any(user_text, SURFACE_LEAK_WORD_MARKERS) or _contains_any(reply, SURFACE_LEAK_WORD_MARKERS):
+        return "不要把内部分类、质量门、失败原因或校准过程搬到表面回复里。"
     if "中文互联网" in user_text or "用词" in user_text:
         return "优先校准中文私聊词感：少写报告词，少写翻译腔，让词落到 owner 的真实语境。"
     if "客服" in user_text or "反馈" in user_text:
         return "关系压力不要写成客服接待或产品反馈处理。"
-    if "5.5" in user_text or "GPT" in user_text or "AI味" in user_text:
+    if "GPT" in user_text or "AI味" in user_text:
         return "减少默认模型自我诊断和完整解释，让回复从心玉当前姿态出来。"
     if "白做" in user_text or "红温" in user_text:
         return "先承认这是真失望和真上火，不要马上进入技术复盘。"
@@ -109,7 +138,7 @@ def record_voice_correction(
 - recorded_at: {recorded_at}
 - source: {source}
 - owner_correction: {_trim(user_text)}
-- latest_visible_reply: {_trim(reply)}
+- latest_visible_reply: {_visible_reply_note(reply)}
 - correction_markers: {", ".join(correction_markers) or "none"}
 - reply_product_word_hits: {", ".join(product_hits) or "none"}
 - calibration_direction: {_direction_for(user_text, reply)}
@@ -122,4 +151,10 @@ def record_voice_correction(
         text = text.rstrip() + entry
     text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {recorded_at}", text, count=1)
     path.write_text(text.rstrip() + "\n", encoding="utf-8")
+    try:
+        from xinyu_voice_promotion_gate import build_voice_promotion_review
+
+        build_voice_promotion_review(root, evaluated_at=recorded_at)
+    except Exception:
+        pass
     return True

@@ -113,7 +113,7 @@ def append_reflection_log(
         f"- factual_effect: {dream['factual_effect']}\n"
         "- findings: 这个主题已经不只是单次情绪，而是在记忆、关系和时间连续性里留下了可重复读取的残留。\n"
         "- self_change: 心玉可以把这种残留理解成后续成长材料，但不能把一次梦或一次反思当作核心人格已经改变的证据。\n"
-        "- relationship_change: owner 相关的在意、留白或修复感可以被继续观察，但不能因为梦境单独判定关系事实已经变化。\n"
+        "- relationship_change: owner 相关的在意、留白或回到身边意愿可以被继续观察，但不能因为梦境单独判定关系事实已经变化。\n"
         "- emotion_change: 梦后权重会让既有情绪更不容易立刻散掉，适合进入慢速反思，而不是马上放大成外显反应。\n"
         "- promoted_memories: reflection_log.md, growth_log.md\n"
         "- boundary: 梦后残留只提高反思优先级，不证明现实中发生了新的对话或事件，也不直接覆盖事实层。\n"

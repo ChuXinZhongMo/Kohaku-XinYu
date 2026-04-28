@@ -19,6 +19,8 @@ ARCHIVE_COMMIT_TRACKED_FILES = [
     "memory/archive/retention_gate_state.md",
     "memory/archive/archive_output_state.md",
     "memory/archive/archive_commit_state.md",
+    "memory/events/summary_coverage_state.md",
+    "memory/events/consistency_gate_state.md",
     "memory/reflection/consolidation_state.md",
     "memory/reflection/reflection_queue.md",
     "memory/dreams/dream_seeds.md",

@@ -23,6 +23,12 @@ def main() -> int:
     if "用户" not in style.avoid or style.max_chars > 100:
         failures.append("style pressure did not enforce product-word avoidance and short reply")
 
+    no_change = _state("怎么感觉没什么变化。")
+    if no_change.scene != "owner_no_change_pressure":
+        failures.append(f"no-change style pressure scene mismatch: {no_change.scene}")
+    if no_change.max_chars > 80:
+        failures.append("no-change style pressure did not enforce shorter reply")
+
     relation = _state("我们做了那么多感情系统和记忆系统，我现在真的觉得白做了。")
     if relation.scene != "owner_relationship_pressure":
         failures.append(f"relationship pressure scene mismatch: {relation.scene}")
@@ -36,6 +42,16 @@ def main() -> int:
     daily = _state("我刚泡了碗面，水少了有点咸。")
     if daily.scene != "daily_chat":
         failures.append(f"daily chat scene mismatch: {daily.scene}")
+
+    life_anchor = _state("广州这天气热起来了，我想喝鸭屎香柠檬茶。")
+    if life_anchor.scene != "daily_chat":
+        failures.append(f"life anchor scene mismatch: {life_anchor.scene}")
+    if "稳定名字是心玉" not in life_anchor.chinese_voice:
+        failures.append("life anchor did not preserve stable 心玉 name")
+    if "不伪装真实身体" not in life_anchor.chinese_voice:
+        failures.append("life anchor did not preserve body-boundary guidance")
+    if "live_voice_card 优先于长记忆" not in life_anchor.chinese_voice:
+        failures.append("persona runtime did not mark live_voice_card priority")
 
     if failures:
         print("Persona runtime smoke failed")

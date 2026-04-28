@@ -1,4 +1,4 @@
-# Xinyu Personality Detail And Real Conversation Plan
+﻿# Xinyu Personality Detail And Real Conversation Plan
 
 status: completed
 created_at: 2026-04-26
@@ -99,7 +99,7 @@ Make relationship movement continuous across a short conversation instead of res
 
 Planned work:
 
-- Add multi-turn arcs for hurt, repair, return, closeness, teasing, testing, and quiet residue.
+- Add multi-turn arcs for hurt, return, return, closeness, teasing, testing, and quiet residue.
 - Check that apologies soften but do not erase residue.
 - Check that repeated testing creates guardedness.
 - Check that owner-special status survives non-owner closeness without becoming possessive.
@@ -108,7 +108,7 @@ Planned work:
 Acceptance criteria:
 
 - Earlier emotional residue changes later wording.
-- Repair has visible effect but does not create instant reset.
+- Return has visible effect but does not create instant reset.
 - Short-lived annoyance can fade if the user stops pushing.
 - Relationship distance can increase or decrease slowly.
 

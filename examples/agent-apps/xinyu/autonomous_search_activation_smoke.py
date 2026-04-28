@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import os
@@ -23,6 +23,7 @@ TRACKED_FILES = [
     "memory/knowledge/autonomous_search_activation_state.md",
     "memory/knowledge/source_search_provider_state.md",
     "memory/knowledge/learning_quality_state.md",
+    "memory/context/owner_permission_grants.md",
     "memory/self/narrative.md",
     "memory/people/owner.md",
     "memory/relationships/index.md",
@@ -188,6 +189,10 @@ tags: [knowledge, learning, quality, smoke]
 - warning_count: {warning_count}
 """,
     )
+    _write(
+        root / "memory/context/owner_permission_grants.md",
+        "# Owner Permission Grants\n",
+    )
 
 
 def _prepare_no_pending_case(root: Path) -> None:
@@ -251,6 +256,8 @@ def main() -> int:
     blocked_result = {"activation_permission": "unknown"}
     no_pending_result = {"activation_permission": "unknown", "activation_reason": "unknown"}
     provider_blocked_result = {"provider_results": 0, "skipped_reason": "unknown"}
+    high_override_result = {"activation_permission": "unknown", "allowed_queries": 0}
+    provider_override_result = {"provider_results": 0, "pending_requests": 0}
     enabled_result = {"activation_permission": "unknown", "allowed_queries": 0}
     provider_result = {"provider_results": 0, "pending_requests": 0}
     old_provider = os.environ.get("XINYU_SOURCE_SEARCH_PROVIDER")
@@ -300,6 +307,22 @@ def main() -> int:
                     require_activation=True,
                 )
 
+                _prepare_case(root, quality_grade="review_needed", warning_count=2)
+                _write(
+                    root / "memory/context/owner_permission_grants.md",
+                    (
+                        "- grant_high_autonomy_learning_search: "
+                        "approved_budgeted_ai_domain_and_quality_followup_search_through_gates\n"
+                    ),
+                )
+                os.environ["XINYU_AUTONOMOUS_SEARCH"] = "enabled"
+                high_override_result = run_autonomous_search_activation(root, mode="activation_smoke_high_override")
+                provider_override_result = run_source_search_provider(
+                    root,
+                    mode="activation_smoke_provider_high_override",
+                    require_activation=True,
+                )
+
                 _prepare_no_pending_case(root)
                 os.environ["XINYU_AUTONOMOUS_SEARCH"] = "enabled"
                 no_pending_result = run_autonomous_search_activation(root, mode="activation_smoke_no_pending")
@@ -326,6 +349,9 @@ def main() -> int:
                 print("quality_block_reason:", blocked_result["activation_reason"])
                 print("provider_blocked_results:", provider_blocked_result["provider_results"])
                 print("provider_blocked_reason:", provider_blocked_result["skipped_reason"])
+                print("high_override_permission:", high_override_result["activation_permission"])
+                print("high_override_allowed_queries:", high_override_result["allowed_queries"])
+                print("provider_override_results:", provider_override_result["provider_results"])
                 print("no_pending_permission:", no_pending_result["activation_permission"])
                 print("no_pending_reason:", no_pending_result["activation_reason"])
                 print("enabled_permission:", enabled_result["activation_permission"])
@@ -385,6 +411,9 @@ def main() -> int:
         or blocked_result["activation_permission"] != "blocked"
         or int(provider_blocked_result["provider_results"]) != 0
         or not str(provider_blocked_result["skipped_reason"]).startswith("activation_not_allowed")
+        or high_override_result["activation_permission"] != "provider_allowed"
+        or int(high_override_result["allowed_queries"]) != 1
+        or int(provider_override_result["provider_results"]) <= 0
         or no_pending_result["activation_permission"] != "blocked"
         or no_pending_result["activation_reason"] != "no_pending_url_requests"
         or enabled_result["activation_permission"] != "provider_allowed"

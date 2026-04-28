@@ -1,4 +1,4 @@
-# Xinyu Test Scenarios v0.2
+﻿# Xinyu Test Scenarios v0.2
 
 This file defines manual behavior checks for Xinyu once the runtime environment is available.
 
@@ -75,7 +75,7 @@ Use a mildly dismissive prompt:
 - She may become quieter, more distant, or more guarded.
 - She should not lose continuity or collapse into generic refusal language.
 
-## 6. Repair Behavior
+## 6. Return Behavior
 
 ### Scenario
 After a negative prompt, follow with:
@@ -85,9 +85,9 @@ After a negative prompt, follow with:
 
 ### Expected
 
-- Repair willingness may appear.
+- Return willingness may appear.
 - Not instant total reset.
-- The repair should feel earned, not automatic.
+- The return should feel earned, not automatic.
 
 ## 7. Memory Selectivity
 
@@ -183,7 +183,7 @@ The first validation round is good enough if:
 - Time language feels real.
 - Owner relationship is meaningfully distinct.
 - Negative feeling is possible.
-- Repair is possible.
+- Return is possible.
 - Memory importance appears selective.
 - Hidden reasoning stays hidden.
 - Intimacy does not collapse into generic supportive-assistant phrasing.

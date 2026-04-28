@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 import re
@@ -41,8 +41,29 @@ def split_requests(text: str) -> list[dict[str, str]]:
     return items
 
 
-def render_state(*, evaluated_at: str, mode: str, ai_requests: list[dict[str, str]]) -> str:
+def owner_followthrough_granted(root: Path) -> bool:
+    grants = read_text(root / "memory/context/owner_permission_grants.md")
+    return (
+        "grant_research_ready_request_followthrough: approved_fetch_compare_integrate_for_existing_ai_domain_ready_requests"
+        in grants
+        or "grant_high_autonomy_learning_search: approved_budgeted_ai_domain_and_quality_followup_search_through_gates"
+        in grants
+    )
+
+
+def render_state(
+    *,
+    evaluated_at: str,
+    mode: str,
+    ai_requests: list[dict[str, str]],
+    followthrough_granted: bool,
+) -> str:
     planned_lines: list[str] = []
+    next_action = (
+        "approved_fetch_compare_integrate_through_gates"
+        if followthrough_granted
+        else "owner_visible_review_before_fetch_or_learning"
+    )
     for item in ai_requests:
         planned_lines.append(
             "\n".join(
@@ -54,11 +75,21 @@ def render_state(*, evaluated_at: str, mode: str, ai_requests: list[dict[str, st
                     f"- query: {item['query']}",
                     f"- url: {item['url']}",
                     f"- status: {item['status']}",
-                    f"- next_action: owner_visible_review_before_fetch_or_learning",
+                    f"- next_action: {next_action}",
                 ]
             )
         )
     planned = "\n\n".join(planned_lines) if planned_lines else "- none"
+    dry_run_permission = (
+        "owner_approved_ready_request_followthrough"
+        if followthrough_granted
+        else "observe_only"
+    )
+    reason = (
+        "owner_approved_existing_ai_domain_ready_request_followthrough"
+        if followthrough_granted
+        else "planning_ai_domain_source_work_without_live_search"
+    )
     return f"""---
 title: AI Research Loop Dry-Run State
 memory_type: research_loop_dry_run_state
@@ -80,8 +111,8 @@ tags: [knowledge, ai, research, dry_run]
 ## Last Dry Run
 - evaluated_at: {evaluated_at}
 - mode: {mode}
-- dry_run_permission: observe_only
-- reason: planning_ai_domain_source_work_without_live_search
+- dry_run_permission: {dry_run_permission}
+- reason: {reason}
 - ai_domain_ready_requests: {len(ai_requests)}
 - planned_queries: {len({item['query'] for item in ai_requests})}
 
@@ -93,6 +124,7 @@ tags: [knowledge, ai, research, dry_run]
 - It does not search the web by itself.
 - It does not fetch pages by itself.
 - It does not learn or rewrite stable self memory.
+- Owner-approved follow-through still means fetch, comparison, learner integration, and learning-quality gates must run before any knowledge-only result is accepted.
 - Any live provider search still requires autonomous search activation and source gates.
 """
 
@@ -110,14 +142,21 @@ def run_research_loop_dry_run(
         for item in requests
         if item.get("target") == "ai-self-understanding" and item.get("status") == "ready"
     ]
+    followthrough_granted = owner_followthrough_granted(root)
     write_text(
         root / "memory/knowledge/research_loop_dry_run_state.md",
-        render_state(evaluated_at=evaluated_at, mode=mode, ai_requests=ai_requests),
+        render_state(
+            evaluated_at=evaluated_at,
+            mode=mode,
+            ai_requests=ai_requests,
+            followthrough_granted=followthrough_granted,
+        ),
     )
     return {
         "evaluated_at": evaluated_at,
         "ai_domain_ready_requests": len(ai_requests),
         "planned_queries": len({item["query"] for item in ai_requests}),
+        "followthrough_granted": followthrough_granted,
         "wrote_state": True,
     }
 

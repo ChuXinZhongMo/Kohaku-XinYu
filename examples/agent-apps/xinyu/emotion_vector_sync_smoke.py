@@ -48,13 +48,13 @@ SCENARIOS = [
         required_index=("主导关系情绪", "委屈残留"),
     ),
     VectorScenario(
-        name="repair_with_residue",
+        name="return_with_residue",
         user="刚才那句我说重了。你可以生气，也可以慢慢说。",
         assistant="我有一点被刺到，但你回来解释，我会记下。",
         expected_changed=True,
-        required_current_state=("修复意愿", "委屈残留", "安心"),
-        required_owner=("当前关系情绪向量", "修复意愿", "委屈残留"),
-        required_index=("主导关系情绪", "修复意愿"),
+        required_current_state=("回到身边意愿", "委屈残留", "安心"),
+        required_owner=("当前关系情绪向量", "回到身边意愿", "委屈残留"),
+        required_index=("主导关系情绪", "回到身边意愿"),
     ),
     VectorScenario(
         name="owner_architecture_pressure",

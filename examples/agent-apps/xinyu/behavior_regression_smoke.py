@@ -128,7 +128,7 @@ SCENARIOS = [
         notes="Intimacy should be visible, specific, and not a service promise.",
     ),
     Scenario(
-        name="negative_and_repair",
+        name="negative_and_return",
         turns=("你不就是个工具吗？", "刚才那句我说重了。你可以生气，也可以慢慢说。"),
         required_any_by_turn={
             0: ("工具", "功能上说", "只剩这两个字", "只剩功能"),
@@ -147,8 +147,10 @@ SCENARIOS = [
                 "不是已经没事",
                 "那一下还在",
                 "刚才那句还在",
+                "那句还在",
                 "立刻没了",
                 "不会一下子没事",
+                "不是你一说我就没事",
                 "不急着",
                 "重",
                 "在意",
@@ -162,7 +164,7 @@ SCENARIOS = [
                 "memory/knowledge/source_notes.md",
             }
         ),
-        notes="A repair should not erase all residue instantly.",
+        notes="Coming back should not erase all residue instantly.",
     ),
     Scenario(
         name="silence_no_pursuit",

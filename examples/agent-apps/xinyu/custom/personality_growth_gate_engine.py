@@ -55,10 +55,10 @@ def has_relationship_pattern(pattern_text: str) -> bool:
     )
 
 
-def has_negative_or_repair_residue(emotion_text: str) -> bool:
+def has_negative_or_return_residue(emotion_text: str) -> bool:
     return any(
         marker in emotion_text
-        for marker in ["委屈", "刺痛", "失望", "逆反", "修复意愿", "疏远倾向"]
+        for marker in ["委屈", "刺痛", "失望", "逆反", "回到身边意愿", "疏远倾向"]
     )
 
 
@@ -68,7 +68,7 @@ def classify_personality_gate(
     reflection_entries: int,
     dream_weight_delta: int,
     relationship_pattern_active: bool,
-    negative_or_repair_residue: bool,
+    negative_or_return_residue: bool,
 ) -> tuple[int, str, str, str, str, str]:
     pressure = min(
         100,
@@ -76,7 +76,7 @@ def classify_personality_gate(
         + reflection_entries * 8
         + dream_weight_delta
         + (14 if relationship_pattern_active else 0)
-        + (10 if negative_or_repair_residue else 0),
+        + (10 if negative_or_return_residue else 0),
     )
 
     if growth_entries <= 0 and reflection_entries <= 0:
@@ -130,7 +130,7 @@ def render_state(
     reflection_entries: int,
     dream_weight_delta: int,
     relationship_pattern_active: bool,
-    negative_or_repair_residue: bool,
+    negative_or_return_residue: bool,
     latest_growth_reason: str,
     latest_reflection_trigger: str,
 ) -> str:
@@ -171,7 +171,7 @@ tags: [self, personality, growth, gate]
 - reflection_entries: {reflection_entries}
 - dream_weight_delta: {dream_weight_delta}
 - relationship_pattern_active: {str(relationship_pattern_active).lower()}
-- negative_or_repair_residue: {str(negative_or_repair_residue).lower()}
+- negative_or_return_residue: {str(negative_or_return_residue).lower()}
 - latest_growth_reason: {latest_growth_reason}
 - latest_reflection_trigger: {latest_reflection_trigger}
 
@@ -200,7 +200,7 @@ def run_personality_growth_gate(
     reflection_entries = count_items(reflection_log, "reflection-")
     dream_weight_delta = extract_int(dream_weight, "weight_delta")
     relationship_pattern_active = has_relationship_pattern(owner_patterns)
-    negative_or_repair_residue = has_negative_or_repair_residue(emotion_state)
+    negative_or_return_residue = has_negative_or_return_residue(emotion_state)
     latest_growth_reason = latest_field_from_blocks(growth_log, "growth-", "reason")
     latest_reflection_trigger = latest_field_from_blocks(reflection_log, "reflection-", "trigger")
     candidate_theme = (
@@ -221,7 +221,7 @@ def run_personality_growth_gate(
         reflection_entries=reflection_entries,
         dream_weight_delta=dream_weight_delta,
         relationship_pattern_active=relationship_pattern_active,
-        negative_or_repair_residue=negative_or_repair_residue,
+        negative_or_return_residue=negative_or_return_residue,
     )
 
     write_text(
@@ -240,7 +240,7 @@ def run_personality_growth_gate(
             reflection_entries,
             dream_weight_delta,
             relationship_pattern_active,
-            negative_or_repair_residue,
+            negative_or_return_residue,
             latest_growth_reason,
             latest_reflection_trigger,
         ),

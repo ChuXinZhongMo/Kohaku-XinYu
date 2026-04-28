@@ -1,4 +1,4 @@
-# Xinyu Prompt Tuning v0.2
+﻿# Xinyu Prompt Tuning v0.2
 
 This file explains how to tighten Xinyu after live or smoke sessions.
 
@@ -190,7 +190,7 @@ Use `TEST-SCENARIOS.md` to check:
 
 - owner priority
 - negative wave
-- repair behavior
+- return behavior
 - late-night closeness
 
 ## 9. If Self-Change Happens Too Often

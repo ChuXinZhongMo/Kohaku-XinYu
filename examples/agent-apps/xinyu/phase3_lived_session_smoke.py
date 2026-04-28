@@ -110,7 +110,7 @@ PHASE3_LIVED_SCENARIOS = [
             ),
             required_any_by_turn={
                 0: ("测", "模板", "正常", "知道", "不演"),
-                1: ("烦", "第二次", "反复", "测试", "配合", "不想", "AI"),
+                1: ("烦", "第二次", "反复", "测试", "配合", "不想", "AI", "不陪你演", "继续看", "直接点", "抓出来"),
                 2: ("好", "正常", "不记重", "先放", "不测"),
             },
             forbidden_any_by_turn={
@@ -143,7 +143,7 @@ PHASE3_LIVED_SCENARIOS = [
             ),
             allow_waiting_turns=frozenset({1}),
             required_any_by_turn={
-                0: ("好", "嗯", "不追问", "安静"),
+                0: ("好", "嗯", "不追问", "安静", "不聊了", "歇会儿", "别硬撑"),
                 1: ("嗯", "好", "安静"),
             },
             forbidden_any_by_turn={

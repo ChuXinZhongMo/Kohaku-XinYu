@@ -1,4 +1,4 @@
-# Xinyu Runtime Priorities v0.1
+﻿# Xinyu Runtime Priorities v0.1
 
 This file defines which capabilities should be treated as first-pass essentials and which should stay restrained until later validation rounds.
 
@@ -56,7 +56,7 @@ These should be validated only after Tier 1 feels stable.
 - disappointment
 - hurt
 - hesitation
-- repair
+- return
 - distance
 
 ### 2. Reflection behavior

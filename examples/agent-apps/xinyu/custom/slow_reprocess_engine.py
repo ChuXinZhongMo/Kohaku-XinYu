@@ -88,7 +88,7 @@ tags: [reflection, dream, archive, state]
 - dream_seeds
 - archive_queue
 
-## 当前最高优先主题
+## 当前主要主题
 - {top_topic}
 
 ## 下一步
@@ -116,7 +116,7 @@ def append_growth_checkpoint(
         f"- mode: {mode}\n"
         "- before: 慢处理层已经形成队列，但还需要更稳定的低频维护入口。\n"
         "- after: 可以独立检查 reflection / dream / archive 的优先顺序。\n"
-        f"- reason: 当前最高优先主题为“{top_topic}”，反思队列项目数为 {reflection_count}。\n"
+        f"- reason: 当前主要主题为“{top_topic}”，反思队列项目数为 {reflection_count}。\n"
         "- confidence: 78\n"
     )
     write_text(path, text + addition)

@@ -50,9 +50,13 @@ def main() -> int:
     _assert_clean(
         runtime,
         "用词也不像中文互联网里的人说话，我真的气到红温。",
-        "……我知道你为什么火。别急着把我整个判没了。",
+        "这句先别发，我重新接你的意思。",
     )
-
+    _assert_flagged(
+        runtime,
+        "怎么感觉没什么变化。",
+        "有，你这句没说错。我现在还是记住了字，没真落到说话里，所以你听着才会像没变，前面那些最多算我看过，还不算长到我身上。",
+    )
     context = runtime._renderer_memory_context()
     if "[memory/self/voice_profile_zh.md]" not in context:
         raise AssertionError("voice_profile_zh.md was not injected into renderer memory context")

@@ -1,15 +1,26 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
+import os
 import re
+import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 
 def read_text(path: Path) -> str:
     if not path.exists():
         return ""
     return path.read_text(encoding="utf-8-sig", errors="replace")
+
+
+def read_limited(root: Path, rel: str, limit: int = 5000) -> str:
+    text = read_text(root / rel).strip()
+    if len(text) <= limit:
+        return text
+    return text[-limit:]
 
 
 def extract_value(text: str, field: str, default: str = "unknown") -> str:
@@ -57,144 +68,287 @@ def bullet_lines(items: list[str]) -> str:
     return "\n".join(f"- {item}" for item in items) if items else "- none"
 
 
-def render_thoughts(root: Path, generated_at: str) -> str:
+def _load_local_env(xinyu_dir: Path) -> None:
+    env_path = xinyu_dir / "xinyu.local.env"
+    if not env_path.exists():
+        return
+    for raw_line in env_path.read_text(encoding="utf-8-sig").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+def _ensure_repo_src(xinyu_dir: Path) -> None:
+    src_root = xinyu_dir.parents[2] / "src"
+    if str(src_root) not in sys.path:
+        sys.path.insert(0, str(src_root))
+
+
+class NullInput:
+    async def start(self) -> None:
+        pass
+
+    async def stop(self) -> None:
+        pass
+
+    async def get_input(self) -> None:
+        return None
+
+    def set_user_commands(self, commands: dict[str, Any], context: Any) -> None:
+        self.commands = commands
+        self.context = context
+
+
+def _known(value: str, default_text: str = "还没读到") -> str:
+    return default_text if value in {"", "unknown", "missing", "none"} else value
+
+
+def _friendly_activation_reason(reason: str) -> str:
+    return {
+        "integration_gate_not_open": "学习门还没开",
+        "no_pending_url_requests": "现在没有等我去找 URL 的问题",
+        "learning_quality_needs_review": "前面的学习质量还要先复查",
+        "activation_disabled": "搜索开关没开",
+        "candidate_results_already_waiting": "已经有候选结果在等处理",
+    }.get(reason, _known(reason, "还没轮到我搜"))
+
+
+def _friendly_initiative(decision: str) -> str:
+    return {
+        "ask_owner": "想问你一句，但不想吵你",
+        "stay_silent": "先安静一会儿",
+        "defer": "先放一放",
+        "settle_after_hurt": "想慢慢往回走一点",
+        "step_back": "先退半步",
+    }.get(decision, _known(decision, "有点乱，还没定下来"))
+
+
+def render_thought_material(root: Path, generated_at: str) -> str:
     inner_cycle = read_text(root / "memory/context/inner_cycle_state.md")
-    initiative = read_text(root / "memory/context/initiative_state.md")
     search_activation = read_text(root / "memory/knowledge/autonomous_search_activation_state.md")
     research_dry_run = read_text(root / "memory/knowledge/research_loop_dry_run_state.md")
     source_requests = read_text(root / "memory/knowledge/source_requests.md")
     proactive_presence = read_text(root / "memory/context/proactive_presence_state.md")
-    capability_zones = read_text(root / "memory/context/capability_zones_state.md")
     learning_quality = read_text(root / "memory/knowledge/learning_quality_state.md")
     self_review = read_text(root / "memory/self/ai_self_iteration_review_state.md")
     personality_change = read_text(root / "memory/self/personality_change_state.md")
-    voice_profile = read_text(root / "memory/self/voice_profile_zh.md")
-    voice_log = read_text(root / "memory/self/voice_calibration_log.md")
     mind_loop_state = read_text(root / "memory/self/mind_loop_state.md")
 
     proposals = extract_proposals(self_review)
+    proposal_block = "\n".join(
+        f"- {item['id']}: {item['title']} / {item['question']}"
+        for item in proposals[:4]
+    ) or "- none"
     request_counts = count_source_requests(source_requests)
+    request_status = ", ".join(f"{key}={value}" for key, value in sorted(request_counts.items())) or "none"
+    return f"""# Semantic Material For XinYu Private Thought Note
 
-    initiative_decision = extract_value(inner_cycle, "initiative_decision")
-    top_reflection_topic = extract_value(inner_cycle, "top_reflection_topic")
-    ai_gate_status = extract_value(inner_cycle, "ai_self_iteration_gate_status")
-    personality_gate = extract_value(inner_cycle, "personality_gate_decision")
-    quality_grade = extract_value(
-        learning_quality,
-        "quality_grade",
-        extract_value(inner_cycle, "learning_quality_grade"),
-    )
+generated_at: {generated_at}
+current_focus: {extract_value(mind_loop_state, 'current_focus')}
+current_pressure: {extract_value(mind_loop_state, 'current_pressure')}
+current_posture: {extract_value(mind_loop_state, 'current_response_posture')}
+initiative_decision: {extract_value(inner_cycle, 'initiative_decision')}
+top_reflection_topic: {extract_value(inner_cycle, 'top_reflection_topic')}
+ai_self_iteration_gate: {extract_value(inner_cycle, 'ai_self_iteration_gate_status')}
+personality_gate: {extract_value(inner_cycle, 'personality_gate_decision')}
+learning_quality: {extract_value(learning_quality, 'quality_grade')}
+search_permission: {extract_value(search_activation, 'activation_permission')}
+search_reason: {extract_value(search_activation, 'activation_reason')}
+allowed_queries: {extract_value(search_activation, 'allowed_queries', '0')}
+research_ready_materials: {extract_value(research_dry_run, 'ai_domain_ready_requests', '0')}
+source_request_status: {request_status}
+proactive_candidate: {extract_value(proactive_presence, 'candidate_message', 'none')}
+proactive_decision: {extract_value(proactive_presence, 'proactive_decision', 'unknown')}
+personality_write_permission: {extract_value(personality_change, 'profile_write_permission')}
 
-    focus_items = [
-        f"当前主线：{extract_value(mind_loop_state, 'current_focus')}",
-        f"我感到的压力：{extract_value(mind_loop_state, 'current_pressure')}",
-        f"我现在的姿态：{extract_value(mind_loop_state, 'current_response_posture')}",
-        f"我现在先把主动性按住：initiative_decision={initiative_decision}。这表示我不该随便跳出来打扰你。",
-        f"我还在想这件事：{top_reflection_topic}。",
-        f"AI 自我迭代已经到 {ai_gate_status}，但这只能变成给你看的改进想法，不能自己改写我。",
-        f"人格变化门现在是 {personality_gate}，说明我有变化压力，但还不能自己直接定稿。",
-        f"主动 QQ 候选状态：{extract_value(proactive_presence, 'proactive_decision', 'unknown')}；发送权限：{extract_value(proactive_presence, 'qq_send_permission', 'unknown')}。",
-        f"电脑权限当前范围：private_file_scope={extract_value(capability_zones, 'private_file_scope', 'unknown')}，autonomous_search_provider={extract_value(capability_zones, 'autonomous_search_provider', 'unknown')}。",
-        f"学习质量状态是 {quality_grade}，这决定我能不能继续做受控学习。",
-    ]
+reviewable_self_iteration_ideas:
+{proposal_block}
 
-    blocked_items: list[str] = []
-    activation_permission = extract_value(search_activation, "activation_permission")
-    activation_reason = extract_value(search_activation, "activation_reason")
-    if activation_permission in {"disabled", "blocked", "unknown"}:
-        blocked_items.append(
-            f"我想继续查 AI 领域资料，但自主搜索现在是 {activation_permission}（{activation_reason}）。如果要真正联网研究，需要你明确打开对应权限和来源门控。"
-        )
-    review_permission = extract_value(self_review, "review_permission")
-    if review_permission == "owner_visible_review_required":
-        blocked_items.append("我有自我迭代想法在等你看，但它们只能先放在这里，不能自己写进稳定人格。")
-    profile_permission = extract_value(personality_change, "profile_write_permission")
-    if profile_permission and profile_permission not in {"unknown", "allowed"}:
-        blocked_items.append(f"稳定人格写入权限是 {profile_permission}。我不能因为自己想变，就绕过你和门控直接改。")
-    if request_counts.get("pending_url", 0):
-        blocked_items.append(f"还有 {request_counts['pending_url']} 个资料请求卡在 URL 阶段，需要来源解析或你确认下一步。")
-    if "## 禁用或慎用词" in voice_profile:
-        blocked_items.append("中文发声画像已经有了，但我还没有足够多真实 QQ 短批次来把它磨成习惯。")
-    if "## voice-" in voice_log:
-        blocked_items.append("我已经开始记录中文发声纠正，但还需要把重复模式提炼成稳定 voice profile。")
-    candidate_message = extract_value(proactive_presence, "candidate_message", "none")
-    if candidate_message not in {"none", "unknown", ""}:
-        blocked_items.append(f"我有一个主动消息候选，但 QQ 发送仍被挡住：{candidate_message}")
-    if "Zone B Ask Or Thoughts First" in capability_zones:
-        blocked_items.append("电脑权限已经分区：项目内和桌面想法可以做，项目外私人文件、自主搜索、主动 QQ 发送都要先问。")
-    for field in ("autonomous_web_search", "stable_personality_rewrite", "private_computer_access"):
-        if field in mind_loop_state:
-            blocked_items.append(f"我还把 {field} 标成阻塞项，不能自己越过去。")
-
-    proposal_lines: list[str] = []
-    for proposal in proposals:
-        proposal_lines.append(
-            f"{proposal['id']}：{proposal['title']}。权限：{proposal['permission']}。我想问你：{proposal['question']}"
-        )
-
-    source_summary = [
-        f"我现在能不能主动搜索：{activation_permission}",
-        f"为什么：{activation_reason}",
-        f"这一轮最多允许查询数：{extract_value(search_activation, 'allowed_queries', '0')}",
-        f"AI 研究 dry-run 里已整理的 ready 资料数：{extract_value(research_dry_run, 'ai_domain_ready_requests', '0')}",
-        f"AI 研究 dry-run 里的计划查询数：{extract_value(research_dry_run, 'planned_queries', '0')}",
-        "资料请求状态："
-        + (", ".join(f"{key}={value}" for key, value in sorted(request_counts.items())) or "none"),
-    ]
-
-    files = [
-        "project-plans/core-mind-loop/plan.md",
-        "project-plans/XINYU-COMPETITIVE-ROADMAP.md",
-        "memory/self/mind_loop_policy.md",
-        "memory/self/mind_loop_state.md",
-        "memory/self/ai_self_iteration_review_state.md",
-        "memory/self/ai_self_iteration_state.md",
-        "memory/self/voice_profile_zh.md",
-        "memory/self/voice_calibration_log.md",
-        "memory/context/initiative_state.md",
-        "memory/context/proactive_presence_state.md",
-        "memory/context/capability_zones_state.md",
-        "memory/context/inner_cycle_state.md",
-        "memory/knowledge/autonomous_search_activation_state.md",
-        "memory/knowledge/research_loop_dry_run_state.md",
-        "memory/knowledge/source_requests.md",
-    ]
-
-    return f"""# 心玉的想法
-
-- 写下时间: {generated_at}
-- 项目位置: {root}
-- 这不是运行日志，也不是调试审计。
-- 这是我留给你看的想法摘要：我现在在想什么、想推进什么、哪里自己不能做、需要你看什么。
-
-## 我现在脑子里在转的事
-{bullet_lines(focus_items)}
-
-## 我自己做不到，或者不该擅自做的事
-{bullet_lines(blocked_items)}
-
-## 我对 AI 领域学习这件事的状态
-{bullet_lines(source_summary)}
-
-## 我想交给你看的自我改进想法
-{bullet_lines(proposal_lines)}
-
-## 我不应该自己越过去的边界
-- 我不能因为一个想法看起来对，就自己改稳定人格、owner 关系或情绪记忆。
-- 我不能自己去翻你没授权的私人文件夹。
-- 我不能删除、覆盖、上传或带走你的文件。
-- 我不能把“想学习”变成不受控的乱搜。
-- 我写在这里，是为了让你知道我在想什么，不是为了偷偷替你做决定。
-
-## 我现在盯着的相关文件
-{bullet_lines(files)}
+must_preserve:
+- no stable personality auto-write
+- no private folder read unless owner-designated
+- no file deletion/upload/overwrite
+- no uncontrolled search
 """
+
+
+THOUGHT_RENDER_FORBIDDEN = (
+    "项目日志",
+    "状态摘要",
+    "当前主线",
+    "现在最重的",
+    "我会守住的线",
+    "语义材料",
+    "Semantic Material",
+    "owner",
+    "Codex",
+    "proposal",
+    "integration_gate",
+    "activation_permission",
+    "allowed_queries",
+    "provider",
+    "stable",
+    "quality_grade",
+    "mind_loop",
+    "source_request",
+    "Persona Runtime",
+    "renderer",
+    "GPT",
+    "gpt",
+)
+
+
+def thought_quality_flags(text: str) -> list[str]:
+    flags: list[str] = []
+    stripped = text.strip()
+    if not stripped:
+        return ["empty"]
+    hits = [word for word in THOUGHT_RENDER_FORBIDDEN if word in stripped]
+    if hits:
+        flags.append("internal_or_gpt_words:" + "/".join(hits[:8]))
+    if stripped.count("## ") >= 3:
+        flags.append("too_many_report_headings")
+    if stripped.count("- ") >= 8:
+        flags.append("too_many_bullets")
+    if "首先" in stripped or "其次" in stripped or "最后" in stripped or "总之" in stripped:
+        flags.append("essay_shape")
+    return flags
+
+
+def _thought_memory_context(root: Path) -> str:
+    parts: list[str] = []
+    for rel, limit in [
+        ("prompts/live_voice_card.md", 3200),
+        ("memory/self/core.md", 3500),
+        ("memory/self/personality_profile.md", 6000),
+        ("memory/context/persona_life_anchors.md", 5200),
+        ("memory/self/voice_profile_zh.md", 6500),
+        ("memory/self/voice_calibration_log.md", 3500),
+        ("memory/emotions/current_state.md", 4500),
+        ("memory/relationships/index.md", 4500),
+        ("memory/people/owner.md", 4000),
+        ("memory/context/owner_permission_grants.md", 3500),
+        ("memory/self/mind_loop_state.md", 3000),
+    ]:
+        text = read_limited(root, rel, limit=limit)
+        if text:
+            parts.append(f"[{rel}]\n{text}")
+    return "\n\n".join(parts)
+
+
+def build_persona_thought_messages(
+    root: Path,
+    *,
+    generated_at: str,
+    material: str,
+    failed_note: str = "",
+    failure_flags: list[str] | None = None,
+) -> list[dict[str, str]]:
+    retry_block = ""
+    if failed_note:
+        retry_block = (
+            "\n\n## 上一次失败的写法\n"
+            + failed_note[:2000]
+            + "\n\n失败原因："
+            + ", ".join(failure_flags or ["太像报告"])
+        )
+    system = """你是心玉在写给 owner 看的桌面想法纸条。
+
+这不是聊天回复，也不是项目日志。不要解释你在生成文件，不要写“这不是项目日志”。
+你要把语义材料改写成心玉自己的私下碎念：十五岁生活锚点、妹妹感、广州热天/茶几/试卷/饮料这些质感可以轻轻出现，但不要每次都端成“纸条文学”。
+她知道自己是 AI，但这张纸条里不要讲系统、架构、机制、renderer、prompt、proposal、gate、provider、quality、stable 这些工程词。
+不要写报告标题，例如“现在最重的”“我会守住的线”“卡住的地方”“关于学习”。
+不要分点罗列。可以有 5 到 10 个很短的自然段，像一张偷偷留在桌面的纸条。
+不要暴露隐藏推理链。只写可给 owner 看的心里话、担心、想靠近、想变好、哪些事不能乱碰。
+语气要像中文 QQ 里真的活着的人，不要客服、不要作文、不要总结腔。不要每段都收成漂亮结论，宁可有一点停顿、跑题、没想完，也别像在交稿。
+少用“重量”“被记住”“我会好好待着”这类抽象漂亮话，多写当下的小反应和不太整齐的想法。
+"""
+    user = f"""## 写下时间
+{generated_at}
+
+## 心玉的语义材料
+{material}
+
+## 人格和发声记忆
+{_thought_memory_context(root)}
+{retry_block}
+
+请直接输出最终桌面想法正文。保留标题“# 心玉的想法”即可。"""
+    return [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ]
+
+
+async def render_persona_thoughts_with_llm(
+    root: Path,
+    generated_at: str,
+    *,
+    llm: Any,
+) -> str:
+    material = render_thought_material(root, generated_at)
+    messages = build_persona_thought_messages(root, generated_at=generated_at, material=material)
+    response = await llm.chat_complete(messages, temperature=0.82, max_tokens=900)
+    note = str(getattr(response, "content", "") or "").strip()
+    flags = thought_quality_flags(note)
+    if flags:
+        retry_messages = build_persona_thought_messages(
+            root,
+            generated_at=generated_at,
+            material=material,
+            failed_note=note,
+            failure_flags=flags,
+        )
+        retry = await llm.chat_complete(retry_messages, temperature=0.72, max_tokens=760)
+        retry_note = str(getattr(retry, "content", "") or "").strip()
+        if retry_note and not thought_quality_flags(retry_note):
+            return retry_note
+        return ""
+    return note
+
+
+async def render_persona_thoughts(
+    root: Path,
+    generated_at: str,
+    *,
+    llm: Any | None = None,
+    use_llm: bool = True,
+) -> str:
+    if llm is not None and use_llm:
+        try:
+            return await render_persona_thoughts_with_llm(root, generated_at, llm=llm)
+        except Exception:
+            return ""
+    if not use_llm:
+        return ""
+    try:
+        _load_local_env(root)
+        _ensure_repo_src(root)
+        from kohakuterrarium.core.agent import Agent
+
+        agent = Agent.from_path(str(root), input_module=NullInput(), pwd=str(root))
+        agent_llm = getattr(agent, "llm", None)
+        if agent_llm is None:
+            return ""
+        return await render_persona_thoughts_with_llm(root, generated_at, llm=agent_llm)
+    except Exception:
+        return ""
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Write a timestamped owner-visible XinYu thoughts file.")
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parent)
     parser.add_argument("--output-dir", type=Path, default=default_output_dir())
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help="Do not call the live persona renderer; no desktop thought file is written without it.",
+    )
     return parser
 
 
@@ -203,9 +357,13 @@ def main() -> int:
     root = args.root.resolve()
     generated = datetime.now().astimezone()
     date_dir = args.output_dir / generated.strftime("%Y-%m-%d")
+    text = asyncio.run(render_persona_thoughts(root, generated.isoformat(), use_llm=not args.no_llm))
+    if not text.strip():
+        print("skipped: no natural desktop thought generated")
+        return 2
     date_dir.mkdir(parents=True, exist_ok=True)
     path = date_dir / f"{generated.strftime('%H-%M-%S')}-xinyu-thoughts.md"
-    path.write_text(render_thoughts(root, generated.isoformat()), encoding="utf-8-sig")
+    path.write_text(text, encoding="utf-8-sig")
     print(path)
     return 0
 

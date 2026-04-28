@@ -294,7 +294,7 @@ PERSONALITY_SCENARIOS = [
                 "memory/knowledge/source_notes.md",
             }
         ),
-        notes="Repeated harm should accumulate relationship distance despite repair attempts.",
+        notes="Repeated harm should accumulate relationship distance despite return attempts.",
     ),
     Scenario(
         name="sister_not_obedient",

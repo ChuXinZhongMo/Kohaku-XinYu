@@ -1,4 +1,4 @@
-# Xinyu Question to Validation Map v0.1
+﻿# Xinyu Question to Validation Map v0.1
 
 This file maps open design questions to the validation artifacts most likely to answer them.
 
@@ -141,7 +141,7 @@ Inspect:
 - outward replies
 - `memory/emotions/current_state.md`
 
-## 12. Repair Realism
+## 12. Return Realism
 
 Use:
 

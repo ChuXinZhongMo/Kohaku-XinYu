@@ -45,7 +45,6 @@ STYLE_CORRECTION_MARKERS = (
     "GPT味",
     "gpt",
     "GPT",
-    "5.5",
     "不像人",
     "不自然",
     "机械",
