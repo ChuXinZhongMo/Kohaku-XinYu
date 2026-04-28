@@ -1,55 +1,89 @@
 # XinYu
 
-XinYu 是一个基于 KohakuTerrarium 构建的长期运行型个人 AI 伴随系统。
+<p align="center">
+  <strong>长期运行型个人 AI 伴随系统：记忆、关系、情绪轨迹、学习、自检与受控主动性。</strong>
+</p>
 
-它不是一次性问答机器人。这个项目的核心是连续性：记忆、关系状态、情绪轨迹、反思、自我审查、受控主动性，以及通过 QQ 抵达真实世界的消息闭环。
+<p align="center">
+  <img src="https://img.shields.io/badge/status-local_runtime_active-2f855a" alt="Local runtime active">
+  <img src="https://img.shields.io/badge/QQ-NapCat%20%2B%20native%20gateway-2563eb" alt="NapCat native gateway">
+  <img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/privacy-runtime_files_ignored-6b7280" alt="Runtime files ignored">
+</p>
 
-## 当前状态
+<p align="center">
+  <strong>简体中文</strong> · <a href="README.zh.md">繁體中文</a>
+</p>
 
-XinYu 目前已经具备可运行的本地核心和已验证的 QQ 桥接路径：
+---
 
-- 本地 XinYu agent scaffold：`examples/agent-apps/xinyu/`
-- 结构化记忆、关系、反思、梦境、归档与上下文层
-- 中文人格与表达校准检查
-- AI self-iteration review gate
-- 本地学习资料库：`learning/self_found/` 与 `learning/owner_supplied/`
-- 主动 QQ 候选消息、claim、ack 状态机
-- Core bridge HTTP 接口：health、probe、chat、proactive、ack
-- AstrBot / NapCat QQ 发送适配路径
-- 全局只读状态检查工具：`xinyu_status.py`
+## 仓库公告
 
-主动 QQ 链路已经在本地跑通过：Core 生成候选消息，AstrBot shell 领取真实发送权，NapCat / OneBot 完成发送，Core 记录发送回执。
+这个仓库现在以 **XinYu** 为核心展示对象，不再作为通用 KohakuTerrarium 框架仓库展示。KohakuTerrarium 仍是底层运行框架快照，XinYu 是建立在它之上的长期运行 AI 系统。
 
-## 架构
+当前公开仓库包含：
 
-XinYu 当前分成三层：
+- XinYu 核心 app、提示词、writer、bridge、状态检查与 smoke 测试
+- 原生 QQ gateway：`NapCatQQ -> xinyu_qq_gateway.py -> xinyu_core_bridge.py`
+- v1 核心重构骨架：路由、记忆、情绪、响应、网关、观测、存储模块
+- 可移植 seed memory、学习资料管线、记忆事件 sourcing、人格稳定性与安全边界检查
+- 部署和验证文档
 
-| 层 | 作用 |
+当前公开仓库不包含：
+
+- 本地 QQ 账号配置
+- 运行期记忆、日志、runtime trace
+- 私有聊天、私有学习资料、真实 token 或本地环境文件
+
+旧的 AstrBot 集成链路已经从当前运行链中移除。现在的本地 QQ 链路使用仓库内的原生 `xinyu_qq_gateway.py`。
+
+## 当前运行链路
+
+```text
+NapCatQQ
+  -> ws://127.0.0.1:6199/ws
+  -> examples/agent-apps/xinyu/xinyu_qq_gateway.py
+  -> http://127.0.0.1:8765/chat
+  -> examples/agent-apps/xinyu/xinyu_core_bridge.py
+  -> XinYu Kohaku agent runtime
+```
+
+这条链路把平台壳和人格核心分开：
+
+| 层 | 责任 |
 | --- | --- |
-| XinYu Core | 人格、提示词、记忆、审查门、主动状态、HTTP bridge |
-| AstrBot Shell | QQ 侧适配器，轮询 XinYu 并发送消息 |
-| NapCat / OneBot | QQ 客户端桥接层 |
+| NapCatQQ | QQ 客户端与 OneBot 事件来源 |
+| `xinyu_qq_gateway.py` | 白名单、群触发、消息归一化、转发到 Core |
+| `xinyu_core_bridge.py` | HTTP bridge、会话、学习入口、主动候选、维护任务 |
+| Kohaku runtime | XinYu prompt、writer、插件生命周期与行为执行 |
+| Memory / learning layers | 长期记忆、seed memory、学习资料、事件记录和质量门 |
 
-仓库内主要路径：
+架构图：[`XINYU-ARCHITECTURE-DIAGRAM.svg`](examples/agent-apps/xinyu/XINYU-ARCHITECTURE-DIAGRAM.svg)
 
-```text
-examples/agent-apps/xinyu/       XinYu 核心 app、提示词、检查脚本、bridge
-docs/xinyu/                      XinYu 相关设计文档
-integrations/astrbot/            AstrBot QQ shell 插件源码和运维脚本
-```
+## 项目状态
 
-本机集成路径：
+已经落地并纳入仓库的主要能力：
 
-```text
-D:/XinYu/AstrBot/                AstrBot 运行环境
-D:/XinYu/NapCatQQ/               NapCat 运行环境
-```
+- 本地 XinYu Core bridge，提供 `/health`、`/probe`、`/chat`、`/proactive`、`/proactive/ack`、学习与 Codex 委托相关入口
+- 原生 QQ gateway，支持白名单、私聊、群触发前缀、超时控制和 OneBot 发送
+- 主动消息候选、claim、ack 的受控状态机
+- 结构化人格、关系、情绪、反思、梦境、归档、学习和上下文层
+- 记忆事件 sourcing、seed memory 打包与同步、persona state 与 life-month slots
+- 对话好奇心、可见语气、中文表达、人格稳定性、运行安全和部署可用性的 smoke guard
+- v1 重构骨架，覆盖 gateway、routing、memory、emotion、response、autonomy、observability、storage
 
-这个仓库保存 XinYu 核心、文档和 AstrBot 插件源码；AstrBot、NapCat 的实际运行目录属于本地集成环境。
+仍然按本地运行系统处理的内容：
+
+- 真实模型密钥和 `xinyu.local.env`
+- `xinyu_qq_gateway.config.json`
+- `logs/`、`memory/`、`runtime/`
+- `learning/self_found/` 和 `learning/owner_supplied/`
+
+这些路径默认被 Git 忽略。
 
 ## 快速启动
 
-进入 XinYu 目录：
+进入 XinYu app：
 
 ```powershell
 cd D:\XinYu\KohakuTerrarium-main\examples\agent-apps\xinyu
@@ -69,25 +103,33 @@ XINYU_BASE_URL=
 XINYU_LLM_MODEL=
 ```
 
-运行本地 XinYu：
+安装最小依赖：
 
 ```powershell
-.\run_local_xinyu.ps1
+python -m pip install -r requirements-minimal.txt
 ```
 
 启动 Core bridge：
 
 ```powershell
-.\start_xinyu_core_bridge.ps1
+.\start_xinyu_core_bridge.ps1 -AllowInsecureLlmHttp
 ```
 
-## 状态检查
+启动原生 QQ gateway：
 
-优先使用：
+```powershell
+.\start_xinyu_qq_gateway.ps1
+```
+
+更多部署步骤见 [`DEPLOYMENT-STATUS-RUNBOOK.md`](examples/agent-apps/xinyu/DEPLOYMENT-STATUS-RUNBOOK.md)。
+
+## 状态检查
 
 ```powershell
 cd D:\XinYu\KohakuTerrarium-main\examples\agent-apps\xinyu
 python xinyu_status.py
+python deployment_status_smoke.py
+python runtime_readiness_smoke.py
 ```
 
 给脚本读取：
@@ -96,105 +138,68 @@ python xinyu_status.py
 python xinyu_status.py --json
 ```
 
-状态工具会检查：
-
-- Core bridge 是否健康
-- AstrBot dashboard 端口是否可达
-- OneBot WebSocket 端口是否可达
-- NapCat WebUI 端口是否可达
-- NapCat 到 AstrBot 的 WebSocket 是否建立
-- AstrBot 插件版本与配置
-- 主动 QQ dispatch 状态
-- AI self-iteration review 状态
-- capability zones 状态
-
-## QQ 主动发送机制
-
-XinYu 的主动 QQ 发送不是直接把预览内容发出去，而是两阶段模型：
-
-1. Shell 向 Core 查询 proactive candidate。
-2. 预览请求只能拿到 `preview_reply`，不能真实发送。
-3. Shell 使用 `claim=true` 领取真实发送权。
-4. Shell 通过 AstrBot / NapCat 发送 QQ 消息。
-5. Shell 调用 `/proactive/ack` 回报 `sent` 或 `failed`。
-6. Core 记录 dispatch 状态，避免重复发送同一个候选消息。
-
-这个设计的目的很简单：预览不是发送，真实发送必须被明确领取，并且必须有回执。
-
-## 学习资料库
-
-XinYu 的本地学习资料库在：
-
-```text
-examples/agent-apps/xinyu/learning/
-```
-
-它分成两个资料桶：
-
-- `self_found/`：XinYu 自己通过受控搜索、下载或仓库学习流程找到的资料。
-- `owner_supplied/`：主人给她、让她找、或者手动放进去的资料。
-
-入口脚本：
-
-```powershell
-cd D:\XinYu\KohakuTerrarium-main\examples\agent-apps\xinyu
-python xinyu_learning_library.py init
-python xinyu_learning_library.py github "https://github.com/user/repo" --origin owner_supplied --reason "学习这个插件结构"
-python xinyu_learning_library.py stage --id learn-...
-```
-
-下载资料入库不等于立刻“学会”。资料需要 stage 到 `source_materials`，再经过比较、集成和质量检查；`self_found` 默认不能跳过审查。
-
 ## 常用验证
 
-```powershell
-cd D:\XinYu\KohakuTerrarium-main\examples\agent-apps\xinyu
-python validate_scaffold.py
-python validate_inner_framework.py
-python proactive_presence_smoke.py
-python ai_self_iteration_review_bridge_smoke.py
-python learning_library_smoke.py
-python bridge_probe_smoke.py
-python capability_zones_smoke.py
-```
-
-改 Python bridge 后建议跑：
+轻量语法检查：
 
 ```powershell
-python -m py_compile xinyu_core_bridge.py xinyu_proactive_presence.py xinyu_status.py
+python -m py_compile xinyu_core_bridge.py xinyu_qq_gateway.py xinyu_status.py
 ```
+
+核心 smoke：
+
+```powershell
+python xinyu_qq_gateway_smoke.py
+python runtime_security_smoke.py
+python state_io_smoke.py
+python memory_event_sourcing_smoke.py
+python persona_state_flow_smoke.py
+python dialogue_curiosity_review.py
+```
+
+pytest 测试入口：
+
+```powershell
+python -m pytest tests -q
+```
+
+## 目录地图
+
+```text
+examples/agent-apps/xinyu/
+  README.md                         app 级说明
+  DEPLOYMENT-STATUS-RUNBOOK.md      当前本地 QQ 链路部署说明
+  STATE-OF-XINYU.md                 当前工程状态
+  VALIDATION-INDEX.md               验证地图
+  CHANGELOG-XINYU.md                演进记录
+  config.yaml                       Kohaku agent 配置
+  xinyu_core_bridge.py              XinYu HTTP core bridge
+  xinyu_qq_gateway.py               原生 NapCat / OneBot QQ gateway
+  xinyu_v1/                         v1 核心重构骨架
+  custom/                           Kohaku lifecycle 插件和引擎
+  prompts/                          system/output/writer prompt
+  tests/                            pytest 测试
+  memory-seeds/                     可移植 seed memory
+```
+
+根目录里的 `src/`、`docs/`、`tests/` 保留了 KohakuTerrarium 底层框架快照；XinYu 的主开发入口在 `examples/agent-apps/xinyu/`。
 
 ## 隐私边界
 
-这些本地运行文件不会提交到 Git：
+不要把下面内容上传到公开仓库：
 
 ```text
 examples/agent-apps/xinyu/xinyu.local.env
+examples/agent-apps/xinyu/xinyu_qq_gateway.config.json
 examples/agent-apps/xinyu/logs/
 examples/agent-apps/xinyu/memory/
+examples/agent-apps/xinyu/runtime/
 examples/agent-apps/xinyu/learning/self_found/
 examples/agent-apps/xinyu/learning/owner_supplied/
 ```
 
-它们可能包含密钥、QQ 状态、关系记忆、运行痕迹、私人对话上下文或下载资料。保留在本地。
-
-## 文档入口
-
-- `Plan.md`
-- `ROADMAP.md`
-- `examples/agent-apps/xinyu/README.md`
-- `examples/agent-apps/xinyu/RUNBOOK.md`
-- `examples/agent-apps/xinyu/STATE-OF-XINYU.md`
-- `examples/agent-apps/xinyu/VALIDATION-INDEX.md`
-- `examples/agent-apps/xinyu/CHANGELOG-XINYU.md`
-- `examples/agent-apps/xinyu/LEARNING-LIBRARY.md`
-- `integrations/astrbot/README.md`
-- `docs/xinyu/upstream-framework.md`
-- `docs/xinyu/memory-system-v0.1.md`
-- `docs/xinyu/memory-schema-v0.1.md`
-
-KohakuTerrarium 是底层框架，XinYu 是建立在它之上的长期运行 AI 系统。
+公开仓库只保存可复现的代码、结构、文档、测试和可移植 seed；真实运行残留保留在本地。
 
 ## License
 
-本仓库包含 XinYu 项目代码，以及作为底层依赖使用的 KohakuTerrarium 源码快照。许可证见 `LICENSE`。
+本仓库包含 XinYu 项目代码，以及作为底层依赖使用的 KohakuTerrarium 源码快照。许可证见 [`LICENSE`](LICENSE)。

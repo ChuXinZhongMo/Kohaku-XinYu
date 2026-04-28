@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1480" viewBox="0 0 1920 1480" role="img" aria-labelledby="title desc">
   <title id="title">XinYu Architecture Diagram</title>
-  <desc id="desc">XinYu current architecture: QQ shell, local core bridge, memory layers, learning pipeline, maintenance gates, safety boundaries, and validation surface.</desc>
+  <desc id="desc">XinYu current architecture: native QQ gateway, local core bridge, memory layers, learning pipeline, maintenance gates, safety boundaries, and validation surface.</desc>
   <defs>
     <style>
       .bg { fill: #f6f8fb; }
@@ -46,7 +46,7 @@
   <rect class="bg" x="0" y="0" width="1920" height="1480"/>
 
   <text class="title" x="70" y="62">心玉 XinYu 项目架构图</text>
-  <text class="subtitle" x="72" y="94">生成时间：2026-04-28｜Core bridge v0.8.10｜AstrBot shell v0.5.3｜核心目标：人格、记忆、学习、主动性与 QQ 可见表达分层运行</text>
+  <text class="subtitle" x="72" y="94">更新：2026-04-29｜Core bridge v0.8.14｜Native QQ gateway v0.1.0｜核心目标：人格、记忆、学习、主动性与 QQ 可见表达分层运行</text>
   <text class="subtitle" x="72" y="120">原则：平台壳不写人格；核心桥集中决策；记忆先过门禁；学习材料只作为候选，不能直接改写自我、owner 或关系层。</text>
 
   <!-- Legend -->
@@ -82,12 +82,12 @@
   <text class="tiny" x="370" y="388">6199 WebSocket</text>
 
   <rect class="shell shadow" x="618" y="255" width="278" height="180" rx="12"/>
-  <text class="label" x="646" y="286">AstrBot + xinyu_bridge</text>
-  <text class="small" x="646" y="314">薄壳插件 v0.5.3</text>
+  <text class="label" x="646" y="286">xinyu_qq_gateway.py</text>
+  <text class="small" x="646" y="314">原生 QQ gateway v0.1.0</text>
   <text class="tiny" x="646" y="338">白名单 / group trigger</text>
-  <text class="tiny" x="646" y="360">stop pipeline / 不做人格</text>
-  <text class="tiny" x="646" y="382">文件学习 / 被动学习群</text>
-  <text class="tiny" x="646" y="404">主动消息 poll + ack</text>
+  <text class="tiny" x="646" y="360">消息归一化 / OneBot 回复</text>
+  <text class="tiny" x="646" y="382">只转发聊天，不写人格</text>
+  <text class="tiny" x="646" y="404">本地 config ignored</text>
 
   <rect class="core shadow" x="965" y="235" width="315" height="220" rx="12"/>
   <text class="label" x="996" y="266">XinYu Core Bridge</text>
