@@ -10,6 +10,7 @@ from typing import Any
 
 from kohakuterrarium.modules.plugin.base import BasePlugin, PluginContext
 
+from dream_output_engine import has_unconsumed_dream_seed
 from turn_mode_utils import read_turn_mode
 
 
@@ -123,6 +124,24 @@ def _has_learning_quality_followup_candidate(learning_quality: str) -> bool:
     return bool(re.search(r"(?m)^- repeated_question_host:\s+severity=review;\s+target=q-\d+@", learning_quality))
 
 
+def _has_candidate_search_result_for_pending(source_requests: str, source_search_results: str) -> bool:
+    pending_ids = {
+        item["request_id"]
+        for item in _split_source_request_blocks(source_requests)
+        if item.get("status") == "pending_url"
+    }
+    if not pending_ids:
+        return False
+    parts = re.split(r"(?m)^## (result-\d{4}-\d{2}-\d{2}-\d{3}|result-[\w-]+)\n", source_search_results)
+    if len(parts) < 3:
+        return False
+    for i in range(1, len(parts), 2):
+        body = parts[i + 1]
+        if _extract_value(body, "status", "hold") == "candidate" and _extract_value(body, "request_id", "none") in pending_ids:
+            return True
+    return False
+
+
 def _infer_suggestions(root: Path) -> dict[str, str]:
     inner_sync = _read(root / "memory/context/inner_sync_state.md")
     question_pipe = _read(root / "memory/context/question_pipeline_state.md")
@@ -144,6 +163,8 @@ def _infer_suggestions(root: Path) -> dict[str, str]:
     general_knowledge = _read(root / "memory/knowledge/general.md")
     learning_quality = _read(root / "memory/knowledge/learning_quality_state.md")
     autonomous_search_activation = _read(root / "memory/knowledge/autonomous_search_activation_state.md")
+    capability = _read(root / "memory/context/capability_zones_state.md")
+    owner_grants = _read(root / "memory/context/owner_permission_grants.md")
     archive_queue = _read(root / "memory/archive/archive_queue.md")
     archive_output = _read(root / "memory/archive/archive_output_state.md")
 
@@ -179,12 +200,18 @@ def _infer_suggestions(root: Path) -> dict[str, str]:
         learning_quality,
     )
     has_quality_followup_candidate = _has_learning_quality_followup_candidate(learning_quality)
-    has_candidate_search_result = "- status: candidate" in source_search_results
+    has_candidate_search_result = _has_candidate_search_result_for_pending(source_requests, source_search_results)
     has_controlled_search_input = bool(os.environ.get("XINYU_SOURCE_SEARCH_RESULTS", "").strip())
-    source_search_provider = os.environ.get("XINYU_SOURCE_SEARCH_PROVIDER", "disabled").strip().lower()
-    has_search_provider = source_search_provider not in {"", "disabled", "none", "off"}
-    autonomous_search_mode = os.environ.get("XINYU_AUTONOMOUS_SEARCH", "disabled").strip().lower()
-    autonomous_search_active = autonomous_search_mode in {"enabled", "dry_run"}
+    source_search_provider = os.environ.get("XINYU_SOURCE_SEARCH_PROVIDER", "").strip().lower()
+    owner_source_collect_granted = (
+        "autonomous_search_provider: enabled_duckduckgo_html_bounded_ai_domain" in capability
+        and "grant_autonomous_source_collect: approved_bounded_candidate_material_only" in owner_grants
+    )
+    has_search_provider = source_search_provider not in {"", "disabled", "none", "off"} or owner_source_collect_granted
+    autonomous_search_mode = os.environ.get("XINYU_AUTONOMOUS_SEARCH", "").strip().lower()
+    autonomous_search_active = autonomous_search_mode in {"enabled", "dry_run"} or (
+        autonomous_search_mode in {"", "auto"} and owner_source_collect_granted
+    )
     dream_weight_active = bool(re.search(r"^- weight_delta:\s*[1-9]\d*$", dream_weight, re.M))
     has_growth_entries = bool(re.search(r"(?m)^## growth-", growth_log))
     has_reflection_entries = bool(re.search(r"(?m)^## reflection-", reflection_log))
@@ -207,7 +234,7 @@ def _infer_suggestions(root: Path) -> dict[str, str]:
         and ("## item-" in archive_queue or "## seed-" in dream_seeds or "## item-" in reflection_queue or dream_weight_active)
         else "hold",
         "suggest_reflection_output": "yes" if "- item_id:" in reflection_out else "hold",
-        "suggest_dream_output": "yes" if "## seed-" in dream_seeds and "- mode: runtime_dream_output" not in dream_output else "hold",
+        "suggest_dream_output": "yes" if has_unconsumed_dream_seed(dream_seeds) else "hold",
         "suggest_source_gate": "yes" if re.search(r"^- q-\d+:", source_gate, re.M) else "hold",
         "suggest_source_reliability": "yes"
         if re.search(r"^- q-\d+:", source_gate, re.M)

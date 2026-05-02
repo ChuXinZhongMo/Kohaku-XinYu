@@ -55,8 +55,23 @@ def activation_gate(root: Path) -> tuple[bool, int, str]:
     return True, allowed_queries, "activation_allowed"
 
 
-def provider_name() -> str:
-    return os.environ.get("XINYU_SOURCE_SEARCH_PROVIDER", "disabled").strip().lower() or "disabled"
+def provider_name(root: Path | None = None) -> str:
+    raw = os.environ.get("XINYU_SOURCE_SEARCH_PROVIDER")
+    if raw is not None and raw.strip():
+        return raw.strip().lower()
+    if root is not None:
+        try:
+            capability = read_text(root / "memory/context/capability_zones_state.md")
+            grants = read_text(root / "memory/context/owner_permission_grants.md")
+        except OSError:
+            capability = ""
+            grants = ""
+        if (
+            "autonomous_search_provider: enabled_duckduckgo_html_bounded_ai_domain" in capability
+            and "grant_autonomous_source_collect: approved_bounded_candidate_material_only" in grants
+        ):
+            return "duckduckgo_html"
+    return "disabled"
 
 
 def provider_endpoint(provider: str) -> str:
@@ -177,7 +192,7 @@ def run_source_search_provider(
     require_activation: bool = False,
 ) -> dict[str, object]:
     searched_at = searched_at or datetime.now().astimezone().isoformat()
-    provider = provider_name()
+    provider = provider_name(root)
     requests = split_requests(read_text(root / "memory/knowledge/source_requests.md"))
     pending = [item for item in requests if item.get("status") == "pending_url"]
     existing_results = split_existing_results(read_text(root / "memory/knowledge/source_search_results.md"))

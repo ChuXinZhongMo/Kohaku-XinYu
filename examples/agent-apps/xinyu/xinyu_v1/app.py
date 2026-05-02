@@ -19,7 +19,7 @@ from .reasoning.slow_runtime import SlowReasoningRuntime
 from .response.models import DraftReply
 from .response.renderer import ResponseRenderer
 from .routing.hybrid_router import HybridRouter
-from .types import MemoryWriteMode, RouteName, TurnKind
+from .types import MemoryWriteMode, RouteName, SourceChannel, TurnKind
 
 
 class XinYuV1App:
@@ -73,7 +73,13 @@ class XinYuV1App:
         await self._record_raw_event(turn, decision.route)
 
         memories = ()
+        recent_messages = ()
         if decision.is_slow_path:
+            recent_messages = await self.memory.recent_messages(
+                turn.trace,
+                limit=8,
+                exclude_trace_ids=(turn.trace.trace_id,),
+            )
             memories = await self.memory.retrieve(
                 MemoryQuery(
                     text=turn.text,
@@ -84,10 +90,18 @@ class XinYuV1App:
                 )
             )
 
-        request = ReasoningRequest(turn=turn, route=decision, memories=memories, emotion_state=emotion_state)
+        request = ReasoningRequest(
+            turn=turn,
+            route=decision,
+            memories=memories,
+            recent_messages=recent_messages,
+            emotion_state=emotion_state,
+        )
         result = await self._reason(request)
         self._update_emotion(turn, emotion_state, decision.classification.salience)
         final = self.renderer.render(DraftReply(text=result.draft, source=decision.route.value, notes=result.notes), turn)
+        if final.accepted and final.text.strip():
+            await self._record_visible_reply(turn, final.text, decision.route)
 
         elapsed_ms = self.clock.elapsed_ms(started)
         notes = (
@@ -133,7 +147,15 @@ class XinYuV1App:
             actor_hash=turn.trace.actor_hash,
             salience=0,
             layers=(MemoryLayer.EVENTS,),
-            metadata={"route": route.value, "turn_kind": turn.kind.value},
+            metadata={
+                "role": "user",
+                "route": route.value,
+                "turn_kind": turn.kind.value,
+                "trace_id": turn.trace.trace_id,
+                "session_hash": turn.trace.session_hash,
+                "source_channel": turn.actor.source_channel.value,
+                "privacy_scope": turn.actor.privacy_scope.value,
+            },
         )
         await self.memory.record_event(event)
         if turn.text.strip():
@@ -145,9 +167,50 @@ class XinYuV1App:
                     timestamp=turn.timestamp,
                     source_event_id=event.event_id,
                     tags=(turn.actor.source_channel.value,),
-                    metadata={"trace_id": turn.trace.trace_id},
+                    metadata={
+                        "role": "user",
+                        "trace_id": turn.trace.trace_id,
+                        "session_hash": turn.trace.session_hash,
+                        "source_channel": turn.actor.source_channel.value,
+                        "privacy_scope": turn.actor.privacy_scope.value,
+                    },
                 )
             )
+
+    async def _record_visible_reply(self, turn: InboundTurn, reply: str, route: RouteName) -> None:
+        if not turn.is_human or not reply.strip():
+            return
+        metadata = {
+            "role": "assistant",
+            "route": route.value,
+            "turn_kind": turn.kind.value,
+            "trace_id": turn.trace.trace_id,
+            "session_hash": turn.trace.session_hash,
+            "source_channel": SourceChannel.SYSTEM.value,
+            "privacy_scope": turn.actor.privacy_scope.value,
+        }
+        event = MemoryEvent.from_text(
+            text=reply,
+            timestamp=self.clock.now_iso(),
+            source_channel=SourceChannel.SYSTEM,
+            privacy_scope=turn.actor.privacy_scope,
+            actor_hash=turn.trace.actor_hash,
+            salience=0,
+            layers=(MemoryLayer.EVENTS,),
+            metadata=metadata,
+        )
+        await self.memory.record_event(event)
+        await self.memory.write(
+            MemoryWriteIntent(
+                text=reply,
+                layer=MemoryLayer.EVENTS,
+                mode=MemoryWriteMode.EVENT_ONLY,
+                timestamp=event.timestamp,
+                source_event_id=event.event_id,
+                tags=("assistant", route.value),
+                metadata=metadata,
+            )
+        )
 
     def _read_emotion(self) -> EmotionState:
         return read_emotion_state(self._emotion_path, default_timestamp=self.clock.now_iso())

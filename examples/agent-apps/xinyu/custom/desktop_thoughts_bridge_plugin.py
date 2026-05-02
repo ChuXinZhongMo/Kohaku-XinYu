@@ -69,15 +69,16 @@ class DesktopThoughtsBridgePlugin(BasePlugin):
         self._ctx = context
         _trace(_resolve_root(context), "on_load ok")
 
-    def _load_renderer(self, root: Path) -> tuple[Any, Any]:
+    def _load_renderer(self, root: Path) -> tuple[Any, Any, Any, Any]:
         if str(root) not in sys.path:
             sys.path.insert(0, str(root))
+        from xinyu_private_thought_events import mark_private_thought_desktop_written, refresh_private_thought_event
         from xinyu_autonomy_journal import default_output_dir, render_persona_thoughts
 
-        return default_output_dir, render_persona_thoughts
+        return default_output_dir, render_persona_thoughts, refresh_private_thought_event, mark_private_thought_desktop_written
 
     def _output_dir(self, root: Path) -> Path:
-        default_output_dir, _render_persona_thoughts = self._load_renderer(root)
+        default_output_dir, _render_persona_thoughts, _refresh_private_thought_event, _mark_written = self._load_renderer(root)
         if self._output_dir_override:
             return Path(self._output_dir_override).expanduser()
         return default_output_dir()
@@ -109,17 +110,33 @@ class DesktopThoughtsBridgePlugin(BasePlugin):
             return True, "bad_last_run"
         return True, "cooldown_ready"
 
-    async def _write_thoughts(self, root: Path, *, reason: str) -> Path | None:
-        default_output_dir, render_persona_thoughts = self._load_renderer(root)
+    async def _write_thoughts(self, root: Path, *, reason: str, source_response: str = "") -> Path | None:
+        default_output_dir, render_persona_thoughts, refresh_private_thought_event, mark_private_thought_desktop_written = self._load_renderer(root)
         output_dir = Path(self._output_dir_override).expanduser() if self._output_dir_override else default_output_dir()
         generated = datetime.now().astimezone()
         llm = self._current_llm()
+        if llm is None:
+            _trace(root, f"skipped no_llm reason={reason}")
+            return None
+        source_kind = "agent_maintenance_private_thought" if reason.startswith("maintenance:") else "startup_private_thought_bridge"
+        event = await refresh_private_thought_event(
+            root,
+            generated_at=generated.isoformat(),
+            llm=llm,
+            source_kind=source_kind,
+            trigger=reason,
+            source_response=source_response,
+        )
         text = (
             await render_persona_thoughts(
                 root,
                 generated.isoformat(),
                 llm=llm,
-                use_llm=llm is not None,
+                use_llm=True,
+                private_thought_event=event,
+                ensure_private_thought_event=False,
+                source_kind="owner_visible_private_note_renderer",
+                trigger=reason,
             )
         ).rstrip()
         if not text.strip():
@@ -131,6 +148,12 @@ class DesktopThoughtsBridgePlugin(BasePlugin):
         path.write_text(text + "\n", encoding="utf-8-sig")
         if self._ctx:
             self._ctx.set_state("desktop_thoughts_last_run", generated.isoformat())
+        mark_private_thought_desktop_written(
+            root,
+            event_id=event.event_id,
+            note_path=path,
+            generated_at=generated.isoformat(),
+        )
         _trace(root, f"wrote {path} reason={reason}")
         return path
 
@@ -158,6 +181,6 @@ class DesktopThoughtsBridgePlugin(BasePlugin):
             ready, reason = self._cooldown_ready(root, startup=False)
             _trace(root, f"post_llm_call ready={ready} reason={reason}")
             if ready:
-                await self._write_thoughts(root, reason=f"maintenance:{reason}")
+                await self._write_thoughts(root, reason=f"maintenance:{reason}", source_response=str(response or ""))
         except Exception as exc:
             _trace(root, f"post_llm_call error={exc!r}")

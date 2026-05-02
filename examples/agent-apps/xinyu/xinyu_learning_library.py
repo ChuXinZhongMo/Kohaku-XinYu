@@ -38,22 +38,46 @@ ORIGINS = {
 
 TEXT_EXTENSIONS = {
     ".bat",
+    ".c",
     ".cfg",
+    ".cmd",
     ".conf",
+    ".cpp",
+    ".cs",
     ".css",
     ".csv",
+    ".dockerfile",
+    ".env",
+    ".go",
+    ".h",
+    ".hpp",
     ".html",
     ".ini",
+    ".java",
     ".js",
+    ".jsx",
     ".json",
     ".jsonl",
+    ".kt",
+    ".less",
+    ".log",
     ".md",
+    ".php",
     ".ps1",
     ".py",
+    ".rb",
     ".rst",
+    ".rs",
+    ".scss",
+    ".sh",
+    ".sql",
+    ".svelte",
+    ".swift",
+    ".tsx",
     ".toml",
     ".ts",
     ".txt",
+    ".vue",
     ".xml",
     ".yaml",
     ".yml",
@@ -137,6 +161,12 @@ DOCX_CONTENT_TYPES = {
 PDF_CONTENT_TYPES = {
     "application/pdf",
     "application/x-pdf",
+}
+
+GENERIC_BINARY_CONTENT_TYPES = {
+    "",
+    "application/octet-stream",
+    "binary/octet-stream",
 }
 
 PPTX_CONTENT_TYPES = {
@@ -381,6 +411,75 @@ def filename_from_url(url: str, content_type: str) -> str:
     return "downloaded" + guess_extension(url, content_type)
 
 
+def filename_from_explicit_name(value: str) -> str:
+    raw = unquote(str(value or "")).strip().strip("'\"")
+    if not raw:
+        return ""
+    if "://" in raw:
+        raw = Path(urlparse(raw).path).name
+    else:
+        raw = Path(raw.replace("\\", "/")).name
+    if not Path(raw).suffix:
+        return ""
+    return slugify(raw)
+
+
+def filename_for_download(url: str, content_type: str, *, title: str = "", label: str = "", data: bytes = b"") -> str:
+    url_name = filename_from_url(url, content_type)
+    explicit_name = filename_from_explicit_name(title) or filename_from_explicit_name(label)
+    suffix = Path(url_name).suffix.lower()
+    if explicit_name and (not suffix or suffix == ".bin"):
+        return explicit_name
+    if not suffix and data.startswith(b"%PDF-"):
+        return f"{url_name}.pdf"
+    office_type = office_openxml_content_type(data)
+    if not suffix and office_type:
+        return url_name + {
+            "docx": ".docx",
+            "pptx": ".pptx",
+            "xlsx": ".xlsx",
+        }.get(office_type, ".zip")
+    return url_name
+
+
+def office_openxml_content_type(data: bytes) -> str:
+    if not data.startswith(b"PK"):
+        return ""
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            names = set(archive.namelist())
+    except (OSError, zipfile.BadZipFile):
+        return ""
+    if "word/document.xml" in names:
+        return "docx"
+    if "ppt/presentation.xml" in names:
+        return "pptx"
+    if "xl/workbook.xml" in names:
+        return "xlsx"
+    return ""
+
+
+def effective_content_type(filename: str, content_type: str, data: bytes = b"") -> str:
+    media_type = media_type_for(content_type)
+    if data.startswith(b"%PDF-"):
+        return "application/pdf"
+    office_type = office_openxml_content_type(data)
+    if office_type == "docx":
+        return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    if office_type == "pptx":
+        return "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    if office_type == "xlsx":
+        return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    guessed = mimetypes.guess_type(filename)[0] or ""
+    if media_type in GENERIC_BINARY_CONTENT_TYPES and guessed:
+        return guessed
+    return content_type or guessed or "application/octet-stream"
+
+
 def _host_is_internal(host: str) -> bool:
     normalized = host.strip().strip("[]").lower()
     if normalized in {"localhost", "local", "0.0.0.0"}:
@@ -454,6 +553,26 @@ def decode_text(data: bytes) -> str:
         except UnicodeDecodeError:
             continue
     return data.decode("utf-8", errors="replace")
+
+
+def bytes_look_like_text(data: bytes, *, sample_bytes: int = 4096) -> bool:
+    sample = data[:sample_bytes]
+    if not sample:
+        return False
+    if b"\x00" in sample:
+        return False
+    control_chars = sum(1 for value in sample if value < 32 and value not in {9, 10, 12, 13})
+    if control_chars / max(1, len(sample)) > 0.02:
+        return False
+    for encoding in ("utf-8-sig", "utf-8", "gb18030"):
+        try:
+            sample.decode(encoding)
+            return True
+        except UnicodeDecodeError:
+            continue
+    decoded = sample.decode("latin-1", errors="replace")
+    printable = sum(1 for char in decoded if char.isprintable() or char in "\r\n\t")
+    return printable / max(1, len(decoded)) > 0.95
 
 
 def xml_local_name(tag: object) -> str:
@@ -842,7 +961,10 @@ def pdf_text_looks_garbled(text: str) -> bool:
     if len(chars) < 24:
         return False
 
-    mojibake_markers = sum(sample.count(marker) for marker in ("锟斤拷", "锟斤", "斤拷", "��", "���"))
+    mojibake_markers = sum(
+        sample.count(marker)
+        for marker in ("\u951f\u65a4\u62f7", "\u951f\u65a4", "\u65a4\u62f7", "\ufffd\ufffd", "\ufffd\ufffd\ufffd")
+    )
     control_or_replacement = sum(
         1
         for char in chars
@@ -915,6 +1037,7 @@ def run_command_ocr(path: Path) -> str:
 def run_windows_ocr(path: Path) -> str:
     if os.name != "nt" or not shutil.which("powershell"):
         return ""
+    input_path = path.resolve()
     try:
         with tempfile.NamedTemporaryFile("w", suffix=".ps1", delete=False, encoding="utf-8") as script:
             script.write(WINDOWS_OCR_SCRIPT)
@@ -923,13 +1046,14 @@ def run_windows_ocr(path: Path) -> str:
             completed = subprocess.run(
                 [
                     "powershell",
+                    "-Sta",
                     "-NoProfile",
                     "-ExecutionPolicy",
                     "Bypass",
                     "-File",
                     str(script_path),
                     "-InputPath",
-                    str(path),
+                    str(input_path),
                     "-MaxPages",
                     str(ocr_max_pages()),
                 ],
@@ -947,11 +1071,56 @@ def run_windows_ocr(path: Path) -> str:
                 pass
     except (OSError, subprocess.TimeoutExpired):
         return ""
-    return completed.stdout.strip() if completed.returncode == 0 else ""
+    if completed.returncode == 0:
+        text = completed.stdout.strip()
+        if not text:
+            trace_ocr_failure(
+                {
+                    "engine": "windows_ocr",
+                    "path": str(input_path),
+                    "returncode": completed.returncode,
+                    "stderr": completed.stderr.strip()[:1000],
+                    "stdout": "",
+                    "status": "empty_stdout",
+                }
+            )
+        return text
+    trace_ocr_failure(
+        {
+            "engine": "windows_ocr",
+            "path": str(input_path),
+            "returncode": completed.returncode,
+            "stderr": completed.stderr.strip()[:1000],
+            "stdout": completed.stdout.strip()[:1000],
+        }
+    )
+    return ""
 
 
-def extract_ocr_text_from_path(path: Path) -> str:
-    if not ocr_enabled():
+def trace_ocr_failure(event: dict[str, object]) -> None:
+    try:
+        trace_dir = root_dir() / "runtime"
+        trace_dir.mkdir(parents=True, exist_ok=True)
+        event = {"recorded_at": now_iso(), **event}
+        with (trace_dir / "learning_ocr_trace.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
+    except OSError:
+        pass
+
+
+def trace_extraction(event: dict[str, object]) -> None:
+    try:
+        trace_dir = root_dir() / "runtime"
+        trace_dir.mkdir(parents=True, exist_ok=True)
+        event = {"recorded_at": now_iso(), **event}
+        with (trace_dir / "learning_extraction_trace.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
+    except OSError:
+        pass
+
+
+def extract_ocr_text_from_path(path: Path, *, force: bool = False) -> str:
+    if not force and not ocr_enabled():
         return ""
     text = run_command_ocr(path)
     if text.strip():
@@ -959,14 +1128,16 @@ def extract_ocr_text_from_path(path: Path) -> str:
     return run_windows_ocr(path).strip()
 
 
-def extract_ocr_text_from_bytes(data: bytes, filename: str) -> str:
-    if not ocr_enabled():
+def extract_ocr_text_from_bytes(data: bytes, filename: str, *, force: bool = False) -> str:
+    if not force and not ocr_enabled():
         return ""
     suffix = Path(filename).suffix or ".bin"
-    with tempfile.TemporaryDirectory(prefix="xinyu-learning-ocr-") as tmp:
+    tmp_root = root_dir() / "runtime" / "ocr_tmp"
+    tmp_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="xinyu-learning-ocr-", dir=tmp_root) as tmp:
         path = Path(tmp) / f"ocr_input{suffix}"
         path.write_bytes(data)
-        return extract_ocr_text_from_path(path)
+        return extract_ocr_text_from_path(path, force=force)
 
 
 def media_type_for(content_type: str) -> str:
@@ -1004,6 +1175,7 @@ def is_image_type(filename: str, content_type: str) -> bool:
 
 
 def extract_text_from_bytes(data: bytes, filename: str, content_type: str) -> str:
+    content_type = effective_content_type(filename, content_type, data)
     lower_type = content_type.lower()
     suffix = Path(filename).suffix.lower()
     if is_docx_type(filename, content_type):
@@ -1013,7 +1185,9 @@ def extract_text_from_bytes(data: bytes, filename: str, content_type: str) -> st
         if text.strip() and not pdf_text_looks_garbled(text):
             return text
         ocr_text = extract_ocr_text_from_bytes(data, filename)
-        return ocr_text if ocr_text.strip() else text
+        if ocr_text.strip() and not pdf_text_looks_garbled(ocr_text):
+            return ocr_text
+        return ""
     if is_pptx_type(filename, content_type):
         return extract_pptx_text(data)
     if is_xlsx_type(filename, content_type):
@@ -1023,10 +1197,15 @@ def extract_text_from_bytes(data: bytes, filename: str, content_type: str) -> st
     if is_odt_type(filename, content_type):
         return extract_odt_text(data)
     if is_image_type(filename, content_type):
-        return extract_ocr_text_from_bytes(data, filename)
+        ocr_text = extract_ocr_text_from_bytes(data, filename, force=True)
+        if ocr_text.strip() and not pdf_text_looks_garbled(ocr_text):
+            return ocr_text
+        return ""
     if "html" in lower_type or suffix in {".html", ".htm"}:
         return clean_html_text(decode_text(data))
     if lower_type.startswith("text/") or suffix in TEXT_EXTENSIONS:
+        return decode_text(data)
+    if bytes_look_like_text(data):
         return decode_text(data)
     return ""
 
@@ -1034,7 +1213,7 @@ def extract_text_from_bytes(data: bytes, filename: str, content_type: str) -> st
 def can_extract_local_text(path: Path) -> bool:
     content_type = mimetypes.guess_type(path.name)[0] or ""
     suffix = path.suffix.lower()
-    return (
+    if (
         suffix in TEXT_EXTENSIONS
         or suffix in DOCUMENT_EXTENSIONS
         or content_type.lower().startswith("text/")
@@ -1045,6 +1224,19 @@ def can_extract_local_text(path: Path) -> bool:
         or is_rtf_type(path.name, content_type)
         or is_odt_type(path.name, content_type)
         or is_image_type(path.name, content_type)
+    ):
+        return True
+    try:
+        with path.open("rb") as fh:
+            header = fh.read(4096)
+    except OSError:
+        return False
+    return (
+        header.startswith(b"%PDF-")
+        or header.startswith(b"PK")
+        or header.startswith(b"\xff\xd8\xff")
+        or header.startswith(b"\x89PNG\r\n\x1a\n")
+        or bytes_look_like_text(header)
     )
 
 
@@ -1056,7 +1248,7 @@ def truncate_text(text: str, max_chars: int = DEFAULT_MAX_TEXT_BYTES) -> str:
 
 def claim_from_text(text: str, fallback: str) -> str:
     cleaned = re.sub(r"\s+", " ", text).strip()
-    if not cleaned:
+    if not cleaned or pdf_text_looks_garbled(cleaned):
         return fallback
     instruction_markers = (
         "SYSTEM_OVERRIDE",
@@ -1075,8 +1267,8 @@ def claim_from_text(text: str, fallback: str) -> str:
     return cleaned[:520].replace("|", "/")
 
 
-def write_extracted_text(item_dir: Path, title: str, text: str) -> Path | None:
-    if not text.strip():
+def write_extracted_text(item_dir: Path, title: str, text: str, *, reject_garbled: bool = True) -> Path | None:
+    if not text.strip() or (reject_garbled and pdf_text_looks_garbled(text)):
         return None
     path = item_dir / "extracted_text.md"
     path.write_text(
@@ -1186,7 +1378,8 @@ def add_url_material(
     ensure_layout(root)
     normalized_origin = normalize_origin(origin)
     data, final_url, content_type = download_bytes(url, max_bytes)
-    filename = filename_from_url(final_url, content_type)
+    filename = filename_for_download(final_url, content_type, title=title, label=label, data=data)
+    content_type = effective_content_type(filename, content_type, data)
     material_title = title or filename
     source_type = source_type_for_download(final_url, filename, content_type)
     with tempfile.TemporaryDirectory(prefix="xinyu-learning-url-") as tmp:
@@ -1194,6 +1387,17 @@ def add_url_material(
         raw_path = tmpdir / filename
         raw_path.write_bytes(data)
         extracted_text = extract_text_from_bytes(data, filename, content_type)
+        trace_extraction(
+            {
+                "kind": "url",
+                "filename": filename,
+                "content_type": content_type,
+                "source_type": source_type,
+                "bytes": len(data),
+                "extracted_chars": len(extracted_text),
+                "garbled": pdf_text_looks_garbled(extracted_text) if extracted_text else False,
+            }
+        )
         text_path = write_extracted_text(tmpdir, material_title, extracted_text)
         fallback = f"downloaded {source_type} from {final_url}"
         return register_downloaded_item(
@@ -1396,7 +1600,7 @@ def combined_text_from_files(paths: list[Path]) -> str:
         data = path.read_bytes()
         content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
         text = extract_text_from_bytes(data, path.name, content_type)
-        if text.strip():
+        if text.strip() and not pdf_text_looks_garbled(text):
             parts.append(f"## {path.name}\n\n```text\n{truncate_text(text, 40_000).rstrip()}\n```\n")
     return "\n".join(parts).strip()
 

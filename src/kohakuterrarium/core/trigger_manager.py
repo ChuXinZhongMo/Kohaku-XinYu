@@ -127,6 +127,8 @@ class TriggerManager:
         if trigger is None:
             return False
 
+        await trigger.stop()
+
         task = self._tasks.pop(trigger_id, None)
         if task and not task.done():
             task.cancel()
@@ -137,7 +139,6 @@ class TriggerManager:
             except Exception as e:
                 logger.debug("Trigger task cleanup error", error=str(e), exc_info=True)
 
-        await trigger.stop()
         self._created_at.pop(trigger_id, None)
         logger.info("Trigger removed", trigger_id=trigger_id)
         return True
@@ -187,12 +188,12 @@ class TriggerManager:
 
     async def stop_all(self) -> None:
         """Stop all triggers. Called by agent.stop()."""
+        for trigger in self._triggers.values():
+            await trigger.stop()
         for task in self._tasks.values():
             task.cancel()
         if self._tasks:
             await asyncio.gather(*self._tasks.values(), return_exceptions=True)
-        for trigger in self._triggers.values():
-            await trigger.stop()
         self._tasks.clear()
         self._triggers.clear()
         self._created_at.clear()

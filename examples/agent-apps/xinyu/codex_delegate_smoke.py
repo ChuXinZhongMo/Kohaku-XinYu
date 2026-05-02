@@ -60,7 +60,17 @@ def main() -> int:
             "handoff_codex_to_dream",
             "codex_delegate_background:scheduled",
             "dream_handoff_on_timeout:armed",
-            'BRIDGE_VERSION = "0.8.14"',
+            'BRIDGE_VERSION = "',
+            "Path(report_path).name",
+            "本地 Codex Outbox",
+            "_enqueue_codex_completion_if_needed",
+            "enqueue_qq_outbox_message",
+        ),
+        ROOT / "xinyu_qq_outbox.py": (
+            "enqueue_qq_outbox_message",
+            "claim_next_qq_outbox_message",
+            "ack_qq_outbox_message",
+            "QQ Outbox Dispatch State",
         ),
         ROOT / "xinyu_codex_dream_handoff.py": (
             "handoff_codex_to_dream",
@@ -68,7 +78,17 @@ def main() -> int:
             "reflection_queue.md",
             "run_dream_output",
         ),
-        ROOT / "xinyu_codex_delegate.py": ("codex", "--full-auto", "--add-dir", "xinyu_learning_library.py", "github_pull_fallback"),
+        ROOT / "xinyu_codex_delegate.py": (
+            "codex",
+            "--full-auto",
+            "--add-dir",
+            "xinyu_learning_library.py",
+            "github_pull_fallback",
+            "sandbox_workspace_write.network_access=true",
+            "enabled_for_task_urls",
+            "visible_window_policy:required",
+            "visible_window_request_overridden:true",
+        ),
     }
     for path, markers in checks.items():
         text = path.read_text(encoding="utf-8-sig")
@@ -77,8 +97,29 @@ def main() -> int:
                 failures.append(f"{path.name} missing marker: {marker}")
 
     gateway_text = (ROOT / "xinyu_qq_gateway.py").read_text(encoding="utf-8-sig")
-    if "codex_execute" in gateway_text:
-        failures.append("native QQ gateway should not auto-trigger codex_execute")
+    gateway_required = (
+        "codex_command_prefixes",
+        "qq_gateway_codex_execute_message",
+        "codex_auxiliary_brain",
+        "direct_cli_execution",
+        "self.client.codex_execute",
+        "_poll_qq_outbox",
+        "qq_outbox_ack",
+    )
+    for marker in gateway_required:
+        if marker not in gateway_text:
+            failures.append(f"xinyu_qq_gateway.py missing safe Codex route marker: {marker}")
+    for forbidden in ("subprocess.run", "shell=True", "--full-auto"):
+        if forbidden in gateway_text:
+            failures.append(f"xinyu_qq_gateway.py must not directly execute Codex CLI: {forbidden}")
+
+    core_text = (ROOT / "xinyu_core_bridge.py").read_text(encoding="utf-8-sig")
+    for marker in ('payload["visible_window"] = True', 'payload["window_title"]'):
+        if marker not in core_text:
+            failures.append(f"xinyu_core_bridge.py missing forced visible Codex window marker: {marker}")
+    for forbidden in ("报告会写到：{report_path}", "报告在：{report_path}", "请求留在：{request_path}"):
+        if forbidden in core_text:
+            failures.append(f"xinyu_core_bridge.py visible Codex reply leaks raw local path marker: {forbidden}")
 
     if failures:
         print("Codex delegate smoke failed")

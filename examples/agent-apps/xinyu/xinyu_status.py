@@ -208,11 +208,36 @@ def check_qq_gateway_config(root: Path, config_path: Path) -> list[Check]:
     whitelist_count = len(whitelist_ids) if isinstance(whitelist_ids, list) else 0
     group_prefixes = cfg.get("group_trigger_prefixes")
     group_prefix_count = len(group_prefixes) if isinstance(group_prefixes, list) else 0
+    codex_prefixes = cfg.get("codex_command_prefixes")
+    codex_prefix_list = codex_prefixes if isinstance(codex_prefixes, list) else []
+    codex_execute_url = str(cfg.get("codex_execute_url", ""))
+    outbox_claim_url = str(cfg.get("qq_outbox_claim_url", ""))
+    outbox_ack_url = str(cfg.get("qq_outbox_ack_url", ""))
     return [
         Check("qq_gateway_source_present", gateway_path.exists(), f"version={version}"),
         Check("qq_gateway_config_present", bool(cfg), redact_local_path(str(config_path)) if cfg else "missing"),
         Check("qq_gateway_enabled", bool(cfg.get("enabled")), f"value={cfg.get('enabled', 'missing')}"),
         Check("qq_gateway_core_url", str(cfg.get("core_chat_url", "")).endswith("/chat"), str(cfg.get("core_chat_url", ""))),
+        Check(
+            "qq_gateway_codex_route",
+            bool(cfg.get("codex_command_enabled"))
+            and codex_execute_url.endswith("/codex/execute")
+            and "/codex" in codex_prefix_list,
+            (
+                f"enabled={cfg.get('codex_command_enabled', 'missing')} "
+                f"url={codex_execute_url or 'missing'} prefixes={len(codex_prefix_list)}"
+            ),
+        ),
+        Check(
+            "qq_gateway_outbox_route",
+            bool(cfg.get("qq_outbox_enabled"))
+            and outbox_claim_url.endswith("/qq/outbox/claim")
+            and outbox_ack_url.endswith("/qq/outbox/ack"),
+            (
+                f"enabled={cfg.get('qq_outbox_enabled', 'missing')} "
+                f"claim={outbox_claim_url or 'missing'} ack={outbox_ack_url or 'missing'}"
+            ),
+        ),
         Check("qq_gateway_whitelist", owner_count > 0 and whitelist_count > 0, f"owners={owner_count} whitelist={whitelist_count}"),
         Check(
             "qq_gateway_group_trigger",
@@ -225,6 +250,7 @@ def check_qq_gateway_config(root: Path, config_path: Path) -> list[Check]:
 def status_fields(root: Path) -> dict[str, str]:
     proactive = read_text(root / "memory/context/proactive_presence_state.md")
     dispatch = read_text(root / "memory/context/proactive_qq_dispatch_state.md")
+    outbox = read_text(root / "memory/context/qq_outbox_dispatch_state.md")
     review = read_text(root / "memory/self/ai_self_iteration_review_state.md")
     gate = read_text(root / "memory/self/ai_self_iteration_state.md")
     capability = read_text(root / "memory/context/capability_zones_state.md")
@@ -238,6 +264,10 @@ def status_fields(root: Path) -> dict[str, str]:
         "last_claim_id": mask_private_identifier(extract_value(dispatch, "last_claim_id", "missing")),
         "last_ack_status": extract_value(dispatch, "last_ack_status", "missing"),
         "adapter_error": extract_value(dispatch, "adapter_error", "missing"),
+        "qq_outbox_queued": extract_value(outbox, "queued_count", "missing"),
+        "qq_outbox_claimed": extract_value(outbox, "claimed_count", "missing"),
+        "qq_outbox_sent": extract_value(outbox, "sent_count", "missing"),
+        "qq_outbox_failed": extract_value(outbox, "failed_count", "missing"),
         "ai_gate_status": extract_value(gate, "gate_status", "missing"),
         "ai_gate_confidence": extract_value(gate, "confidence_score", "missing"),
         "ai_review_permission": extract_value(review, "review_permission", "missing"),
@@ -268,6 +298,14 @@ def check_state(root: Path) -> list[Check]:
             "dispatch_state",
             fields["last_claim_status"] != "missing",
             f"claim={fields['last_claim_status']} ack={fields['last_ack_status']}",
+        ),
+        Check(
+            "qq_outbox_dispatch_state",
+            True,
+            (
+                f"queued={fields['qq_outbox_queued']} claimed={fields['qq_outbox_claimed']} "
+                f"sent={fields['qq_outbox_sent']} failed={fields['qq_outbox_failed']}"
+            ),
         ),
         Check(
             "ai_self_iteration_review",

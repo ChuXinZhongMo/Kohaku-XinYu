@@ -312,7 +312,7 @@ def _base_decision() -> dict[str, str]:
         "visible_posture": "quiet_available",
         "cooldown_active": "no",
         "repeat_guard": "not_evaluated",
-        "generation_policy": "concrete_anchor_required; rotate_question_family; no_generic_attention_checks",
+        "generation_policy": "context_born_required; no_preseeded_question_bank; no_generic_attention_checks",
     }
 
 
@@ -563,7 +563,7 @@ tags: [initiative, choice, question, boundary]
 - settle_pressure: {decision['settle_pressure']}
 
 ## Runtime Guidance
-- `ask_owner` allows one concrete owner-facing question, not an interview list.
+- `ask_owner` allows one context-born owner-facing question, not an interview list or stored prompt.
 - `ask_owner` must rotate question family when possible and defer instead of repeating the same family as needy chatter.
 - `ask_external_later` is curiosity only; it cannot run network search or write knowledge without source gates.
 - `stay_silent` allows `[WAITING]` only when the latest live turn actually asks for silence or is unfinished.

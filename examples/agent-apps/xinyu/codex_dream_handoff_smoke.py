@@ -44,7 +44,7 @@ def main() -> int:
             "memory/dreams/dream_log.md": (
                 result.seed_id,
                 "Codex 未完成的学习任务不能被关掉",
-                "不能证明现实里发生过新的对话或事件",
+                "不能证明现实里发生过新的对话、接触、感官经验或关系事实",
             ),
             "memory/dreams/dream_weight_state.md": (
                 "mode: codex_timeout_dream_handoff",

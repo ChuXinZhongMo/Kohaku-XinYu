@@ -23,7 +23,14 @@ title: Dream Log Smoke
 ## dream-2026-04-27-auto
 - dreamed_at: 2026-04-27T03:20:00+08:00
 - source_seed: seed-2026-04-27-001
+- source_seeds: [seed-2026-04-27-001]
+- dream_surface: 深夜里的未完成感像一条没有门牌的走廊，醒来后只剩一点留白。
 - fragments: 深夜里的未完成感被整理成很轻的梦感，不当作新事实。
+- distortions: 时间顺序被折叠，聊天窗口和空教室混在一起。
+- emotional_weather: 在意，留白，醒后边界感
+- relationship_shadow: owner 相关的在意被保留成余影
+- unresolved_piece: 未完成感还没有被说透
+- waking_residue: 只保留情绪残留，不制造新现实记忆
 - dominant_feelings: 在意，留白，醒后边界感
 - likely_sources: confirmed interaction / can_recombine_but_not_rewrite_fact
 - dream_weight_before: 70
@@ -35,6 +42,8 @@ title: Dream Log Smoke
 - retained_after_waking: 只保留情绪残留，不制造新现实记忆
 - reality_boundary_check: 梦是梦，不能证明现实里发生过新的对话或事件
 - memory_effect: 可以加重既有情绪权重，但不能改写事实层
+- reflection_candidate: yes
+- reflection_priority: medium
 """,
             encoding="utf-8",
         )
@@ -55,7 +64,9 @@ title: Dream Log Smoke
         latest_text = latest.read_text(encoding="utf-8-sig")
         for marker in (
             "心玉梦境：dream-2026-04-27-auto",
+            "## 梦面",
             "深夜里的未完成感",
+            "聊天窗口和空教室混在一起",
             "梦可以保留情绪残影",
             "factual_effect: none",
         ):

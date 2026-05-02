@@ -85,4 +85,9 @@ examples/agent-apps/xinyu/xinyu_qq_gateway.config.json
 examples/agent-apps/xinyu/logs/
 examples/agent-apps/xinyu/memory/
 examples/agent-apps/xinyu/runtime/
+examples/agent-apps/xinyu/test-temp-*/
+examples/agent-apps/xinyu/context/
+examples/agent-apps/xinyu/self/
+examples/agent-apps/xinyu/emotions/
+examples/agent-apps/xinyu/persona_surface_state.md
 *.log

@@ -25,11 +25,15 @@ class SlowReasoningRuntime:
 
     async def run(self, request: ReasoningRequest, *, timeout_seconds: float) -> ReasoningResult:
         bundle = self._prompt_builder.build(request)
-        response = await self._client.complete(system=bundle.system, user=bundle.user, timeout_seconds=timeout_seconds)
+        response = await self._client.complete(
+            system=bundle.system,
+            user=bundle.user,
+            history=bundle.history,
+            timeout_seconds=timeout_seconds,
+        )
         return ReasoningResult(
             draft=response.text,
             memory_changed=None,
             notes=(*bundle.notes, "llm_complete"),
             usage=ResourceUsage(model_calls=1),
         )
-

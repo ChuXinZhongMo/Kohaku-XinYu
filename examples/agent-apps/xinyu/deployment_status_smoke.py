@@ -19,8 +19,10 @@ HARD_CHECKS = {
     "napcat_to_xinyu_qq_gateway_ws",
     "qq_gateway_source_present",
     "qq_gateway_config_present",
+    "qq_gateway_codex_route",
     "qq_gateway_enabled",
     "qq_gateway_core_url",
+    "qq_gateway_outbox_route",
     "qq_gateway_whitelist",
     "qq_gateway_group_trigger",
     "proactive_gate_readable",
@@ -42,12 +44,15 @@ def _run_status(root: Path) -> dict[str, Any]:
         errors="replace",
         timeout=30,
     )
-    if completed.returncode != 0:
+    try:
+        return json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        output = (completed.stdout + "\n" + completed.stderr).strip().splitlines()
+        tail = "\n".join(output[-12:])
         raise RuntimeError(
             "xinyu_status.py --json failed with exit code "
-            f"{completed.returncode}: {completed.stdout[-500:]} {completed.stderr[-500:]}"
+            f"{completed.returncode}: {tail}"
         )
-    return json.loads(completed.stdout)
 
 
 def _walk_strings(value: Any) -> list[str]:

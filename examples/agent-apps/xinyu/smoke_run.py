@@ -9,7 +9,53 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+QUICK_SMOKES = [
+    [
+        "-m",
+        "py_compile",
+        "xinyu_runtime_presence.py",
+        "xinyu_core_bridge.py",
+        "xinyu_runtime_context.py",
+        "xinyu_housekeeping.py",
+        "xinyu_self_thought_loop.py",
+        "xinyu_research_handoff_loop.py",
+        "xinyu_watched_sources.py",
+        "xinyu_memory_self_review.py",
+        "custom/research_handoff_engine.py",
+        "custom/research_handoff_bridge_plugin.py",
+        "xinyu_proactive_request_loop.py",
+        "xinyu_self_code_approval.py",
+        "smoke_run.py",
+    ],
+    ["mojibake_guard_smoke.py"],
+    ["runtime_presence_smoke.py"],
+    ["self_thought_loop_smoke.py"],
+    ["research_handoff_smoke.py"],
+    ["watched_sources_smoke.py"],
+    ["memory_self_review_smoke.py"],
+    ["proactive_request_loop_smoke.py"],
+    ["self_code_approval_smoke.py"],
+    ["xinyu_qq_gateway_smoke.py"],
+]
+
+CORE_SMOKES = [
+    *QUICK_SMOKES,
+    ["-m", "pytest", "tests", "-q"],
+    ["smoke_run.py", "--group", "privacy"],
+    ["smoke_run.py", "--group", "voice"],
+]
+
+FULL_SMOKES = [
+    *CORE_SMOKES,
+    ["smoke_run.py", "--group", "memory"],
+    ["smoke_run.py", "--group", "learning"],
+    ["runtime_readiness_smoke.py", "--offline"],
+]
+
 SMOKE_GROUPS = {
+    "quick": QUICK_SMOKES,
+    "core": CORE_SMOKES,
+    "full": FULL_SMOKES,
     "deployment": [
         ["deployment_status_smoke.py"],
         ["xinyu_status.py", "--json"],
@@ -21,11 +67,14 @@ SMOKE_GROUPS = {
     ],
     "memory": [
         ["memory_event_sourcing_smoke.py"],
+        ["thought_seeds_smoke.py"],
+        ["private_thought_events_smoke.py"],
         ["archive_queue_trace_smoke.py"],
         ["summary_coverage_smoke.py"],
     ],
     "voice": [
         ["persona_contract_absence_smoke.py"],
+        ["personality_evolution_smoke.py"],
         ["live_voice_card_smoke.py"],
         ["pre_draft_turn_classifier_smoke.py"],
         ["voice_calibration_promotion_smoke.py"],
@@ -38,6 +87,7 @@ SMOKE_GROUPS = {
         ["local_scope_smoke.py"],
         ["learning_library_smoke.py"],
         ["codex_delegate_smoke.py"],
+        ["qq_outbox_smoke.py"],
         ["codex_dream_handoff_smoke.py"],
         ["bridge_learning_ingest_smoke.py"],
     ],
@@ -62,6 +112,16 @@ def _python(root: Path, venv_path: str) -> Path:
     return candidate if candidate.exists() else Path(sys.executable)
 
 
+def _command_name(script_args: list[str]) -> str:
+    if len(script_args) >= 2 and script_args[0] == "-m":
+        return "python -m " + script_args[1]
+    if script_args and script_args[0] == "smoke_run.py" and "--group" in script_args:
+        index = script_args.index("--group")
+        if index + 1 < len(script_args):
+            return f"smoke_run:{script_args[index + 1]}"
+    return script_args[0] if script_args else "unknown"
+
+
 def run_group(root: Path, group: str, *, venv_path: str, timeout_seconds: int, json_output: bool) -> int:
     py = _python(root, venv_path)
     results: list[RunResult] = []
@@ -76,7 +136,7 @@ def run_group(root: Path, group: str, *, venv_path: str, timeout_seconds: int, j
             errors="replace",
             timeout=timeout_seconds,
         )
-        results.append(RunResult(name=script_args[0], command=command, exit_code=completed.returncode))
+        results.append(RunResult(name=_command_name(script_args), command=command, exit_code=completed.returncode))
         if completed.returncode != 0:
             break
     ok = all(item.exit_code == 0 for item in results)

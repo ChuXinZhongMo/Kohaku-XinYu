@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlparse
 
 
 @dataclass
@@ -43,10 +45,67 @@ def _python(root: Path) -> str:
     return str(candidate if candidate.exists() else Path(sys.executable))
 
 
-def _run(root: Path, log_dir: Path, name: str, command: list[str], timeout: int) -> CommandResult:
+def _bridge_env(root: Path) -> dict[str, str]:
+    env = os.environ.copy()
+    if env.get("XINYU_BRIDGE_TOKEN"):
+        return env
+    base_url = env.get("XINYU_BRIDGE_BASE_URL", "http://127.0.0.1:8765")
+    port = urlparse(base_url).port or 8765
+    token = _running_bridge_token(port)
+    if token:
+        env["XINYU_BRIDGE_TOKEN"] = token
+        return env
+    for token_path in (root / ".xinyu_bridge_token", root.parents[3] / ".xinyu_bridge_token"):
+        if not token_path.exists():
+            continue
+        token = token_path.read_text(encoding="ascii", errors="ignore").strip()
+        if token:
+            env["XINYU_BRIDGE_TOKEN"] = token
+            break
+    return env
+
+
+def _running_bridge_token(port: int = 8765) -> str:
+    if os.name != "nt":
+        return ""
+    command = (
+        f"$listen = Get-NetTCPConnection -LocalPort {port} -State Listen -ErrorAction SilentlyContinue | "
+        "Select-Object -First 1; "
+        "$listenPid = if ($listen) { $listen.OwningProcess } else { $null }; "
+        "$p = if ($listenPid) { "
+        "Get-CimInstance Win32_Process -Filter \"ProcessId = $listenPid\" "
+        "} else { "
+        "Get-CimInstance Win32_Process | "
+        "Where-Object { $_.Name -eq 'python.exe' -and $_.CommandLine -match 'xinyu_core_bridge\\.py' } | "
+        "Select-Object -First 1 "
+        "}; "
+        "$p = $p | Where-Object { $_.Name -eq 'python.exe' -and $_.CommandLine -match 'xinyu_core_bridge\\.py' } | "
+        "Select-Object -First 1 -ExpandProperty CommandLine; "
+        "if ($p) { $p }"
+    )
+    try:
+        completed = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", command],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    if completed.returncode != 0:
+        return ""
+    match = re.search(r"--bridge-token\s+(\S+)", completed.stdout)
+    return match.group(1).strip() if match else ""
+
+
+def _run(root: Path, log_dir: Path, name: str, command: list[str], timeout: int, env: dict[str, str]) -> CommandResult:
     completed = subprocess.run(
         command,
         cwd=str(root),
+        env=env,
         check=False,
         capture_output=True,
         text=True,
@@ -92,6 +151,7 @@ def main() -> int:
     log_dir = root / "logs" / ("runtime_readiness_" + datetime.now().strftime("%Y%m%dT%H%M%S"))
     log_dir.mkdir(parents=True, exist_ok=True)
     py = _python(root)
+    env = _bridge_env(root)
     commands: list[tuple[str, list[str]]] = []
     if not args.offline:
         commands.extend(
@@ -108,7 +168,7 @@ def main() -> int:
         ]
     )
 
-    results = [_run(root, log_dir, name, command, args.timeout_seconds) for name, command in commands]
+    results = [_run(root, log_dir, name, command, args.timeout_seconds, env) for name, command in commands]
     sweep_counts = _sensitive_sweep(root)
     failures = [item for item in results if item.exit_code != 0]
     if sweep_counts["api_key_markers"] or sweep_counts["bridge_token_markers"]:

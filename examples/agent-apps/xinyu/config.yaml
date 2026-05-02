@@ -16,7 +16,6 @@ prompt_context_files:
   live_voice_card: prompts/live_voice_card.md
   memory_weight_state: memory/context/memory_weight_state.md
   persona_surface_state: memory/context/persona_surface_state.md
-  system_prompt_memory: memory/self/system_prompt_memory.md
   self_core: memory/self/core.md
   self_personality: memory/self/personality_profile.md
   persona_life_anchors: memory/context/persona_life_anchors.md
@@ -37,6 +36,8 @@ prompt_context_files:
   real_world_anchor_policy: memory/context/real_world_anchor_policy.md
   real_life_input_policy: memory/context/real_life_input_adapter_policy.md
   recent_context: memory/context/recent_context.md
+  watched_source_state: memory/context/watched_source_state.md
+  memory_self_review_state: memory/context/memory_self_review_state.md
   initiative_policy: memory/context/initiative_policy.md
   initiative_state: memory/context/initiative_state.md
   owner_permission_grants: memory/context/owner_permission_grants.md
@@ -49,8 +50,11 @@ prompt_context_files:
   dream_weight_state: memory/dreams/dream_weight_state.md
   long_term_memory_gate: memory/archive/long_term_memory_gate_state.md
   personality_change_state: memory/self/personality_change_state.md
+  personality_self_review_state: memory/self/personality_self_review_state.md
   ai_self_iteration_state: memory/self/ai_self_iteration_state.md
   ai_self_iteration_review_state: memory/self/ai_self_iteration_review_state.md
+  expression_self_learning_state: memory/self/expression_self_learning_state.md
+  learning_closed_loop_state: memory/self/learning_closed_loop_state.md
   ai_domain: memory/knowledge/ai_domain.md
   social_inquiry_policy: memory/knowledge/social_inquiry_policy.md
 
@@ -168,6 +172,16 @@ plugins:
     options:
       enabled: true
       min_interval_seconds: 8400
+  - name: xinyu_research_handoff_bridge
+    type: custom
+    module: ./custom/research_handoff_bridge_plugin.py
+    class: ResearchHandoffBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 1800
+      execution_level: activate
+      allow_live_search: false
+      allow_codex: false
   - name: xinyu_search_result_gate_bridge
     type: custom
     module: ./custom/search_result_gate_bridge_plugin.py

@@ -95,7 +95,11 @@ class PersonalityGrowthGateBridgePlugin(BasePlugin):
                 root,
                 "runtime_personality_growth_gate "
                 f"decision={result['gate_decision']} "
-                f"pressure={result['change_pressure']}",
+                f"pressure={result['change_pressure']} "
+                f"self_review={result.get('self_review_decision', 'unknown')} "
+                f"self_review_action={result.get('self_review_action', 'unknown')} "
+                f"self_review_autonomy={result.get('self_review_autonomy_level', 'unknown')} "
+                f"profile_changed={result.get('self_review_profile_changed', False)}",
             )
         except Exception as exc:
             _trace(root, f"error={exc!r}")

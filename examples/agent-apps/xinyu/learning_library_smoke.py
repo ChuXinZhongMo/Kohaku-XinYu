@@ -9,7 +9,8 @@ from argparse import Namespace
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-from xinyu_learning_library import command_add, command_stage, load_manifest, pdf_text_looks_garbled
+from xinyu_learning_library import command_add, command_stage, extract_text_from_bytes, load_manifest, pdf_text_looks_garbled
+from xinyu_text_variants import legacy_mojibake_variants
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -26,6 +27,12 @@ def _write(path: Path, text: str) -> None:
 def _has_tokens(text: str, *tokens: str) -> bool:
     normalized = text.lower()
     return all(token.lower() in normalized for token in tokens)
+
+
+def _mojibake_fixture_text() -> str:
+    text = "IM Context 中文 DeepSeek-V4 注意力 Sliding Window Attention Sink Partial ROPE"
+    variants = legacy_mojibake_variants(text)
+    return variants[0] if variants else text
 
 
 def _write_docx(path: Path, paragraphs: list[str]) -> None:
@@ -58,6 +65,33 @@ def _write_pdf(path: Path, text: str) -> None:
         b"trailer\n<<>>\n%%EOF\n"
     )
     path.write_bytes(data)
+
+
+def _garbled_pdf_bytes() -> bytes:
+    bad_hex = "FFFD" * 80
+    stream = f"BT /F1 12 Tf 72 720 Td <{bad_hex}> Tj ET".encode("ascii")
+    return (
+        b"%PDF-1.4\n"
+        b"1 0 obj\n"
+        + f"<< /Length {len(stream)} >>\n".encode("ascii")
+        + b"stream\n"
+        + stream
+        + b"\nendstream\n"
+        b"endobj\n"
+        b"trailer\n<<>>\n%%EOF\n"
+    )
+
+
+def _extract_garbled_pdf_with_ocr_disabled() -> str:
+    previous = os.environ.get("XINYU_OCR_ENABLED")
+    os.environ["XINYU_OCR_ENABLED"] = "0"
+    try:
+        return extract_text_from_bytes(_garbled_pdf_bytes(), "garbled.pdf", "application/pdf")
+    finally:
+        if previous is None:
+            os.environ.pop("XINYU_OCR_ENABLED", None)
+        else:
+            os.environ["XINYU_OCR_ENABLED"] = previous
 
 
 def _write_pptx(path: Path, text: str) -> None:
@@ -301,7 +335,11 @@ before learner integration treats it as learned knowledge.
         "self_item_id": str(self_item["id"]) in source_materials,
         "md_extracted": "Owner-supplied material should enter" in md_extract,
         "docx_extracted": "XinYu docx fixture memory" in docx_extract,
+        "docx_octet_stream_extracted": "XinYu docx fixture memory"
+        in extract_text_from_bytes(docx_file.read_bytes(), "qqdownloadftnv5", "application/octet-stream"),
         "pdf_extracted": "XinYu PDF fixture should be extracted" in pdf_extract,
+        "pdf_octet_stream_extracted": "XinYu PDF fixture should be extracted"
+        in extract_text_from_bytes(pdf_file.read_bytes(), "qqdownloadftnv5", "application/octet-stream"),
         "pptx_extracted": "XinYu PPTX fixture should be extracted" in pptx_extract,
         "xlsx_extracted": "XinYu XLSX fixture should be extracted" in xlsx_extract,
         "rtf_extracted": "XinYu RTF fixture should be extracted" in rtf_extract,
@@ -311,9 +349,9 @@ before learner integration treats it as learned knowledge.
             "\u2623\x01%FFQ4FFL\u0017\u0014\u0015\u0016\u4d07\ua75a\u2515\u2516\u4e44"
         ),
         "pdf_mojibake_quality_hold": pdf_text_looks_garbled(
-            "IM Context 锟斤拷 锟斤拷 DeepSeek-V4 锟斤拷 attention 锟斤拷 "
-            "Sliding Window 锟斤拷 Attention Sink 锟斤拷 Partial ROPE 锟斤拷"
+            _mojibake_fixture_text()
         ),
+        "pdf_garbled_extraction_hold": _extract_garbled_pdf_with_ocr_disabled() == "",
     }
     if ocr_fixture_enabled:
         checks["image_ocr_extracted"] = _has_tokens(ocr_image_extract, "xinyu", "ocr", "123")

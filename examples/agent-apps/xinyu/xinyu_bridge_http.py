@@ -76,12 +76,26 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
             "/probe",
             "/proactive",
             "/proactive/ack",
+            "/qq/outbox/claim",
+            "/qq/outbox/ack",
             "/learning/ingest",
             "/learning/study",
             "/learning/observe",
+            "/package/install",
             "/codex/execute",
         }:
             self._send_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
+            return
+
+        if route in {"/codex/execute", "/package/install", "/qq/outbox/claim", "/qq/outbox/ack"} and not self.server.bridge_token:
+            self._send_json(
+                HTTPStatus.UNAUTHORIZED,
+                {
+                    "accepted": False,
+                    "reply": "",
+                    "notes": [f"{route.strip('/').replace('/', '_')}_requires_bridge_token"],
+                },
+            )
             return
 
         if not self._is_authorized():
@@ -96,6 +110,18 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
                 result = self._run_on_loop(self.server.runtime.proactive(payload), timeout=10)
             elif route == "/proactive/ack":
                 result = self._run_on_loop(self.server.runtime.proactive_ack(payload), timeout=10)
+            elif route == "/qq/outbox/claim":
+                fast_claim = getattr(self.server.runtime, "qq_outbox_claim_fast", None)
+                if callable(fast_claim):
+                    result = fast_claim(payload)
+                else:
+                    result = self._run_on_loop(self.server.runtime.qq_outbox_claim(payload), timeout=10)
+            elif route == "/qq/outbox/ack":
+                fast_ack = getattr(self.server.runtime, "qq_outbox_ack_fast", None)
+                if callable(fast_ack):
+                    result = fast_ack(payload)
+                else:
+                    result = self._run_on_loop(self.server.runtime.qq_outbox_ack(payload), timeout=10)
             elif route == "/learning/ingest":
                 result = self._run_on_loop(
                     self.server.runtime.learning_ingest(payload),
@@ -109,6 +135,11 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
             elif route == "/learning/observe":
                 result = self._run_on_loop(
                     self.server.runtime.learning_observe(payload),
+                    timeout=self.server.request_timeout_seconds,
+                )
+            elif route == "/package/install":
+                result = self._run_on_loop(
+                    self.server.runtime.package_install(payload),
                     timeout=self.server.request_timeout_seconds,
                 )
             elif route == "/codex/execute":
@@ -147,7 +178,10 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
         self._send_json(HTTPStatus.OK, result)
 
     def log_message(self, format: str, *args: Any) -> None:
-        print(f"[xinyu_core_bridge] {self.address_string()} - {format % args}", flush=True)
+        message = format % args
+        if 'POST /qq/outbox/claim ' in message and " 200 " in message:
+            return
+        print(f"[xinyu_core_bridge] {self.address_string()} - {message}", flush=True)
 
     def _read_json_body(self) -> dict[str, Any]:
         content_length = int(self.headers.get("Content-Length", "0") or "0")
@@ -171,7 +205,10 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Connection", "close")
         self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.wfile.write(body)
+        except OSError as exc:
+            print(f"[xinyu_core_bridge] client disconnected before response body was sent: {exc}", flush=True)
 
     def _is_authorized(self) -> bool:
         token = self.server.bridge_token

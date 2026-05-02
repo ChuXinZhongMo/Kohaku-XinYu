@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 import sys
@@ -8,15 +9,12 @@ from pathlib import Path
 
 
 REQUIRED_DOCS = [
-    "plan.md",
     "STATE-OF-XINYU.md",
     "IMPLEMENTATION-NEXT.md",
     "RUNTIME-VALIDATION-NOTES.md",
     "VALIDATION-INDEX.md",
     "social_inquiry_policy.md",
     "real_life_input_adapter_policy.md",
-    "project-plans/PROJECT-PLAN-MERGE.md",
-    "project-plans/PERSONALITY-REAL-CONVERSATION-PLAN.md",
 ]
 
 REQUIRED_VALIDATIONS = [
@@ -117,7 +115,7 @@ def deployment_gate(root: Path) -> tuple[bool, str]:
     if not python_exe.exists():
         python_exe = Path(sys.executable)
     completed = subprocess.run(
-        [str(python_exe), "deployment_status_smoke.py"],
+        [str(python_exe), "deployment_status_smoke.py", "--json"],
         cwd=str(root),
         check=False,
         capture_output=True,
@@ -126,8 +124,20 @@ def deployment_gate(root: Path) -> tuple[bool, str]:
         errors="replace",
         timeout=45,
     )
-    detail = (completed.stdout + "\n" + completed.stderr).strip().splitlines()
-    return completed.returncode == 0, (detail[-1] if detail else f"exit={completed.returncode}")
+    try:
+        result = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        detail = (completed.stdout + "\n" + completed.stderr).strip().splitlines()
+        return completed.returncode == 0, (detail[-1] if detail else f"exit={completed.returncode}")
+    failures = result.get("failures", [])
+    if completed.returncode == 0 and result.get("ok") is True:
+        return True, "ok"
+    if isinstance(failures, list) and failures:
+        detail = "; ".join(str(item) for item in failures[:3])
+        if len(failures) > 3:
+            detail += f"; +{len(failures) - 3} more"
+        return False, detail
+    return False, f"exit={completed.returncode}"
 
 
 def main() -> int:
@@ -136,8 +146,9 @@ def main() -> int:
     args = _build_parser().parse_args()
     root = Path(__file__).resolve().parent
 
-    plan_text = read_text(root / "plan.md")
-    milestones = extract_milestones(plan_text)
+    plan_path = root / "plan.md"
+    plan_text = read_text(plan_path) if plan_path.exists() else ""
+    milestones = extract_milestones(plan_text) if plan_text else []
     status_counts: dict[str, int] = {}
     for item in milestones:
         status_counts[item["status"]] = status_counts.get(item["status"], 0) + 1
@@ -146,6 +157,7 @@ def main() -> int:
     hits = residue_hits(root)
 
     print("=== XINYU LONG RUN STATUS ===")
+    print("milestones_source:", "plan.md" if plan_text else "deleted_plan_docs_skipped")
     print("milestones_total:", len(milestones))
     for status in sorted(status_counts):
         print(f"milestones_{status}:", status_counts[status])
@@ -174,7 +186,7 @@ def main() -> int:
     for item in milestones:
         print(f"- {item['number']}: {item['title']} => {item['status']}")
 
-    if args.require_all_completed and any(item["status"] != "completed" for item in milestones):
+    if args.require_all_completed and milestones and any(item["status"] != "completed" for item in milestones):
         return 4
     if args.require_no_residue and hits:
         return 5

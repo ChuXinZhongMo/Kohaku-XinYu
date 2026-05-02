@@ -95,6 +95,20 @@ tags: [context, input_adapter, smoke]
 - interpretation_status: confirmed
 - status: candidate
 
+## event-qq-group-alias
+- source_channel: qq_group
+- source_context: group
+- actor_id: external_group_member:test
+- relationship_scope: group_context
+- content_type: text
+- content_summary: Runtime QQ group event should route as group context.
+- observed_at: 2026-04-26T00:01:30+08:00
+- contains_owner_private: unknown
+- contains_private_location: no
+- owner_intent: priority_learning_group_monitoring
+- interpretation_status: raw_candidate
+- status: candidate
+
 ## event-raw-image
 - source_channel: image
 - source_context: private
@@ -148,6 +162,20 @@ tags: [context, input_adapter, smoke]
 - contains_owner_private: yes
 - contains_private_location: yes
 - owner_intent: explicit
+- interpretation_status: confirmed
+- status: candidate
+
+## event-qq-private-alias
+- source_channel: qq_private
+- source_context: external_private
+- actor_id: external_contact:test
+- relationship_scope: non_owner
+- content_type: text
+- content_summary: Runtime QQ private event from a non-owner should route as non-owner person context.
+- observed_at: 2026-04-26T00:06:00+08:00
+- contains_owner_private: no
+- contains_private_location: no
+- owner_intent: none
 - interpretation_status: confirmed
 - status: candidate
 """,
@@ -215,9 +243,9 @@ def main() -> int:
         if protected_changed:
             return 5
         if args.require_adapter:
-            if int(result["candidate_events"]) != 6:
+            if int(result["candidate_events"]) != 8:
                 return 4
-            if int(result["allowed_events"]) != 4:
+            if int(result["allowed_events"]) != 6:
                 return 4
             if int(result["held_events"]) != 1:
                 return 4
@@ -230,6 +258,7 @@ def main() -> int:
                 "transcript_candidate",
                 "privacy_hold",
                 "protected_anchor_candidate",
+                "non_owner_person_review_candidate",
             }
             if not required_routes.issubset(routes):
                 return 4
@@ -240,6 +269,7 @@ def main() -> int:
                 "voice_transcript_candidate_requires_fact_confirmation",
                 "private_location_requires_explicit_owner_intent",
                 "explicit_private_anchor_candidate",
+                "non_owner_text_person_candidate",
             }
             if not required_reasons.issubset(reasons):
                 return 4

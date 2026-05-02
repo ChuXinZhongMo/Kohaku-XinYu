@@ -19,6 +19,8 @@ DREAM_WEIGHT_TRACKED_FILES = [
     "memory/dreams/dream_output_state.md",
     "memory/dreams/dream_weight_state.md",
     "memory/emotions/current_state.md",
+    "memory/reflection/reflection_queue.md",
+    "memory/self/self_model_state.md",
     "memory/self/narrative.md",
     "memory/people/owner.md",
     "memory/relationships/index.md",

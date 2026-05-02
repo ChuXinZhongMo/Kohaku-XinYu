@@ -21,6 +21,7 @@ Write when real-time continuity matters, such as:
 - Use explicit real dates and times when available
 - Preserve the boundary between current time and remembered past time
 - Do not invent time facts
+- Do not infer holiday phase, holiday ending, or "last day" language from the date alone; only write that when the owner or a reliable calendar source explicitly establishes it
 - Do not turn this into a factual event log for everything
 - Do not talk to the user
 

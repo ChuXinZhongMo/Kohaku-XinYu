@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 from ..emotion.models import EmotionState
 from ..gateway.models import InboundTurn
-from ..memory.models import MemorySearchResult
+from ..memory.models import ConversationMessage, MemorySearchResult
 from ..routing.hybrid_router import RouteDecision
 from ..types import JSONValue, ResourceUsage
 
@@ -16,6 +16,7 @@ class ReasoningRequest:
     turn: InboundTurn
     route: RouteDecision
     memories: tuple[MemorySearchResult, ...] = field(default_factory=tuple)
+    recent_messages: tuple[ConversationMessage, ...] = field(default_factory=tuple)
     emotion_state: EmotionState | None = None
     system_context: str = ""
 
@@ -34,4 +35,3 @@ class ConflictReport:
     has_conflict: bool
     reasons: tuple[str, ...] = field(default_factory=tuple)
     severity: float = 0.0
-

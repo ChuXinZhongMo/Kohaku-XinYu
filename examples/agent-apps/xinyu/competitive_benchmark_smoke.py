@@ -21,7 +21,9 @@ REQUIRED_CAPABILITIES = {
         "xinyu_voice_learning.py",
     ],
     "persona_runtime_target": [
+        "xinyu_personality_evolution.py",
         "xinyu_persona_runtime.py",
+        "personality_evolution_smoke.py",
         "persona_runtime_smoke.py",
         "chinese_voice_guard_smoke.py",
     ],
@@ -33,7 +35,42 @@ REQUIRED_CAPABILITIES = {
     "desktop_thoughts_target": [
         "xinyu_desktop_thoughts.py",
         "xinyu_autonomy_journal.py",
-        "project-plans/core-mind-loop/plan.md",
+        "xinyu_thought_seeds.py",
+        "xinyu_private_thought_events.py",
+        "private_thought_events_smoke.py",
+        "custom/desktop_thoughts_bridge_plugin.py",
+    ],
+}
+
+REQUIRED_MARKERS = {
+    "xinyu_autonomy_journal.py": [
+        "Private Thought Event Material For XinYu Owner-Visible Note",
+        "render_persona_thoughts",
+        "build_private_thought_note_material",
+    ],
+    "xinyu_thought_seeds.py": [
+        "Thought Seeds",
+        "output_form: owner-visible private desktop note",
+    ],
+    "xinyu_private_thought_events.py": [
+        "Private Thought State",
+        "record_private_thought_reply_link",
+        "record_private_thought_outcome",
+        "Self Model State",
+    ],
+    "xinyu_persona_runtime.py": [
+        "Persona Runtime",
+        "Growth Trial Layer",
+        "persona_life_anchors",
+    ],
+    "xinyu_personality_evolution.py": [
+        "Personality Evolution State",
+        "runtime_trial_only",
+        "Deprecated Reactions",
+    ],
+    "xinyu_voice_learning.py": [
+        "record_voice_correction",
+        "voice_calibration",
     ],
 }
 
@@ -46,25 +83,11 @@ def main() -> int:
             if not (root / rel).exists():
                 failures.append(f"{group} missing {rel}")
 
-    plan = (root / "project-plans/core-mind-loop/plan.md").read_text(encoding="utf-8")
-    roadmap = (root / "project-plans/XINYU-COMPETITIVE-ROADMAP.md").read_text(encoding="utf-8")
-    for marker in (
-        "must not copy their path",
-        "guarded self-directed growth",
-        "Desktop Thoughts",
-        "Persona Runtime",
-        "AI Research Loop",
-    ):
-        if marker not in plan:
-            failures.append(f"core mind-loop plan missing marker: {marker}")
-    for marker in (
-        "Desktop Thoughts",
-        "Memory Retrieval v2",
-        "Chinese Voice Learning v1",
-        "Proactive Presence v1",
-    ):
-        if marker not in roadmap:
-            failures.append(f"competitive roadmap missing marker: {marker}")
+    for rel, markers in REQUIRED_MARKERS.items():
+        text = (root / rel).read_text(encoding="utf-8", errors="replace")
+        for marker in markers:
+            if marker not in text:
+                failures.append(f"{rel} missing marker: {marker}")
 
     if failures:
         print("Competitive benchmark smoke failed")

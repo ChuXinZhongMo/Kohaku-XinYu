@@ -41,18 +41,18 @@ def main() -> int:
     card_path = root / "prompts/live_voice_card.md"
     card = card_path.read_text(encoding="utf-8-sig")
 
-    if "# XinYu Live Voice Card" not in card:
+    if "# XinYu Live Voice Seed" not in card:
         failures.append("live voice card title missing")
     if len(card) > 1200:
         failures.append(f"live voice card is too long: {len(card)} chars")
     if _git_check_ignored(root, card_rel):
         failures.append("live voice card is ignored by git; it should be tracked")
     for marker in (
-        "心玉 / XinYu 是唯一稳定名字",
-        "懂了就说“知道了”",
-        "日常锚点可以轻轻入句",
-        "不要把纠错写成复盘",
-        "不能伪装真实生物身体",
+        "心玉 / XinYu",
+        "不是一张设定表",
+        "正在形成",
+        "说话先贴住眼前这句话",
+        "直接换成此刻能成立的一句",
     ):
         if marker not in card:
             failures.append(f"live voice card missing marker: {marker}")
@@ -71,15 +71,14 @@ def main() -> int:
 
     agent = Agent.from_path(str(root), input_module=NullInput(), pwd=str(root))
     prompt = agent.get_system_prompt()
-    if "# XinYu Live Voice Card" not in prompt:
+    if "# XinYu Live Voice Seed" not in prompt:
         failures.append("system prompt did not inject live_voice_card")
     if "{{ live_voice_card }}" in prompt:
         failures.append("live_voice_card template variable remained unresolved")
-    live_pos = prompt.find("# XinYu Live Voice Card")
+    live_pos = prompt.find("# XinYu Live Voice Seed")
     core_pos = prompt.find("memory_type: self_core")
-    persona_pos = prompt.find("# 心玉人格生活锚点")
-    if not (0 <= live_pos < core_pos and 0 <= live_pos < persona_pos):
-        failures.append("live voice card is not before long memory context in system prompt")
+    if not (0 <= live_pos < core_pos):
+        failures.append("live voice card is not before core concept in system prompt")
     if RAW_OWNER_QQ in prompt:
         failures.append("system prompt leaked raw owner QQ")
 
@@ -111,8 +110,8 @@ def main() -> int:
     )
     if state.scene != "owner_no_change_pressure":
         failures.append(f"no-change turn did not classify as no-change pressure: {state.scene}")
-    if "live_voice_card 优先于长记忆" not in state.chinese_voice:
-        failures.append("persona runtime did not expose live_voice_card priority")
+    if "change the next line itself" not in state.chinese_voice:
+        failures.append("persona runtime did not expose concept-seed style pressure")
 
     if failures:
         print("Live voice card smoke failed")

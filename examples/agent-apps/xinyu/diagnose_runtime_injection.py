@@ -73,13 +73,13 @@ def main() -> int:
 
     print("=== SYSTEM_PROMPT_MARKERS ===")
     for label, needle in [
-        ("live_voice_card", "# XinYu Live Voice Card"),
+        ("live_voice_card", "# XinYu Live Voice Seed"),
         ("self_core", "memory_type: self_core"),
-        ("personality_profile", "# 心玉人格细节画像"),
-        ("persona_life_anchors", "# 心玉人格生活锚点"),
+        ("personality_profile", "# 心玉当前概念种子"),
+        ("persona_life_anchors", "# Background Texture Seed"),
         ("emotion_state", "# 当前状态"),
         ("relationship_index", "# 关系索引"),
-        ("owner_profile", "# owner"),
+        ("owner_profile", "memory_type: relationship_profile"),
         ("output_layer_prompt_not_in_controller", "# Xinyu Output Layer"),
     ]:
         print(f"{label}: {_contains(prompt, needle)}")

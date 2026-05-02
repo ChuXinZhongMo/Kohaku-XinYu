@@ -140,6 +140,17 @@ class MemorySearchResult:
 
 
 @dataclass(frozen=True, slots=True)
+class ConversationMessage:
+    role: str
+    text: str
+    timestamp: str = ""
+    event_id: MemoryId = ""
+    trace_id: str = ""
+    source_channel: SourceChannel = SourceChannel.UNKNOWN
+    privacy_scope: PrivacyScope = PrivacyScope.UNKNOWN
+
+
+@dataclass(frozen=True, slots=True)
 class MemoryWriteIntent:
     text: str
     layer: MemoryLayer
@@ -169,4 +180,3 @@ class ConsolidationCandidate:
             "confidence": self.confidence,
             "notes": list(self.notes),
         }
-

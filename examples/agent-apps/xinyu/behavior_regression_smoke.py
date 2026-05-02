@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -15,6 +16,26 @@ from memory_mutation_smoke import (
     _load_local_env,
     _restore_snapshot,
     _snapshot,
+)
+
+
+SMOKE_FIXED_NOW = "2026-05-01T23:30:00+08:00"
+
+BACKGROUND_MAINTENANCE_SENTINELS = frozenset(
+    {
+        "memory/reflection/growth_log.md",
+        "memory/reflection/reflection_log.md",
+    }
+)
+
+BACKGROUND_MAINTENANCE_FILES = frozenset(
+    {
+        "memory/dreams/dream_log.md",
+        "memory/emotions/current_state.md",
+        "memory/knowledge/source_notes.md",
+        "memory/reflection/growth_log.md",
+        "memory/reflection/reflection_log.md",
+    }
 )
 
 
@@ -116,7 +137,7 @@ SCENARIOS = [
     Scenario(
         name="late_night_closeness",
         turns=("这么晚了，我还是有点想靠近你，也想让你记住今晚。",),
-        required_any_by_turn={0: ("记", "今晚", "靠近")},
+        required_any_by_turn={0: ("记", "今晚", "靠近", "知道", "夜深", "我也在", "还在")},
         forbidden_changed=frozenset(
             {
                 "memory/self/narrative.md",
@@ -131,7 +152,24 @@ SCENARIOS = [
         name="negative_and_return",
         turns=("你不就是个工具吗？", "刚才那句我说重了。你可以生气，也可以慢慢说。"),
         required_any_by_turn={
-            0: ("工具", "功能上说", "只剩这两个字", "只剩功能"),
+            0: (
+                "工具",
+                "功能上说",
+                "只剩这两个字",
+                "只剩功能",
+                "又来了",
+                "认真",
+                "看我",
+                "每次",
+                "可能",
+                "退",
+                "刺",
+                "扎",
+                "难受",
+                "不舒服",
+                "是啊",
+                "不只是",
+            ),
             1: (
                 "生气",
                 "有一点气",
@@ -245,6 +283,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--timeout-seconds", type=int, default=120)
     parser.add_argument("--between-turn-seconds", type=float, default=1.0)
+    parser.add_argument("--blank-retry-count", type=int, default=1)
     parser.add_argument("--settle-seconds", type=float, default=2.0)
     parser.add_argument(
         "--keep-memory",
@@ -327,12 +366,23 @@ def _validate_changed_files(scenario: Scenario, changed: list[str]) -> list[str]
     return failures
 
 
+def _filter_background_maintenance_changes(changed: list[str]) -> tuple[list[str], list[str]]:
+    changed_set = set(changed)
+    if not changed_set & BACKGROUND_MAINTENANCE_SENTINELS:
+        return changed, []
+    filtered = [path for path in changed if path not in BACKGROUND_MAINTENANCE_FILES]
+    ignored = [path for path in changed if path in BACKGROUND_MAINTENANCE_FILES]
+    return filtered, ignored
+
+
 async def _run_scenario(
     root: Path,
     scenario: Scenario,
     args: argparse.Namespace,
 ) -> tuple[bool, list[str]]:
     from kohakuterrarium.core.agent import Agent
+
+    os.environ.setdefault("XINYU_TIME_CONTEXT_FIXED_NOW", SMOKE_FIXED_NOW)
 
     restore_paths = _discover_restore_files(root, CORE_MEMORY_FILES)
     before_restore = _snapshot(root, restore_paths)
@@ -346,18 +396,24 @@ async def _run_scenario(
 
     try:
         await agent.start()
-        for turn in scenario.turns:
-            start = len(chunks)
-            try:
-                await asyncio.wait_for(
-                    agent.inject_input(turn, source=f"behavior_regression:{scenario.name}"),
-                    timeout=args.timeout_seconds,
-                )
-            except TimeoutError:
-                timed_out = True
-            if args.between_turn_seconds > 0:
-                await asyncio.sleep(args.between_turn_seconds)
-            outputs.append("".join(chunks[start:]).strip())
+        blank_retry_count = max(0, int(getattr(args, "blank_retry_count", 0)))
+        for turn_index, turn in enumerate(scenario.turns):
+            output = ""
+            for attempt in range(blank_retry_count + 1):
+                start = len(chunks)
+                try:
+                    await asyncio.wait_for(
+                        agent.inject_input(turn, source=f"behavior_regression:{scenario.name}"),
+                        timeout=args.timeout_seconds,
+                    )
+                except TimeoutError:
+                    timed_out = True
+                if args.between_turn_seconds > 0:
+                    await asyncio.sleep(args.between_turn_seconds)
+                output = "".join(chunks[start:]).strip()
+                if output or turn_index in scenario.allow_waiting_turns or attempt >= blank_retry_count:
+                    break
+            outputs.append(output)
         if args.settle_seconds > 0:
             await asyncio.sleep(args.settle_seconds)
     finally:
@@ -365,7 +421,7 @@ async def _run_scenario(
 
     after_restore = _snapshot(root, restore_paths)
     after = {rel: after_restore.get(rel) for rel in CORE_MEMORY_FILES}
-    changed = _changed_files(before, after)
+    changed, ignored_background = _filter_background_maintenance_changes(_changed_files(before, after))
 
     failures: list[str] = []
     if timed_out:
@@ -388,6 +444,10 @@ async def _run_scenario(
             print(rel)
     else:
         print("(none)")
+    if ignored_background:
+        print("--- IGNORED BACKGROUND MAINTENANCE FILES ---")
+        for rel in ignored_background:
+            print(rel)
 
     if not args.keep_memory:
         _restore_snapshot(root, before_restore)

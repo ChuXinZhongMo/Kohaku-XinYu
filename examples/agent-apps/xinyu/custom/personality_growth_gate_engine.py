@@ -1,11 +1,22 @@
 from __future__ import annotations
 
 import re
+import sys
 from datetime import datetime
 from pathlib import Path
 
 
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from xinyu_personality_evolution import refresh_personality_evolution
+from xinyu_personality_self_review import run_personality_self_review
+
+
 def read_text(path: Path) -> str:
+    if not path.exists():
+        return ""
     return path.read_text(encoding="utf-8-sig")
 
 
@@ -88,7 +99,7 @@ def classify_personality_gate(
             "hold",
             "blocked_direct_write",
         )
-    if pressure >= 86 and (growth_entries >= 3 or reflection_entries >= 3):
+    if pressure >= 70 and (growth_entries >= 3 or reflection_entries >= 3):
         return (
             pressure,
             "accelerated_review",
@@ -245,6 +256,16 @@ def run_personality_growth_gate(
             latest_reflection_trigger,
         ),
     )
+    evolution = refresh_personality_evolution(
+        root,
+        checked_at=checked_at,
+        mode=f"{mode}_personality_evolution",
+    )
+    self_review = run_personality_self_review(
+        root,
+        checked_at=checked_at,
+        mode=f"{mode}_personality_self_review",
+    )
 
     return {
         "checked_at": checked_at,
@@ -258,4 +279,12 @@ def run_personality_growth_gate(
         "growth_entries": growth_entries,
         "reflection_entries": reflection_entries,
         "dream_weight_delta": dream_weight_delta,
+        "evolution_stage": evolution.stage,
+        "trial_permission": evolution.trial_permission,
+        "active_trial_habit": evolution.active_trial_habit,
+        "deprecated_reaction": evolution.deprecated_reaction,
+        "self_review_decision": self_review["decision"],
+        "self_review_action": self_review["action"],
+        "self_review_autonomy_level": self_review["autonomy_level"],
+        "self_review_profile_changed": self_review["profile_changed"],
     }

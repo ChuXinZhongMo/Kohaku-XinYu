@@ -20,6 +20,7 @@ import pytest
 
 from kohakuterrarium.core.output_wiring import ROOT_TARGET, OutputWiringEntry
 from kohakuterrarium.core.session import remove_session
+from kohakuterrarium.testing.llm import ScriptedLLM
 from kohakuterrarium.terrarium.config import (
     ChannelConfig,
     CreatureConfig,
@@ -29,24 +30,27 @@ from kohakuterrarium.terrarium.config import (
 from kohakuterrarium.terrarium.output_wiring import TerrariumOutputWiringResolver
 from kohakuterrarium.terrarium.runtime import TerrariumRuntime
 
-SWE_AGENT_DIR = (
-    Path(__file__).resolve().parents[2] / "examples" / "agent-apps" / "swe_agent"
-)
+_FAKE_ENV = {"OPENROUTER_API_KEY": "fake-key-for-test"}
+_LLM_PATCH_TARGET = "kohakuterrarium.bootstrap.agent_init.create_llm_provider"
 
 
-def _terrarium_config_with_wiring(*, include_root: bool) -> TerrariumConfig:
+def _scripted_llm(*_args, **_kwargs) -> ScriptedLLM:
+    return ScriptedLLM(["OK"])
+
+
+def _terrarium_config_with_wiring(
+    *, include_root: bool, agent_dir: str
+) -> TerrariumConfig:
     """Build a tiny two-creature terrarium with output_wiring declared."""
-    swe_path = str(SWE_AGENT_DIR.resolve())
-
     alpha_config_data: dict = {
-        "base_config": swe_path,
+        "base_config": agent_dir,
         "output_wiring": [
             {"to": "beta"},
             {"to": "root", "with_content": False},
         ],
     }
     beta_config_data: dict = {
-        "base_config": swe_path,
+        "base_config": agent_dir,
         "output_wiring": ["alpha"],  # shorthand
     }
 
@@ -70,7 +74,7 @@ def _terrarium_config_with_wiring(*, include_root: bool) -> TerrariumConfig:
     root: RootConfig | None = None
     if include_root:
         root = RootConfig(
-            config_data={"base_config": swe_path},
+            config_data={"base_config": agent_dir},
             base_dir=Path("."),
         )
 
@@ -84,6 +88,40 @@ def _terrarium_config_with_wiring(*, include_root: bool) -> TerrariumConfig:
     )
 
 
+@pytest.fixture()
+def agent_dir(tmp_path: Path) -> str:
+    agent_path = tmp_path / "swe"
+    agent_path.mkdir()
+    (agent_path / "config.yaml").write_text(
+        """name: swe
+version: "1.0"
+controller:
+  model: test-model
+  api_key_env: OPENROUTER_API_KEY
+  base_url: https://example.invalid/v1
+input:
+  type: none
+output:
+  type: stdout
+tools:
+  - name: read
+  - name: bash
+""",
+        encoding="utf-8",
+    )
+    return str(agent_path)
+
+
+@pytest.fixture(autouse=True)
+def isolated_runtime():
+    """Keep output-wiring runtime tests off real UI, OAuth, and network paths."""
+    with patch.dict(os.environ, _FAKE_ENV), patch(
+        _LLM_PATCH_TARGET,
+        side_effect=_scripted_llm,
+    ):
+        yield
+
+
 @pytest.fixture(autouse=True)
 def cleanup_sessions():
     yield
@@ -93,13 +131,15 @@ def cleanup_sessions():
 
 
 class TestOutputWiringConfigFlow:
-    async def test_wiring_flows_from_config_to_agent(self):
+    async def test_wiring_flows_from_config_to_agent(self, agent_dir: str):
         """Output wiring declared in the YAML reaches AgentConfig.output_wiring."""
-        cfg = _terrarium_config_with_wiring(include_root=False)
+        cfg = _terrarium_config_with_wiring(
+            include_root=False,
+            agent_dir=agent_dir,
+        )
         runtime = TerrariumRuntime(cfg)
 
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "fake-key-for-test"}):
-            await runtime.start()
+        await runtime.start()
 
         try:
             alpha_agent = runtime._creatures["alpha"].agent
@@ -120,12 +160,14 @@ class TestOutputWiringConfigFlow:
 
 
 class TestResolverInstallation:
-    async def test_every_creature_gets_the_resolver(self):
-        cfg = _terrarium_config_with_wiring(include_root=False)
+    async def test_every_creature_gets_the_resolver(self, agent_dir: str):
+        cfg = _terrarium_config_with_wiring(
+            include_root=False,
+            agent_dir=agent_dir,
+        )
         runtime = TerrariumRuntime(cfg)
 
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "fake-key-for-test"}):
-            await runtime.start()
+        await runtime.start()
 
         try:
             for name, handle in runtime._creatures.items():
@@ -135,12 +177,14 @@ class TestResolverInstallation:
         finally:
             await runtime.stop()
 
-    async def test_root_gets_the_resolver_too(self):
-        cfg = _terrarium_config_with_wiring(include_root=True)
+    async def test_root_gets_the_resolver_too(self, agent_dir: str):
+        cfg = _terrarium_config_with_wiring(
+            include_root=True,
+            agent_dir=agent_dir,
+        )
         runtime = TerrariumRuntime(cfg)
 
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "fake-key-for-test"}):
-            await runtime.start()
+        await runtime.start()
 
         try:
             assert runtime._root_agent is not None
@@ -150,12 +194,14 @@ class TestResolverInstallation:
         finally:
             await runtime.stop()
 
-    async def test_resolver_resolves_creature_and_root_targets(self):
-        cfg = _terrarium_config_with_wiring(include_root=True)
+    async def test_resolver_resolves_creature_and_root_targets(self, agent_dir: str):
+        cfg = _terrarium_config_with_wiring(
+            include_root=True,
+            agent_dir=agent_dir,
+        )
         runtime = TerrariumRuntime(cfg)
 
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "fake-key-for-test"}):
-            await runtime.start()
+        await runtime.start()
 
         try:
             alpha_agent = runtime._creatures["alpha"].agent

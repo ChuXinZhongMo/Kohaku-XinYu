@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
@@ -32,7 +33,7 @@ class HashEmbeddingProvider:
     def _embed(self, text: str) -> Embedding:
         dims = max(8, self.dimensions)
         values = [0.0 for _ in range(dims)]
-        tokens = [token for token in text.lower().split() if token]
+        tokens = _tokenize(text)
         if not tokens:
             tokens = [text.lower()]
         for token in tokens:
@@ -43,3 +44,11 @@ class HashEmbeddingProvider:
         norm = math.sqrt(sum(value * value for value in values)) or 1.0
         return tuple(value / norm for value in values)
 
+
+def _tokenize(text: str) -> list[str]:
+    lowered = text.lower()
+    tokens = [token for token in re.findall(r"[a-z0-9_]+", lowered) if token]
+    cjk_chars = [char for char in lowered if "\u4e00" <= char <= "\u9fff"]
+    tokens.extend(cjk_chars)
+    tokens.extend("".join(cjk_chars[index : index + 2]) for index in range(max(0, len(cjk_chars) - 1)))
+    return list(dict.fromkeys(tokens))

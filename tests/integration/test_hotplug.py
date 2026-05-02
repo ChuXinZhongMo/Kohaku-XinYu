@@ -22,6 +22,7 @@ from kohakuterrarium.core.channel import ChannelMessage
 from kohakuterrarium.core.config import load_agent_config
 from kohakuterrarium.core.session import remove_session
 from kohakuterrarium.modules.trigger.channel import ChannelTrigger
+from kohakuterrarium.testing.llm import ScriptedLLM
 from kohakuterrarium.terrarium.config import (
     ChannelConfig,
     CreatureConfig,
@@ -33,12 +34,33 @@ from kohakuterrarium.terrarium.runtime import TerrariumRuntime
 # Shared paths
 # ---------------------------------------------------------------------------
 
-SWE_AGENT_DIR = (
-    Path(__file__).resolve().parents[2] / "examples" / "agent-apps" / "swe_agent"
-)
-
 # Fake API key for all tests that create real Agent instances
 FAKE_ENV = {"OPENROUTER_API_KEY": "fake-key-for-test"}
+LLM_PATCH_TARGET = "kohakuterrarium.bootstrap.agent_init.create_llm_provider"
+
+
+def _scripted_llm(*_args, **_kwargs) -> ScriptedLLM:
+    return ScriptedLLM(["OK"])
+
+
+def _write_test_agent_config(tmp_path: Path) -> str:
+    """Create a non-interactive agent config for integration tests."""
+    agent_dir = tmp_path / "hotplug_agent"
+    agent_dir.mkdir(exist_ok=True)
+    (agent_dir / "config.yaml").write_text(
+        """version: "1.0"
+controller:
+  model: test-model
+  api_key_env: OPENROUTER_API_KEY
+  base_url: https://example.invalid/v1
+input:
+  type: none
+output:
+  type: stdout
+""",
+        encoding="utf-8",
+    )
+    return str(agent_dir)
 
 
 # =========================================================================
@@ -50,11 +72,11 @@ class TestAgentHotPlugTriggers:
     """Test adding/removing triggers on a running agent."""
 
     @pytest.fixture()
-    def agent(self):
-        """Create a minimal agent from the SWE config with a fake API key."""
-        swe_path = str(SWE_AGENT_DIR.resolve())
-        with patch.dict(os.environ, FAKE_ENV):
-            config = load_agent_config(swe_path)
+    def agent(self, tmp_path: Path):
+        """Create a minimal non-interactive agent with a fake API key."""
+        agent_path = _write_test_agent_config(tmp_path)
+        with patch.dict(os.environ, FAKE_ENV), patch(LLM_PATCH_TARGET, side_effect=_scripted_llm):
+            config = load_agent_config(agent_path)
             agent = Agent(config)
         return agent
 
@@ -168,11 +190,11 @@ class TestAgentSystemPromptUpdate:
     """Test updating system prompt at runtime."""
 
     @pytest.fixture()
-    def agent(self):
+    def agent(self, tmp_path: Path):
         """Create a minimal agent."""
-        swe_path = str(SWE_AGENT_DIR.resolve())
-        with patch.dict(os.environ, FAKE_ENV):
-            config = load_agent_config(swe_path)
+        agent_path = _write_test_agent_config(tmp_path)
+        with patch.dict(os.environ, FAKE_ENV), patch(LLM_PATCH_TARGET, side_effect=_scripted_llm):
+            config = load_agent_config(agent_path)
             agent = Agent(config)
         return agent
 
@@ -222,15 +244,15 @@ class TestTerrariumHotPlugCreatures:
     """Test adding/removing creatures to a running terrarium."""
 
     @pytest.fixture()
-    def terrarium_config(self) -> TerrariumConfig:
+    def terrarium_config(self, tmp_path: Path) -> TerrariumConfig:
         """Minimal terrarium with one creature and one channel."""
-        swe_path = str(SWE_AGENT_DIR.resolve())
+        agent_path = _write_test_agent_config(tmp_path)
         return TerrariumConfig(
             name="hotplug_test",
             creatures=[
                 CreatureConfig(
                     name="alpha",
-                    config_data={"base_config": swe_path},
+                    config_data={"base_config": agent_path},
                     base_dir=Path("."),
                     listen_channels=["work"],
                     send_channels=["results"],
@@ -252,23 +274,23 @@ class TestTerrariumHotPlugCreatures:
         yield
         remove_session(f"terrarium_{terrarium_config.name}")
 
-    async def test_add_creature(self, terrarium_config: TerrariumConfig):
+    async def test_add_creature(self, terrarium_config: TerrariumConfig, tmp_path: Path):
         """Add a creature to a running terrarium."""
         runtime = TerrariumRuntime(terrarium_config)
-        with patch.dict(os.environ, FAKE_ENV):
+        with patch.dict(os.environ, FAKE_ENV), patch(LLM_PATCH_TARGET, side_effect=_scripted_llm):
             await runtime.start()
 
         try:
-            swe_path = str(SWE_AGENT_DIR.resolve())
+            agent_path = _write_test_agent_config(tmp_path)
             new_creature = CreatureConfig(
                 name="beta",
-                config_data={"base_config": swe_path},
+                config_data={"base_config": agent_path},
                 base_dir=Path("."),
                 listen_channels=["results"],
                 send_channels=["work"],
             )
 
-            with patch.dict(os.environ, FAKE_ENV):
+            with patch.dict(os.environ, FAKE_ENV), patch(LLM_PATCH_TARGET, side_effect=_scripted_llm):
                 await runtime.add_creature(new_creature)
 
             status = runtime.get_status()
@@ -279,37 +301,37 @@ class TestTerrariumHotPlugCreatures:
             await runtime.stop()
 
     async def test_add_creature_duplicate_raises(
-        self, terrarium_config: TerrariumConfig
+        self, terrarium_config: TerrariumConfig, tmp_path: Path
     ):
         """Adding a creature with an existing name raises an error."""
         runtime = TerrariumRuntime(terrarium_config)
-        with patch.dict(os.environ, FAKE_ENV):
+        with patch.dict(os.environ, FAKE_ENV), patch(LLM_PATCH_TARGET, side_effect=_scripted_llm):
             await runtime.start()
 
         try:
-            swe_path = str(SWE_AGENT_DIR.resolve())
+            agent_path = _write_test_agent_config(tmp_path)
             duplicate = CreatureConfig(
                 name="alpha",  # Already exists
-                config_data={"base_config": swe_path},
+                config_data={"base_config": agent_path},
                 base_dir=Path("."),
                 listen_channels=[],
                 send_channels=[],
             )
 
             with pytest.raises((ValueError, KeyError, RuntimeError)):
-                with patch.dict(os.environ, FAKE_ENV):
+                with patch.dict(os.environ, FAKE_ENV), patch(LLM_PATCH_TARGET, side_effect=_scripted_llm):
                     await runtime.add_creature(duplicate)
         finally:
             await runtime.stop()
 
-    async def test_remove_creature(self, terrarium_config: TerrariumConfig):
+    async def test_remove_creature(self, terrarium_config: TerrariumConfig, tmp_path: Path):
         """Remove a creature from a running terrarium."""
         # Start with two creatures
-        swe_path = str(SWE_AGENT_DIR.resolve())
+        agent_path = _write_test_agent_config(tmp_path)
         terrarium_config.creatures.append(
             CreatureConfig(
                 name="beta",
-                config_data={"base_config": swe_path},
+                config_data={"base_config": agent_path},
                 base_dir=Path("."),
                 listen_channels=["results"],
                 send_channels=["work"],
@@ -317,7 +339,7 @@ class TestTerrariumHotPlugCreatures:
         )
 
         runtime = TerrariumRuntime(terrarium_config)
-        with patch.dict(os.environ, FAKE_ENV):
+        with patch.dict(os.environ, FAKE_ENV), patch(LLM_PATCH_TARGET, side_effect=_scripted_llm):
             await runtime.start()
 
         try:
@@ -337,7 +359,7 @@ class TestTerrariumHotPlugCreatures:
     ):
         """Removing a nonexistent creature returns False."""
         runtime = TerrariumRuntime(terrarium_config)
-        with patch.dict(os.environ, FAKE_ENV):
+        with patch.dict(os.environ, FAKE_ENV), patch(LLM_PATCH_TARGET, side_effect=_scripted_llm):
             await runtime.start()
 
         try:
@@ -356,15 +378,15 @@ class TestTerrariumHotPlugChannels:
     """Test adding channels and wiring at runtime."""
 
     @pytest.fixture()
-    def terrarium_config(self) -> TerrariumConfig:
+    def terrarium_config(self, tmp_path: Path) -> TerrariumConfig:
         """Minimal terrarium for channel tests."""
-        swe_path = str(SWE_AGENT_DIR.resolve())
+        agent_path = _write_test_agent_config(tmp_path)
         return TerrariumConfig(
             name="hotplug_ch_test",
             creatures=[
                 CreatureConfig(
                     name="alpha",
-                    config_data={"base_config": swe_path},
+                    config_data={"base_config": agent_path},
                     base_dir=Path("."),
                     listen_channels=["inbox"],
                     send_channels=["outbox"],
@@ -385,7 +407,7 @@ class TestTerrariumHotPlugChannels:
     async def test_add_channel(self, terrarium_config: TerrariumConfig):
         """Add a new channel to a running terrarium."""
         runtime = TerrariumRuntime(terrarium_config)
-        with patch.dict(os.environ, FAKE_ENV):
+        with patch.dict(os.environ, FAKE_ENV), patch(LLM_PATCH_TARGET, side_effect=_scripted_llm):
             await runtime.start()
 
         try:
@@ -404,7 +426,7 @@ class TestTerrariumHotPlugChannels:
     async def test_add_broadcast_channel(self, terrarium_config: TerrariumConfig):
         """Add a broadcast channel at runtime."""
         runtime = TerrariumRuntime(terrarium_config)
-        with patch.dict(os.environ, FAKE_ENV):
+        with patch.dict(os.environ, FAKE_ENV), patch(LLM_PATCH_TARGET, side_effect=_scripted_llm):
             await runtime.start()
 
         try:
@@ -421,7 +443,7 @@ class TestTerrariumHotPlugChannels:
     async def test_wire_channel_listen(self, terrarium_config: TerrariumConfig):
         """Wire a creature to listen on a new channel."""
         runtime = TerrariumRuntime(terrarium_config)
-        with patch.dict(os.environ, FAKE_ENV):
+        with patch.dict(os.environ, FAKE_ENV), patch(LLM_PATCH_TARGET, side_effect=_scripted_llm):
             await runtime.start()
 
         try:
@@ -445,7 +467,7 @@ class TestTerrariumHotPlugChannels:
     async def test_wire_channel_send(self, terrarium_config: TerrariumConfig):
         """Wire a creature to send on a channel."""
         runtime = TerrariumRuntime(terrarium_config)
-        with patch.dict(os.environ, FAKE_ENV):
+        with patch.dict(os.environ, FAKE_ENV), patch(LLM_PATCH_TARGET, side_effect=_scripted_llm):
             await runtime.start()
 
         try:
@@ -464,7 +486,7 @@ class TestTerrariumHotPlugChannels:
     ):
         """Wiring a nonexistent creature raises an error."""
         runtime = TerrariumRuntime(terrarium_config)
-        with patch.dict(os.environ, FAKE_ENV):
+        with patch.dict(os.environ, FAKE_ENV), patch(LLM_PATCH_TARGET, side_effect=_scripted_llm):
             await runtime.start()
 
         try:

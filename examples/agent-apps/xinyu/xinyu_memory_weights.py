@@ -20,16 +20,19 @@ class MemoryWeightSpec:
 
 
 MEMORY_WEIGHT_SPECS = (
-    MemoryWeightSpec("memory/self/system_prompt_memory.md", "stable_prompt_memory", 1000000.0, 92, True),
-    MemoryWeightSpec("memory/self/core.md", "stable_identity", 1000000.0, 96, True),
-    MemoryWeightSpec("memory/self/personality_profile.md", "stable_identity", 1000000.0, 96, True),
-    MemoryWeightSpec("memory/context/persona_life_anchors.md", "stable_identity", 1000000.0, 84, True),
-    MemoryWeightSpec("memory/context/real_world_anchor_policy.md", "stable_reality_boundary", 1000000.0, 90, True),
-    MemoryWeightSpec("memory/context/life_month_slots.md", "life_memory_slots", 1000000.0, 52, True),
+    MemoryWeightSpec("memory/self/system_prompt_memory.md", "concept_prompt_memory", 168.0, 10, False),
+    MemoryWeightSpec("memory/self/core.md", "xinyu_concept", 720.0, 45, False),
+    MemoryWeightSpec("memory/self/personality_profile.md", "concept_tendency_seed", 720.0, 35, False),
+    MemoryWeightSpec("memory/self/personality_evolution_state.md", "growth_trial", 96.0, 22, False),
+    MemoryWeightSpec("memory/self/private_thought_state.md", "private_thought_event", 24.0, 12, False),
+    MemoryWeightSpec("memory/self/self_model_state.md", "self_model", 96.0, 24, False),
+    MemoryWeightSpec("memory/context/persona_life_anchors.md", "background_texture_seed", 720.0, 28, False),
+    MemoryWeightSpec("memory/context/real_world_anchor_policy.md", "runtime_reference", 168.0, 20, False),
+    MemoryWeightSpec("memory/context/life_month_slots.md", "life_texture_reference", 720.0, 10, False),
     MemoryWeightSpec("memory/context/current_life_month_context.md", "floating_life_month_context", 12.0, 18, False),
-    MemoryWeightSpec("memory/people/owner.md", "stable_relationship", 1000000.0, 92, True),
-    MemoryWeightSpec("memory/relationships/index.md", "stable_relationship", 720.0, 82, False),
-    MemoryWeightSpec("memory/self/voice_profile_zh.md", "stable_voice", 1000000.0, 88, True),
+    MemoryWeightSpec("memory/people/owner.md", "owner_relation", 720.0, 55, False),
+    MemoryWeightSpec("memory/relationships/index.md", "relationship", 720.0, 35, False),
+    MemoryWeightSpec("memory/self/voice_profile_zh.md", "voice_tendency_seed", 720.0, 24, False),
     MemoryWeightSpec("memory/self/voice_calibration_log.md", "floating_voice", 168.0, 35, False),
     MemoryWeightSpec("memory/emotions/current_state.md", "floating_emotion", 36.0, 30, False),
     MemoryWeightSpec("memory/context/persona_surface_state.md", "floating_surface", 6.0, 0, False),
@@ -187,10 +190,12 @@ tags: [memory, weights, retention, decay]
 
 ## Policy
 - decay_model: gradual_half_life
-- stable_layer_rule: self core, personality profile, owner relation, and voice profile have high floors and must not decay into default assistant persona.
+- concept_layer_rule: self core, owner relation, and voice files are concept seeds, not hard floors.
+- seed_layer_rule: seed files bias behavior only when the current turn naturally draws on them.
+- growth_trial_rule: personality_evolution_state is maintenance context; it should not dominate live speech.
 - floating_layer_rule: emotion, tone, recent context, dream residue, and life posture decay by elapsed time instead of disappearing after one turn.
 - retention_rule: low active_weight means less vivid surface influence, not destructive deletion.
-- use_rule: when choosing visible wording, prefer higher active_weight rows; do not let fresh but low-weight trivia overwrite stable identity or relationship memory.
+- use_rule: when choosing visible wording, let the current message outweigh old rows unless the user is asking for memory or architecture.
 
 ## Active Weights
 {row_lines}

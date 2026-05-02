@@ -67,8 +67,10 @@ def main() -> int:
     system = (root / "prompts/system.md").read_text(encoding="utf-8-sig")
     if "current_life_month_context: memory/context/current_life_month_context.md" not in config:
         failures.append("config does not inject current_life_month_context")
-    if "{{ current_life_month_context }}" not in system or "[context/current_life_month_context.md]" not in system:
-        failures.append("system prompt does not include current_life_month_context variable")
+    if "{{ current_life_month_context }}" in system or "[context/current_life_month_context.md]" in system:
+        failures.append("base system prompt should not include full current_life_month_context")
+    if "life-month context" not in system or "live-turn runtime context" not in system:
+        failures.append("system prompt does not document life-month runtime injection")
 
     renderer = BridgeRenderer(
         xinyu_dir=root,

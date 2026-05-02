@@ -5,6 +5,13 @@ from datetime import datetime
 from pathlib import Path
 
 
+CHANNEL_ALIASES = {
+    "owner_private": "private_chat",
+    "qq_private": "private_chat",
+    "qq_group": "group_chat",
+    "priority_learning_group": "group_chat",
+    "group": "group_chat",
+}
 TEXT_CHANNELS = {"im", "private_chat"}
 KNOWN_CHANNELS = {"im", "private_chat", "group_chat", "image", "voice_transcript", "system_context"}
 
@@ -46,9 +53,14 @@ def is_explicit(value: str) -> bool:
     return value.strip().lower() == "explicit"
 
 
+def normalize_source_channel(channel: str) -> str:
+    return CHANNEL_ALIASES.get(channel.strip(), channel.strip())
+
+
 def classify_event(event: dict[str, str]) -> dict[str, str]:
     status = event.get("status", "hold")
-    channel = event.get("source_channel", "unknown")
+    raw_channel = event.get("source_channel", "unknown").strip()
+    channel = normalize_source_channel(raw_channel)
     relationship_scope = event.get("relationship_scope", "unknown")
     actor_id = event.get("actor_id", "unknown")
     content_type = event.get("content_type", "unknown")
@@ -59,6 +71,7 @@ def classify_event(event: dict[str, str]) -> dict[str, str]:
 
     base = {
         "event_id": event["event_id"],
+        "source_channel": raw_channel,
         "channel": channel,
         "permission": "hold",
         "reason": "not_evaluated",
@@ -141,7 +154,8 @@ def render_state(evaluated_at: str, mode: str, decisions: list[dict[str, str]]) 
     held = [item for item in decisions if item["permission"] == "hold"]
     blocked = [item for item in decisions if item["permission"] == "blocked"]
     decision_lines = [
-        f"- {item['event_id']}: permission={item['permission']}; channel={item['channel']}; "
+        f"- {item['event_id']}: permission={item['permission']}; "
+        f"source_channel={item['source_channel']}; channel={item['channel']}; "
         f"memory_route={item['memory_route']}; time_anchor_route={item['time_anchor_route']}; "
         f"owner_relationship_write={item['owner_relationship_write']}; reason={item['reason']}"
         for item in decisions

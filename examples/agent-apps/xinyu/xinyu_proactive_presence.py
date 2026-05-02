@@ -111,6 +111,10 @@ def _abstract_proactive(text: str) -> bool:
     return any(marker in text for marker in ABSTRACT_PROACTIVE_MARKERS) or len(text) > 70
 
 
+def _abstract_request_preview(text: str) -> bool:
+    return any(marker in text for marker in ABSTRACT_PROACTIVE_MARKERS)
+
+
 def _generic_attention_check(text: str) -> bool:
     return any(marker in text for marker in GENERIC_ATTENTION_PATTERNS)
 
@@ -165,10 +169,191 @@ def _dispatch_state_path(root: Path) -> Path:
     return root / "memory/context/proactive_qq_dispatch_state.md"
 
 
+def _request_state_path(root: Path) -> Path:
+    return root / "memory/context/proactive_request_state.md"
+
+
+def _replace_list_field(text: str, field: str, value: str) -> str:
+    replacement = f"- {field}: {_one_line(value) or 'none'}"
+    updated, count = re.subn(
+        rf"(?m)^-\s+{re.escape(field)}:\s*.*$",
+        replacement,
+        text,
+        count=1,
+    )
+    if count:
+        return updated
+    return text.rstrip() + "\n" + replacement + "\n"
+
+
+def _replace_frontmatter_field(text: str, field: str, value: str) -> str:
+    replacement = f"{field}: {_one_line(value) or 'none'}"
+    updated, count = re.subn(
+        rf"(?m)^{re.escape(field)}:\s*.*$",
+        replacement,
+        text,
+        count=1,
+    )
+    if count:
+        return updated
+    return text.rstrip() + "\n" + replacement + "\n"
+
+
+def _update_request_delivery_state(
+    root: Path,
+    *,
+    candidate: str,
+    request_status: str,
+    claim_id: str = "",
+    ack_status: str = "",
+    adapter_message_id: str = "",
+    adapter_error: str = "",
+    updated_at: str,
+) -> bool:
+    path = _request_state_path(root)
+    state = read_text(path)
+    if not state:
+        return False
+    if _one_line(extract_value(state, "concrete_question", "")) != _one_line(candidate):
+        return False
+
+    request_id = extract_value(state, "request_id", "")
+    message_id = f"proactive:{request_id}" if request_id not in {"", "none", "unknown"} else "none"
+    updated = _replace_frontmatter_field(state, "updated_at", updated_at)
+    updated = _replace_list_field(updated, "status", request_status)
+    updated = _replace_list_field(updated, "qq_outbox_message_id", message_id)
+    if claim_id:
+        updated = _replace_list_field(updated, "last_claim_id", claim_id)
+    if ack_status:
+        updated = _replace_list_field(updated, "last_ack_status", ack_status)
+    if adapter_message_id:
+        updated = _replace_list_field(updated, "adapter_message_id", adapter_message_id)
+    if adapter_error:
+        updated = _replace_list_field(updated, "adapter_error", adapter_error)
+    write_text(path, updated)
+    return True
+
+
+def _request_id_for_candidate(root: Path, candidate: str) -> str:
+    state = read_text(_request_state_path(root))
+    if not state:
+        return "none"
+    if _one_line(extract_value(state, "concrete_question", "")) != _one_line(candidate):
+        return "none"
+    request_id = extract_value(state, "request_id", "none")
+    return request_id if request_id not in {"", "unknown"} else "none"
+
+
+def _request_preview_candidate(proactive_request: str) -> dict[str, str]:
+    if not proactive_request:
+        return {
+            "candidate": "none",
+            "shape": "no_proactive_request_state",
+            "reason": "no_proactive_request_state",
+            "status": "none",
+            "delivery_level": "none",
+            "request_id": "none",
+            "kind": "none",
+            "source": "none",
+        }
+
+    status = extract_value(proactive_request, "status", "none")
+    delivery_level = extract_value(proactive_request, "delivery_level", "none")
+    request_id = extract_value(proactive_request, "request_id", "none")
+    kind = extract_value(proactive_request, "kind", "none")
+    source = extract_value(proactive_request, "source", "none")
+    question = extract_value(proactive_request, "concrete_question", "none")
+    requested_action = extract_value(proactive_request, "requested_action", "none")
+
+    if status in {"claimed", "sent", "answered", "failed"}:
+        return {
+            "candidate": "none",
+            "shape": f"request_status_{status}",
+            "reason": f"proactive_request_{status}",
+            "status": status,
+            "delivery_level": delivery_level,
+            "request_id": request_id,
+            "kind": kind,
+            "source": source,
+        }
+    if status not in {"candidate_only", "ready"}:
+        return {
+            "candidate": "none",
+            "shape": f"request_status_{status}",
+            "reason": "proactive_request_not_ready",
+            "status": status,
+            "delivery_level": delivery_level,
+            "request_id": request_id,
+            "kind": kind,
+            "source": source,
+        }
+    delivery_preview = delivery_level in {"state_only", "preview_only"}
+    delivery_claimable = status == "ready" and delivery_level in {"queue_owner_private", "claim_ack"}
+    if not delivery_preview and not delivery_claimable:
+        return {
+            "candidate": "none",
+            "shape": f"request_delivery_{delivery_level}",
+            "reason": "proactive_request_delivery_not_preview",
+            "status": status,
+            "delivery_level": delivery_level,
+            "request_id": request_id,
+            "kind": kind,
+            "source": source,
+        }
+
+    statement_like = kind == "dream_share" or requested_action in {"owner_response_optional", "owner_listen"}
+    candidate = _one_line(question) if statement_like else _direct_question(question)
+    if candidate in {"", "none", "unknown"}:
+        return {
+            "candidate": "none",
+            "shape": "request_missing_concrete_question",
+            "reason": "proactive_request_missing_question",
+            "status": status,
+            "delivery_level": delivery_level,
+            "request_id": request_id,
+            "kind": kind,
+            "source": source,
+        }
+    if kind != "dream_share" and _abstract_request_preview(candidate):
+        return {
+            "candidate": "none",
+            "shape": "request_abstract_question_blocked",
+            "reason": "proactive_request_abstract_question_blocked",
+            "status": status,
+            "delivery_level": delivery_level,
+            "request_id": request_id,
+            "kind": kind,
+            "source": source,
+        }
+    if kind != "dream_share" and _generic_attention_check(candidate):
+        return {
+            "candidate": "none",
+            "shape": "request_generic_attention_blocked",
+            "reason": "proactive_request_generic_attention_blocked",
+            "status": status,
+            "delivery_level": delivery_level,
+            "request_id": request_id,
+            "kind": kind,
+            "source": source,
+        }
+    return {
+        "candidate": candidate,
+        "shape": "proactive_request_claimable" if delivery_claimable else "proactive_request_preview",
+        "reason": f"proactive_request_{delivery_level}_{'ready' if delivery_claimable else 'preview'}",
+        "status": status,
+        "delivery_level": delivery_level,
+        "request_id": request_id,
+        "kind": kind,
+        "source": source,
+        "claimable": "true" if delivery_claimable else "false",
+    }
+
+
 def _dispatch_hold_reason(
     dispatch_state: str,
     *,
     candidate: str,
+    request_id: str = "none",
     evaluated_at: str,
     min_interval_seconds: int,
 ) -> str:
@@ -177,21 +362,29 @@ def _dispatch_hold_reason(
         return ""
 
     last_message = extract_value(dispatch_state, "last_claimed_message", "")
+    last_request_id = extract_value(dispatch_state, "proactive_request_id", "none")
     last_at = _parse_iso(extract_value(dispatch_state, "last_claimed_at", ""))
     now = _parse_iso(evaluated_at)
     if last_message and last_message == candidate:
-        if last_status == "sent":
+        same_request = (
+            request_id in {"", "none", "unknown"}
+            or last_request_id in {"", "none", "unknown"}
+            or last_request_id == request_id
+        )
+        if last_status == "sent" and same_request:
             return "candidate_already_sent"
         if last_status == "claimed":
             return "candidate_already_claimed"
         if min_interval_seconds <= 0:
-            return "candidate_failed_recently"
+            return "candidate_failed_recently" if last_status == "failed" and same_request else ""
         if not last_at or not now:
-            return "candidate_failed_recently"
+            return "candidate_failed_recently" if last_status == "failed" and same_request else ""
         elapsed = (now - last_at).total_seconds()
         if elapsed < min_interval_seconds:
             remaining = max(0, int(min_interval_seconds - elapsed))
-            return f"candidate_failed_retry_cooldown:{remaining}s"
+            if last_status == "failed" and same_request:
+                return f"candidate_failed_retry_cooldown:{remaining}s"
+            return f"same_message_new_request_cooldown:{remaining}s"
 
     if min_interval_seconds <= 0:
         return ""
@@ -210,6 +403,7 @@ def _write_dispatch_state(
     claimed_at: str,
     claim_id: str,
     candidate: str,
+    request_id: str = "none",
     min_interval_seconds: int,
 ) -> None:
     text = f"""---
@@ -234,6 +428,7 @@ tags: [initiative, proactive, qq, dispatch, boundary]
 - last_claimed_at: {claimed_at}
 - last_claim_id: {claim_id or "none"}
 - last_claim_status: claimed
+- proactive_request_id: {request_id or "none"}
 - min_interval_seconds: {min_interval_seconds}
 - last_claimed_message: {_one_line(candidate)}
 
@@ -282,6 +477,7 @@ tags: [initiative, proactive, qq, dispatch, boundary]
 - last_claimed_at: {extract_value(state, "last_claimed_at", "none")}
 - last_claim_id: {extract_value(state, "last_claim_id", "none")}
 - last_claim_status: {ack_status}
+- proactive_request_id: {extract_value(state, "proactive_request_id", "none")}
 - min_interval_seconds: {extract_value(state, "min_interval_seconds", "21600")}
 - last_claimed_message: {extract_value(state, "last_claimed_message", "none")}
 
@@ -307,6 +503,7 @@ def render_state(
     capability: str = "",
     life_posture_state: str = "",
     owner_grants: str = "",
+    proactive_request: str = "",
 ) -> str:
     decision = extract_value(initiative, "decision", "defer")
     reason = extract_value(initiative, "reason", "unknown")
@@ -332,8 +529,35 @@ def render_state(
         visible_posture=visible_posture,
         life_posture=current_life_posture,
     )
+    request_preview = _request_preview_candidate(proactive_request)
+    request_candidate = request_preview["candidate"]
     send_enabled = _proactive_qq_enabled(capability, owner_grants)
-    if cooldown_active == "yes":
+    qq_send_permission = (
+        "owner_enabled_gated_one_short_message"
+        if send_enabled
+        else "blocked_until_owner_enables_proactive_qq"
+    )
+    if request_candidate not in {"", "none", "unknown"}:
+        raw_candidate = request_candidate
+        candidate = request_candidate
+        candidate_shape = request_preview["shape"]
+        if request_preview.get("claimable") == "true":
+            proactive_decision = "candidate_ready_owner_enabled" if send_enabled else "candidate_only"
+            proactive_reason = (
+                request_preview["reason"]
+                if send_enabled
+                else "proactive_request_ready_but_qq_send_blocked"
+            )
+            qq_send_permission = (
+                "owner_enabled_gated_one_short_message"
+                if send_enabled
+                else "blocked_until_owner_enables_proactive_qq"
+            )
+        else:
+            proactive_decision = "request_preview_only"
+            proactive_reason = request_preview["reason"]
+            qq_send_permission = "preview_only_no_qq_claim"
+    elif cooldown_active == "yes":
         proactive_decision = "hold"
         proactive_reason = "cooldown_active"
     elif life_posture_block_class != "none" and not life_posture_override:
@@ -354,11 +578,6 @@ def render_state(
             proactive_reason = f"owner_welcomes_interruptions_{life_posture_block_class}_override"
         else:
             proactive_reason = "owner_enabled_proactive_qq_with_boundaries" if send_enabled else "safe_candidate_but_qq_send_blocked"
-    qq_send_permission = (
-        "owner_enabled_gated_one_short_message"
-        if send_enabled
-        else "blocked_until_owner_enables_proactive_qq"
-    )
 
     return f"""---
 title: Proactive Presence State
@@ -398,15 +617,20 @@ tags: [initiative, proactive, qq, boundary]
 - raw_candidate_message: {raw_candidate}
 - candidate_shape: {candidate_shape}
 - candidate_message: {candidate}
+- proactive_request_status: {request_preview['status']}
+- proactive_request_delivery_level: {request_preview['delivery_level']}
+- proactive_request_id: {request_preview['request_id']}
+- proactive_request_kind: {request_preview['kind']}
+- proactive_request_source: {request_preview['source']}
 
 ## Boundaries
 - XinYu cannot spam owner.
-- The high-interruption grant may override rest/silence and style-pressure posture holds for one short owner-private message.
+- The high-interruption grant may override rest/silence and style-pressure posture holds for one bounded owner-private thread.
 - XinYu can form one candidate message from initiative state. Actual QQ sending requires owner-approved proactive mode.
-- The softer interruption grant may override only soft owner-correction posture holds for one short message.
-- Proactive messages must be one short message, not an interview or a technical nag.
+- The softer interruption grant may override only soft owner-correction posture holds for one bounded thread.
+- Proactive expression may use multiple short bubbles inside one grounded thread, not an unbounded interview or technical nag.
 - Proactive messages must not be generic attention checks such as asking whether owner is busy or will look at her.
-- If there is no concrete daily anchor or selected concrete question, XinYu stays silent instead of inventing a filler question.
+- If there is no living daily anchor or selected context-born question, XinYu stays silent instead of inventing a filler question.
 - Even with the high-interruption grant, proactive QQ still stops for no-pursuit, conflict-cooling, cooldown, duplicate-message, or spam-limit conditions.
 """
 
@@ -422,6 +646,7 @@ def run_proactive_presence(
     capability = read_text(root / "memory/context/capability_zones_state.md")
     life_posture_state = read_text(root / "memory/context/current_life_posture.md")
     owner_grants = read_text(root / "memory/context/owner_permission_grants.md")
+    proactive_request = read_text(_request_state_path(root))
     state = render_state(
         evaluated_at=evaluated_at,
         mode=mode,
@@ -429,6 +654,7 @@ def run_proactive_presence(
         capability=capability,
         life_posture_state=life_posture_state,
         owner_grants=owner_grants,
+        proactive_request=proactive_request,
     )
     write_text(root / "memory/context/proactive_presence_state.md", state)
     return {
@@ -436,6 +662,9 @@ def run_proactive_presence(
         "proactive_decision": extract_value(state, "proactive_decision"),
         "qq_send_permission": extract_value(state, "qq_send_permission"),
         "candidate_message": extract_value(state, "candidate_message"),
+        "proactive_request_id": extract_value(state, "proactive_request_id", "none"),
+        "proactive_request_status": extract_value(state, "proactive_request_status", "none"),
+        "proactive_request_kind": extract_value(state, "proactive_request_kind", "none"),
     }
 
 
@@ -460,7 +689,7 @@ def claim_proactive_qq_message(
     )
     if not ready:
         notes.append(f"not_ready:{result['proactive_decision']}")
-        return {
+        response = {
             **result,
             "accepted": True,
             "reply": "",
@@ -468,11 +697,17 @@ def claim_proactive_qq_message(
             "claim_id": claim_id,
             "notes": notes,
         }
+        if result["proactive_decision"] == "request_preview_only" and candidate not in {"", "none", "unknown"}:
+            response["preview_reply"] = candidate
+            response["notes"] = notes + ["proactive_request_preview_only"]
+        return response
 
     dispatch_state = read_text(_dispatch_state_path(root))
+    request_id = str(result.get("proactive_request_id") or _request_id_for_candidate(root, candidate))
     hold_reason = _dispatch_hold_reason(
         dispatch_state,
         candidate=candidate,
+        request_id=request_id,
         evaluated_at=evaluated_at,
         min_interval_seconds=min_interval_seconds,
     )
@@ -493,8 +728,18 @@ def claim_proactive_qq_message(
             claimed_at=evaluated_at,
             claim_id=claim_id,
             candidate=candidate,
+            request_id=request_id,
             min_interval_seconds=min_interval_seconds,
         )
+        if _update_request_delivery_state(
+            root,
+            candidate=candidate,
+            request_status="claimed",
+            claim_id=claim_id,
+            ack_status="pending",
+            updated_at=evaluated_at,
+        ):
+            notes.append("proactive_request_marked_claimed")
         notes.append("candidate_claimed")
         reply = candidate
     else:
@@ -564,13 +809,23 @@ def acknowledge_proactive_qq_message(
             adapter_error=adapter_error,
         ),
     )
+    request_updated = _update_request_delivery_state(
+        root,
+        candidate=extract_value(state, "last_claimed_message", ""),
+        request_status=ack_status,
+        claim_id=last_claim_id,
+        ack_status=ack_status,
+        adapter_message_id=adapter_message_id,
+        adapter_error=adapter_error,
+        updated_at=acked_at,
+    )
     return {
         "accepted": True,
         "ack_recorded": True,
         "claim_id": last_claim_id,
         "ack_status": ack_status,
         "adapter_message_id": _one_line(adapter_message_id) or "none",
-        "notes": notes + ["ack_recorded"],
+        "notes": notes + ["ack_recorded"] + (["proactive_request_delivery_updated"] if request_updated else []),
     }
 
 

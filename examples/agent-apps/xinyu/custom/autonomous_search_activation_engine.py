@@ -28,8 +28,23 @@ def extract_value(text: str, field: str, default: str = "unknown") -> str:
     return match.group(1).strip() if match else default
 
 
-def activation_mode() -> str:
-    return os.environ.get("XINYU_AUTONOMOUS_SEARCH", "disabled").strip().lower() or "disabled"
+def activation_mode(root: Path | None = None) -> str:
+    raw = os.environ.get("XINYU_AUTONOMOUS_SEARCH")
+    if raw is not None and raw.strip():
+        return raw.strip().lower()
+    if root is not None:
+        try:
+            capability = read_text(root / "memory/context/capability_zones_state.md")
+            grants = read_text(root / "memory/context/owner_permission_grants.md")
+        except OSError:
+            capability = ""
+            grants = ""
+        if (
+            "autonomous_search_provider: enabled_duckduckgo_html_bounded_ai_domain" in capability
+            and "grant_autonomous_source_collect: approved_bounded_candidate_material_only" in grants
+        ):
+            return "enabled"
+    return "disabled"
 
 
 def max_queries_per_pass() -> int:
@@ -48,7 +63,7 @@ def owner_high_autonomy_granted(root: Path) -> bool:
     return (
         "grant_high_autonomy_learning_search: "
         "approved_budgeted_ai_domain_and_quality_followup_search_through_gates"
-    ) in grants
+    ) in grants or "grant_autonomous_source_collect: approved_bounded_candidate_material_only" in grants
 
 
 def render_state(
@@ -114,12 +129,17 @@ def run_autonomous_search_activation(
     mode: str = "runtime_autonomous_search_activation",
 ) -> dict[str, object]:
     evaluated_at = evaluated_at or datetime.now().astimezone().isoformat()
-    activation = activation_mode()
-    provider = provider_name()
+    activation = activation_mode(root)
+    provider = provider_name(root)
     requests = split_requests(read_text(root / "memory/knowledge/source_requests.md"))
     pending = [item for item in requests if item.get("status") == "pending_url"]
+    pending_request_ids = {item.get("request_id") for item in pending}
     results = split_existing_results(read_text(root / "memory/knowledge/source_search_results.md"))
-    candidates = [item for item in results if item.get("status") == "candidate"]
+    candidates = [
+        item
+        for item in results
+        if item.get("status") == "candidate" and item.get("request_id") in pending_request_ids
+    ]
     integration_text = read_text(root / "memory/knowledge/source_integration_gate_state.md")
     integration_permission = extract_value(integration_text, "integration_permission", "hold")
     quality_text = read_text(root / "memory/knowledge/learning_quality_state.md")

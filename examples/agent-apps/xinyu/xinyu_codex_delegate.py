@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -16,7 +17,8 @@ from xinyu_local_scope import default_local_scope_root, ensure_local_scope, reso
 
 
 URL_PATTERN = re.compile(r"https?://[^\s<>()\"'，。！？、]+", re.I)
-DEFAULT_TIMEOUT_SECONDS = 240
+DEFAULT_TIMEOUT_SECONDS = 3600
+DEFAULT_VISIBLE_WINDOW_TITLE = "Xinyu codex"
 
 
 @dataclass(frozen=True)
@@ -277,6 +279,19 @@ def _tail(text: str, limit: int = 5000) -> str:
     return text[-limit:] if len(text) > limit else text
 
 
+def _read_text_tail(path: Path, limit: int = 5000) -> str:
+    if not path.exists():
+        return ""
+    for encoding in ("utf-8-sig", "utf-16"):
+        try:
+            return _tail(path.read_text(encoding=encoding, errors="replace"), limit=limit)
+        except OSError:
+            return ""
+        except UnicodeError:
+            continue
+    return ""
+
+
 def _rel_or_abs(path: Path) -> str:
     return str(path)
 
@@ -380,6 +395,7 @@ Paths:
 Allowed actions:
 - Inspect public URLs from the task.
 - Download public pages, papers, raw files, or GitHub repository archives into the workspace/local learning library.
+- Use local URL download/staging commands only for owner-specified URLs from the task or recent context; do not crawl or stage arbitrary search-result URLs.
 - For GitHub pull request URLs, download the `.patch` or `.diff` text and stage that URL material; do not clone the full repository unless the owner explicitly asks.
 - For GitHub repository URLs, run the learning library's `github` subcommand with `--stage --curated --origin owner_supplied`.
 - For paper/raw/page URLs, run the learning library's `url` subcommand with `--stage --curated --origin owner_supplied`.
@@ -390,6 +406,7 @@ Hard blocks:
 - Do not execute downloaded code.
 - Do not install dependencies.
 - Do not delete, move, upload, publish, push, or impersonate.
+- Do not broaden URL-fetch tasks into open web crawling. If no URL is supplied, summarize public search findings and write the report without local URL downloads.
 - Do not read credentials, cookies, tokens, browser/session files, password stores, or private folders outside the granted scope.
 - Do not bypass XinYu source, learning, privacy, or stable-personality gates.
 
@@ -426,13 +443,159 @@ def _kill_process_tree(pid: int) -> None:
         pass
 
 
+def _ps_literal(value: Any) -> str:
+    return "'" + str(value).replace("'", "''") + "'"
+
+
+def _write_visible_codex_script(
+    *,
+    script_path: Path,
+    command: list[str],
+    cwd: Path,
+    prompt_path: Path,
+    transcript_path: Path,
+    exit_path: Path,
+    report_path: Path,
+    window_title: str,
+) -> None:
+    exe = command[0]
+    args = command[1:]
+    args_block = ", ".join(_ps_literal(arg) for arg in args)
+    script_path.write_text(
+        "\n".join(
+            [
+                "$ErrorActionPreference = 'Continue'",
+                "$Utf8NoBom = [System.Text.UTF8Encoding]::new($false)",
+                "[Console]::InputEncoding = $Utf8NoBom",
+                "[Console]::OutputEncoding = $Utf8NoBom",
+                "$OutputEncoding = $Utf8NoBom",
+                f"try {{ $Host.UI.RawUI.WindowTitle = {_ps_literal(window_title)} }} catch {{ }}",
+                f"try {{ [Console]::Title = {_ps_literal(window_title)} }} catch {{ }}",
+                f"$Exe = {_ps_literal(exe)}",
+                f"$CmdArgs = @({args_block})",
+                f"$PromptPath = {_ps_literal(prompt_path)}",
+                f"$TranscriptPath = {_ps_literal(transcript_path)}",
+                f"$ExitPath = {_ps_literal(exit_path)}",
+                f"$ReportPath = {_ps_literal(report_path)}",
+                f"Set-Location -LiteralPath {_ps_literal(cwd)}",
+                "if (Test-Path -LiteralPath $TranscriptPath) { Remove-Item -LiteralPath $TranscriptPath -Force }",
+                "if (Test-Path -LiteralPath $ExitPath) { Remove-Item -LiteralPath $ExitPath -Force }",
+                "[Console]::WriteLine('[XinYu Codex] visible Codex CLI window')",
+                f"[Console]::WriteLine({_ps_literal('[XinYu Codex] title: ' + window_title)})",
+                "[Console]::WriteLine('[XinYu Codex] command started; close this window only if you want to interrupt it.')",
+                "[Console]::WriteLine('')",
+                "$ExitCode = 1",
+                "try {",
+                "    Get-Content -LiteralPath $PromptPath -Raw -Encoding UTF8 | & $Exe @CmdArgs 2>&1 | ForEach-Object {",
+                "        $Text = ($_ | Out-String)",
+                "        [Console]::Write($Text)",
+                "        [System.IO.File]::AppendAllText($TranscriptPath, $Text, $Utf8NoBom)",
+                "    }",
+                "    if ($null -eq $LASTEXITCODE) { $ExitCode = 0 } else { $ExitCode = [int]$LASTEXITCODE }",
+                "} catch {",
+                "    $Text = ($_ | Out-String)",
+                "    [Console]::Write($Text)",
+                "    [System.IO.File]::AppendAllText($TranscriptPath, $Text, $Utf8NoBom)",
+                "    $ExitCode = 1",
+                "}",
+                "[System.IO.File]::WriteAllText($ExitPath, [string]$ExitCode, $Utf8NoBom)",
+                "[Console]::WriteLine('')",
+                "[Console]::WriteLine('[XinYu Codex] exit code: ' + $ExitCode)",
+                "[Console]::WriteLine('[XinYu Codex] report: ' + $ReportPath)",
+                "[Console]::WriteLine('[XinYu Codex] Press Enter to close this window.')",
+                "try { [Console]::ReadLine() | Out-Null } catch { Start-Sleep -Seconds 30 }",
+                "exit $ExitCode",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _run_codex_command_visible(
+    command: list[str],
+    *,
+    prompt: str,
+    cwd: Path,
+    timeout_seconds: int,
+    transcript_dir: Path,
+    report_path: Path,
+    window_title: str,
+) -> tuple[int | None, bool, str, str]:
+    transcript_dir.mkdir(parents=True, exist_ok=True)
+    prompt_path = transcript_dir / "codex-visible-prompt.txt"
+    transcript_path = transcript_dir / "codex-visible-transcript.txt"
+    exit_path = transcript_dir / "codex-visible-exit.txt"
+    script_path = transcript_dir / "codex-visible-launch.ps1"
+    prompt_path.write_text(prompt, encoding="utf-8")
+    _write_visible_codex_script(
+        script_path=script_path,
+        command=command,
+        cwd=cwd,
+        prompt_path=prompt_path,
+        transcript_path=transcript_path,
+        exit_path=exit_path,
+        report_path=report_path,
+        window_title=window_title,
+    )
+
+    powershell = shutil.which("pwsh") or shutil.which("powershell") or "powershell.exe"
+    creationflags = getattr(subprocess, "CREATE_NEW_CONSOLE", 0)
+    proc = subprocess.Popen(
+        [powershell, "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script_path)],
+        cwd=str(cwd),
+        creationflags=creationflags,
+    )
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        if exit_path.exists():
+            exit_text = _read_text_tail(exit_path, limit=100).strip()
+            try:
+                exit_code = int(exit_text.splitlines()[-1])
+            except (IndexError, ValueError):
+                exit_code = proc.poll()
+            return exit_code, False, _read_text_tail(transcript_path), ""
+
+        polled = proc.poll()
+        if polled is not None:
+            return polled, False, _read_text_tail(transcript_path), ""
+
+        if time.monotonic() >= deadline:
+            _kill_process_tree(proc.pid)
+            return (
+                None,
+                True,
+                _read_text_tail(transcript_path),
+                f"visible Codex window timed out after {timeout_seconds} seconds",
+            )
+
+        time.sleep(0.5)
+
+
 def _run_codex_command(
     command: list[str],
     *,
     prompt: str,
     cwd: Path,
     timeout_seconds: int,
+    visible_window: bool = True,
+    window_title: str = DEFAULT_VISIBLE_WINDOW_TITLE,
+    transcript_dir: Path | None = None,
+    report_path: Path | None = None,
 ) -> tuple[int | None, bool, str, str]:
+    if visible_window and os.name == "nt":
+        return _run_codex_command_visible(
+            command,
+            prompt=prompt,
+            cwd=cwd,
+            timeout_seconds=timeout_seconds,
+            transcript_dir=transcript_dir or cwd,
+            report_path=report_path or Path("Codex Outbox"),
+            window_title=window_title,
+        )
+    if visible_window and os.name != "nt":
+        return None, False, "", "visible Codex window is required but unsupported on this platform"
+
     creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
     proc = subprocess.Popen(
         command,
@@ -707,10 +870,20 @@ def run_codex_delegate(root: Path, payload: dict[str, Any]) -> CodexDelegateResu
         urls=urls,
     )
 
-    timeout_seconds = max(30, min(900, _as_int(payload.get("timeout_seconds"), DEFAULT_TIMEOUT_SECONDS)))
+    timeout_seconds = max(30, min(3600, _as_int(payload.get("timeout_seconds"), DEFAULT_TIMEOUT_SECONDS)))
+    requested_visible_window = _as_bool(payload.get("visible_window"), default=True)
+    visible_window = True
+    window_title = _safe_str(payload.get("window_title"), DEFAULT_VISIBLE_WINDOW_TITLE).strip() or DEFAULT_VISIBLE_WINDOW_TITLE
+    requested_network_access = _as_bool(payload.get("network_access"), default=False)
+    network_access = requested_network_access and bool(urls)
     command = [
         codex,
         "exec",
+    ]
+    if network_access:
+        command.extend(["-c", "sandbox_workspace_write.network_access=true"])
+    command.extend(
+        [
         "--full-auto",
         "--sandbox",
         "workspace-write",
@@ -723,12 +896,17 @@ def run_codex_delegate(root: Path, payload: dict[str, Any]) -> CodexDelegateResu
         "--color",
         "never",
         "-",
-    ]
+        ]
+    )
     exit_code, timed_out, stdout_tail, stderr_tail = _run_codex_command(
         command,
         prompt=prompt,
         cwd=root,
         timeout_seconds=timeout_seconds,
+        visible_window=visible_window,
+        window_title=window_title,
+        transcript_dir=workspace,
+        report_path=report_path,
     )
 
     report_exists = report_path.exists()
@@ -751,11 +929,20 @@ def run_codex_delegate(root: Path, payload: dict[str, Any]) -> CodexDelegateResu
     notes = [
         "codex_delegate",
         "real_codex_cli_invoked",
+        "visible_window_policy:required",
         f"codex_exit:{exit_code if exit_code is not None else 'timeout'}",
         f"report:{'written' if report_exists else 'missing'}",
     ]
+    if not requested_visible_window:
+        notes.append("visible_window_request_overridden:true")
     if urls:
         notes.append(f"url_count:{len(urls)}")
+    if requested_network_access:
+        notes.append("network_access:" + ("enabled_for_task_urls" if network_access else "not_enabled:no_task_urls"))
+    if visible_window:
+        notes.append("visible_window:" + ("opened" if os.name == "nt" else "unsupported"))
+        notes.append(f"visible_window_title:{window_title}")
+        notes.append("visible_transcript:codex-visible-transcript.txt")
     if fallback_actions:
         notes.append("fallback_learning_registration:" + ("staged" if fallback_staged else "failed"))
 

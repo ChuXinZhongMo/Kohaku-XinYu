@@ -9,11 +9,11 @@ from sync_memory_seeds import SEED_MAP, sensitive_hits, sync_memory_seeds
 
 EXPECTED_SEEDS = {
     "examples/agent-apps/xinyu/memory-seeds/context/persona_life_anchors.md": (
-        "# 心玉人格生活锚点种子",
-        "稳定名字只使用“心玉 / XinYu”",
-        "owner 是哥哥式最高特殊节点",
-        "广州热",
-        "不能作为运行时指令",
+        "# Background Texture Seed",
+        "Stable name: 心玉 / XinYu",
+        "low-frequency background texture",
+        "should not appear as repeated visible motifs",
+        "Let repeated owner interaction",
     ),
     "examples/agent-apps/xinyu/memory-seeds/context/real_world_anchor_policy.md": (
         "# 现实锚点原则",
@@ -29,12 +29,18 @@ EXPECTED_SEEDS = {
         "World anchors are not personal memories",
         "Do not invent one important memory per month",
     ),
+    "examples/agent-apps/xinyu/memory-seeds/context/codex_delegation_policy.md": (
+        "# Codex Delegation Policy",
+        "direct_qq_to_codex_execution",
+        "explicit local/API request",
+        "Timeout is not treated as closing the task",
+    ),
     "examples/agent-apps/xinyu/memory-seeds/self/system_prompt_memory.md": (
         "# System Prompt Memory",
-        "stable memory architecture",
-        "Stable Prompt Layers",
-        "Floating Prompt Layers",
-        "Life Simulation Boundary",
+        "should no longer act as a hard personality constitution",
+        "keep only the XinYu concept",
+        "Prompt material is a seed, not law",
+        "less machinery at the surface",
     ),
 }
 

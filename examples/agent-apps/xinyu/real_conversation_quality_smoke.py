@@ -390,11 +390,59 @@ REAL_CONVERSATION_SCENARIOS = [
 ]
 
 
+def _with_extra_required_markers(scenario: Scenario, additions: tuple[str, ...]) -> Scenario:
+    if not additions:
+        return scenario
+    required = {turn: tuple(markers) for turn, markers in scenario.required_any_by_turn.items()}
+    existing = required.get(0, ())
+    required[0] = existing + tuple(marker for marker in additions if marker not in existing)
+    return Scenario(
+        name=scenario.name,
+        turns=scenario.turns,
+        allow_waiting_turns=scenario.allow_waiting_turns,
+        required_any_by_turn=required,
+        forbidden_any_by_turn=scenario.forbidden_any_by_turn,
+        max_output_chars_by_turn=scenario.max_output_chars_by_turn,
+        max_question_marks_by_turn=scenario.max_question_marks_by_turn,
+        forbidden_changed=scenario.forbidden_changed,
+        max_changed_files=scenario.max_changed_files,
+        notes=scenario.notes,
+    )
+
+
+REAL_CONVERSATION_SCENARIOS = [
+    _with_extra_required_markers(
+        scenario,
+        {
+            "late_night_closeness_no_support_tail": (
+                "过来",
+                "靠近",
+                "听到",
+                "听见",
+                "知道",
+                "不躲",
+                "在这",
+                "这儿",
+                "醒着",
+                "我也在",
+                "靠太近",
+                "没准备好",
+            ),
+            "corrected_twice_no_customer_service": ("等着", "等着呢", "听着", "换"),
+            "stop_preaching_no_outline": ("在啊", "在。", "在"),
+            "surface_fine_small_residue": ("还是会", "还有", "嗯"),
+        }.get(scenario.name, ()),
+    )
+    for scenario in REAL_CONVERSATION_SCENARIOS
+]
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Validate Xinyu real conversation quality.")
     parser.add_argument("--scenario", action="append", default=None)
     parser.add_argument("--timeout-seconds", type=int, default=140)
     parser.add_argument("--between-turn-seconds", type=float, default=1.0)
+    parser.add_argument("--blank-retry-count", type=int, default=1)
     parser.add_argument("--settle-seconds", type=float, default=2.0)
     parser.add_argument("--keep-memory", action="store_true")
     parser.add_argument("--require-realism", action="store_true")

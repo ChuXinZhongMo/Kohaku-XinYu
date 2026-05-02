@@ -131,4 +131,5 @@ try {
     Write-Host "XinYu core bridge process started but health check failed. PID: $($process.Id)"
     Write-Host "Check logs: $stdoutLog"
     Write-Host "Errors: $stderrLog"
+    throw "XinYu core bridge failed health check after startup."
 }

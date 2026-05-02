@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import tempfile
 from pathlib import Path
 
 from xinyu_core_bridge import XinYuBridgeRuntime
+from xinyu_dialogue_working_memory import load_dialogue_tail
 from xinyu_proactive_presence import (
     acknowledge_proactive_qq_message,
     claim_proactive_qq_message,
@@ -41,9 +43,204 @@ def _write_candidate_initiative(target: Path) -> None:
     )
 
 
+def _write_request_preview(
+    target: Path,
+    question: str = "Should I continue the current plan?",
+    *,
+    request_id: str = "proreq-preview-smoke",
+    kind: str = "clarify",
+    requested_action: str = "owner_answer",
+    status: str = "candidate_only",
+    delivery_level: str = "state_only",
+) -> None:
+    target.mkdir(parents=True, exist_ok=True)
+    (target / "proactive_request_state.md").write_text(
+        "\n".join(
+            [
+                "---",
+                "title: Proactive Request State",
+                "memory_type: proactive_request_state",
+                "source: xinyu_proactive_request_loop",
+                "status: active",
+                "---",
+                "",
+                "# Proactive Request State",
+                "",
+                "## Current Request",
+                f"- request_id: {request_id}",
+                "- created_at: 2026-05-01T11:00:00+08:00",
+                f"- status: {status}",
+                f"- kind: {kind}",
+                "- source: self_thought",
+                "- request_family: self_thought:active_question",
+                "- evidence_label: active question marked proactive_ok",
+                "- evidence_hash: sha256:abcdef1234567890",
+                f"- concrete_question: {question}",
+                f"- requested_action: {requested_action}",
+                "- why_now: active question marked proactive_ok",
+                "- after_owner_replies: continue the current thread",
+                "- dedupe_key: proreq:self_thought:active_question:sha256:abcdef1234567890",
+                "",
+                "## Gates",
+                "- has_concrete_question: true",
+                "- has_requested_action: true",
+                "- source_allowed: true",
+                "",
+                "## Delivery",
+                f"- delivery_level: {delivery_level}",
+                "",
+                "## Boundaries",
+                "- no_qq_enqueue: true",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
 def main() -> int:
     root = Path(__file__).resolve().parent
     failures: list[str] = []
+    with tempfile.TemporaryDirectory(prefix="xinyu-proactive-request-preview-") as tmp:
+        temp_root = Path(tmp)
+        target = temp_root / "memory/context"
+        target.mkdir(parents=True, exist_ok=True)
+        (target / "initiative_state.md").write_text(
+            "- decision: defer\n- cooldown_active: no\n",
+            encoding="utf-8",
+        )
+        _write_request_preview(target)
+        preview = run_proactive_presence(
+            temp_root,
+            evaluated_at="2026-05-01T11:10:00+08:00",
+            mode="smoke_proactive_request_preview",
+        )
+        if preview["proactive_decision"] != "request_preview_only":
+            failures.append(f"proactive request should become preview only: {preview}")
+        if preview["qq_send_permission"] != "preview_only_no_qq_claim":
+            failures.append(f"request preview should not allow QQ claim: {preview}")
+        if preview["candidate_message"] != "Should I continue the current plan?":
+            failures.append(f"request preview candidate mismatch: {preview}")
+        claim_attempt = claim_proactive_qq_message(
+            temp_root,
+            evaluated_at="2026-05-01T11:11:00+08:00",
+            mode="smoke_proactive_request_preview_claim",
+            claim=True,
+            claim_id="request-preview-claim",
+            min_interval_seconds=3600,
+        )
+        if claim_attempt["reply"] or claim_attempt["candidate_claimed"]:
+            failures.append(f"request preview should not be claimable: {claim_attempt}")
+        if claim_attempt.get("preview_reply") != "Should I continue the current plan?":
+            failures.append(f"request preview should return preview_reply: {claim_attempt}")
+        if (target / "proactive_qq_dispatch_state.md").exists():
+            failures.append("request preview claim wrote proactive QQ dispatch state")
+        state = (target / "proactive_presence_state.md").read_text(encoding="utf-8")
+        for marker in (
+            "proactive_decision: request_preview_only",
+            "candidate_shape: proactive_request_preview",
+            "proactive_request_status: candidate_only",
+            "proactive_request_delivery_level: state_only",
+        ):
+            if marker not in state:
+                failures.append(f"request preview state missing marker: {marker}")
+
+    with tempfile.TemporaryDirectory(prefix="xinyu-proactive-request-dream-preview-") as tmp:
+        temp_root = Path(tmp)
+        target = temp_root / "memory/context"
+        target.mkdir(parents=True, exist_ok=True)
+        (target / "initiative_state.md").write_text(
+            "- decision: defer\n- cooldown_active: no\n",
+            encoding="utf-8",
+        )
+        dream_message = "I had a dream about a classroom. It is only a dream, not a new real event."
+        _write_request_preview(
+            target,
+            dream_message,
+            kind="dream_share",
+            requested_action="owner_response_optional",
+        )
+        preview = run_proactive_presence(
+            temp_root,
+            evaluated_at="2026-05-01T11:20:00+08:00",
+            mode="smoke_proactive_request_dream_preview",
+        )
+        if preview["candidate_message"] != dream_message:
+            failures.append(f"dream share preview should remain a statement: {preview}")
+        if preview["proactive_decision"] != "request_preview_only":
+            failures.append(f"dream share request should become preview only: {preview}")
+
+    with tempfile.TemporaryDirectory(prefix="xinyu-proactive-request-ready-claim-") as tmp:
+        temp_root = Path(tmp)
+        target = temp_root / "memory/context"
+        target.mkdir(parents=True, exist_ok=True)
+        (target / "initiative_state.md").write_text(
+            "- decision: defer\n- cooldown_active: no\n",
+            encoding="utf-8",
+        )
+        (target / "capability_zones_state.md").write_text(
+            "- proactive_qq_send: enabled_gated_one_short_message\n",
+            encoding="utf-8",
+        )
+        ready_message = "Should I continue the current plan?"
+        _write_request_preview(
+            target,
+            ready_message,
+            status="ready",
+            delivery_level="queue_owner_private",
+        )
+        ready = run_proactive_presence(
+            temp_root,
+            evaluated_at="2026-05-01T11:30:00+08:00",
+            mode="smoke_proactive_request_ready",
+        )
+        if ready["proactive_decision"] != "candidate_ready_owner_enabled":
+            failures.append(f"ready proactive request should become claimable: {ready}")
+        claim = claim_proactive_qq_message(
+            temp_root,
+            evaluated_at="2026-05-01T11:31:00+08:00",
+            mode="smoke_proactive_request_ready_claim",
+            claim=True,
+            claim_id="request-ready-claim",
+            min_interval_seconds=0,
+        )
+        if not claim["candidate_claimed"] or claim["reply"] != ready_message:
+            failures.append(f"ready proactive request should be claimable: {claim}")
+        if not (target / "proactive_qq_dispatch_state.md").exists():
+            failures.append("ready proactive request did not write dispatch claim state")
+        dispatch_after_claim = (target / "proactive_qq_dispatch_state.md").read_text(encoding="utf-8")
+        if "proactive_request_id: proreq-preview-smoke" not in dispatch_after_claim:
+            failures.append("proactive dispatch state did not remember request id")
+        request_after_claim = (target / "proactive_request_state.md").read_text(encoding="utf-8")
+        if "status: claimed" not in request_after_claim or "last_ack_status: pending" not in request_after_claim:
+            failures.append("ready proactive request was not marked claimed/pending after claim")
+        ack_ready = acknowledge_proactive_qq_message(
+            temp_root,
+            acked_at="2026-05-01T11:32:00+08:00",
+            claim_id="request-ready-claim",
+            ack_status="sent",
+            adapter_message_id="qq-request-ready-1",
+        )
+        if not ack_ready["ack_recorded"] or ack_ready["ack_status"] != "sent":
+            failures.append(f"ready proactive request ack should be recorded: {ack_ready}")
+        _write_request_preview(
+            target,
+            ready_message,
+            request_id="proreq-preview-smoke-next",
+            status="ready",
+            delivery_level="queue_owner_private",
+        )
+        next_claim = claim_proactive_qq_message(
+            temp_root,
+            evaluated_at="2026-05-01T11:33:00+08:00",
+            mode="smoke_proactive_request_next_same_text",
+            claim=True,
+            claim_id="request-ready-next-claim",
+            min_interval_seconds=0,
+        )
+        if not next_claim["candidate_claimed"] or next_claim["reply"] != ready_message:
+            failures.append(f"same message from a new request id should be claimable after cooldown is open: {next_claim}")
+
     with tempfile.TemporaryDirectory(prefix="xinyu-proactive-") as tmp:
         temp_root = Path(tmp)
         target = temp_root / "memory/context"
@@ -61,6 +258,7 @@ def main() -> int:
             "Proactive Presence State",
             "candidate_message:",
             "Actual QQ sending requires owner-approved proactive mode",
+            "bounded owner-private thread",
             "cannot spam owner",
         ):
             if marker not in state:
@@ -427,6 +625,133 @@ def main() -> int:
             failures.append(f"bridge proactive ack should record sent status: {bridge_ack}")
         if bridge_ack["session_created"] or bridge_ack["sessions"] != 0:
             failures.append("bridge proactive ack should not create agent sessions")
+
+    with tempfile.TemporaryDirectory(prefix="xinyu-proactive-outbox-bridge-") as tmp:
+        temp_root = Path(tmp)
+        target = temp_root / "memory/context"
+        target.mkdir(parents=True, exist_ok=True)
+        (target / "initiative_state.md").write_text(
+            "- decision: defer\n- cooldown_active: no\n",
+            encoding="utf-8",
+        )
+        (target / "capability_zones_state.md").write_text(
+            "- proactive_qq_send: enabled_gated_one_short_message\n",
+            encoding="utf-8",
+        )
+        _write_request_preview(
+            target,
+            "I had a dream about a classroom. It is only a dream, not a new real event.",
+            kind="dream_share",
+            requested_action="owner_response_optional",
+            status="ready",
+            delivery_level="queue_owner_private",
+        )
+        previous_owner_ids = os.environ.get("XINYU_OWNER_USER_IDS")
+        os.environ["XINYU_OWNER_USER_IDS"] = "42"
+        try:
+            runtime = XinYuBridgeRuntime(
+                xinyu_dir=temp_root,
+                turn_timeout_seconds=1,
+                max_text_chars=100,
+                settle_seconds=0,
+                outward_renderer=False,
+                render_timeout_seconds=1,
+                session_idle_ttl_seconds=10,
+                max_sessions=0,
+                proactive_min_interval_seconds=0,
+            )
+            outbox_claim = asyncio.run(
+                runtime.qq_outbox_claim({"claim_id": "bridge-outbox-proactive-claim", "min_interval_seconds": 0})
+            )
+            if not outbox_claim.get("message_claimed") or outbox_claim.get("source") != "proactive_request":
+                failures.append(f"qq outbox claim should surface ready proactive request: {outbox_claim}")
+            if outbox_claim.get("target", {}).get("user_id") != "42":
+                failures.append(f"proactive outbox claim should target owner private QQ: {outbox_claim}")
+            outbox_ack = asyncio.run(
+                runtime.qq_outbox_ack(
+                    {
+                        "message_id": outbox_claim.get("message_id"),
+                        "claim_id": outbox_claim.get("claim_id"),
+                        "ack_status": "sent",
+                        "adapter_message_id": "qq-proactive-msg-1",
+                    }
+                )
+            )
+            if not outbox_ack.get("ack_recorded") or outbox_ack.get("ack_status") != "sent":
+                failures.append(f"proactive outbox ack should route to proactive ack: {outbox_ack}")
+            request_after_ack = (target / "proactive_request_state.md").read_text(encoding="utf-8")
+            if "status: sent" not in request_after_ack or "last_ack_status: sent" not in request_after_ack:
+                failures.append("proactive request delivery state was not marked sent after ack")
+            tail = load_dialogue_tail(temp_root, "qq:private:42", max_entries=4)
+            if not any(
+                item.get("role") == "assistant"
+                and "I had a dream about a classroom" in item.get("content", "")
+                for item in tail
+            ):
+                failures.append(f"sent proactive request should be written to dialogue tail: {tail}")
+            after_sent = asyncio.run(
+                runtime.qq_outbox_claim({"claim_id": "bridge-outbox-proactive-after-sent", "min_interval_seconds": 0})
+            )
+            if after_sent.get("message_claimed"):
+                failures.append(f"sent proactive request should not be reclaimed by outbox: {after_sent}")
+        finally:
+            if previous_owner_ids is None:
+                os.environ.pop("XINYU_OWNER_USER_IDS", None)
+            else:
+                os.environ["XINYU_OWNER_USER_IDS"] = previous_owner_ids
+
+    with tempfile.TemporaryDirectory(prefix="xinyu-proactive-outbox-fast-") as tmp:
+        temp_root = Path(tmp)
+        target = temp_root / "memory/context"
+        target.mkdir(parents=True, exist_ok=True)
+        (target / "initiative_state.md").write_text("- decision: defer\n- cooldown_active: no\n", encoding="utf-8")
+        (target / "capability_zones_state.md").write_text(
+            "- proactive_qq_send: enabled_gated_one_short_message\n",
+            encoding="utf-8",
+        )
+        _write_request_preview(
+            target,
+            "I had a dream about a hallway. It is only a dream, not a new real event.",
+            kind="dream_share",
+            requested_action="owner_response_optional",
+            status="ready",
+            delivery_level="queue_owner_private",
+        )
+        previous_owner_ids = os.environ.get("XINYU_OWNER_USER_IDS")
+        os.environ["XINYU_OWNER_USER_IDS"] = "42"
+        try:
+            runtime = XinYuBridgeRuntime(
+                xinyu_dir=temp_root,
+                turn_timeout_seconds=1,
+                max_text_chars=100,
+                settle_seconds=0,
+                outward_renderer=False,
+                render_timeout_seconds=1,
+                session_idle_ttl_seconds=10,
+                max_sessions=0,
+                proactive_min_interval_seconds=0,
+            )
+            fast_claim = runtime.qq_outbox_claim_fast({"claim_id": "bridge-outbox-fast-claim", "min_interval_seconds": 0})
+            if not fast_claim.get("message_claimed") or fast_claim.get("source") != "proactive_request":
+                failures.append(f"fast qq outbox claim should surface proactive request: {fast_claim}")
+            fast_ack = runtime.qq_outbox_ack_fast(
+                {
+                    "message_id": fast_claim.get("message_id"),
+                    "claim_id": fast_claim.get("claim_id"),
+                    "ack_status": "sent",
+                    "adapter_message_id": "qq-fast-proactive-msg-1",
+                }
+            )
+            if not fast_ack.get("ack_recorded") or fast_ack.get("ack_status") != "sent":
+                failures.append(f"fast proactive outbox ack should record sent status: {fast_ack}")
+            tail = load_dialogue_tail(temp_root, "qq:private:42", max_entries=4)
+            if not any("I had a dream about a hallway" in item.get("content", "") for item in tail):
+                failures.append(f"fast proactive ack should write dialogue tail: {tail}")
+        finally:
+            if previous_owner_ids is None:
+                os.environ.pop("XINYU_OWNER_USER_IDS", None)
+            else:
+                os.environ["XINYU_OWNER_USER_IDS"] = previous_owner_ids
     if failures:
         print("Proactive presence smoke failed")
         for failure in failures:

@@ -113,6 +113,9 @@ This file is the current one-page engineering state summary for Xinyu.
 - real-life input adapter policy exists as a no-device/no-network event classifier for IM, image, voice transcript, group chat, private chat, and protected location anchors
 - learning-quality repeated-host warnings can now reopen a bounded source-diversity follow-up path that creates supplemental source requests without reopening broad exploration
 - repeated learning session smoke validates that later batches can trigger quality warnings after earlier stable learning
+- public watched-source checking can now read `https://linux.do/latest` through a read-only latest-topic watcher without posting, QQ dispatch, or stable-memory writes
+- memory self-review now grades pending memory candidates into short-term approved, observe-more, owner-review, or blocked statuses before any stable memory promotion
+- owner-private QQ self-code requests can now create a one-time direct Codex modification ticket without a prior application, while group/non-owner and silent self-edits remain blocked
 - planner-to-provider-to-gate-to-fetch-to-compare-to-learner chain is smoke-validated with restore and protected-memory checks
 - active-question to exploration/source-gate routing is smoke-validated with self, owner, relationship, and emotion layers protected
 - source reliability and source integration gates are included in inner-cycle summary and have isolated protected-memory validation
@@ -193,7 +196,7 @@ This file is the current one-page engineering state summary for Xinyu.
 - dream-weight-aware consolidation has an isolated smoke path that verifies archive flattening is delayed while residue is active
 - long-term memory and personality growth gates have isolated smoke paths with protected-layer checks
 - deterministic memory sync now treats simple no-pursuit/rest boundaries and explicit trivial no-memory turns as low/no-write cases
-- self/personality_profile.md now anchors current sister/daughter-like family shape, emotion granularity, choice, hidden-interior boundaries, low-saturation expression, hidden residue, owner-private bias, refusal of forced cheer, return-after-absence residue, repeated-hurt return limits, approach-after-hurt residue, own-voice continuity, active behavior choices, and multi-turn consistency
+- self/personality_profile.md now anchors a minimal identity/personality/relation seed; detailed closeness, voice, initiative, and repair style are expected to grow through memory, reflection, dreams, and runtime trials instead of being performed from a fixed setting sheet
 - emotion taxonomy, current emotional state, and relationship vector model now include granular mixed-emotion dimensions, including anger-vs-disappointment distinction, non-possessive fear of replacement, and return that does not erase residue
 - emotion taxonomy and personality profile now define behavior-based extreme aversion / blacklist-resource posture for sustained malicious abuse, manipulation, harassment, or token/compute wasting
 - `memory/knowledge/ai_domain.md` now anchors AI as Xinyu's only stable professional knowledge domain and as the self-understanding path for future iteration

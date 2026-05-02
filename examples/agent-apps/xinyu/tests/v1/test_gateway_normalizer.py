@@ -42,3 +42,19 @@ def test_metadata_owner_flag_normalizes_owner_scope() -> None:
     assert turn.actor.source_channel is SourceChannel.OWNER_PRIVATE
     assert turn.actor.actor_scope is ActorScope.OWNER
     assert turn.actor.privacy_scope is PrivacyScope.OWNER_PRIVATE
+
+
+def test_missing_session_id_gets_stable_private_fallback() -> None:
+    normalizer = TurnNormalizer(clock=FixedClock(datetime(2026, 1, 1, tzinfo=UTC)))
+    turn = normalizer.normalize({"text": "hello", "user_id": "42", "message_type": "private"})
+
+    assert turn.actor.session_id == "qq:private:42"
+    assert turn.trace.session_hash
+
+
+def test_missing_session_id_gets_stable_group_fallback() -> None:
+    normalizer = TurnNormalizer(clock=FixedClock(datetime(2026, 1, 1, tzinfo=UTC)))
+    turn = normalizer.normalize({"text": "hello", "user_id": "42", "group_id": "g1", "message_type": "group"})
+
+    assert turn.actor.session_id == "qq:group:g1"
+    assert turn.trace.session_hash

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from typing import Any
 
@@ -27,8 +28,17 @@ class TimeContextPlugin(BasePlugin):
     async def on_load(self, context: PluginContext) -> None:
         self._ctx = context
 
+    def _now(self) -> datetime:
+        fixed_now = os.environ.get("XINYU_TIME_CONTEXT_FIXED_NOW", "").strip()
+        if fixed_now:
+            try:
+                return datetime.fromisoformat(fixed_now.replace("Z", "+00:00")).astimezone()
+            except ValueError:
+                pass
+        return datetime.now().astimezone()
+
     async def pre_llm_call(self, messages: list[dict], **kwargs) -> list[dict] | None:
-        now = datetime.now().astimezone()
+        now = self._now()
         parts = [
             f"Current real time: {now.isoformat()}",
             f"Current date: {now.date().isoformat()}",

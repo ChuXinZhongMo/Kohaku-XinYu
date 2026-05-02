@@ -15,6 +15,10 @@ from memory_mutation_smoke import (
 
 TRACKED_FILES = [
     "memory/self/personality_change_state.md",
+    "memory/self/personality_self_review_state.md",
+    "memory/self/personality_evolution_state.md",
+    "memory/self/persona_experiment_state.md",
+    "memory/self/deprecated_reactions.md",
     "memory/self/personality_profile.md",
     "memory/self/narrative.md",
     "memory/reflection/growth_log.md",
@@ -236,6 +240,8 @@ def main() -> int:
         protected_changed = sorted(PROTECTED_UNTOUCHED_FILES.intersection(changed))
 
         state_text = (root / "memory/self/personality_change_state.md").read_text(encoding="utf-8-sig")
+        self_review_text = (root / "memory/self/personality_self_review_state.md").read_text(encoding="utf-8-sig")
+        evolution_text = (root / "memory/self/personality_evolution_state.md").read_text(encoding="utf-8-sig")
         failures: list[str] = []
         for marker in [
             "gate_decision: profile_review_ready",
@@ -245,8 +251,33 @@ def main() -> int:
         ]:
             if marker not in state_text:
                 failures.append(f"state missing marker: {marker}")
+        for marker in [
+            "evolution_stage: active_trial",
+            "trial_permission: runtime_trial_only",
+            "active_trial_habit:",
+            "deprecated_reaction:",
+            "stable_profile_write_permission: review_only_not_auto_apply",
+        ]:
+            if marker not in evolution_text:
+                failures.append(f"evolution state missing marker: {marker}")
+        for marker in [
+            "memory_type: personality_self_review_state",
+            "decision: continue_trial",
+            "action: keep_runtime_trial_only",
+            "autonomy_level: self_can_continue_trial",
+        ]:
+            if marker not in self_review_text:
+                failures.append(f"self-review state missing marker: {marker}")
         if result["gate_decision"] != "profile_review_ready":
             failures.append(f"unexpected gate_decision: {result['gate_decision']}")
+        if result["evolution_stage"] != "active_trial":
+            failures.append(f"unexpected evolution_stage: {result['evolution_stage']}")
+        if result["trial_permission"] != "runtime_trial_only":
+            failures.append(f"unexpected trial_permission: {result['trial_permission']}")
+        if result.get("self_review_decision") != "continue_trial":
+            failures.append(f"unexpected self_review_decision: {result.get('self_review_decision')}")
+        if result.get("self_review_autonomy_level") != "self_can_continue_trial":
+            failures.append(f"unexpected self_review_autonomy_level: {result.get('self_review_autonomy_level')}")
         if protected_changed:
             failures.append("protected files changed: " + ", ".join(protected_changed))
 
@@ -255,6 +286,11 @@ def main() -> int:
         print("change_pressure:", result["change_pressure"])
         print("change_pace:", result["change_pace"])
         print("profile_write_permission:", result["profile_write_permission"])
+        print("evolution_stage:", result["evolution_stage"])
+        print("trial_permission:", result["trial_permission"])
+        print("self_review_decision:", result.get("self_review_decision", "unknown"))
+        print("self_review_action:", result.get("self_review_action", "unknown"))
+        print("self_review_autonomy_level:", result.get("self_review_autonomy_level", "unknown"))
         print("protected_changed:", ", ".join(protected_changed) or "none")
         print("=== MUTATION SUMMARY ===")
         print(f"tracked_files: {len(TRACKED_FILES)}")

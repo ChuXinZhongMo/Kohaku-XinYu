@@ -27,7 +27,6 @@ CRITICAL_FILES = (
     "memory/emotions/current_state.md",
     "memory/relationships/index.md",
     "memory/people/owner.md",
-    "plan.md",
     "STATE-OF-XINYU.md",
     "IMPLEMENTATION-NEXT.md",
     "RUNTIME-VALIDATION-NOTES.md",
@@ -35,6 +34,19 @@ CRITICAL_FILES = (
     "xinyu_turn_classifier.py",
     "xinyu_proactive_presence.py",
     "xinyu_voice_promotion_gate.py",
+)
+
+SCAN_EXTENSIONS = {".py", ".md", ".yaml", ".yml", ".json", ".jsonl", ".toml", ".txt"}
+SCAN_EXCLUDED_PARTS = {
+    ".git",
+    ".venv",
+    "__pycache__",
+    ".pytest_cache",
+    "node_modules",
+    "runtime",
+}
+SCAN_EXCLUDED_PREFIXES = (
+    ("learning", "owner_supplied"),
 )
 
 COMMON_CHARS = (
@@ -121,13 +133,32 @@ def _direct_variant_hits(text: str) -> list[str]:
     return hits
 
 
-def main() -> int:
-    failures: list[str] = []
+def _iter_guard_files() -> list[Path]:
+    files: dict[str, Path] = {}
     for rel in CRITICAL_FILES:
         path = ROOT / rel
+        files[str(path)] = path
+    for path in ROOT.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in SCAN_EXTENSIONS:
+            continue
+        rel_parts = path.relative_to(ROOT).parts
+        if any(part in SCAN_EXCLUDED_PARTS for part in rel_parts):
+            continue
+        if any(rel_parts[: len(prefix)] == prefix for prefix in SCAN_EXCLUDED_PREFIXES):
+            continue
+        files[str(path)] = path
+    return sorted(files.values(), key=lambda item: str(item.relative_to(ROOT)))
+
+
+def main() -> int:
+    failures: list[str] = []
+    checked = 0
+    for path in _iter_guard_files():
+        rel = str(path.relative_to(ROOT))
         if not path.exists():
             failures.append(f"{rel}: missing")
             continue
+        checked += 1
         text = path.read_text(encoding="utf-8")
         if "\ufffd" in text:
             failures.append(f"{rel}: contains replacement character U+FFFD")
@@ -146,7 +177,7 @@ def main() -> int:
         for failure in failures:
             print(f"- {failure}")
         return 1
-    print(f"mojibake_guard_smoke ok: {len(CRITICAL_FILES)} critical files readable")
+    print(f"mojibake_guard_smoke ok: {checked} project text files readable")
     return 0
 
 

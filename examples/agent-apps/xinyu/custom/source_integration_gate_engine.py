@@ -167,7 +167,10 @@ def count_pending_ai_followthrough_materials(source_materials: str, general: str
 
 def claim_looks_garbled(claim: str) -> bool:
     sample = claim.strip()[:2000]
-    mojibake_markers = sum(sample.count(marker) for marker in ("锟斤拷", "锟斤", "斤拷", "��", "���"))
+    mojibake_markers = sum(
+        sample.count(marker)
+        for marker in ("\u951f\u65a4\u62f7", "\u951f\u65a4", "\u65a4\u62f7", "\ufffd\ufffd", "\ufffd\ufffd\ufffd")
+    )
     chars = [char for char in sample if not char.isspace()]
     if len(chars) < 24:
         return False

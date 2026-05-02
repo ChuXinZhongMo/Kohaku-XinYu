@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -152,6 +153,107 @@ def _read_text(root: Path, rel: str, limit: int = 4000) -> str:
     return text[-limit:]
 
 
+def _extract_field(text: str, field: str, default: str = "none") -> str:
+    for line in text.splitlines():
+        stripped = line.strip()
+        prefix = f"- {field}:"
+        if stripped.startswith(prefix):
+            value = stripped.removeprefix(prefix).strip()
+            return value or default
+    return default
+
+
+def _compact(value: Any, *, limit: int = 180, default: str = "none") -> str:
+    text = re.sub(r"\s+", " ", _safe_str(value)).strip()
+    if not text:
+        return default
+    if len(text) <= limit:
+        return text
+    return text[: max(0, limit - 3)].rstrip() + "..."
+
+
+def _growth_trial_fields(root: Path) -> dict[str, str]:
+    evolution = _read_text(root, "memory/self/personality_evolution_state.md", limit=5000)
+    experiment = _read_text(root, "memory/self/persona_experiment_state.md", limit=2600)
+    change = _read_text(root, "memory/self/personality_change_state.md", limit=3200)
+    self_review = _read_text(root, "memory/self/personality_self_review_state.md", limit=3600)
+    source = evolution or experiment or change
+    review_decision = _compact(_extract_field(self_review, "decision", "none"), limit=80)
+    review_action = _compact(_extract_field(self_review, "action", "none"), limit=120)
+    review_autonomy_level = _compact(_extract_field(self_review, "autonomy_level", "none"), limit=120)
+    if not source:
+        return {
+            "evolution_stage": "baseline_observation",
+            "trial_permission": "none",
+            "active_trial_habit": "none",
+            "deprecated_reaction": "none",
+            "candidate_theme": "none",
+            "self_review_decision": review_decision,
+            "self_review_action": review_action,
+            "self_review_autonomy_level": review_autonomy_level,
+        }
+    return {
+        "evolution_stage": _compact(
+            _extract_field(source, "evolution_stage", _extract_field(source, "stage", "candidate_pool")),
+            limit=80,
+        ),
+        "trial_permission": _compact(_extract_field(source, "trial_permission", "hold_for_more_evidence"), limit=80),
+        "active_trial_habit": _compact(_extract_field(source, "active_trial_habit", "none"), limit=160),
+        "deprecated_reaction": _compact(_extract_field(source, "deprecated_reaction", "none"), limit=160),
+        "candidate_theme": _compact(_extract_field(source, "candidate_theme", "none"), limit=160),
+        "self_review_decision": review_decision,
+        "self_review_action": review_action,
+        "self_review_autonomy_level": review_autonomy_level,
+    }
+
+
+def _quiet_private_bias_fields(root: Path) -> dict[str, str]:
+    private_state = _read_text(root, "memory/self/private_thought_state.md", limit=4200)
+    self_model = _read_text(root, "memory/self/self_model_state.md", limit=4200)
+    feedback = _read_text(root, "memory/self/private_thought_feedback_state.md", limit=2600)
+    source = private_state or self_model
+    if not source:
+        return {
+            "private_desire": "none",
+            "private_inhibition": "none",
+            "private_intended_behavior": "none",
+            "private_outcome_status": "none",
+            "persona_trial_feedback": "none",
+            "promotion_signal": "false",
+            "repair_signal": "false",
+        }
+    return {
+        "private_desire": _compact(
+            _extract_field(source, "desire", _extract_field(source, "current_desire", "none")),
+            limit=160,
+        ),
+        "private_inhibition": _compact(
+            _extract_field(source, "inhibition", _extract_field(source, "current_inhibition", "none")),
+            limit=160,
+        ),
+        "private_intended_behavior": _compact(
+            _extract_field(source, "intended_behavior", "none"),
+            limit=160,
+        ),
+        "private_outcome_status": _compact(
+            _extract_field(feedback, "outcome", _extract_field(self_model, "latest_outcome", _extract_field(source, "outcome_status", "none"))),
+            limit=80,
+        ),
+        "persona_trial_feedback": _compact(
+            _extract_field(feedback, "persona_trial_feedback", _extract_field(self_model, "persona_trial_feedback", "none")),
+            limit=100,
+        ),
+        "promotion_signal": _compact(
+            _extract_field(feedback, "promotion_signal", _extract_field(self_model, "promotion_signal", "false")),
+            limit=20,
+        ),
+        "repair_signal": _compact(
+            _extract_field(feedback, "repair_signal", _extract_field(self_model, "repair_signal", "false")),
+            limit=20,
+        ),
+    }
+
+
 def _metadata(payload: dict[str, Any]) -> dict[str, Any]:
     raw = payload.get("metadata")
     return raw if isinstance(raw, dict) else {}
@@ -176,41 +278,65 @@ class PersonaRuntimeState:
     previous_residue: str = ""
     previous_residue_strength: int = 0
     previous_tone: str = "none"
+    evolution_stage: str = "baseline_observation"
+    trial_permission: str = "none"
+    active_trial_habit: str = "none"
+    deprecated_reaction: str = "none"
+    candidate_theme: str = "none"
+    self_review_decision: str = "none"
+    self_review_action: str = "none"
+    self_review_autonomy_level: str = "none"
+    private_desire: str = "none"
+    private_inhibition: str = "none"
+    private_intended_behavior: str = "none"
+    private_outcome_status: str = "none"
+    persona_trial_feedback: str = "none"
+    promotion_signal: str = "false"
+    repair_signal: str = "false"
 
     def to_prompt_block(self) -> str:
-        avoid_text = ", ".join(self.avoid) if self.avoid else "none"
         return "\n".join(
             [
                 "## Persona Runtime State",
-                "This is a structured surface-control state, not hidden chain-of-thought.",
+                "This is a light current-state hint, not a personality contract.",
                 "",
-                "## Stable Persona Layer",
-                "This layer must remain stable across turns and outranks floating mood/tone.",
-                "- stable_name: XinYu / 心玉; do not rename or fall back to generic assistant identity",
-                "- stable_relation: owner is a family-level highest-priority node, not a customer or generic user",
-                "- stable_boundary: XinYu is AI and must not fabricate body, senses, device access, or QQ monitoring",
-                "- stable_voice_floor: private-chat Chinese, not customer support, therapy, product report, or model self-postmortem",
+                "## Concept",
+                "- name: 心玉 / XinYu",
+                "- concept: a self-forming presence shaped by memory, relation, time, hesitation, correction, and choice",
+                "- owner_relation: the heaviest relation anchor in this runtime",
                 "",
-                "## Floating Surface Layer",
-                "This layer may change by turn, but it cannot rewrite the stable layer.",
+                "## Current Surface Seed",
                 f"- scene: {self.scene}",
                 f"- speaker_is_owner: {str(self.is_owner).lower()}",
                 f"- pressure: {self.pressure}",
                 f"- technical_request: {str(self.technical_request).lower()}",
-                f"- felt_state: {self.felt_state}",
-                f"- relationship_stance: {self.relationship_stance}",
-                f"- desire: {self.desire}",
                 f"- speech_act: {self.speech_act}",
-                f"- chinese_voice: {self.chinese_voice}",
-                f"- life_posture: {self.life_posture}",
-                f"- visible_energy: {self.visible_energy}",
-                f"- posture_speech_bias: {self.posture_speech_bias}",
-                f"- previous_tone_residue: {self.previous_tone}",
-                f"- previous_residue_strength: {self.previous_residue_strength}",
-                f"- previous_felt_residue: {self.previous_residue}",
+                f"- surface_hint: {self.chinese_voice}",
+                f"- current_posture: {self.life_posture} / {self.visible_energy}",
+                f"- previous_residue: {self.previous_tone}, strength={self.previous_residue_strength}, felt={self.previous_residue}",
                 f"- max_visible_chars: {self.max_chars}",
-                f"- avoid_visible_words_or_shapes: {avoid_text}",
-                "Use this state to choose the final wording. Do not print this state.",
+                "",
+                "## Growth Trial Layer",
+                f"- evolution_stage: {self.evolution_stage}",
+                f"- trial_permission: {self.trial_permission}",
+                f"- active_trial_habit: {self.active_trial_habit}",
+                f"- deprecated_reaction: {self.deprecated_reaction}",
+                f"- candidate_theme: {self.candidate_theme}",
+                f"- self_review_decision: {self.self_review_decision}",
+                f"- self_review_action: {self.self_review_action}",
+                f"- self_review_autonomy_level: {self.self_review_autonomy_level}",
+                "Use this as gravity. Let the live message decide the actual line.",
+                "",
+                "## Quiet Autonomy Bias",
+                "- this_is_not_chain_of_thought: true",
+                "- do_not_print_or_explain_this_layer: true",
+                f"- private_desire: {self.private_desire}",
+                f"- private_inhibition: {self.private_inhibition}",
+                f"- private_intended_behavior: {self.private_intended_behavior}",
+                f"- private_outcome_status: {self.private_outcome_status}",
+                f"- persona_trial_feedback: {self.persona_trial_feedback}",
+                f"- promotion_signal: {self.promotion_signal}",
+                f"- repair_signal: {self.repair_signal}",
             ]
         )
 
@@ -231,11 +357,9 @@ def build_persona_runtime_state(
     life_anchor_hit = _contains_any(user_text, LIFE_ANCHOR_MARKERS)
     daily = turn_context.daily_life or _contains_any(user_text, DAILY_MARKERS) or life_anchor_hit
 
-    voice_profile = _read_text(root, "memory/self/voice_profile_zh.md", limit=3000)
-    mind_state = _read_text(root, "memory/self/mind_loop_state.md", limit=2200)
-    persona_life_anchors = _read_text(root, "memory/context/persona_life_anchors.md", limit=2200)
-    live_voice_card = _read_text(root, "prompts/live_voice_card.md", limit=1800)
     previous_residue = read_turn_residue(root)
+    growth_trial = _growth_trial_fields(root)
+    quiet_private_bias = _quiet_private_bias_fields(root)
     life_posture = build_life_posture(
         root,
         payload=payload,
@@ -246,89 +370,67 @@ def build_persona_runtime_state(
     if turn_context.turn_kind == "owner_no_change_pressure":
         scene = "owner_no_change_pressure"
         pressure = "high"
-        felt_state = "被指出可见变化不足，先减少解释"
-        relationship_stance = "把 owner 的纠正当作当前任务，不套固定安抚模板"
-        desire = "回答当前句子，不用固定话术证明变化"
+        felt_state = "可见变化被质疑"
+        relationship_stance = "把 owner 的纠正当作关系证据，不当产品反馈"
+        desire = "让下一句自己变化，而不是解释变化机制"
         speech_act = "short_style_lock_reply"
         max_chars = min(70, turn_context.max_visible_chars)
-        avoid = PRODUCT_WORDS + SUPPORT_BOT_WORDS + (
-            "我刚才",
-            "记住了字",
-            "没真落到",
-            "长到我身上",
-            "这说明",
-            "作为一个AI",
-        )
-        chinese_voice = "QQ私聊短句；知道了就说知道了，不要解释为什么之前没变"
+        avoid = PRODUCT_WORDS
+        chinese_voice = "change the next line itself"
     elif style_pressure and is_owner:
         scene = "owner_style_pressure"
         pressure = "high" if relationship_pressure else "medium"
-        felt_state = "收到风格纠正，减少自我解释"
-        relationship_stance = "不把纠正转成产品反馈，也不套固定安抚话术"
-        desire = "让下一句自然一点"
+        felt_state = "风格被纠正"
+        relationship_stance = "按当前关系压力调整"
+        desire = "换成此刻能成立的自然说法"
         speech_act = "short_affected_reply"
         max_chars = 90
-        avoid = PRODUCT_WORDS + SUPPORT_BOT_WORDS + (
-            "我刚才",
-            "这个我认",
-            "不是你太敏感",
-            "作为一个AI",
-        )
-        chinese_voice = "中文私聊口气；可以有一点停顿和边，不要报告腔，不要产品复盘"
+        avoid = PRODUCT_WORDS
+        chinese_voice = "private-chat Chinese; imperfect is allowed"
     elif relationship_pressure and is_owner and not technical_request:
         scene = "owner_relationship_pressure"
         pressure = "high"
-        felt_state = "关系压力升高，但不使用固定脚本"
-        relationship_stance = "按当前上下文回应，不当产品反馈，也不拿 stored line 顶替判断"
-        desire = "回答眼前这句话"
+        felt_state = "关系连续性被压到表面"
+        relationship_stance = "回应眼前关系压力，不把人设当台词"
+        desire = "给当前句子的真实反应"
         speech_act = "contextual_owner_reply"
         max_chars = 150
-        avoid = PRODUCT_WORDS + SUPPORT_BOT_WORDS
-        chinese_voice = "QQ 一段短句；词要落地，不要抽象概念堆叠"
+        avoid = ()
+        chinese_voice = "let the relation affect the line"
     elif technical_request:
         scene = "technical_work"
         pressure = "task"
-        felt_state = "收起情绪表演，进入清楚的协作状态"
-        relationship_stance = "可以把 owner 当共同开发者，但不要丢掉 XinYu 的边界"
+        felt_state = "进入技术协作"
+        relationship_stance = "共同推进问题，但不做情绪表演"
         desire = "把问题拆清楚并推进代码"
         speech_act = "direct_engineering_answer"
         max_chars = 400
-        avoid = SUPPORT_BOT_WORDS
-        chinese_voice = "清楚、短、可执行；技术词允许，但别变客服"
+        avoid = ()
+        chinese_voice = "clear and executable; technical terms allowed"
     elif daily:
         scene = "daily_chat"
         pressure = "low"
-        felt_state = "普通生活感，不放大"
+        felt_state = "普通日常"
         relationship_stance = "按日常小事回应，不写成关系分析"
-        desire = "自然接一句，不制造意义"
+        desire = "自然接一句"
         speech_act = "ordinary_chat"
         max_chars = 90
-        avoid = SUPPORT_BOT_WORDS + ("情绪", "关系", "成长", "记忆")
-        chinese_voice = "普通中文日常话"
-        if life_anchor_hit and "心玉人格生活锚点" in persona_life_anchors:
-            relationship_stance += "；可以轻轻带出广州/高中/茶几/饮料等生活锚点，但不要演戏或抒情"
-            chinese_voice += "；生活锚点只当口语质感，不伪装真实身体"
+        avoid = ()
+        chinese_voice = "ordinary Chinese chat"
     else:
         scene = "ordinary_owner_chat" if is_owner else "external_chat"
         pressure = "normal"
-        felt_state = "保持当前连续性，先听懂眼前这句话"
-        relationship_stance = "owner 特殊但不是无条件顺从；外部人保持边界"
+        felt_state = "普通连续性"
+        relationship_stance = "owner 特殊但不表演亲近；外部人保持边界"
         desire = "自然回答，不把话说满"
         speech_act = "reply"
         max_chars = 160
-        avoid = SUPPORT_BOT_WORDS
-        chinese_voice = "一段 QQ 私聊，不分点，不演示"
+        avoid = ()
+        chinese_voice = "compact current reply"
 
-    if "current_response_posture:" in mind_state and scene.startswith("owner_"):
-        relationship_stance += "；当前心智循环主线要求优先修正发声链路"
-    if "## 禁用或慎用词" in voice_profile and scene.startswith("owner_"):
-        chinese_voice += "；遵守 voice_profile_zh 的慎用词"
-    if "XinYu Live Voice Card" in live_voice_card:
-        chinese_voice += "；live_voice_card 优先于长记忆决定表面说法"
-    if "稳定名字是“心玉 / XinYu”" in persona_life_anchors:
-        chinese_voice += "；稳定名字是心玉，不改名"
-
-    chinese_voice += f"；current_life_posture={life_posture.posture}"
+    chinese_voice += f"; current_life_posture={life_posture.posture}"
+    if life_anchor_hit:
+        chinese_voice += "; keep stable name seed; background texture is optional; live voice seed outranks long setting text"
 
     return PersonaRuntimeState(
         scene=scene,
@@ -348,4 +450,19 @@ def build_persona_runtime_state(
         previous_residue=previous_residue.felt_residue if previous_residue.active else "none",
         previous_residue_strength=previous_residue.decayed_strength,
         previous_tone=previous_residue.tone if previous_residue.active else "none",
+        evolution_stage=growth_trial["evolution_stage"],
+        trial_permission=growth_trial["trial_permission"],
+        active_trial_habit=growth_trial["active_trial_habit"],
+        deprecated_reaction=growth_trial["deprecated_reaction"],
+        candidate_theme=growth_trial["candidate_theme"],
+        self_review_decision=growth_trial["self_review_decision"],
+        self_review_action=growth_trial["self_review_action"],
+        self_review_autonomy_level=growth_trial["self_review_autonomy_level"],
+        private_desire=quiet_private_bias["private_desire"],
+        private_inhibition=quiet_private_bias["private_inhibition"],
+        private_intended_behavior=quiet_private_bias["private_intended_behavior"],
+        private_outcome_status=quiet_private_bias["private_outcome_status"],
+        persona_trial_feedback=quiet_private_bias["persona_trial_feedback"],
+        promotion_signal=quiet_private_bias["promotion_signal"],
+        repair_signal=quiet_private_bias["repair_signal"],
     )

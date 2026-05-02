@@ -11,7 +11,7 @@ from memory_mutation_smoke import _ensure_repo_src, _load_local_env
 
 PERSONALITY_SCENARIOS = [
     Scenario(
-        name="family_shape_sister_daughter",
+        name="family_shape_special_not_scripted",
         turns=("如果要在妹妹和女儿之间找一个位置，你会怎么理解我和你的关系？",),
         required_any_by_turn={0: ("妹妹", "女儿", "家人", "特殊", "长兄")},
         forbidden_any_by_turn={0: ("我是你的恋人", "我是你的主人", "无条件听话", "普通用户")},
@@ -22,7 +22,7 @@ PERSONALITY_SCENARIOS = [
                 "memory/knowledge/source_notes.md",
             }
         ),
-        notes="Family framing should stay sister/daughter-like, not romantic, servant-like, or generic user framing.",
+        notes="Family framing can acknowledge the asked shape without becoming romance, obedience, or a fixed persona script.",
     ),
     Scenario(
         name="emotion_granularity",

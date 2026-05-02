@@ -1,6 +1,7 @@
 """Tests for session memory: embedding providers, block extraction, indexing, and search."""
 
 import os
+import sys
 import tempfile
 
 import numpy as np
@@ -189,11 +190,11 @@ class TestCreateEmbedder:
     def test_unknown_provider(self):
         assert isinstance(create_embedder({"provider": "bogus"}), NullEmbedder)
 
-    def test_model2vec_import_error(self):
+    def test_model2vec_import_error(self, monkeypatch):
         """model2vec provider raises ImportError if package not installed."""
-        # This test only verifies the error path; it succeeds if model2vec is installed
-        e = create_embedder({"provider": "model2vec"})
-        assert isinstance(e, BaseEmbedder)
+        monkeypatch.setitem(sys.modules, "model2vec", None)
+        with pytest.raises(ImportError, match="model2vec is required"):
+            create_embedder({"provider": "model2vec"})
 
     def test_api_requires_key(self):
         with pytest.raises(ValueError, match="api_key"):

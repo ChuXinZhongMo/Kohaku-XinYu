@@ -81,4 +81,5 @@ if ($listener) {
     Write-Host "XinYu QQ gateway process started but port check failed. PID: $($process.Id)"
     Write-Host "Check logs: $stdoutLog"
     Write-Host "Errors: $stderrLog"
+    throw "XinYu QQ gateway failed to listen on $HostAddress`:$Port after startup."
 }

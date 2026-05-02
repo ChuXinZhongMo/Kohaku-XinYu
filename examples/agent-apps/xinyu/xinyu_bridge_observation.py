@@ -106,8 +106,8 @@ def _ensure_observation_file(path: Path, observed_at: str) -> None:
     )
 
 
-def _update_real_life_events(root: Path, observed_at: str, entry: dict[str, str]) -> None:
-    path = root / "memory/context/real_life_input_events.md"
+def _update_real_life_events(memory_root: Path, observed_at: str, entry: dict[str, str]) -> None:
+    path = memory_root / "context/real_life_input_events.md"
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(

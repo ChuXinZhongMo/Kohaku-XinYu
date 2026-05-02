@@ -72,6 +72,14 @@ class TurnNormalizer:
         group_id = payload_str(payload, "group_id", default=str(metadata.get("group_id", ""))).strip()
         session_id = payload_str(payload, "session_id", default=str(metadata.get("session_id", ""))).strip()
         message_type = payload_str(payload, "message_type", default=str(metadata.get("message_type", ""))).strip()
+        if not session_id:
+            session_id = self._fallback_session_id(
+                payload=payload,
+                metadata=metadata,
+                user_id=user_id,
+                group_id=group_id,
+                message_type=message_type,
+            )
         metadata_owner = str(metadata.get("is_owner_user", "")).strip().lower() in {"1", "true", "yes", "on"}
         is_owner = (
             payload_bool(payload, "is_owner_user", default=False)
@@ -114,6 +122,25 @@ class TurnNormalizer:
             is_owner=is_owner,
             priority_learning_group=priority_group,
         )
+
+    def _fallback_session_id(
+        self,
+        *,
+        payload: Mapping[str, Any],
+        metadata: Mapping[str, Any],
+        user_id: str,
+        group_id: str,
+        message_type: str,
+    ) -> str:
+        platform = payload_str(payload, "platform", default=str(metadata.get("platform", "qq"))).strip() or "qq"
+        lowered_type = message_type.lower()
+        if group_id:
+            return f"{platform}:group:{group_id}"
+        if lowered_type.startswith("group"):
+            return f"{platform}:group:unknown:{user_id}" if user_id else ""
+        if user_id:
+            return f"{platform}:private:{user_id}"
+        return ""
 
     def _attachments(self, payload: Mapping[str, Any]) -> tuple[AttachmentRef, ...]:
         raw_items: list[Any] = []

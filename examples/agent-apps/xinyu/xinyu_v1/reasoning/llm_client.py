@@ -6,6 +6,7 @@ import asyncio
 import json
 import urllib.error
 import urllib.request
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -24,21 +25,38 @@ class LLMClient:
         self._config = config
         self._api_key = api_key
 
-    async def complete(self, *, system: str, user: str, timeout_seconds: float) -> LLMResponse:
+    async def complete(
+        self,
+        *,
+        system: str,
+        user: str,
+        timeout_seconds: float,
+        history: Sequence[Mapping[str, str]] = (),
+    ) -> LLMResponse:
         if not self._config.base_url:
             raise ReasoningError("LLM base_url is not configured")
-        return await asyncio.to_thread(self._complete_sync, system, user, timeout_seconds)
+        return await asyncio.to_thread(self._complete_sync, system, user, timeout_seconds, tuple(history))
 
-    def _complete_sync(self, system: str, user: str, timeout_seconds: float) -> LLMResponse:
+    def _complete_sync(
+        self,
+        system: str,
+        user: str,
+        timeout_seconds: float,
+        history: Sequence[Mapping[str, str]],
+    ) -> LLMResponse:
         url = self._config.base_url.rstrip("/") + "/chat/completions"
+        messages = [{"role": "system", "content": system}]
+        for message in history:
+            role = str(message.get("role") or "").strip()
+            content = str(message.get("content") or "").strip()
+            if role in {"user", "assistant"} and content:
+                messages.append({"role": role, "content": content})
+        messages.append({"role": "user", "content": user})
         payload = {
             "model": self._config.model,
             "temperature": self._config.temperature,
             "max_tokens": self._config.max_tokens,
-            "messages": [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ],
+            "messages": messages,
         }
         headers = {"Content-Type": "application/json; charset=utf-8", "Accept": "application/json"}
         if self._api_key:
@@ -72,4 +90,3 @@ def extract_openai_text(data: dict[str, Any]) -> str:
                 return str(message.get("content") or "").strip()
             return str(first.get("text") or "").strip()
     return str(data.get("text") or data.get("reply") or "").strip()
-

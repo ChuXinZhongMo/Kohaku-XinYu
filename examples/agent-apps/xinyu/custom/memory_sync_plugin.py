@@ -983,12 +983,53 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
 def _read(path: Path) -> str:
     if not path.exists():
         return ""
-    return path.read_text(encoding="utf-8-sig").replace("\r\n", "\n")
+    text = path.read_text(encoding="utf-8-sig").replace("\r\n", "\n")
+    return _unwrap_content_envelope(text)
 
 
 def _write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text.rstrip() + "\n", encoding="utf-8")
+
+
+def _unwrap_content_envelope(text: str) -> str:
+    if text.startswith("content:---"):
+        return text.removeprefix("content:")
+    if text.startswith("content:\n"):
+        return text.removeprefix("content:\n")
+    return text
+
+
+def _normalize_recent_context_text(text: str) -> tuple[str, list[str]]:
+    recovered_entries: list[str] = []
+    marker = "\ncontent:---"
+    if text.startswith("content:---"):
+        return text.removeprefix("content:"), recovered_entries
+    index = text.find(marker)
+    if index == -1:
+        return text, recovered_entries
+
+    prefix = text[:index].strip()
+    body = text[index + 1 :].removeprefix("content:")
+    for line in prefix.splitlines():
+        entry = line.strip().lstrip("-").strip()
+        if re.match(r"^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}：", entry):
+            recovered_entries.append(entry)
+    return body, recovered_entries
+
+
+def _ensure_recent_context_events_section(text: str) -> str:
+    heading = "## 近期关键事件"
+    if heading in text:
+        return text
+    if re.search(r"(?m)^# 近期上下文\s*$", text):
+        return re.sub(
+            r"(?m)^# 近期上下文\s*$",
+            "# 近期上下文\n\n## 近期关键事件",
+            text,
+            count=1,
+        )
+    return text.rstrip() + f"\n\n{heading}\n"
 
 
 def _trace(root: Path, line: str) -> None:
@@ -1044,11 +1085,33 @@ def _touch_frontmatter(text: str, now: datetime) -> str:
     return text
 
 
+def _drop_unsupported_time_inference_lines(text: str) -> str:
+    bad_fragments = (
+        "五一劳动节假期最后一天",
+        "五一假期最后一个夜晚",
+        "假日正式收尾",
+        "假期最后几个小时",
+        "假期收尾",
+        "假日收尾",
+        "明天回归日常",
+    )
+    guard_fragments = ("不要", "纠正", "不是", "不能", "避免")
+    kept: list[str] = []
+    for line in text.splitlines():
+        if any(fragment in line for fragment in bad_fragments) and not any(
+            guard in line for guard in guard_fragments
+        ):
+            continue
+        kept.append(line)
+    return "\n".join(kept) + ("\n" if text.endswith("\n") else "")
+
+
 def _update_time_anchor(path: Path, now: datetime, signals: dict[str, Any]) -> None:
     text = _read(path)
     iso = now.isoformat()
     if not text:
         text = "# 现实时间锚点\n"
+    text = _drop_unsupported_time_inference_lines(text)
     text = _touch_frontmatter(text, now)
     text = _replace_section(text, "## 当前现实时间", iso)
     text = _replace_section(text, "## 当前日期", now.date().isoformat())
@@ -1065,15 +1128,15 @@ def _update_time_anchor(path: Path, now: datetime, signals: dict[str, Any]) -> N
 
 def _update_recent_context(path: Path, now: datetime, signals: dict[str, Any]) -> None:
     text = _read(path)
+    text, recovered_entries = _normalize_recent_context_text(text)
     if not text:
         text = "# 近期上下文\n\n## 近期关键事件\n"
     text = _touch_frontmatter(text, now)
+    text = _ensure_recent_context_events_section(text)
+    for recovered_entry in reversed(recovered_entries):
+        text = _prepend_unique_bullet(text, "## 近期关键事件", recovered_entry, max_items=8)
     entry = f"{now.strftime('%Y-%m-%d %H:%M')}：{signals['event_summary']}"
-    if "## 近期关键事件" in text:
-        text = _prepend_unique_bullet(text, "## 近期关键事件", entry, max_items=8)
-    else:
-        if entry not in text:
-            text = f"{entry}\n\n{text.lstrip()}"
+    text = _prepend_unique_bullet(text, "## 近期关键事件", entry, max_items=8)
     _write(path, text)
 
 
@@ -1388,14 +1451,39 @@ def _update_reflection_queue(path: Path, now: datetime, signals: dict[str, Any])
 def _update_dream_seeds(path: Path, now: datetime, signals: dict[str, Any]) -> None:
     text = _read(path)
     if not text:
-        text = "# 当前可进入梦境整理的材料\n"
+        text = """---
+title: Dream Seeds
+memory_type: dream_seeds
+time_scope: short_term
+subject_ids: [xinyu]
+protected: false
+source: memory_sync
+status: active
+tags: [dream, seed, residue]
+---
+
+# Dream Seeds
+"""
     text = _touch_frontmatter(text, now)
-    text = _prepend_unique_bullet(
-        text,
-        "# 当前可进入梦境整理的材料",
-        f"{now.strftime('%Y-%m-%d %H:%M')}：{signals['theme_label']}，只允许作为情绪残留进入梦，不得当作新事实",
-        max_items=8,
-    )
+    event_summary = str(signals.get("event_summary") or signals.get("theme_label") or "dream residue")
+    seed_hash = hashlib.sha1(event_summary.encode("utf-8", errors="replace")).hexdigest()[:6]
+    seed_id = f"seed-{now.strftime('%Y-%m-%d-%H%M')}-{seed_hash}"
+    if f"## {seed_id}" in text:
+        _write(path, text)
+        return
+    section = f"""## {seed_id}
+- source_event: memory_sync:{seed_hash}
+- theme: {signals['theme_label']}
+- residue: {event_summary}
+- emotional_weight: 78
+- factual_status: confirmed interaction residue
+- dream_permission: can_recombine_but_not_rewrite_fact
+- consumed_at: none
+- dream_count: 0
+- last_dreamed_at: none
+- decay_after_dream: soft_decay_after_reflection
+"""
+    text = text.rstrip() + "\n\n" + section
     _write(path, text)
 
 

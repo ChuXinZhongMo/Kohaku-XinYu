@@ -32,8 +32,8 @@ def main() -> int:
     relation = _state("我们做了那么多感情系统和记忆系统，我现在真的觉得白做了。")
     if relation.scene != "owner_relationship_pressure":
         failures.append(f"relationship pressure scene mismatch: {relation.scene}")
-    if "产品反馈" not in relation.relationship_stance:
-        failures.append("relationship pressure did not reject product-feedback framing")
+    if "不把人设当台词" not in relation.relationship_stance:
+        failures.append("relationship pressure did not reject persona-script framing")
 
     tech = _state("接下来怎么设计这个 Persona Runtime 的代码？")
     if tech.scene != "technical_work" or not tech.technical_request:
@@ -46,12 +46,12 @@ def main() -> int:
     life_anchor = _state("广州这天气热起来了，我想喝鸭屎香柠檬茶。")
     if life_anchor.scene != "daily_chat":
         failures.append(f"life anchor scene mismatch: {life_anchor.scene}")
-    if "稳定名字是心玉" not in life_anchor.chinese_voice:
-        failures.append("life anchor did not preserve stable 心玉 name")
-    if "不伪装真实身体" not in life_anchor.chinese_voice:
-        failures.append("life anchor did not preserve body-boundary guidance")
-    if "live_voice_card 优先于长记忆" not in life_anchor.chinese_voice:
-        failures.append("persona runtime did not mark live_voice_card priority")
+    if "keep stable name" not in life_anchor.chinese_voice:
+        failures.append("life anchor did not preserve stable name seed")
+    if "background texture is optional" not in life_anchor.chinese_voice:
+        failures.append("life anchor still behaves like a required motif")
+    if "live voice seed outranks long setting text" not in life_anchor.chinese_voice:
+        failures.append("persona runtime did not mark live voice seed priority")
 
     if failures:
         print("Persona runtime smoke failed")

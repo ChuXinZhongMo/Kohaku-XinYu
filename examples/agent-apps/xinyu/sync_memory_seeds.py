@@ -12,6 +12,7 @@ SEED_MAP = {
     "memory-seeds/context/persona_life_anchors.md": "memory/context/persona_life_anchors.md",
     "memory-seeds/context/real_world_anchor_policy.md": "memory/context/real_world_anchor_policy.md",
     "memory-seeds/context/life_month_slots.md": "memory/context/life_month_slots.md",
+    "memory-seeds/context/codex_delegation_policy.md": "memory/context/codex_delegation_policy.md",
     "memory-seeds/self/system_prompt_memory.md": "memory/self/system_prompt_memory.md",
 }
 

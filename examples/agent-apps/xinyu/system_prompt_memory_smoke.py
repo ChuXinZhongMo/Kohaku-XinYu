@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 
 from xinyu_bridge_renderer import BridgeRenderer
-from xinyu_memory_weights import calculate_memory_weights
 from xinyu_speech_controller import XinyuSpeechController
 
 
@@ -26,25 +25,22 @@ def main() -> int:
 
     for marker in (
         "# System Prompt Memory",
-        "stable memory architecture",
-        "Stable Prompt Layers",
-        "Floating Prompt Layers",
-        "real_world_anchor_policy",
-        "Life Simulation Boundary",
-        "not allowed to claim",
-        "does not reset to generic helper wording every turn",
+        "should no longer act as a hard personality constitution",
+        "keep only the XinYu concept",
+        "Prompt material is a seed, not law",
+        "less machinery at the surface",
     ):
         if marker not in text:
             failures.append(f"missing marker: {marker}")
 
     config = (root / "config.yaml").read_text(encoding="utf-8-sig")
     system = (root / "prompts/system.md").read_text(encoding="utf-8-sig")
-    if "system_prompt_memory: memory/self/system_prompt_memory.md" not in config:
-        failures.append("config does not inject system_prompt_memory")
-    if "{{ system_prompt_memory }}" not in system or "[self/system_prompt_memory.md]" not in system:
-        failures.append("system prompt template does not include system_prompt_memory")
-    if "Treat `system_prompt_memory.md` as stable memory" not in system:
-        failures.append("system prompt does not describe system_prompt_memory priority")
+    if "system_prompt_memory: memory/self/system_prompt_memory.md" in config:
+        failures.append("config should not inject system_prompt_memory into base prompt")
+    if "{{ system_prompt_memory }}" in system or "[self/system_prompt_memory.md]" in system:
+        failures.append("system prompt should not include system_prompt_memory")
+    if "stable memory" in system:
+        failures.append("system prompt still describes stable prompt memory")
 
     renderer = BridgeRenderer(
         xinyu_dir=root,
@@ -53,17 +49,10 @@ def main() -> int:
         render_timeout_seconds=1,
     )
     renderer_context = renderer.renderer_memory_context()
-    if "[memory/self/system_prompt_memory.md]" not in renderer_context:
-        failures.append("renderer context does not include system_prompt_memory")
-    if "# System Prompt Memory" not in renderer_context:
-        failures.append("renderer context did not load system_prompt_memory body")
-
-    weights = calculate_memory_weights(root)
-    prompt_rows = [row for row in weights if row["path"] == "memory/self/system_prompt_memory.md"]
-    if not prompt_rows:
-        failures.append("memory weight calculation does not include system_prompt_memory")
-    elif prompt_rows[0]["active_weight"] < 90:
-        failures.append(f"system_prompt_memory active weight too low: {prompt_rows[0]['active_weight']}")
+    if "[memory/self/system_prompt_memory.md]" in renderer_context:
+        failures.append("renderer context should not include full system_prompt_memory")
+    if "# System Prompt Memory" in renderer_context:
+        failures.append("renderer context should keep stable prompt architecture out of final speech context")
 
     if failures:
         print("System prompt memory smoke failed")

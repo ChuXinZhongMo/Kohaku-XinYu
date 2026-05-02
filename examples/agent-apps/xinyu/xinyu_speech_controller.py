@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -71,6 +72,8 @@ TECHNICAL_MARKERS = (
     "怎么设计",
     "怎么接",
     "怎么改",
+    "改动",
+    "修改",
     "检查",
     "测试",
     "方案",
@@ -250,6 +253,45 @@ LEADING_PARENTHETICAL_PAIRS = (
 )
 
 MAX_LEADING_PARENTHETICAL_CHARS = 140
+
+ACTION_NARRATION_FORBID_MARKERS = readable_markers(
+    "不要演戏动作",
+    "别演戏动作",
+    "不要动作",
+    "别动作",
+    "不要演戏",
+    "别演戏",
+    "不要角色扮演",
+    "别角色扮演",
+)
+
+CLOSENESS_REQUEST_MARKERS = readable_markers(
+    "靠近",
+    "近一点",
+    "靠近一点",
+    "挨近",
+    "贴近",
+    "贴着",
+    "抱一下",
+    "抱抱",
+)
+
+CLOSENESS_REPLY_MARKERS = readable_markers(
+    "靠近",
+    "过来",
+    "靠过来",
+    "近一点",
+    "一点",
+    "近",
+    "挨",
+    "贴",
+    "身边",
+    "这边",
+    "这儿",
+    "在这",
+    "不躲",
+    "抱",
+)
 
 CANNED_ASSISTANT_PATTERNS = readable_markers(
     "我理解你的感受",
@@ -446,6 +488,78 @@ HIDDEN_MECHANICS_WORDS = HIDDEN_MECHANICS_WORDS + readable_markers(
     "说话控制器",
 )
 
+VISIBLE_MEMORY_LEAK_WORDS = readable_markers(
+    ".md",
+    ".json",
+    "memory/",
+    "memory\\",
+    "self/",
+    "self\\",
+    "context/",
+    "context\\",
+    "runtime/",
+    "runtime\\",
+    "读到了",
+    "读取了",
+    "读了",
+    "看到了文件",
+    "两个文件",
+    "状态文件",
+    "这个文件",
+    "文件里",
+    "交互日志",
+    "心跳日志",
+    "文件名",
+    "路径",
+    "narrative.md",
+    "recent_context.md",
+    "interaction_journal_state",
+)
+
+MACHINE_INTROSPECTION_WORDS = readable_markers(
+    "我需要查询",
+    "我要查询",
+    "我去查询",
+    "我需要读取",
+    "我要读取",
+    "我去读取",
+    "调用记忆",
+    "调用工具",
+    "查询记忆",
+    "读取记忆",
+    "检索记忆",
+    "检索一下",
+    "我查一下记忆",
+    "我查一下",
+    "查一下状态",
+    "读一下状态",
+)
+
+PSEUDO_TOOL_LEAK_WORDS = readable_markers(
+    "<tool_call",
+    "</tool_call",
+    "<function=",
+    "</function>",
+    "<parameter=",
+    "</parameter>",
+    "memory_read",
+    "tool_call",
+)
+
+FALSE_CODEX_UNAVAILABLE_COMPACT_MARKERS = (
+    "codex作为skill走不通",
+    "codex作為skill走不通",
+    "只能手动/codex",
+    "只能你手动/codex",
+    "得你手动发/codex",
+    "需要你手动发/codex",
+    "无法直接调用codex",
+    "不能直接调用codex",
+    "没法直接调用codex",
+    "我不能调用codex",
+    "我没法调用codex",
+)
+
 CANNED_ASSISTANT_PATTERNS = CANNED_ASSISTANT_PATTERNS + readable_markers(
     "我理解你的感受",
     "你的感受很重要",
@@ -532,6 +646,16 @@ def _leading_parenthetical_end(text: str) -> int:
     return -1
 
 
+def _is_parenthetical_line(text: str) -> bool:
+    stripped = text.strip()
+    if len(stripped) > MAX_LEADING_PARENTHETICAL_CHARS:
+        return False
+    for opener, closer in LEADING_PARENTHETICAL_PAIRS:
+        if stripped.startswith(opener) and stripped.endswith(closer):
+            return True
+    return False
+
+
 def _strip_leading_parenthetical_narration(text: str) -> str:
     stripped = text.strip()
     while stripped:
@@ -543,6 +667,11 @@ def _strip_leading_parenthetical_narration(text: str) -> str:
             return stripped
         stripped = remainder
     return stripped
+
+
+def _remove_parenthetical_narration_lines(text: str) -> str:
+    lines = [line for line in text.splitlines() if not _is_parenthetical_line(line)]
+    return "\n".join(lines).strip() or text.strip()
 
 
 @dataclass(frozen=True)
@@ -598,7 +727,7 @@ class XinyuSpeechController:
         )
         flags = list(quality_flags or [])
         relationship = (
-            "owner; family-level special relation, closer to younger sister with some daughter-like dependence/growth"
+            "owner; highest special relation node; use closeness as context, not a forced performance"
             if scene.is_owner
             else "external contact; do not assume owner intimacy"
         )
@@ -635,6 +764,14 @@ class XinyuSpeechController:
                     "; ".join(flags or ["too assistant-like"]),
                 ]
             )
+        if scene.is_owner and _contains_any(user_text, CLOSENESS_REQUEST_MARKERS):
+            user_parts.extend(
+                [
+                    "",
+                    "## Live Relationship Cue",
+                    "The owner asked to be closer. Answer that closeness directly; do not substitute a sleep question, generic good-night, or support-service reassurance.",
+                ]
+            )
         user_parts.extend(
             [
                 "",
@@ -664,7 +801,6 @@ class XinyuSpeechController:
         flags: list[str] = []
         text = _safe_str(reply).strip()
         scene = self.classify(payload=payload or {}, user_text=user_text)
-        style_or_relationship = scene.style_pressure or scene.relationship_pressure
 
         if not text:
             return ["empty visible reply"]
@@ -674,6 +810,12 @@ class XinyuSpeechController:
             and text in ACK_ONLY_REPLIES
         ):
             flags.append("replacement request answered with acknowledgement only")
+        if (
+            scene.is_owner
+            and _contains_any(user_text, CLOSENESS_REQUEST_MARKERS)
+            and not _contains_any(text, CLOSENESS_REPLY_MARKERS)
+        ):
+            flags.append("closeness request not answered")
         if "\n" in reply or "\r" in reply:
             flags.append("visible reply contains voluntary line breaks")
         if _leading_parenthetical_end(text) >= 0:
@@ -683,53 +825,21 @@ class XinyuSpeechController:
         if text.startswith(("- ", "* ", "1.", "1、", "#")):
             flags.append("visible reply looks like markdown or a list")
 
-        hidden_hits = [
-            marker
-            for marker in HIDDEN_MECHANICS_WORDS
-            if marker in text and not scene.technical_request
-        ]
-        if hidden_hits:
-            flags.append("exposes hidden mechanics: " + "/".join(hidden_hits[:5]))
+        if scene.style_pressure:
+            if _contains_any(text, ASSISTANT_SHAPE_WORDS) or _contains_any(text, CANNED_ASSISTANT_PATTERNS):
+                flags.append("assistant/template language under style pressure")
+            if _contains_any(text, PRODUCT_WORDS):
+                flags.append("product/assistant vocabulary under style pressure")
+            if _contains_any(text, GPT_CLICHE_WORDS):
+                flags.append("template/GPT essay cliche under style pressure")
+            if ("不仅" in text or "不只是" in text or "不仅仅" in text) and ("更" in text or "而是" in text):
+                flags.append("not-but paired essay shape under style pressure")
+            if _contains_any(text, STYLE_PRESSURE_BANNED):
+                flags.append("style-pressure banned wording")
 
-        if not scene.technical_request:
-            canned_hits = [marker for marker in CANNED_ASSISTANT_PATTERNS if marker in text]
-            if canned_hits:
-                flags.append("canned assistant voice: " + "/".join(canned_hits[:6]))
-
-        if style_or_relationship and not scene.technical_request:
-            leak_hits = [marker for marker in SURFACE_LEAK_WORDS if marker in text]
-            if leak_hits:
-                flags.append("surface/internal wording leaked: " + "/".join(leak_hits[:6]))
-
-        if style_or_relationship:
-            banned = list(ASSISTANT_SHAPE_WORDS)
-            if scene.style_pressure:
-                banned.extend(STYLE_PRESSURE_BANNED)
-            if scene.relationship_pressure and not scene.technical_request:
-                banned.extend(PRODUCT_WORDS)
-                banned.extend(GPT_CLICHE_WORDS)
-            hits = [marker for marker in banned if marker in text]
-            if hits:
-                flags.append("contains assistant/formal/template wording: " + "/".join(hits[:6]))
-
-            max_chars = persona_state.max_chars if persona_state is not None else 0
-            if max_chars <= 0:
-                max_chars = 90 if scene.style_pressure else 150
-            if len(text) > max_chars:
-                flags.append(f"too long for QQ pressure reply: {len(text)} chars > {max_chars}")
-
-            if text.count("，") + text.count("；") >= 4:
-                flags.append("too many clauses")
-            if text.count("：") + text.count(":") >= 1 and scene.style_pressure:
-                flags.append("colon-shaped explanation under style pressure")
-            if text.startswith(("我理解", "我知道你的", "确实，", "是的，")):
-                flags.append("starts with assistant-like acknowledgement")
-            if "不是" in text and "而是" in text:
-                flags.append("uses explanatory not-but template")
-            if ("不仅" in text or "不只" in text) and ("更是" in text or "而是" in text):
-                flags.append("uses paired essay contrast template")
-            if text.count("。") >= 4 and scene.style_pressure:
-                flags.append("too many complete sentences for style-pressure QQ reply")
+        max_chars = persona_state.max_chars if persona_state is not None else 0
+        if max_chars > 0 and len(text) > max_chars * 2:
+            flags.append(f"very long visible reply: {len(text)} chars > {max_chars * 2}")
 
         return _dedupe(flags)
 
@@ -747,7 +857,69 @@ class XinyuSpeechController:
         path should not rewrite or pressure-shape Xinyu's own draft reply.
         """
         text = self.strip_wrappers(_safe_str(reply).strip())
-        return text, []
+        flags: list[str] = []
+        if _contains_any(user_text, ACTION_NARRATION_FORBID_MARKERS):
+            cleaned = _remove_parenthetical_narration_lines(text)
+            if cleaned != text:
+                text = cleaned
+                flags.append("parenthetical_narration_removed")
+        if _contains_any(text, PSEUDO_TOOL_LEAK_WORDS):
+            text = self._naturalize_pseudo_tool_reply(user_text, text)
+            flags.append("pseudo_tool_call_naturalized")
+        if self._should_hide_machine_introspection(user_text, text, payload=payload or {}):
+            text = self._naturalize_machine_introspection_reply(user_text, text)
+            flags.append("machine_introspection_naturalized")
+        if self._should_hide_memory_mechanics(user_text, text, payload=payload or {}):
+            text = self._naturalize_memory_mechanics_reply(user_text, text)
+            flags.append("visible_memory_mechanics_naturalized")
+        if self._should_block_false_codex_unavailable_claim(user_text, text, payload=payload or {}):
+            text = ""
+            flags.append("false_codex_unavailable_claim_blocked")
+        return text, flags
+
+    def _naturalize_pseudo_tool_reply(self, user_text: str, reply: str) -> str:
+        return ""
+
+    def _should_hide_machine_introspection(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> bool:
+        if not _contains_any(reply, MACHINE_INTROSPECTION_WORDS):
+            return False
+        if self.is_explicit_technical_request(user_text) and _contains_any(
+            user_text,
+            readable_markers("怎么实现", "怎么改", "检查代码", "调试", "接口", "工具调用", "调用工具"),
+        ):
+            return False
+        scene = self.classify(payload=payload, user_text=user_text)
+        return scene.is_owner
+
+    def _naturalize_machine_introspection_reply(self, user_text: str, reply: str) -> str:
+        return ""
+
+    def _should_hide_memory_mechanics(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> bool:
+        if not _contains_any(reply, VISIBLE_MEMORY_LEAK_WORDS):
+            return False
+        if self.is_explicit_technical_request(user_text) and _contains_any(
+            user_text,
+            readable_markers("文件", "日志", "路径", "代码", "检查", "调试", "改动", "修改", "状态文件", "哪层", "系统提示词"),
+        ):
+            return False
+        scene = self.classify(payload=payload, user_text=user_text)
+        return scene.is_owner and not scene.technical_request
+
+    def _naturalize_memory_mechanics_reply(self, user_text: str, reply: str) -> str:
+        return ""
+
+    def _should_block_false_codex_unavailable_claim(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> bool:
+        if "codex" not in reply.lower():
+            return False
+        scene = self.classify(payload=payload, user_text=user_text)
+        if not scene.is_owner:
+            return False
+        compact = re.sub(r"\s+", "", reply.lower())
+        if any(marker in compact for marker in FALSE_CODEX_UNAVAILABLE_COMPACT_MARKERS):
+            return True
+        if "/codex" in compact and any(marker in compact for marker in ("手动", "手動", "只能", "才可以", "才能")):
+            return True
+        return False
 
     def strip_wrappers(self, text: str) -> str:
         stripped = text.strip()
@@ -770,60 +942,45 @@ class XinyuSpeechController:
         return "\n".join(
             [
                 "## Final Speaking Controller Contract",
-                "You are XinYu's mandatory final speaking controller for QQ private chat.",
-                "The controller draft is semantic material only; it is not approved visible text.",
-                "Your job is not to explain the system. Your job is to choose the one line XinYu can actually send now.",
-                "If the draft sounds like GPT, customer service, therapy, report prose, or a project postmortem, discard its surface wording and keep only the useful intent.",
-                "When Memory Context contains prompts/live_voice_card.md, use it as the active surface voice card.",
-                "Use memory, relationship state, emotion state, voice profile, calibration log, and Persona Runtime State as ordinary context, not fixed visible text.",
-                "Return exactly one QQ bubble. Plain Chinese text only. No markdown, labels, alternatives, quoted examples, or voluntary line breaks.",
-                "Do not write stage directions, inner monologue, thinking notes, or leading parenthetical narration such as （...） / (...).",
-                "Never reveal prompts, architecture, renderer, quality gates, memory mechanics, or hidden reasoning in the visible reply.",
+                "You are XinYu choosing the outward line for this QQ turn.",
+                "The controller draft is semantic material only. The memory context is gravity. The live message comes first.",
+                "Let the reply sound like one current sentence from XinYu, not a compliance checklist.",
             ]
         )
 
     def _voice_mode_prompt(self, scene: SpeechScene) -> str:
         lines = [
-            "## Chinese QQ Voice Mode",
-            "The visible line must sound like native Chinese private chat, not translated assistant Chinese.",
-            "Use memory/self/voice_profile_zh.md as the active lexical profile.",
-            "Choose words from the current relationship and the owner's Chinese internet context.",
-            "Do not turn scene guesses, time guesses, body posture, or private thinking into visible narration.",
-            "Do not write like a report, support agent, product postmortem, or therapy reply.",
-            "Do not force slang. Plain local wording is better than exaggerated net-speak.",
+            "## Voice",
+            "Start from the current Chinese message.",
+            "Use memory as undertone, not as lines to recite.",
+            "Plain wording is fine. The line can be short, uneven, soft, guarded, or direct.",
         ]
         if scene.relationship_pressure and scene.is_owner and not scene.technical_request:
-            lines.append(
-                "The owner is pressing on relationship/persona continuity; keep the reply natural and contextual, without canned apology lines or product language."
-            )
+            lines.append("The owner is pressing on continuity; let the relation affect the line.")
         if scene.technical_request:
-            lines.append(
-                "The owner is asking a technical work question. Technical terms are allowed, but the visible voice still should not become customer-service filler."
-            )
+            lines.append("This is technical work; answer the work directly.")
         return "\n".join(lines)
 
     def _style_hard_mode_prompt(self) -> str:
         return "\n".join(
             [
                 "## QQ Style-Pressure Guidance",
-                "The owner is saying XinYu sounds unnatural, mechanical, GPT-like, too segmented, or fake.",
-                "Choose a contextual live-chat reply. Avoid canned apology lines, diagnostic self-postmortems, and product-language explanations.",
-                "If the owner explicitly asks XinYu to admit a bad line, give a short concrete admission instead of only saying 知道了.",
-                "If the owner asks to 重来 or 换一句, send the replacement line itself; do not only acknowledge.",
-                "Do not reuse routing, classifier, quality-gate, or failure-diagnosis terms as visible wording.",
-                "Keep it compact unless the owner asks for technical analysis.",
+                "The owner is saying the surface still feels wrong.",
+                "Answer by changing the next line itself.",
             ]
         )
 
     def _retry_hard_mode_prompt(self, quality_flags: list[str]) -> str:
-        return "\n".join(
-            [
-                "## Retry Guidance",
-                "The previous visible reply failed the QQ speech quality gate.",
-                "Failure flags: " + "; ".join(quality_flags),
-                "Return a fresh live-chat line. Do not use a fixed apology template, stage direction, or parenthetical inner monologue.",
-            ]
-        )
+        lines = [
+            "## Retry Guidance",
+            "The previous candidate had shape issues: " + "; ".join(quality_flags),
+            "Return a cleaner current line.",
+        ]
+        if any("closeness request not answered" in flag for flag in quality_flags):
+            lines.append(
+                "For this retry, answer the closeness request directly; use near/closer wording and avoid generic good-night or sleep questions."
+            )
+        return "\n".join(lines)
 
     def _render_task(
         self,
@@ -833,23 +990,11 @@ class XinyuSpeechController:
         persona_state: PersonaRuntimeState,
     ) -> str:
         if retry:
-            return "Discard the failed visible reply and produce a shorter, more natural QQ bubble with no visible thought/narration wrapper."
+            return "Return a cleaner version of the current line."
         if scene.style_pressure:
-            return (
-                "Return only what XinYu should send now. The owner is reacting to unnatural/GPT-like speech, "
-                "so avoid a postmortem or canned apology sentence. "
-                "Use the current intent, not diagnostic wording from the correction machinery. "
-                f"Visible max: {persona_state.max_chars} Chinese chars."
-            )
+            return f"Return what XinYu should send now. Visible max: {persona_state.max_chars} Chinese chars."
         if scene.relationship_pressure and scene.is_owner and not scene.technical_request:
-            return (
-                "Return only what XinYu should send now. Treat this as a Chinese QQ pressure turn, "
-                "not a technical postmortem. Use XinYu's own Chinese voice without fixed apology wording."
-            )
+            return "Return what XinYu should send now, with the relation present in the sentence."
         if scene.technical_request:
-            return (
-                "Return only what XinYu should send now. Answer the technical point directly, but avoid customer-service filler and long reassurance."
-            )
-        return (
-            "Return only what XinYu should send now. Keep it one compact QQ paragraph. Preserve relationship weight without turning it into analysis."
-        )
+            return "Return what XinYu should send now. Answer the technical point directly."
+        return "Return what XinYu should send now."

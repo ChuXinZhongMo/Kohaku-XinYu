@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass
 from typing import Protocol
 
-from ..types import Embedding, HealthState, JSONValue, ServiceHealth
+from ..types import Embedding, HealthState, JSONValue, PrivacyScope, ServiceHealth, SourceChannel, coerce_enum
 from .models import MemoryChunk, MemoryQuery, MemorySearchResult
 
 
@@ -45,6 +45,10 @@ class InMemoryVectorStore:
                 continue
             if query.tags and not set(query.tags).intersection(record.chunk.tags):
                 continue
+            if query.source_channels and _metadata_source_channel(record.chunk) not in query.source_channels:
+                continue
+            if query.privacy_scopes and _metadata_privacy_scope(record.chunk) not in query.privacy_scopes:
+                continue
             score = cosine_similarity(embedding, record.embedding)
             if score >= query.min_score:
                 scored.append(MemorySearchResult(chunk=record.chunk, score=score, reason="vector"))
@@ -80,3 +84,10 @@ def metadata_for_chunk(chunk: MemoryChunk) -> dict[str, JSONValue]:
     data.pop("text", None)
     return data
 
+
+def _metadata_source_channel(chunk: MemoryChunk) -> SourceChannel:
+    return coerce_enum(SourceChannel, chunk.metadata.get("source_channel"), SourceChannel.UNKNOWN)
+
+
+def _metadata_privacy_scope(chunk: MemoryChunk) -> PrivacyScope:
+    return coerce_enum(PrivacyScope, chunk.metadata.get("privacy_scope"), PrivacyScope.UNKNOWN)

@@ -9,7 +9,7 @@ from typing import Any
 
 from kohakuterrarium.modules.plugin.base import BasePlugin, PluginContext
 
-from dream_output_engine import run_dream_output
+from dream_output_engine import has_unconsumed_dream_seed, run_dream_output
 from turn_mode_utils import read_turn_mode
 
 
@@ -90,8 +90,8 @@ class DreamOutputBridgePlugin(BasePlugin):
             return False, "recommendation_not_yes"
 
         dream_seeds = _read(root / "memory/dreams/dream_seeds.md")
-        if "## seed-" not in dream_seeds:
-            return False, "no_dream_seed"
+        if not has_unconsumed_dream_seed(dream_seeds):
+            return False, "no_unconsumed_dream_seed"
 
         last_run = self._ctx.get_state("dream_output_last_run")
         if last_run:

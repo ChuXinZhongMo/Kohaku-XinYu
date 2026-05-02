@@ -17,7 +17,7 @@ event -> adapter policy -> turn mode -> interpretation gate -> memory/source rou
 Each event candidate should carry:
 
 - `event_id`
-- `source_channel`: `im`, `private_chat`, `group_chat`, `image`, `voice_transcript`, `system_context`
+- `source_channel`: `im`, `private_chat`, `group_chat`, `image`, `voice_transcript`, `system_context`; runtime aliases `owner_private`/`qq_private` route as `private_chat`, and `qq_group`/`priority_learning_group`/`group` route as `group_chat`
 - `source_context`: `owner_private`, `group`, `public`, `unknown`
 - `actor_id`: `owner`, `person:<id>`, `group:<id>`, or `unknown`
 - `relationship_scope`: `owner`, `non_owner`, `group`, or `unknown`

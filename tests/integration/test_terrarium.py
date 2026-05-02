@@ -8,6 +8,7 @@ import pytest
 
 from kohakuterrarium.core.session import remove_session
 from kohakuterrarium.modules.trigger.channel import ChannelTrigger
+from kohakuterrarium.testing.llm import ScriptedLLM
 from kohakuterrarium.terrarium.config import (
     ChannelConfig,
     CreatureConfig,
@@ -21,9 +22,46 @@ from kohakuterrarium.terrarium.runtime import TerrariumRuntime
 NOVEL_TERRARIUM_DIR = (
     Path(__file__).resolve().parents[2] / "examples" / "terrariums" / "novel_terrarium"
 )
-SWE_AGENT_DIR = (
-    Path(__file__).resolve().parents[2] / "examples" / "agent-apps" / "swe_agent"
-)
+_FAKE_ENV = {"OPENROUTER_API_KEY": "fake-key-for-test"}
+_LLM_PATCH_TARGET = "kohakuterrarium.bootstrap.agent_init.create_llm_provider"
+
+
+def _scripted_llm(*_args, **_kwargs) -> ScriptedLLM:
+    return ScriptedLLM(["OK"])
+
+
+@pytest.fixture()
+def agent_dir(tmp_path: Path) -> str:
+    agent_path = tmp_path / "swe"
+    agent_path.mkdir()
+    (agent_path / "config.yaml").write_text(
+        """name: swe
+version: "1.0"
+controller:
+  model: test-model
+  api_key_env: OPENROUTER_API_KEY
+  base_url: https://example.invalid/v1
+input:
+  type: none
+output:
+  type: stdout
+tools:
+  - name: read
+  - name: bash
+""",
+        encoding="utf-8",
+    )
+    return str(agent_path)
+
+
+@pytest.fixture(autouse=True)
+def isolated_runtime():
+    """Keep runtime tests off real UI, OAuth, and network paths."""
+    with patch.dict(os.environ, _FAKE_ENV), patch(
+        _LLM_PATCH_TARGET,
+        side_effect=_scripted_llm,
+    ):
+        yield
 
 
 # ---------------------------------------------------------------------------
@@ -212,22 +250,21 @@ class TestRuntimeLifecycle:
     """Test TerrariumRuntime start/stop without running the LLM loop."""
 
     @pytest.fixture()
-    def terrarium_config(self) -> TerrariumConfig:
-        """Minimal terrarium config pointing at a real agent directory."""
-        swe_path = str(SWE_AGENT_DIR.resolve())
+    def terrarium_config(self, agent_dir: str) -> TerrariumConfig:
+        """Minimal terrarium config pointing at an isolated test agent."""
         return TerrariumConfig(
             name="test_terrarium",
             creatures=[
                 CreatureConfig(
                     name="alpha",
-                    config_data={"base_config": str(swe_path)},
+                    config_data={"base_config": agent_dir},
                     base_dir=Path("."),
                     listen_channels=["ch_alpha"],
                     send_channels=["ch_beta"],
                 ),
                 CreatureConfig(
                     name="beta",
-                    config_data={"base_config": str(swe_path)},
+                    config_data={"base_config": agent_dir},
                     base_dir=Path("."),
                     listen_channels=["ch_beta"],
                     send_channels=["ch_alpha"],
@@ -252,8 +289,7 @@ class TestRuntimeLifecycle:
     async def test_start_creates_channels(self, terrarium_config: TerrariumConfig):
         """After start(), all declared channels exist in the environment."""
         runtime = TerrariumRuntime(terrarium_config)
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "fake-key-for-test"}):
-            await runtime.start()
+        await runtime.start()
 
         try:
             channel_names = runtime.environment.shared_channels.list_channels()
@@ -269,8 +305,7 @@ class TestRuntimeLifecycle:
     ):
         """After start(), creatures have ChannelTrigger for their listen channels."""
         runtime = TerrariumRuntime(terrarium_config)
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "fake-key-for-test"}):
-            await runtime.start()
+        await runtime.start()
 
         try:
             alpha_handle = runtime._creatures["alpha"]
@@ -288,8 +323,7 @@ class TestRuntimeLifecycle:
     ):
         """After start(), system prompt mentions the creature's channels."""
         runtime = TerrariumRuntime(terrarium_config)
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "fake-key-for-test"}):
-            await runtime.start()
+        await runtime.start()
 
         try:
             alpha_handle = runtime._creatures["alpha"]
@@ -304,8 +338,7 @@ class TestRuntimeLifecycle:
     async def test_stop_cleans_up(self, terrarium_config: TerrariumConfig):
         """After stop(), runtime reports not running."""
         runtime = TerrariumRuntime(terrarium_config)
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "fake-key-for-test"}):
-            await runtime.start()
+        await runtime.start()
         await runtime.stop()
 
         assert not runtime._running
@@ -313,8 +346,7 @@ class TestRuntimeLifecycle:
     async def test_get_status_structure(self, terrarium_config: TerrariumConfig):
         """get_status() returns expected keys and creature info."""
         runtime = TerrariumRuntime(terrarium_config)
-        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "fake-key-for-test"}):
-            await runtime.start()
+        await runtime.start()
 
         try:
             status = runtime.get_status()

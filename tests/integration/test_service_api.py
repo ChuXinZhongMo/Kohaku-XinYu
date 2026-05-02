@@ -15,16 +15,72 @@ from unittest.mock import patch
 import pytest
 
 from kohakuterrarium.serving.events import ChannelEvent, OutputEvent
-
-# Paths reused across test classes
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SWE_AGENT_DIR = str((PROJECT_ROOT / "examples" / "agent-apps" / "swe_agent").resolve())
-NOVEL_TERRARIUM_DIR = str(
-    (PROJECT_ROOT / "examples" / "terrariums" / "novel_terrarium").resolve()
-)
+from kohakuterrarium.testing.llm import ScriptedLLM
 
 # Environment patch applied to every test that instantiates agents/terrariums
 _FAKE_ENV = {"OPENROUTER_API_KEY": "fake-key-for-test"}
+_LLM_PATCH_TARGET = "kohakuterrarium.bootstrap.agent_init.create_llm_provider"
+
+
+def _scripted_llm(*_args, **_kwargs) -> ScriptedLLM:
+    return ScriptedLLM(["OK"])
+
+
+@pytest.fixture(autouse=True)
+def _isolated_runtime():
+    """Keep service API tests off real UI, OAuth, and network paths."""
+    with patch.dict(os.environ, _FAKE_ENV), patch(
+        _LLM_PATCH_TARGET,
+        side_effect=_scripted_llm,
+    ):
+        yield
+
+
+@pytest.fixture()
+def agent_dir(tmp_path: Path) -> str:
+    agent_path = tmp_path / "swe"
+    agent_path.mkdir()
+    (agent_path / "config.yaml").write_text(
+        """name: swe
+version: "1.0"
+controller:
+  model: test-model
+  api_key_env: OPENROUTER_API_KEY
+  base_url: https://example.invalid/v1
+input:
+  type: none
+output:
+  type: stdout
+tools:
+  - name: read
+  - name: bash
+""",
+        encoding="utf-8",
+    )
+    return str(agent_path)
+
+
+@pytest.fixture()
+def terrarium_dir(tmp_path: Path, agent_dir: str) -> str:
+    terrarium_path = tmp_path / "novel_terrarium"
+    terrarium_path.mkdir()
+    rel_agent = Path(agent_dir).as_posix()
+    (terrarium_path / "terrarium.yaml").write_text(
+        f"""terrarium:
+  name: novel_writer
+  creatures:
+    - name: brainstorm
+      config: {rel_agent}
+      channels:
+        listen: [seed]
+        can_send: [ideas]
+  channels:
+    seed: {{ type: queue, description: "Story seed prompt" }}
+    ideas: {{ type: queue, description: "Story ideas" }}
+""",
+        encoding="utf-8",
+    )
+    return str(terrarium_path)
 
 
 # ---------------------------------------------------------------------------
@@ -116,11 +172,11 @@ class TestAgentSession:
         with patch.dict(os.environ, _FAKE_ENV):
             yield
 
-    async def test_create_from_path(self):
+    async def test_create_from_path(self, agent_dir: str):
         """Create session from config path, verify agent_id, and stop."""
         from kohakuterrarium.serving.agent_session import AgentSession
 
-        session = await AgentSession.from_path(SWE_AGENT_DIR)
+        session = await AgentSession.from_path(agent_dir)
         try:
             assert session.agent_id is not None
             assert session.agent_id.startswith("agent_")
@@ -128,11 +184,11 @@ class TestAgentSession:
         finally:
             await session.stop()
 
-    async def test_get_status(self):
+    async def test_get_status(self, agent_dir: str):
         """Status includes agent_id, name, running, and tools."""
         from kohakuterrarium.serving.agent_session import AgentSession
 
-        session = await AgentSession.from_path(SWE_AGENT_DIR)
+        session = await AgentSession.from_path(agent_dir)
         try:
             status = session.get_status()
             assert "agent_id" in status
@@ -143,13 +199,13 @@ class TestAgentSession:
         finally:
             await session.stop()
 
-    async def test_session_lifecycle(self):
+    async def test_session_lifecycle(self, agent_dir: str):
         """Start and stop lifecycle transitions correctly."""
         from kohakuterrarium.serving.agent_session import AgentSession
 
         agent = __import__(
             "kohakuterrarium.core.agent", fromlist=["Agent"]
-        ).Agent.from_path(SWE_AGENT_DIR)
+        ).Agent.from_path(agent_dir)
         session = AgentSession(agent)
 
         # Before start
@@ -185,36 +241,36 @@ class TestKohakuManagerAgents:
         yield mgr
         await mgr.shutdown()
 
-    async def test_create_agent(self, manager):
+    async def test_create_agent(self, manager, agent_dir: str):
         """Create a standalone agent and verify it is listed."""
-        agent_id = await manager.agent_create(config_path=SWE_AGENT_DIR)
+        agent_id = await manager.agent_create(config_path=agent_dir)
         assert agent_id is not None
 
         agents = manager.agent_list()
         ids = [a["agent_id"] for a in agents]
         assert agent_id in ids
 
-    async def test_stop_agent(self, manager):
+    async def test_stop_agent(self, manager, agent_dir: str):
         """Stop an agent and verify it is removed."""
-        agent_id = await manager.agent_create(config_path=SWE_AGENT_DIR)
+        agent_id = await manager.agent_create(config_path=agent_dir)
         await manager.agent_stop(agent_id)
 
         agents = manager.agent_list()
         ids = [a["agent_id"] for a in agents]
         assert agent_id not in ids
 
-    async def test_list_agents(self, manager):
+    async def test_list_agents(self, manager, agent_dir: str):
         """List returns all running agents."""
-        id1 = await manager.agent_create(config_path=SWE_AGENT_DIR)
-        id2 = await manager.agent_create(config_path=SWE_AGENT_DIR)
+        id1 = await manager.agent_create(config_path=agent_dir)
+        id2 = await manager.agent_create(config_path=agent_dir)
 
         agents = manager.agent_list()
         ids = {a["agent_id"] for a in agents}
         assert {id1, id2} <= ids
 
-    async def test_get_agent_status(self, manager):
+    async def test_get_agent_status(self, manager, agent_dir: str):
         """Get status of a specific agent."""
-        agent_id = await manager.agent_create(config_path=SWE_AGENT_DIR)
+        agent_id = await manager.agent_create(config_path=agent_dir)
         status = manager.agent_status(agent_id)
 
         assert status is not None
@@ -251,35 +307,35 @@ class TestKohakuManagerTerrariums:
         yield mgr
         await mgr.shutdown()
 
-    async def test_create_terrarium(self, manager):
+    async def test_create_terrarium(self, manager, terrarium_dir: str):
         """Create terrarium from config path."""
-        tid = await manager.terrarium_create(config_path=NOVEL_TERRARIUM_DIR)
+        tid = await manager.terrarium_create(config_path=terrarium_dir)
         assert tid is not None
 
         terrariums = manager.terrarium_list()
         ids = [t["terrarium_id"] for t in terrariums]
         assert tid in ids
 
-    async def test_stop_terrarium(self, manager):
+    async def test_stop_terrarium(self, manager, terrarium_dir: str):
         """Stop terrarium and verify removed."""
-        tid = await manager.terrarium_create(config_path=NOVEL_TERRARIUM_DIR)
+        tid = await manager.terrarium_create(config_path=terrarium_dir)
         await manager.terrarium_stop(tid)
 
         terrariums = manager.terrarium_list()
         ids = [t["terrarium_id"] for t in terrariums]
         assert tid not in ids
 
-    async def test_list_terrariums(self, manager):
+    async def test_list_terrariums(self, manager, terrarium_dir: str):
         """List returns running terrariums."""
-        tid = await manager.terrarium_create(config_path=NOVEL_TERRARIUM_DIR)
+        tid = await manager.terrarium_create(config_path=terrarium_dir)
 
         listing = manager.terrarium_list()
         assert len(listing) >= 1
         assert any(t["terrarium_id"] == tid for t in listing)
 
-    async def test_get_terrarium_status(self, manager):
+    async def test_get_terrarium_status(self, manager, terrarium_dir: str):
         """Status includes creatures and channels."""
-        tid = await manager.terrarium_create(config_path=NOVEL_TERRARIUM_DIR)
+        tid = await manager.terrarium_create(config_path=terrarium_dir)
         status = manager.terrarium_status(tid)
 
         assert status is not None
@@ -287,11 +343,13 @@ class TestKohakuManagerTerrariums:
         assert "channels" in status
         assert status["running"] is True
 
-    async def test_hot_plug_via_manager(self, manager):
+    async def test_hot_plug_via_manager(
+        self, manager, agent_dir: str, terrarium_dir: str
+    ):
         """Add creature/channel through manager."""
         from kohakuterrarium.terrarium.config import CreatureConfig
 
-        tid = await manager.terrarium_create(config_path=NOVEL_TERRARIUM_DIR)
+        tid = await manager.terrarium_create(config_path=terrarium_dir)
 
         # Add a new channel
         await manager.terrarium_channel_add(
@@ -305,7 +363,7 @@ class TestKohakuManagerTerrariums:
         # Add a new creature wired to the new channel
         creature_cfg = CreatureConfig(
             name="reviewer",
-            config_data={"base_config": SWE_AGENT_DIR},
+            config_data={"base_config": agent_dir},
             base_dir=Path("."),
             listen_channels=["review"],
             send_channels=[],
@@ -316,9 +374,9 @@ class TestKohakuManagerTerrariums:
         status = manager.terrarium_status(tid)
         assert "reviewer" in status["creatures"]
 
-    async def test_send_to_channel(self, manager):
+    async def test_send_to_channel(self, manager, terrarium_dir: str):
         """Send message to channel via manager."""
-        tid = await manager.terrarium_create(config_path=NOVEL_TERRARIUM_DIR)
+        tid = await manager.terrarium_create(config_path=terrarium_dir)
 
         # "seed" channel exists in novel_terrarium config
         msg_id = await manager.terrarium_channel_send(
@@ -342,14 +400,16 @@ class TestKohakuManagerShutdown:
         with patch.dict(os.environ, _FAKE_ENV):
             yield
 
-    async def test_shutdown_stops_everything(self):
+    async def test_shutdown_stops_everything(
+        self, agent_dir: str, terrarium_dir: str
+    ):
         """Shutdown stops all agents and terrariums."""
         from kohakuterrarium.serving.manager import KohakuManager
 
         mgr = KohakuManager()
 
-        await mgr.agent_create(config_path=SWE_AGENT_DIR)
-        await mgr.terrarium_create(config_path=NOVEL_TERRARIUM_DIR)
+        await mgr.agent_create(config_path=agent_dir)
+        await mgr.terrarium_create(config_path=terrarium_dir)
 
         # Verify they exist
         assert len(mgr.agent_list()) >= 1

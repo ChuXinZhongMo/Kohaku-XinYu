@@ -38,6 +38,8 @@ class TestAgentBuilder:
         assert env.llm.call_count == 1
     """
 
+    __test__ = False
+
     def __init__(self):
         self._llm: ScriptedLLM | None = None
         self._output: OutputRecorder | None = None

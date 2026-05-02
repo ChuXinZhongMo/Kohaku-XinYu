@@ -54,6 +54,7 @@ jobs:
         run: |
           python state_io_smoke.py
           python runtime_security_smoke.py
+          python codex_delegation_reality_smoke.py
 
       - name: Check private runtime files are absent
         run: |

@@ -4,8 +4,7 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
-from xinyu_life_month_slots import refresh_current_life_month_context
-from xinyu_memory_weights import refresh_memory_weight_state
+from xinyu_runtime_context import build_renderer_memory_context, read_limited
 
 
 def _safe_str(value: Any, default: str = "") -> str:
@@ -162,42 +161,10 @@ class BridgeRenderer:
         )
 
     def renderer_memory_context(self, *, user_text: str = "") -> str:
-        refresh_current_life_month_context(self.xinyu_dir, user_text=user_text)
-        refresh_memory_weight_state(self.xinyu_dir)
-        parts: list[str] = []
-        for rel, limit in [
-            ("prompts/live_voice_card.md", 4000),
-            ("memory/context/persona_surface_state.md", 4000),
-            ("memory/self/core.md", 5000),
-            ("memory/self/personality_profile.md", 9000),
-            ("memory/context/persona_life_anchors.md", 6000),
-            ("memory/context/real_world_anchor_policy.md", 5000),
-            ("memory/context/current_life_month_context.md", 4500),
-            ("memory/self/voice_profile_zh.md", 9000),
-            ("memory/self/voice_calibration_log.md", 7000),
-            ("memory/self/narrative.md", 5000),
-            ("memory/emotions/current_state.md", 7000),
-            ("memory/relationships/index.md", 7000),
-            ("memory/relationships/owner_recent_events.md", 5000),
-            ("memory/people/owner.md", 7000),
-            ("memory/context/real_life_input_adapter_policy.md", 5000),
-            ("memory/context/current_life_posture.md", 3000),
-            ("memory/context/recent_context.md", 9000),
-        ]:
-            text = self.read_text(rel, limit=limit)
-            if text:
-                parts.append(f"[{rel}]\n{text}")
-        return "\n\n".join(parts) if parts else "(no memory context loaded)"
+        return build_renderer_memory_context(self.xinyu_dir, user_text=user_text)
 
     def read_text(self, rel: str, *, limit: int) -> str:
-        path = self.xinyu_dir / rel
-        try:
-            text = path.read_text(encoding="utf-8", errors="replace").strip()
-        except OSError:
-            return ""
-        if len(text) <= limit:
-            return text
-        return text[-limit:]
+        return read_limited(self.xinyu_dir, rel, limit=limit)
 
     def conversation_tail(self, agent: Any, *, max_messages: int) -> str:
         controller = getattr(agent, "controller", None)

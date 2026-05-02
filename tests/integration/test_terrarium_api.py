@@ -9,6 +9,7 @@ import pytest
 
 from kohakuterrarium.core.channel import AgentChannel, ChannelMessage, SubAgentChannel
 from kohakuterrarium.core.session import remove_session
+from kohakuterrarium.testing.llm import ScriptedLLM
 from kohakuterrarium.terrarium.config import (
     ChannelConfig,
     CreatureConfig,
@@ -17,9 +18,12 @@ from kohakuterrarium.terrarium.config import (
 from kohakuterrarium.terrarium.observer import ObservedMessage
 from kohakuterrarium.terrarium.runtime import TerrariumRuntime
 
-SWE_AGENT_DIR = (
-    Path(__file__).resolve().parents[2] / "examples" / "agent-apps" / "swe_agent"
-)
+_FAKE_ENV = {"OPENROUTER_API_KEY": "fake-key-for-test"}
+_LLM_PATCH_TARGET = "kohakuterrarium.bootstrap.agent_init.create_llm_provider"
+
+
+def _scripted_llm(*_args, **_kwargs) -> ScriptedLLM:
+    return ScriptedLLM(["OK"])
 
 
 # ---------------------------------------------------------------------------
@@ -28,22 +32,55 @@ SWE_AGENT_DIR = (
 
 
 @pytest.fixture()
-def terrarium_config() -> TerrariumConfig:
+def agent_dir(tmp_path: Path) -> str:
+    agent_path = tmp_path / "swe"
+    agent_path.mkdir()
+    (agent_path / "config.yaml").write_text(
+        """name: swe
+version: "1.0"
+controller:
+  model: test-model
+  api_key_env: OPENROUTER_API_KEY
+  base_url: https://example.invalid/v1
+input:
+  type: none
+output:
+  type: stdout
+tools:
+  - name: read
+  - name: bash
+""",
+        encoding="utf-8",
+    )
+    return str(agent_path)
+
+
+@pytest.fixture(autouse=True)
+def isolated_runtime():
+    """Keep these API tests off real UI, OAuth, and network paths."""
+    with patch.dict(os.environ, _FAKE_ENV), patch(
+        _LLM_PATCH_TARGET,
+        side_effect=_scripted_llm,
+    ):
+        yield
+
+
+@pytest.fixture()
+def terrarium_config(agent_dir: str) -> TerrariumConfig:
     """Minimal terrarium config with two creatures and mixed channels."""
-    swe_path = str(SWE_AGENT_DIR.resolve())
     return TerrariumConfig(
         name="api_test",
         creatures=[
             CreatureConfig(
                 name="alpha",
-                config_data={"base_config": swe_path},
+                config_data={"base_config": agent_dir},
                 base_dir=Path("."),
                 listen_channels=["inbox_alpha"],
                 send_channels=["outbox_alpha", "team_chat"],
             ),
             CreatureConfig(
                 name="beta",
-                config_data={"base_config": swe_path},
+                config_data={"base_config": agent_dir},
                 base_dir=Path("."),
                 listen_channels=["inbox_beta"],
                 send_channels=["outbox_beta", "team_chat"],
@@ -82,8 +119,7 @@ def cleanup_sessions(terrarium_config: TerrariumConfig):
 async def started_runtime(terrarium_config: TerrariumConfig):
     """A TerrariumRuntime that has been started (but not running creatures)."""
     runtime = TerrariumRuntime(terrarium_config)
-    with patch.dict(os.environ, {"OPENROUTER_API_KEY": "fake-key-for-test"}):
-        await runtime.start()
+    await runtime.start()
     yield runtime
     await runtime.stop()
 

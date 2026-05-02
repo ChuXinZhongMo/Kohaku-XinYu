@@ -10,17 +10,24 @@ from pathlib import Path
 ENTRY_RE = re.compile(r"(?ms)^## (?P<dream_id>dream-[^\n]+)\n(?P<body>.*?)(?=^## |\Z)")
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class DreamEntry:
     dream_id: str
     dreamed_at: str
-    fragments: str
-    dominant_feelings: str
     source_seed: str
-    likely_sources: str
+    source_seeds: str
+    dream_surface: str
+    fragments: str
+    distortions: str
+    emotional_weather: str
+    relationship_shadow: str
+    unresolved_piece: str
+    waking_residue: str
     retained_after_waking: str
     reality_boundary_check: str
     memory_effect: str
+    reflection_candidate: str
+    reflection_priority: str
     dream_weight_before: str
     dream_weight_after: str
     dream_weight_delta: str
@@ -36,43 +43,53 @@ def read_text(path: Path) -> str:
 
 
 def default_output_dir() -> Path:
-    desktop = Path.home() / "Desktop"
-    if desktop.exists():
-        return desktop / "XinYu-Dreams"
-    return Path("D:/XinYu/XinYu-Dreams")
+    return Path("D:/XinYu/XinYu-Autonomy/dreams")
 
 
 def extract_field(body: str, field: str, default: str = "none") -> str:
     match = re.search(rf"(?m)^- {re.escape(field)}:\s*(.*)$", body)
-    return match.group(1).strip() if match else default
+    return match.group(1).strip() if match and match.group(1).strip() else default
 
 
 def parse_dream_log(text: str) -> list[DreamEntry]:
     entries: list[DreamEntry] = []
     for match in ENTRY_RE.finditer(text):
         body = match.group("body")
+        fragments = extract_field(body, "fragments", "还没有形成可读梦境片段。")
+        waking = extract_field(
+            body,
+            "waking_residue",
+            extract_field(body, "retained_after_waking", "只保留情绪残留，不写成现实事实。"),
+        )
         entry = DreamEntry(
             dream_id=match.group("dream_id").strip(),
             dreamed_at=extract_field(body, "dreamed_at", "unknown"),
-            fragments=extract_field(body, "fragments", "还没有形成可读梦境片段。"),
-            dominant_feelings=extract_field(body, "dominant_feelings", "未定"),
             source_seed=extract_field(body, "source_seed", "none"),
-            likely_sources=extract_field(body, "likely_sources", "unknown"),
-            retained_after_waking=extract_field(
+            source_seeds=extract_field(body, "source_seeds", "[]"),
+            dream_surface=extract_field(body, "dream_surface", fragments),
+            fragments=fragments,
+            distortions=extract_field(body, "distortions", "梦里材料被重排；醒后不能当作现实。"),
+            emotional_weather=extract_field(
                 body,
-                "retained_after_waking",
-                "只保留情绪残留，不写成现实事实。",
+                "emotional_weather",
+                extract_field(body, "dominant_feelings", "未定"),
             ),
+            relationship_shadow=extract_field(body, "relationship_shadow", "none"),
+            unresolved_piece=extract_field(body, "unresolved_piece", "none"),
+            waking_residue=waking,
+            retained_after_waking=extract_field(body, "retained_after_waking", waking),
             reality_boundary_check=extract_field(
                 body,
                 "reality_boundary_check",
-                "梦境不是现实证据，不能证明现实里发生过新的对话或事件。",
+                "梦境不是现实证据，不能证明现实里发生过新的对话、接触或事件。",
             ),
             memory_effect=extract_field(
                 body,
                 "memory_effect",
-                "可以影响情绪权重，但不能改写事实层。",
+                "可以影响情绪权重和反思优先级，但不能改写事实层。",
             ),
+            reflection_candidate=extract_field(body, "reflection_candidate", "no"),
+            reflection_priority=extract_field(body, "reflection_priority", "none"),
             dream_weight_before=extract_field(body, "dream_weight_before", "unknown"),
             dream_weight_after=extract_field(body, "dream_weight_after", "unknown"),
             dream_weight_delta=extract_field(body, "dream_weight_delta", "unknown"),
@@ -106,25 +123,35 @@ def render_dream(entry: DreamEntry, generated_at: str) -> str:
 - exported_at: {generated_at}
 - dreamed_at: {entry.dreamed_at}
 - source_seed: {entry.source_seed}
+- source_seeds: {entry.source_seeds}
 
-## 梦境片段
+## 梦面
+{entry.dream_surface}
+
+## 梦境碎片
 {entry.fragments}
 
+## 梦的错位
+{entry.distortions}
+
 ## 醒后残留
-- dominant_feelings: {entry.dominant_feelings}
-- retained_after_waking: {entry.retained_after_waking}
+- emotional_weather: {entry.emotional_weather}
+- relationship_shadow: {entry.relationship_shadow}
+- unresolved_piece: {entry.unresolved_piece}
+- waking_residue: {entry.waking_residue}
 
 ## 梦后权重
 - dream_weight: {weight_line}
 - dream_weight_effect: {entry.dream_weight_effect}
 - relationship_effect: {entry.relationship_effect}
 - factual_effect: {entry.factual_effect}
+- reflection_candidate: {entry.reflection_candidate}
+- reflection_priority: {entry.reflection_priority}
 - memory_effect: {entry.memory_effect}
 
-## 来源与边界
-- likely_sources: {entry.likely_sources}
+## 边界
 - reality_boundary_check: {entry.reality_boundary_check}
-- rule: 梦可以保留情绪残影，但不能把梦里的片段写成现实事实。
+- rule: 梦可以保留情绪残影和反思材料，但不能把梦里的片段写成现实事实。
 """
 
 
@@ -139,7 +166,7 @@ def render_index(entries: list[DreamEntry], generated_at: str) -> str:
             lines.append(
                 f"- [{entry.dream_id}]({date}/{file_name}) "
                 f"- dreamed_at: {entry.dreamed_at} "
-                f"- feelings: {entry.dominant_feelings}"
+                f"- residue: {entry.waking_residue}"
             )
         body = "\n".join(lines)
 
@@ -154,8 +181,8 @@ def render_index(entries: list[DreamEntry], generated_at: str) -> str:
 
 ## Boundary
 - 这里是心玉的梦境导出，不是事实记忆。
-- 梦境可以显示她怎样整理情绪残留、关系残影和醒后的权重变化。
-- 梦不能证明现实里发生过新的对话或事件。
+- 梦境可以显示她怎样整理情绪残留、关系残影和醒后权重变化。
+- 梦不能证明现实里发生过新的对话、接触或事件。
 """
 
 
@@ -183,10 +210,7 @@ def export_dream_journal(
         latest_path.write_text(render_dream(entries[-1], generated_at), encoding="utf-8-sig")
         written_paths.append(str(latest_path))
     else:
-        latest_path.write_text(
-            "# 心玉梦境\n\n还没有可导出的梦境。\n",
-            encoding="utf-8-sig",
-        )
+        latest_path.write_text("# 心玉梦境\n\n还没有可导出的梦境。\n", encoding="utf-8-sig")
         written_paths.append(str(latest_path))
 
     index_path = output_dir / "index.md"

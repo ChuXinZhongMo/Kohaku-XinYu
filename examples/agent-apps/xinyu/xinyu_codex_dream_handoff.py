@@ -91,6 +91,7 @@ def _write_dream_seed(
     status = "timed_out" if timed_out else "unfinished"
     section = f"""
 ## {seed_id}
+- source_event: codex_delegate_{status}
 - theme: Codex 未完成的学习任务不能被关掉
 - residue: owner 明确要求别把超时当结束；{_trim(url_hint, 120)} 需要沉到梦和反思里继续消化
 - emotional_weight: 88
@@ -141,7 +142,12 @@ def _write_reflection_item(
     return item_id
 
 
-def _run_cycle(root: Path, produced_at: str) -> tuple[dict[str, object], dict[str, object], dict[str, object], dict[str, object]]:
+def _run_cycle(
+    root: Path,
+    produced_at: str,
+    *,
+    seed_id: str,
+) -> tuple[dict[str, object], dict[str, object], dict[str, object], dict[str, object]]:
     custom_dir = root / "custom"
     if str(custom_dir) not in sys.path:
         sys.path.insert(0, str(custom_dir))
@@ -152,7 +158,12 @@ def _run_cycle(root: Path, produced_at: str) -> tuple[dict[str, object], dict[st
     from slow_reprocess_engine import run_slow_reprocess
 
     slow = run_slow_reprocess(root, checked_at=produced_at, mode="codex_timeout_dream_handoff")
-    dream = run_dream_output(root, produced_at=produced_at, mode="codex_timeout_dream_handoff")
+    dream = run_dream_output(
+        root,
+        produced_at=produced_at,
+        mode="codex_timeout_dream_handoff",
+        preferred_seed_id=seed_id,
+    )
     reflection = run_reflection_output(root, produced_at=produced_at, mode="codex_timeout_dream_handoff")
     inner = run_inner_cycle_summary(root, checked_at=produced_at, mode="codex_timeout_dream_handoff")
     return slow, dream, reflection, inner
@@ -193,7 +204,7 @@ def handoff_codex_to_dream(
     inner: dict[str, object] = {}
     notes = ["codex_dream_handoff", f"seed:{seed_id}", f"reflection_item:{item_id}"]
     if run_cycle:
-        slow, dream, reflection, inner = _run_cycle(root, produced_at)
+        slow, dream, reflection, inner = _run_cycle(root, produced_at, seed_id=seed_id)
         notes.extend(
             [
                 f"dream_wrote:{dream.get('wrote_log')}",
