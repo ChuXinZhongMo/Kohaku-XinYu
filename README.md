@@ -1,6 +1,10 @@
 # XinYu
 
 <p align="center">
+  <img src="images/xinyu-repository-banner.jpg" alt="心玉の疗养室" width="100%">
+</p>
+
+<p align="center">
   <strong>长期运行型个人 AI 伴随系统：记忆、关系、情绪轨迹、学习、自检与受控主动性。</strong>
 </p>
 
@@ -203,3 +207,4 @@ examples/agent-apps/xinyu/learning/owner_supplied/
 ## License
 
 本仓库包含 XinYu 项目代码，以及作为底层依赖使用的 KohakuTerrarium 源码快照。许可证见 [`LICENSE`](LICENSE)。
+
