@@ -91,3 +91,9 @@ examples/agent-apps/xinyu/self/
 examples/agent-apps/xinyu/emotions/
 examples/agent-apps/xinyu/persona_surface_state.md
 *.log
+
+# XinYu desktop shell
+XinYu_Desktop/node_modules/
+XinYu_Desktop/out/
+XinYu_Desktop/dist/
+XinYu_Desktop/.codex-dev.log
