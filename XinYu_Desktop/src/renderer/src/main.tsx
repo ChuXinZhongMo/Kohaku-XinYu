@@ -342,8 +342,11 @@ function ChatTimeline(props: {
   onSelect: (item: unknown) => void
 }): JSX.Element {
   const turns = props.turns.slice(-8).map(asRecord)
+  const renderedCommandIds = new Set(turns.map((turn) => String(turn.commandId || '')).filter(Boolean))
+  const renderedTurnIds = new Set(turns.map((turn) => String(turn.turnId || '')).filter(Boolean))
   const pendingCommands = props.commands
     .filter((command) => command.status !== 'finished')
+    .filter((command) => !isCommandRenderedByTurn(command, renderedCommandIds, renderedTurnIds))
     .slice()
     .reverse()
   return (
@@ -394,6 +397,10 @@ function ChatTimeline(props: {
       ))}
     </div>
   )
+}
+
+function isCommandRenderedByTurn(command: CommandState, commandIds: Set<string>, turnIds: Set<string>): boolean {
+  return commandIds.has(command.commandId) || Boolean(command.turnId && turnIds.has(command.turnId))
 }
 
 function ChatInput(props: {
