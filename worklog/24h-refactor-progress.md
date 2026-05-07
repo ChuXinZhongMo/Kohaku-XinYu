@@ -51,3 +51,25 @@ Workspace: D:\XinYu
 - Risk: Documentation-only; no route, payload, persona, memory body, QQ outbound, or v1 traffic behavior touched.
 - Rollback: `git revert <loop-2-commit>`
 - Next: Choose the first code slice with the new validation gate in place.
+
+## Loop 3 - 18:35
+
+- Task: Extract the Desktop event service startup/shutdown boundary from `xinyu_core_bridge.py`.
+- Why: Desktop events are a distinct bridge-side service; moving their assembly and lifecycle out of `main()` reduces core bridge ownership without changing routes or payloads.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_desktop_service.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `rg -n "DesktopEventBus|DesktopWSServer" xinyu_core_bridge.py`
+  - `rg -n "desktop_ws_server|desktop_event_bus" xinyu_core_bridge.py`
+  - `Get-Content xinyu_core_bridge.py` focused on main and desktop methods
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_core_bridge.py xinyu_desktop_service.py`
+  - `.\.venv\Scripts\python.exe xinyu_desktop_rest_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_desktop_ws_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_desktop_events_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+- Result: Desktop event service assembly moved into `xinyu_desktop_service.py`. Compile, Desktop REST, Desktop WS, Desktop events, and bridge probe smokes passed.
+- Risk: Low; route names, request/response payloads, ports, auth guard calls, and event bus semantics are preserved.
+- Rollback: `git revert <loop-3-commit>`
+- Next: If validation passes, continue with a second bridge or state-write slice.

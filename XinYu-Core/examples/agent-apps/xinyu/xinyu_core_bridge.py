@@ -56,8 +56,7 @@ from xinyu_dialogue_working_memory import (
     save_dialogue_tail,
     session_tail_entries,
 )
-from xinyu_desktop_events import DesktopEventBus
-from xinyu_desktop_ws import DesktopWSServer
+from xinyu_desktop_service import build_desktop_service
 from xinyu_environment_sensor import sample_environment
 from xinyu_life_kernel import build_entropy_state, evaluate_life_kernel
 from xinyu_life_reply_policy import (
@@ -985,8 +984,8 @@ class XinYuBridgeRuntime:
         self._global_turn_lock = asyncio.Lock()
         self._codex_delegate_lock = asyncio.Lock()
         self._review_admin_lock = asyncio.Lock()
-        self.desktop_event_bus: DesktopEventBus | None = None
-        self.desktop_ws_server: DesktopWSServer | None = None
+        self.desktop_event_bus: Any | None = None
+        self.desktop_ws_server: Any | None = None
         self._desktop_recent_turns: list[dict[str, Any]] = []
         self._desktop_recent_memory_events: list[dict[str, Any]] = []
         self._desktop_proactive_inbox: dict[str, dict[str, Any]] = {}
@@ -7074,18 +7073,14 @@ def main() -> int:
         autonomous_maintenance_session_key=args.autonomous_maintenance_session_key,
     )
     loop, loop_thread = _start_loop_thread()
-    desktop_event_bus: DesktopEventBus | None = None
-    desktop_ws_server: DesktopWSServer | None = None
-    if not args.disable_desktop_events:
-        desktop_event_bus = DesktopEventBus(loop=loop)
-        desktop_ws_server = DesktopWSServer(
-            bus=desktop_event_bus,
-            host=args.desktop_events_host,
-            port=args.desktop_events_port,
-            token=args.bridge_token.strip(),
-        )
-        runtime.desktop_event_bus = desktop_event_bus
-        runtime.desktop_ws_server = desktop_ws_server
+    desktop_service = build_desktop_service(
+        enabled=not args.disable_desktop_events,
+        loop=loop,
+        host=args.desktop_events_host,
+        port=args.desktop_events_port,
+        token=args.bridge_token.strip(),
+    )
+    desktop_service.attach_runtime(runtime)
     server = XinYuBridgeHTTPServer(
         (args.host, args.port),
         XinYuBridgeRequestHandler,
@@ -7101,13 +7096,13 @@ def main() -> int:
     except Exception as exc:
         print(f"[xinyu_core_bridge] background startup warning: {exc}", flush=True)
 
-    if desktop_ws_server is not None:
+    if desktop_service.enabled:
         try:
-            future = asyncio.run_coroutine_threadsafe(desktop_ws_server.start(), loop)
+            future = asyncio.run_coroutine_threadsafe(desktop_service.start(), loop)
             future.result(timeout=10)
             print(
                 "[xinyu_core_bridge] desktop event stream dark launch listening on "
-                f"ws://{args.desktop_events_host}:{desktop_ws_server.bound_port}{desktop_ws_server.path}",
+                f"{desktop_service.listener_url()}",
                 flush=True,
             )
         except Exception as exc:
@@ -7128,9 +7123,9 @@ def main() -> int:
     finally:
         server.shutdown()
         server.server_close()
-        if desktop_ws_server is not None:
+        if desktop_service.enabled:
             try:
-                future = asyncio.run_coroutine_threadsafe(desktop_ws_server.stop(), loop)
+                future = asyncio.run_coroutine_threadsafe(desktop_service.stop(), loop)
                 future.result(timeout=10)
                 print("[xinyu_core_bridge] desktop event stream stopped", flush=True)
             except Exception as exc:

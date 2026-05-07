@@ -21,12 +21,13 @@ Workspace: D:\XinYu
 - [x] Create refactor checklist.
 - [x] Create validation matrix mapping capability areas to exact commands.
 - [x] Identify missing validation coverage and add it to this queue.
-- [ ] Extract one low-risk responsibility from `xinyu_core_bridge.py`.
+- [x] Extract one low-risk responsibility from `xinyu_core_bridge.py`.
 - [ ] Create state write audit.
 
 ## P1
 
-- [ ] Extract Desktop service boundary from the core bridge without route or payload changes.
+- [x] Extract Desktop event service startup/shutdown boundary from the core bridge.
+- [ ] Extract Desktop REST/snapshot methods from the core bridge without route or payload changes.
 - [ ] Extract Codex service boundary from the core bridge without output format changes.
 - [ ] Extract Learning service boundary from the core bridge without write format changes.
 - [ ] Introduce `state_service.py` helper surface for atomic writes and JSONL append.
