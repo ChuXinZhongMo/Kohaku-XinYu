@@ -59,8 +59,8 @@ Date: 2026-05-07
 
 - [x] Add state write audit.
 - [x] Add `state_service.py` helper seed.
-- [ ] Add long-run operations document.
-- [ ] Add read-only health diagnostic script.
+- [x] Add long-run operations document.
+- [x] Add read-only health diagnostic script.
 
 ## Completion Report Inputs
 

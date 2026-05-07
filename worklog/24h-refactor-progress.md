@@ -143,3 +143,26 @@ Workspace: D:\XinYu
 - Risk: Medium-low; no OneBot payload shape, send path, real outbound behavior, config keys, or trust persistence format changed.
 - Rollback: `git revert <loop-6-commit>`
 - Next: If validation passes, extract QQ outbox dispatcher or add long-run diagnostics.
+
+## Loop 7 - 19:45
+
+- Task: Add long-run operations guidance and a read-only health diagnostic.
+- Why: XinYu is a long-running local system; refactors need an operator-facing health snapshot beyond individual smoke tests.
+- Files changed:
+  - `XINYU-LONG-RUN-OPERATIONS.md`
+  - `diagnostics/check_xinyu_health.py`
+  - `worklog/24h-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+  - `XINYU-REFACTOR-CHECKLIST.md`
+- Commands:
+  - `Get-Content xinyu_status.py`
+  - `Get-Content deployment_status_smoke.py`
+  - `Get-Content runtime_readiness_smoke.py`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe -m py_compile diagnostics\check_xinyu_health.py`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json`
+  - `.\.venv\Scripts\python.exe long_run_status.py`
+  - `git diff --check`
+- Result: Long-run doc and read-only diagnostic added. Compile, diagnostic execution, `long_run_status.py`, and `git diff --check` passed. The health snapshot reported current live status `critical` because existing logs contain many recent exception markers, v1 shadow trace has errors in the sampled tail, and the worktree is dirty during the loop.
+- Risk: Low; diagnostic is read-only and does not start services, write runtime files, send QQ messages, or modify memory.
+- Rollback: `git revert <loop-7-commit>`
+- Next: Continue with QQ outbox dispatcher or v1 canary gate isolation.
