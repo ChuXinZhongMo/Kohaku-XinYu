@@ -35,6 +35,7 @@ Date: 2026-05-07
 - [x] Map Memory/state to commands.
 - [x] Map v1 compatibility to commands.
 - [x] Map Long-run health to command or mark missing.
+- [x] Add service-boundary smoke for extracted helper contracts.
 
 ## Core Bridge Slices
 

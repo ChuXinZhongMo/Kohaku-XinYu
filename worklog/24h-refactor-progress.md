@@ -418,3 +418,28 @@ Workspace: D:\XinYu
 - Risk: Low; only opt-in runtime diagnostic writes were added. No QQ outbound, v1 traffic expansion, persona semantics, or long-term memory body content changed.
 - Rollback: `git revert <loop-18-commit>`
 - Next: Add service-boundary unit tests for new bridge modules.
+
+## Loop 19 - 20:01
+
+- Task: Add service-boundary smoke coverage for extracted modules.
+- Why: The new service modules need narrower contract checks beyond route-level smoke tests, especially for pure payload helpers and dependency delegation.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/service_boundary_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_codex_service.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `XINYU-REFACTOR-CHECKLIST.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `git status --short --branch`
+  - `.\.venv\Scripts\python.exe -m py_compile service_boundary_smoke.py xinyu_qq_sender.py xinyu_desktop_service.py xinyu_chat_service.py xinyu_codex_service.py xinyu_learning_service.py`
+  - `.\.venv\Scripts\python.exe service_boundary_smoke.py`
+  - `.\.venv\Scripts\python.exe chat_service_smoke.py`
+  - `.\.venv\Scripts\python.exe codex_completion_outbox_smoke.py`
+  - `.\.venv\Scripts\python.exe codex_delegate_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Added `service_boundary_smoke.py` covering QQ sender payloads, Desktop service helpers, Chat request validation, Codex summary/image helper contracts, and Learning service delegation through fakes. First run exposed that `Generated image path:` could enter Codex visible summaries; `xinyu_codex_service.py` now filters that metadata, and Codex completion/delegate smokes passed after the fix.
+- Risk: Low-medium; one visible-summary filter changed to avoid local artifact metadata leakage. No persona semantics, memory body content, QQ outbound, or v1 traffic changed.
+- Rollback: `git revert <loop-19-commit>`
+- Next: Triage current health critical `recent_exceptions` and v1 shadow tail errors without changing live traffic.

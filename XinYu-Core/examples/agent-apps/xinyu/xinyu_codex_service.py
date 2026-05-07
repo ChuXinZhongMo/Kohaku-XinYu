@@ -146,7 +146,9 @@ def codex_completion_summary(xinyu_dir: Path, result: Any, *, limit: int = 220) 
             lower_line = line.lower()
             if line.startswith(("#", "title:", "status:", "generated_at:", "## Stdout", "## Stderr")):
                 continue
-            if lower_line.startswith(("request:", "created:", "owner task:", "report:", "report name:")):
+            if lower_line.startswith(
+                ("request:", "created:", "owner task:", "report:", "report name:", "generated image path:")
+            ):
                 continue
             if re.search(r"(?i)(codex-qq-\d|\.md\b|outbox|request_path|report_path|last_message_path)", line):
                 continue

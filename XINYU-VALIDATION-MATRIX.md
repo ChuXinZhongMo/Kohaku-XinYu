@@ -44,6 +44,7 @@ For Python code changes, also compile the changed Python files:
 | Codex completion outbox | `codex_completion_outbox_smoke.py`; `codex_report_material_smoke.py` | Any completion report or outbox handling change | Covered |
 | Learning ingest | `bridge_learning_ingest_smoke.py`; `.\.venv\Scripts\python.exe -m pytest tests\test_learning_closed_loop.py -q` | Any `/learning/*`, ingest scope, or learning write wrapper change | Covered |
 | Learning library/source chain | `learning_library_smoke.py`; `learning_quality_smoke.py`; `source_learning_chain_smoke.py`; `smoke_run.py --group learning` | Any learning quality, library, source material, or controlled source path change | Covered |
+| Service boundaries | `service_boundary_smoke.py`; plus the capability smoke for the touched service | Any extracted boundary helper, service wrapper, or transport sender contract change | Covered for pure boundary contracts |
 | Memory/state helpers | `state_io_smoke.py`; `memory_event_sourcing_smoke.py`; `private_thought_events_smoke.py`; `smoke_run.py --group memory` | Any state helper, event/projection, or memory-sidecar change | Covered for existing helper; broader state governance still pending |
 | Persona/voice behavior | `persona_contract_absence_smoke.py`; `personality_evolution_smoke.py`; `live_voice_card_smoke.py`; `pre_draft_turn_classifier_smoke.py`; `xinyu_speech_controller_smoke.py`; `smoke_run.py --group voice` | Any renderer, prompt assembly, voice, or final speaking-controller change | Covered; avoid changing semantics |
 | Runtime security/local scope | `runtime_security_smoke.py`; `local_scope_smoke.py`; `smoke_run.py --group privacy` | Any auth, token, loopback, path scope, or local file access change | Covered |
@@ -61,6 +62,7 @@ For Python code changes, also compile the changed Python files:
 | Codex service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `codex_delegate_smoke.py`; `codex_completion_outbox_smoke.py`; `bridge_probe_smoke.py` |
 | Learning service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `bridge_learning_ingest_smoke.py`; `python -m pytest tests\test_learning_closed_loop.py -q`; `bridge_probe_smoke.py` |
 | Chat service boundary | `python -m py_compile xinyu_core_bridge.py xinyu_chat_service.py chat_service_smoke.py`; `chat_service_smoke.py`; `bridge_probe_smoke.py`; focused chat/session pytest |
+| Service-boundary smoke | `python -m py_compile service_boundary_smoke.py xinyu_qq_sender.py xinyu_desktop_service.py xinyu_chat_service.py xinyu_codex_service.py xinyu_learning_service.py`; `service_boundary_smoke.py`; plus touched capability smoke |
 | State service helper | `python -m py_compile state_service.py`; `state_io_smoke.py`; `promise_followup_state_smoke.py`; any focused test added for the helper |
 | QQ trust/outbox extraction | `python -m py_compile xinyu_qq_gateway.py <new-module>`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py`; `qq_outbox_smoke.py`; sent-index lookup via `check_sent_index.py <adapter_msg_id>` or the focused pytest fallback |
 | QQ sender/command extraction | `python -m py_compile xinyu_qq_gateway.py <new-module>`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py` |
@@ -70,7 +72,7 @@ For Python code changes, also compile the changed Python files:
 ## Missing Or Weak Gates
 
 - `state_io_smoke.py` covers the existing shared markdown helper, but not a future full `state_service.py` contract.
-- Core bridge and QQ gateway extraction gates exist, but there are no narrow unit tests for each future service boundary yet.
+- `service_boundary_smoke.py` covers the first extracted pure contracts, but future boundary modules still need their own focused tests as they are split.
 - Current live health still reports existing `recent_exceptions` and `v1_shadow_errors`; those need triage before treating live health as green.
 
 ## Red Lines During Validation

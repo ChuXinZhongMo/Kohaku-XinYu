@@ -25,7 +25,7 @@ Date: 2026-05-07
 
 - [x] Add chat service boundary.
 - [x] Add narrower long-run health history/checkpoint ledger.
-- [ ] Add service-boundary unit tests for new bridge modules.
+- [x] Add service-boundary unit tests for new bridge modules.
 
 ## Red Lines Remain
 
