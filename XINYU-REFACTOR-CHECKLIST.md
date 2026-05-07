@@ -4,14 +4,14 @@ Date: 2026-05-07
 
 ## Guardrails
 
-- [ ] Do not change persona semantics.
-- [ ] Do not edit long-term memory body content.
-- [ ] Do not perform real QQ outbound tests.
-- [ ] Do not expand v1 real traffic.
-- [ ] Do not bulk-format unrelated files.
-- [ ] Do not delete `runtime`, `memory`, `Autonomy`, or `Local-Scope`.
-- [ ] Do not use `git reset --hard`.
-- [ ] Do not overwrite user parallel edits.
+- [x] Do not change persona semantics.
+- [x] Do not edit long-term memory body content.
+- [x] Do not perform real QQ outbound tests.
+- [x] Do not expand v1 real traffic.
+- [x] Do not bulk-format unrelated files.
+- [x] Do not delete `runtime`, `memory`, `Autonomy`, or `Local-Scope`.
+- [x] Do not use `git reset --hard`.
+- [x] Do not overwrite user parallel edits.
 
 ## Baseline Inventory
 
@@ -26,15 +26,15 @@ Date: 2026-05-07
 
 ## Validation
 
-- [ ] Add `XINYU-VALIDATION-MATRIX.md`.
-- [ ] Map Bridge startup to smoke command.
-- [ ] Map Desktop REST/WS/events to smoke commands.
-- [ ] Map QQ Gateway and outbox to smoke commands.
-- [ ] Map Codex delegation and completion outbox to smoke commands.
-- [ ] Map Learning ingest and closed-loop tests to commands.
-- [ ] Map Memory/state to commands.
-- [ ] Map v1 compatibility to commands.
-- [ ] Map Long-run health to command or mark missing.
+- [x] Add `XINYU-VALIDATION-MATRIX.md`.
+- [x] Map Bridge startup to smoke command.
+- [x] Map Desktop REST/WS/events to smoke commands.
+- [x] Map QQ Gateway and outbox to smoke commands.
+- [x] Map Codex delegation and completion outbox to smoke commands.
+- [x] Map Learning ingest and closed-loop tests to commands.
+- [x] Map Memory/state to commands.
+- [x] Map v1 compatibility to commands.
+- [x] Map Long-run health to command or mark missing.
 
 ## Core Bridge Slices
 

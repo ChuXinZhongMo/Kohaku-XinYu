@@ -19,8 +19,8 @@ Workspace: D:\XinYu
 - [x] Record baseline task queue.
 - [x] Create progress log for loop-by-loop execution.
 - [x] Create refactor checklist.
-- [ ] Create validation matrix mapping capability areas to exact commands.
-- [ ] Identify missing validation coverage and add it to this queue.
+- [x] Create validation matrix mapping capability areas to exact commands.
+- [x] Identify missing validation coverage and add it to this queue.
 - [ ] Extract one low-risk responsibility from `xinyu_core_bridge.py`.
 - [ ] Create state write audit.
 
@@ -40,6 +40,9 @@ Workspace: D:\XinYu
 - [ ] Isolate v1 canary gate decisions.
 - [ ] Add long-run health diagnostics.
 - [ ] Add chat service boundary after validation coverage is solid.
+- [ ] Add root long-run operations document.
+- [ ] Add read-only `diagnostics/check_xinyu_health.py`.
+- [ ] Add narrow tests for future service-boundary helpers as they are extracted.
 
 ## P3
 
