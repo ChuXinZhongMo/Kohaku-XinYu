@@ -373,3 +373,27 @@ Workspace: D:\XinYu
 - Risk: Low-medium; Desktop payload fields and routes are unchanged, but helper ownership moved.
 - Rollback: `git revert <loop-16-commit>`
 - Next: Add chat service boundary.
+
+## Loop 17 - 19:49
+
+- Task: Add a chat service boundary.
+- Why: The full chat turn orchestration is too large to move safely in one slice, but request validation, text/session extraction, empty-response handling, and turn clock setup are stable boundary responsibilities.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_chat_service.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/chat_service_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `XINYU-REFACTOR-CHECKLIST.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `rg -n "async def chat|def _build_chat|_payload_text|_session|run_pre_model_routes|archive_dialogue_turn|record_chat_event|desktop_publish_chat" xinyu_core_bridge.py bridge_probe_smoke.py tests`
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_core_bridge.py xinyu_chat_service.py chat_service_smoke.py`
+  - `.\.venv\Scripts\python.exe chat_service_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_dialogue_curiosity_bridge_injection.py::test_bridge_uses_restored_live_turn_context_with_session_tail tests\test_dialogue_curiosity_bridge_injection.py::test_session_prompt_signature_ignores_volatile_context_files -q`
+  - `git diff --check`
+- Result: Added `xinyu_chat_service.py` and `chat_service_smoke.py`; core chat now delegates request preparation and turn-clock setup to the service. The long-text branch now uses a 413-compatible HTTP status fallback inside the boundary. Compile, chat service smoke, bridge probe, focused chat/session pytest, and `git diff --check` passed.
+- Risk: Medium-low; chat orchestration, prompt assembly, persona, memory selection, v1 policy, and side effects remain in core unchanged.
+- Rollback: `git revert <loop-17-commit>`
+- Next: Add narrower long-run health history/checkpoint ledger.

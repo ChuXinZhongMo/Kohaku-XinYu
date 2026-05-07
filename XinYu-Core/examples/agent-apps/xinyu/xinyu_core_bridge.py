@@ -34,6 +34,7 @@ from xinyu_bridge_renderer import BridgeRenderer
 import xinyu_bridge_action_routes
 from xinyu_bridge_turn_pipeline import run_pre_model_routes
 import xinyu_bridge_v1_routes
+from xinyu_chat_service import ChatServiceError, build_chat_service
 from xinyu_codex_delegate import (
     looks_like_codex_request,
     looks_like_owner_local_write_request,
@@ -997,6 +998,7 @@ class XinYuBridgeRuntime:
             renderer_mode=self.renderer_mode,
             render_timeout_seconds=self.render_timeout_seconds,
         )
+        self.chat_service = build_chat_service()
         self._sessions: dict[str, AgentSession] = {}
         self._sessions_lock = asyncio.Lock()
         self._global_turn_lock = asyncio.Lock()
@@ -4812,26 +4814,23 @@ tags: [promise, followup, qq-outbox, continuity]
     async def chat(self, payload: dict[str, Any]) -> dict[str, Any]:
         if self._closed:
             raise BridgeRequestError(HTTPStatus.SERVICE_UNAVAILABLE, "bridge is shutting down")
-        if not isinstance(payload, dict):
-            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
-
-        text = self._payload_text(payload)
-        if not text:
-            return {
-                "accepted": True,
-                "reply": "",
-                "memory_changed": False,
-                "notes": ["empty_text"],
-            }
-        if len(text) > self.max_text_chars:
-            raise BridgeRequestError(
-                HTTPStatus.PAYLOAD_TOO_LARGE,
-                f"text is too long: {len(text)} chars > {self.max_text_chars}",
+        try:
+            chat_request = self.chat_service.prepare_request(
+                payload,
+                max_text_chars=self.max_text_chars,
+                payload_text=self._payload_text,
+                session_key=self._session_key,
             )
+        except ChatServiceError as exc:
+            raise BridgeRequestError(exc.status, exc.message) from exc
+        if chat_request.empty_response is not None:
+            return chat_request.empty_response
 
-        session_key = self._session_key(payload)
-        turn_started_at = time.perf_counter()
-        turn_started_wall = datetime.now().astimezone().isoformat()
+        text = chat_request.text
+        session_key = chat_request.session_key
+        turn_clock = self.chat_service.start_turn_clock()
+        turn_started_at = turn_clock.started_at
+        turn_started_wall = turn_clock.started_wall
         presence_start: dict[str, Any] = {"turn_id": ""}
         async with self._global_turn_lock:
             cleanup = await self._cleanup_idle_sessions()

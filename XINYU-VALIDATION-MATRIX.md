@@ -60,6 +60,7 @@ For Python code changes, also compile the changed Python files:
 | Desktop service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `xinyu_desktop_rest_smoke.py`; `xinyu_desktop_ws_smoke.py`; `xinyu_desktop_events_smoke.py`; `bridge_probe_smoke.py` |
 | Codex service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `codex_delegate_smoke.py`; `codex_completion_outbox_smoke.py`; `bridge_probe_smoke.py` |
 | Learning service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `bridge_learning_ingest_smoke.py`; `python -m pytest tests\test_learning_closed_loop.py -q`; `bridge_probe_smoke.py` |
+| Chat service boundary | `python -m py_compile xinyu_core_bridge.py xinyu_chat_service.py chat_service_smoke.py`; `chat_service_smoke.py`; `bridge_probe_smoke.py`; focused chat/session pytest |
 | State service helper | `python -m py_compile state_service.py`; `state_io_smoke.py`; `promise_followup_state_smoke.py`; any focused test added for the helper |
 | QQ trust/outbox extraction | `python -m py_compile xinyu_qq_gateway.py <new-module>`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py`; `qq_outbox_smoke.py`; sent-index lookup via `check_sent_index.py <adapter_msg_id>` or the focused pytest fallback |
 | QQ sender/command extraction | `python -m py_compile xinyu_qq_gateway.py <new-module>`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py` |

@@ -23,7 +23,7 @@ Date: 2026-05-07
 
 ## P2
 
-- [ ] Add chat service boundary.
+- [x] Add chat service boundary.
 - [ ] Add narrower long-run health history/checkpoint ledger.
 - [ ] Add service-boundary unit tests for new bridge modules.
 
