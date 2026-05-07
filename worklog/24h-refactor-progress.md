@@ -190,3 +190,25 @@ Workspace: D:\XinYu
 - Risk: Medium; send path is structurally moved but real outbound tests are still not run. Existing smoke coverage must pass before commit.
 - Rollback: `git revert <loop-8-commit>`
 - Next: Continue with v1 gate isolation or final report docs.
+
+## Loop 9 - 20:25
+
+- Task: Isolate v1 simple canary gate decisions.
+- Why: v1 canary eligibility should be independently testable and reviewable without widening canary scope or changing shadow/readiness behavior.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/v1_canary_gate.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_v1_routes.py`
+  - `worklog/24h-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+  - `XINYU-REFACTOR-CHECKLIST.md`
+- Commands:
+  - `rg -n "_payload_has_attachment_signal|canary_payload_allowed|V1_CANARY|V1_OWNER_SIMPLE" xinyu_bridge_v1_routes.py tests\test_v1_canary_readiness.py tests\v1\test_bridge_compatibility.py tests\v1\test_hybrid_router.py`
+  - `Get-Content xinyu_bridge_v1_routes.py` focused on v1 canary gate
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_v1_routes.py v1_canary_gate.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_v1_canary_readiness.py tests\v1\test_bridge_compatibility.py tests\v1\test_hybrid_router.py -q`
+  - `.\.venv\Scripts\python.exe xinyu_v1_owner_simple_canary_smoke.py`
+  - `git diff --check`
+- Result: Canary gate isolated. Compile, v1 canary readiness/compatibility/hybrid pytest gate, owner simple canary smoke, and `git diff --check` passed.
+- Risk: Medium-low; logic is moved but canary scope, env gates, and real traffic behavior are unchanged.
+- Rollback: `git revert <loop-9-commit>`
+- Next: Continue with final summary docs or another bridge service boundary.

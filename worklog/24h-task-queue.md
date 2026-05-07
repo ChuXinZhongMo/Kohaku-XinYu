@@ -38,7 +38,7 @@ Workspace: D:\XinYu
 
 - [ ] Extract QQ sender helpers.
 - [ ] Extract QQ command router helpers.
-- [ ] Isolate v1 canary gate decisions.
+- [x] Isolate v1 canary gate decisions.
 - [ ] Add long-run health diagnostics.
 - [ ] Add chat service boundary after validation coverage is solid.
 - [x] Add `state_service.py` helper seed for runtime/projection writes.

@@ -43,7 +43,7 @@ Date: 2026-05-07
 - [ ] Extract Codex service boundary.
 - [ ] Extract Learning service boundary.
 - [ ] Extract state write helpers.
-- [ ] Extract v1 canary gate.
+- [x] Extract v1 canary gate.
 - [ ] Extract chat service boundary.
 
 ## QQ Gateway Slices

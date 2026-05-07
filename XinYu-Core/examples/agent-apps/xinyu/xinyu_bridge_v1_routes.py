@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-import re
 import time
 from pathlib import Path
 from typing import Any
 
+import v1_canary_gate
 from xinyu_runtime_presence import record_turn_finished
 from xinyu_sent_reply_index import visible_text_hash
 from xinyu_v1_canary_readiness import record_v1_shadow_observation
@@ -42,35 +42,6 @@ def _memory_snapshot(memory_root: Path) -> dict[str, tuple[int, int]]:
             stat.st_size,
         )
     return snapshot
-
-
-def _payload_has_attachment_signal(payload: dict[str, Any]) -> bool:
-    attachment_keys = (
-        "attachments",
-        "attachment",
-        "image_path",
-        "file_path",
-        "file_name",
-        "image",
-        "file",
-        "raw_image",
-        "raw_images",
-    )
-    for key in attachment_keys:
-        value = payload.get(key)
-        if isinstance(value, (list, tuple, dict)) and value:
-            return True
-        if _safe_str(value).strip():
-            return True
-    metadata = payload.get("metadata")
-    if isinstance(metadata, dict):
-        for key in attachment_keys:
-            value = metadata.get(key)
-            if isinstance(value, (list, tuple, dict)) and value:
-                return True
-            if _safe_str(value).strip():
-                return True
-    return False
 
 
 def _command_id(payload: dict[str, Any]) -> str:
@@ -196,27 +167,16 @@ async def run_shadow(runtime: Any, payload: dict[str, Any], *, text: str) -> dic
 
 
 def canary_payload_allowed(runtime: Any, payload: dict[str, Any], text: str) -> tuple[bool, list[str]]:
-    if not runtime.v1_enabled:
-        return False, ["v1_disabled"]
-    if not runtime.v1_owner_simple_canary:
-        return False, [f"{V1_OWNER_SIMPLE_CANARY_ENV}=false"]
-    if not runtime._owner_private_payload_matches(payload):
-        return False, ["not_owner_private"]
-    if _payload_has_attachment_signal(payload):
-        return False, ["attachment_present"]
-    compact = re.sub(r"\s+", "", _safe_str(text)).strip()
-    if not compact:
-        return False, ["empty_text"]
-    if "\n" in _safe_str(text) or "\r" in _safe_str(text):
-        return False, ["multiline_text"]
-    if len(compact) > 20:
-        return False, ["text_too_long_for_simple_canary"]
-    lowered = compact.lower()
-    if compact in V1_CANARY_GREETING_TEXTS or lowered in V1_CANARY_GREETING_TEXTS:
-        return True, ["simple_greeting"]
-    if compact in V1_CANARY_ACK_TEXTS or lowered in V1_CANARY_ACK_TEXTS:
-        return True, ["simple_ack"]
-    return False, ["not_simple_greeting_or_ack"]
+    return v1_canary_gate.canary_payload_allowed(
+        v1_enabled=runtime.v1_enabled,
+        owner_simple_canary=runtime.v1_owner_simple_canary,
+        owner_private=runtime._owner_private_payload_matches(payload),
+        payload=payload,
+        text=text,
+        owner_simple_canary_env=V1_OWNER_SIMPLE_CANARY_ENV,
+        greeting_texts=V1_CANARY_GREETING_TEXTS,
+        ack_texts=V1_CANARY_ACK_TEXTS,
+    )
 
 
 async def handle_canary_turn(
