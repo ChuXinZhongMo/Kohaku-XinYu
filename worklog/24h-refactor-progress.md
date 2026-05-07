@@ -306,3 +306,25 @@ Workspace: D:\XinYu
 - Risk: Low; path and markdown shape are unchanged, and no long-term memory body content was edited.
 - Rollback: `git revert <loop-13-commit>`
 - Next: Extract QQ sender helpers from `xinyu_qq_gateway.py`.
+
+## Loop 14 - 19:31
+
+- Task: Extract QQ sender action/param helpers from `xinyu_qq_gateway.py`.
+- Why: OneBot send action selection and params are transport sender responsibilities and can be isolated without changing send timing, ack handling, or payload shape.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_sender.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XINYU-REFACTOR-CHECKLIST.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `rg -n "send_private|send_group|send_file|send_image|send_msg|call_api|_send" xinyu_qq_gateway.py`
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py xinyu_qq_sender.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_outbox_smoke.py`
+  - `git diff --check`
+- Result: Added `xinyu_qq_sender.py`; text, image, and file send wrappers now delegate OneBot action/params to it. Compile, QQ gateway smoke, QQ review smoke, QQ outbox smoke, and `git diff --check` passed.
+- Risk: Medium-low; send payload construction moved but real QQ outbound behavior was not exercised or expanded.
+- Rollback: `git revert <loop-14-commit>`
+- Next: Reduce QQ command router shims in `xinyu_qq_gateway.py`.

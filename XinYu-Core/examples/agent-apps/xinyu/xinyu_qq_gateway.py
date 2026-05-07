@@ -29,6 +29,7 @@ import xinyu_qq_command_router
 import xinyu_qq_normalizer
 import xinyu_qq_outbox_client
 import xinyu_qq_outbox_dispatcher
+import xinyu_qq_sender
 import xinyu_qq_trust_policy
 from xinyu_visible_reply_guard import dedupe_visible_reply
 
@@ -3999,15 +4000,7 @@ class NativeQQGateway:
         return responses[-1]
 
     async def send_reply(self, websocket: Any, target: ReplyTarget, text: str) -> dict[str, Any] | None:
-        action = "send_group_msg" if target.message_kind == "group" else "send_private_msg"
-        params: dict[str, Any] = {
-            "message": [{"type": "text", "data": {"text": text}}],
-            "auto_escape": False,
-        }
-        if target.message_kind == "group":
-            params["group_id"] = _maybe_int(target.group_id)
-        else:
-            params["user_id"] = _maybe_int(target.user_id)
+        action, params = xinyu_qq_sender.text_message_action(target, text)
         return await self.send_action(websocket, action, params)
 
     async def send_image(
@@ -4018,16 +4011,7 @@ class NativeQQGateway:
         *,
         caption: str = "",
     ) -> dict[str, Any] | None:
-        action = "send_group_msg" if target.message_kind == "group" else "send_private_msg"
-        segments: list[dict[str, Any]] = [{"type": "image", "data": {"file": image_file}}]
-        params: dict[str, Any] = {
-            "message": segments,
-            "auto_escape": False,
-        }
-        if target.message_kind == "group":
-            params["group_id"] = _maybe_int(target.group_id)
-        else:
-            params["user_id"] = _maybe_int(target.user_id)
+        action, params = xinyu_qq_sender.image_message_action(target, image_file)
         return await self.send_action(websocket, action, params)
 
     async def send_file(
@@ -4038,15 +4022,7 @@ class NativeQQGateway:
         *,
         name: str,
     ) -> dict[str, Any] | None:
-        action = "upload_group_file" if target.message_kind == "group" else "upload_private_file"
-        params: dict[str, Any] = {
-            "file": file_path,
-            "name": name,
-        }
-        if target.message_kind == "group":
-            params["group_id"] = _maybe_int(target.group_id)
-        else:
-            params["user_id"] = _maybe_int(target.user_id)
+        action, params = xinyu_qq_sender.file_upload_action(target, file_path, name=name)
         return await self.send_action(websocket, action, params)
 
     async def send_action(self, websocket: Any, action: str, params: dict[str, Any]) -> dict[str, Any] | None:
