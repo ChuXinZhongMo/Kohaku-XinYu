@@ -96,3 +96,23 @@ Workspace: D:\XinYu
 - Risk: Documentation-only; no memory body, runtime state, QQ outbound, or v1 behavior touched.
 - Rollback: `git revert <loop-4-commit>`
 - Next: Introduce a small state helper seed or move to QQ trust policy extraction.
+
+## Loop 5 - 19:05
+
+- Task: Add a small `state_service.py` helper seed.
+- Why: The audit showed repeated atomic text/JSON and JSONL append patterns; a focused helper gives future migrations a governed target without changing existing production writes yet.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/state_service.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/state_io_smoke.py`
+  - `worklog/24h-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+  - `XINYU-REFACTOR-CHECKLIST.md`
+- Commands:
+  - `git status --short --branch`
+  - `.\.venv\Scripts\python.exe -m py_compile state_service.py state_io_smoke.py`
+  - `.\.venv\Scripts\python.exe state_io_smoke.py`
+  - `git diff --check`
+- Result: Helper seed added with atomic text, atomic JSON, JSON read, and JSONL append helpers. Compile, `state_io_smoke.py`, and `git diff --check` passed.
+- Risk: Low; helper is not wired into production callers, so no memory body, runtime state, QQ outbound, or v1 behavior changes.
+- Rollback: `git revert <loop-5-commit>`
+- Next: If validation passes, migrate one low-risk projection writer or move to QQ trust policy extraction.

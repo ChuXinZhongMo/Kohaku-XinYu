@@ -41,7 +41,8 @@ Workspace: D:\XinYu
 - [ ] Isolate v1 canary gate decisions.
 - [ ] Add long-run health diagnostics.
 - [ ] Add chat service boundary after validation coverage is solid.
-- [ ] Add `state_service.py` helper seed for runtime/projection writes.
+- [x] Add `state_service.py` helper seed for runtime/projection writes.
+- [ ] Migrate one low-risk runtime/projection writer to `state_service.py`.
 - [ ] Add root long-run operations document.
 - [ ] Add read-only `diagnostics/check_xinyu_health.py`.
 - [ ] Add narrow tests for future service-boundary helpers as they are extracted.
