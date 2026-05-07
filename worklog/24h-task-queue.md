@@ -22,7 +22,7 @@ Workspace: D:\XinYu
 - [x] Create validation matrix mapping capability areas to exact commands.
 - [x] Identify missing validation coverage and add it to this queue.
 - [x] Extract one low-risk responsibility from `xinyu_core_bridge.py`.
-- [ ] Create state write audit.
+- [x] Create state write audit.
 
 ## P1
 
@@ -41,6 +41,7 @@ Workspace: D:\XinYu
 - [ ] Isolate v1 canary gate decisions.
 - [ ] Add long-run health diagnostics.
 - [ ] Add chat service boundary after validation coverage is solid.
+- [ ] Add `state_service.py` helper seed for runtime/projection writes.
 - [ ] Add root long-run operations document.
 - [ ] Add read-only `diagnostics/check_xinyu_health.py`.
 - [ ] Add narrow tests for future service-boundary helpers as they are extracted.

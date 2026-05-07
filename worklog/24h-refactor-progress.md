@@ -73,3 +73,26 @@ Workspace: D:\XinYu
 - Risk: Low; route names, request/response payloads, ports, auth guard calls, and event bus semantics are preserved.
 - Rollback: `git revert <loop-3-commit>`
 - Next: If validation passes, continue with a second bridge or state-write slice.
+
+## Loop 4 - 18:50
+
+- Task: Add the state write audit.
+- Why: State writes are spread across Markdown, JSON, JSONL, SQLite, runtime traces, projections, and memory files; the next helper/refactor slice needs a governed target list.
+- Files changed:
+  - `XINYU-STATE-WRITE-AUDIT.md`
+  - `worklog/24h-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+  - `XINYU-REFACTOR-CHECKLIST.md`
+- Commands:
+  - `rg -n "write_text|open|jsonl|sqlite" -g "*.py"`
+  - `rg -n "_atomic_write|write_text_atomic|append_jsonl|jsonl|sqlite|connect" -g "*.py"`
+  - `rg -n "memory/|runtime/|logs/|cache/|context/" xinyu_core_bridge.py xinyu_qq_gateway.py xinyu_qq_outbox.py xinyu_runtime_presence.py xinyu_state_io.py`
+  - `Get-Content xinyu_state_io.py`
+  - `Get-Content state_io_smoke.py`
+  - `Get-Content xinyu_core_bridge.py` focused on direct write sites
+  - `Get-Content xinyu_qq_gateway.py` focused on trust config persistence
+  - `git diff --check`
+- Result: State write audit drafted with directory semantics, helper inventory, direct-write risks, and first migration candidates. `git diff --check` passed.
+- Risk: Documentation-only; no memory body, runtime state, QQ outbound, or v1 behavior touched.
+- Rollback: `git revert <loop-4-commit>`
+- Next: Introduce a small state helper seed or move to QQ trust policy extraction.
