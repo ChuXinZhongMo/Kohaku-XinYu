@@ -42,7 +42,7 @@ Date: 2026-05-07
 - [ ] Extract Desktop REST/snapshot methods.
 - [x] Extract Codex service boundary.
 - [x] Extract Learning service boundary.
-- [ ] Extract state write helpers.
+- [x] Extract state write helpers.
 - [x] Extract v1 canary gate.
 - [ ] Extract chat service boundary.
 

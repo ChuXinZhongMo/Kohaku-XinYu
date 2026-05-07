@@ -279,3 +279,30 @@ Workspace: D:\XinYu
 - Risk: Low-medium; learning writes still go through the existing bridge learning/observation modules and existing locks. No memory body content or persona semantics were edited.
 - Rollback: `git revert <loop-12-commit>`
 - Next: Migrate one low-risk projection writer to `state_service.py` and add a focused caller smoke.
+
+## Loop 13 - 19:25
+
+- Task: Migrate one low-risk projection writer to `state_service.py`.
+- Why: `memory/context/promise_followup_state.md` is a short-term projection with focused tests, making it a good first production caller for the shared atomic write helper.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/promise_followup_state_smoke.py`
+  - `XINYU-STATE-WRITE-AUDIT.md`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `XINYU-REFACTOR-CHECKLIST.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `Get-Content state_service.py`
+  - `Get-Content state_io_smoke.py`
+  - `rg -n "proactive_request_state|promise_followup_state|_write_promised_followup_state|_write_proactive|write_text\(" xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_core_bridge.py state_service.py promise_followup_state_smoke.py`
+  - `.\.venv\Scripts\python.exe promise_followup_state_smoke.py`
+  - `.\.venv\Scripts\python.exe state_io_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_dialogue_curiosity_bridge_injection.py::test_promised_followup_queues_owner_private_completion tests\test_dialogue_curiosity_bridge_injection.py::test_promised_followup_status_check_queues_completion -q`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: `_write_promised_followup_state` now writes through `state_service.atomic_write_text`. Added a focused smoke for the caller and updated validation/audit docs. Compile, state smoke, focused promise pytest, bridge probe, and `git diff --check` passed.
+- Risk: Low; path and markdown shape are unchanged, and no long-term memory body content was edited.
+- Rollback: `git revert <loop-13-commit>`
+- Next: Extract QQ sender helpers from `xinyu_qq_gateway.py`.

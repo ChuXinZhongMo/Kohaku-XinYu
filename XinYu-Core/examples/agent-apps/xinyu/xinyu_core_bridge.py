@@ -23,6 +23,7 @@ from xinyu_async_exploration import (
 )
 from xinyu_action_layer import XinyuActionLayer, codex_response_to_outcome
 from xinyu_action_reply_composer import compose_action_reply
+from state_service import atomic_write_text
 from xinyu_bridge_http import XinYuBridgeHTTPServer, XinYuBridgeRequestHandler
 from xinyu_bridge_learning import (
     LearningBridgeError,
@@ -3595,8 +3596,7 @@ tags: [promise, followup, qq-outbox, continuity]
 {note_lines}
 """
         path = self.xinyu_dir / PROMISE_FOLLOWUP_STATE_REL
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        atomic_write_text(path, text)
 
     def _owner_private_user_id(self) -> str:
         if self.v1_owner_user_ids:

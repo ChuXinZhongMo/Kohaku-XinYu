@@ -35,7 +35,7 @@ Scope: first-pass write-surface audit before introducing broader state governanc
 | Autonomous mind loop trace | `memory/context/autonomous_mind_loop_trace.log` | Log-like trace under memory | Append trace lives in `memory/context`, not `runtime/logs` | Audit only; do not move until readers are known. |
 | Autonomous mind loop state | `memory/context/autonomous_mind_loop_state.md` | Projection | Direct `write_text` from bridge | Candidate for atomic helper after tests cover the state shape. |
 | Desktop proactive request update | `memory/context/proactive_request_state.md` | Projection | Direct markdown field mutation in bridge | Candidate for `write_text_atomic`; do not change fields. |
-| Promise follow-up state | `memory/context/promise_followup_state.md` | Projection | Direct full markdown write in bridge | Candidate for `write_text_atomic`; keep body shape. |
+| Promise follow-up state | `memory/context/promise_followup_state.md` | Projection | Migrated to `state_service.atomic_write_text` in Loop 13 | Keep body shape; validate with `promise_followup_state_smoke.py` and focused promise follow-up pytest. |
 | Debug live system prompt | `runtime/debug/last_live_system_prompt.txt` | Runtime diagnostic cache | Already tmp-and-replace | Leave as runtime diagnostic, maybe move helper later. |
 | Codex background traces | `memory/knowledge/codex_*_trace.log` | Log-like traces under memory | Append logs near knowledge material | Audit only; moving paths could break current review workflow. |
 | Dialogue tail sync | runtime dialogue tail helpers | Runtime/session state | Helper-owned, not direct bridge text write except save call | Leave behind existing helper boundary. |
@@ -89,4 +89,4 @@ Scope: first-pass write-surface audit before introducing broader state governanc
 - No runtime state files were deleted or moved.
 - No QQ outbound behavior was exercised.
 - No v1 traffic behavior was changed.
-- No state write helper was wired into production code yet.
+- One low-risk projection writer was wired into `state_service.py`; broader memory body writes were not migrated.
