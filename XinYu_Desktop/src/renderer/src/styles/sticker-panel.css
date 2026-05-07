@@ -1,0 +1,214 @@
+.sticker-library-panel {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  border-top: 1px solid rgba(39, 87, 82, 0.1);
+  padding: 13px 14px;
+  overflow: auto;
+}
+
+.sticker-library-panel .section-head {
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.sticker-library-panel .section-head span {
+  margin-right: auto;
+}
+
+.sticker-library-panel .section-head button {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #2f8076;
+  background: #e7f3ef;
+  cursor: pointer;
+}
+
+.sticker-library-panel .section-head button:disabled {
+  opacity: 0.48;
+  cursor: default;
+}
+
+.sticker-health {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.sticker-health span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  border-radius: 8px;
+  padding: 5px 7px;
+  color: #63716e;
+  background: #f8faf8;
+  font-size: 10px;
+  overflow: hidden;
+}
+
+.sticker-health strong {
+  color: #2f8076;
+  font-size: 11px;
+}
+
+.sticker-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.sticker-metrics div {
+  min-width: 0;
+  border-radius: 8px;
+  padding: 7px 6px;
+  background: #f6f8f5;
+}
+
+.sticker-metrics strong,
+.sticker-metrics small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sticker-metrics strong {
+  color: #23322f;
+  font-size: 15px;
+}
+
+.sticker-metrics small,
+.sticker-foot,
+.sticker-row em,
+.sticker-moods small {
+  color: #7a8985;
+  font-size: 10px;
+}
+
+.sticker-moods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sticker-moods span {
+  max-width: 96px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+  padding: 5px 7px;
+  color: #32504c;
+  background: #edf5f1;
+  font-size: 11px;
+  overflow: hidden;
+}
+
+.sticker-moods strong {
+  color: #2f8076;
+}
+
+.sticker-correction-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.sticker-correction-targets button {
+  min-width: 42px;
+  height: 24px;
+  border-radius: 8px;
+  padding: 0 7px;
+  color: #3d5c57;
+  background: #f4f7f4;
+  font-size: 10px;
+  cursor: default;
+}
+
+.sticker-correction-targets button[aria-disabled='false'] {
+  color: #245f58;
+  background: #e4f4ef;
+  cursor: copy;
+}
+
+.sticker-correction-targets button.is-drop-target {
+  color: #123c37;
+  background: #bfe9dc;
+  box-shadow: inset 0 0 0 1px rgba(47, 128, 118, 0.32);
+}
+
+.sticker-rows {
+  display: grid;
+  gap: 6px;
+}
+
+.sticker-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 7px;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #f8faf8;
+  cursor: grab;
+}
+
+.sticker-row.is-dragging {
+  opacity: 0.58;
+  background: #edf5f1;
+}
+
+.sticker-row[draggable='false'] {
+  cursor: default;
+}
+
+.sticker-row strong,
+.sticker-row > span,
+.sticker-row > span span,
+.sticker-row > span small,
+.sticker-row em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sticker-row strong {
+  color: #24312f;
+  font-size: 11px;
+}
+
+.sticker-row > span {
+  display: grid;
+  gap: 2px;
+}
+
+.sticker-row > span span {
+  color: #566864;
+  font-size: 11px;
+}
+
+.sticker-row > span small {
+  color: #8a9693;
+  font-size: 9px;
+}
+
+.sticker-row em {
+  text-align: right;
+  font-style: normal;
+}
+
+.sticker-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}

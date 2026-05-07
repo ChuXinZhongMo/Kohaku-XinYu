@@ -1,0 +1,498 @@
+.qq-bridge-panel {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  border-top: 1px solid rgba(39, 87, 82, 0.1);
+  padding: 13px 14px;
+  overflow: auto;
+}
+
+.qq-bridge-head {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.qq-bridge-head > span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.qq-bridge-head strong {
+  min-width: 36px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #8a6023;
+  background: #fff2d9;
+  font-size: 12px;
+}
+
+.qq-bridge-panel.ready .qq-bridge-head strong {
+  color: #1f7269;
+  background: #dff6ef;
+}
+
+.qq-bridge-summary {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px;
+  align-items: center;
+  gap: 8px;
+}
+
+.qq-bridge-summary span,
+.qq-service-row strong,
+.qq-service-row small,
+.qq-service-row em,
+.qq-action-note {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qq-bridge-summary span {
+  color: #32413e;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.qq-bridge-summary small {
+  color: #7a8985;
+  text-align: right;
+  font-size: 11px;
+}
+
+.qq-login-hint {
+  min-width: 0;
+  min-height: 32px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 7px 8px;
+  color: #8a6023;
+  background: #fff4dc;
+  overflow: hidden;
+}
+
+.qq-login-hint.ready {
+  color: #1f7269;
+  background: #dff6ef;
+}
+
+.qq-login-hint span,
+.qq-login-hint small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qq-login-hint span {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.qq-login-hint small {
+  max-width: 92px;
+  font-size: 10px;
+  text-align: right;
+}
+
+.qq-service-list {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.qq-service-row {
+  min-width: 0;
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 7px;
+  border-radius: 8px;
+  padding: 7px;
+  background: #f6f8f5;
+}
+
+.qq-service-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d9a13c;
+  box-shadow: 0 0 0 4px rgba(217, 161, 60, 0.12);
+}
+
+.qq-service-dot.ok {
+  background: #24a99a;
+  box-shadow: 0 0 0 4px rgba(36, 169, 154, 0.12);
+}
+
+.qq-service-row div {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.qq-service-row strong {
+  color: #24312f;
+  font-size: 12px;
+}
+
+.qq-service-row small {
+  color: #7a8985;
+  font-size: 10px;
+}
+
+.qq-service-row em {
+  grid-column: 2;
+  color: #7a8985;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.qq-service-row.ok em {
+  color: #1f7269;
+}
+
+.qq-bridge-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 34px);
+  gap: 7px;
+}
+
+.qq-bridge-actions button {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #2f8076;
+  background: #e7f3ef;
+  cursor: pointer;
+  transition:
+    transform 150ms ease,
+    opacity 150ms ease,
+    background 150ms ease;
+}
+
+.qq-bridge-actions button:nth-child(1) {
+  color: #fff;
+  background: #2f8076;
+}
+
+.qq-bridge-actions button:nth-child(3) {
+  color: #755674;
+  background: #f3edf2;
+}
+
+.qq-action-note {
+  color: #7a8985;
+  font-size: 11px;
+}
+
+.qq-runtime-controls {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid rgba(39, 87, 82, 0.1);
+  padding-top: 9px;
+}
+
+.qq-runtime-switches {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.runtime-switch {
+  min-width: 0;
+  height: 44px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 7px 8px;
+  color: #44534f;
+  background: #f6f8f5;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform 150ms ease,
+    opacity 150ms ease,
+    background 150ms ease;
+}
+
+.runtime-switch:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.runtime-switch:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.runtime-switch > span {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.runtime-switch strong,
+.runtime-switch small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runtime-switch strong {
+  color: #24312f;
+  font-size: 11px;
+}
+
+.runtime-switch small {
+  color: #7a8985;
+  font-size: 10px;
+}
+
+.runtime-switch i {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  border-radius: 999px;
+  background: #d8e1dd;
+  box-shadow: inset 0 0 0 1px rgba(60, 88, 83, 0.1);
+}
+
+.runtime-switch i::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 7px rgba(35, 48, 46, 0.18);
+  transition: transform 150ms ease;
+}
+
+.runtime-switch.is-on {
+  color: #1f7269;
+  background: #edf7f4;
+}
+
+.runtime-switch.is-on i {
+  background: #24a99a;
+}
+
+.runtime-switch.is-on i::after {
+  transform: translateX(14px);
+}
+
+.runtime-switch.is-danger.is-on,
+.runtime-switch.is-danger.is-off {
+  background: #fff4f6;
+}
+
+.runtime-switch.is-danger i {
+  background: #d8a24a;
+}
+
+.qq-runtime-scope {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.qq-runtime-scope span {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  border-radius: 8px;
+  padding: 6px 7px;
+  background: #f8faf8;
+}
+
+.qq-runtime-scope strong,
+.qq-runtime-scope em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qq-runtime-scope strong {
+  color: #24312f;
+  font-size: 10px;
+}
+
+.qq-runtime-scope em {
+  color: #7a8985;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.qq-runtime-lists {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.id-list-editor {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  border-radius: 8px;
+  padding: 7px;
+  background: #f8faf8;
+}
+
+.id-list-head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.id-list-head strong,
+.id-list-head small,
+.id-list-chips span,
+.id-list-chips em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.id-list-head strong {
+  color: #24312f;
+  font-size: 10px;
+}
+
+.id-list-head small,
+.id-list-chips em {
+  color: #7a8985;
+  font-size: 10px;
+  font-style: normal;
+}
+
+.id-list-chips {
+  min-width: 0;
+  min-height: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.id-list-chips span {
+  max-width: 112px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+  padding: 0 4px 0 7px;
+  color: #31504c;
+  background: #edf5f1;
+  font-size: 10px;
+}
+
+.id-list-chips button {
+  width: 17px;
+  height: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: #755674;
+  background: transparent;
+  cursor: pointer;
+}
+
+.id-list-chips button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.id-list-input {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 26px;
+  gap: 5px;
+}
+
+.id-list-input input {
+  min-width: 0;
+  height: 26px;
+  border: 1px solid rgba(39, 87, 82, 0.12);
+  border-radius: 8px;
+  padding: 0 7px;
+  color: #24312f;
+  background: #fff;
+  font-size: 11px;
+  outline: none;
+}
+
+.id-list-input button {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #2f8076;
+  background: #e7f3ef;
+  cursor: pointer;
+}
+
+.id-list-input button:disabled,
+.id-list-input input:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.qq-runtime-restart {
+  width: 100%;
+  height: 31px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 8px;
+  color: #2f8076;
+  background: #e7f3ef;
+  cursor: pointer;
+}
+
+.qq-runtime-restart:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.qq-runtime-note {
+  min-width: 0;
+  color: #7a8985;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

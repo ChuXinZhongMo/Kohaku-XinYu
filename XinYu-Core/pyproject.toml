@@ -1,0 +1,181 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "XinYuTerrariumRuntime"
+version = "1.1.0"
+description = "XinYu runtime for long-running personal AI companionship"
+authors = [
+    { name = "Shih-Ying Yeh (KohakuBlueLeaf)", email = "apolloyeh0123@gmail.com" },
+]
+license = { text = "KohakuTerrarium-1.0" }
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["ai", "agent", "llm", "multi-agent", "terrarium", "framework", "xinyu"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+dependencies = [
+    # Core
+    "httpx>=0.27.0",
+    "openai>=2.0.0",
+    "pydantic>=2.0.0",
+    "rich>=14.0.0",
+    "prompt_toolkit>=3.0.0",
+    "pyyaml>=6.0.0",
+    "ruamel.yaml>=0.18.0",
+    "jinja2>=3.1.0",
+    "libcst>=1.4.0",
+    "aiofiles>=25.1.0",
+    "python-dotenv>=1.0.0",
+    "kohakuvault>=0.8.1",
+    "textual>=8.0.0",
+    "html2text>=2025.0.0",
+    "gitpython>=3.1.0",
+    # API server
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    # Web tools
+    "trafilatura>=2.0.0",
+    "ddgs>=9.0.0",
+    # PDF reading
+    "pymupdf>=1.24.0",
+    # MCP client
+    "mcp>=1.0.0",
+    # Lightweight embeddings (no pytorch)
+    "model2vec>=0.8.0",
+    # Desktop webview
+    "pywebview==6.1",
+    # Windows PTY for terminal panel (Nerd Font / PowerShell theme support)
+    "pywinpty>=2.0.0; sys_platform == 'win32'",
+]
+
+[project.urls]
+Homepage = "https://local.xinyu/runtime"
+Repository = "https://local.xinyu/runtime"
+Documentation = "https://local.xinyu/runtime/docs"
+Issues = "https://local.xinyu/runtime/issues"
+
+[project.scripts]
+xinyu-runtime = "xinyu_runtime.__main__:main"
+xyr = "xinyu_runtime.__main__:main"
+
+[project.optional-dependencies]
+# ── demo: example agent-apps that need extra deps ────────────────────
+discord = [
+    "discord.py>=2.0.0",
+    "Pillow>=12.2.0",
+]
+asr = [
+    "openai-whisper>=20250625",
+    "sounddevice>=0.4.0",
+    "numpy",
+]
+demo = [
+    "XinYuTerrariumRuntime[discord,asr]",
+]
+
+# ── browser: full browser rendering for web_fetch (heavy: lxml) ──────
+browser = [
+    "crawl4ai>=0.8.0",
+]
+
+# ── full: everything including pytorch-based embeddings ──────────────
+embeddings-heavy = [
+    "sentence-transformers>=5.0.0",
+]
+full = [
+    "XinYuTerrariumRuntime[demo,browser,embeddings-heavy]",
+]
+
+# ── dev: testing and linting ─────────────────────────────────────────
+dev = [
+    "pytest>=9.0.0",
+    "pytest-asyncio>=1.3.0",
+    "black>=26.3.0",
+    "isort>=5.13.0",
+    "ruff>=0.9.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["xinyu_runtime*"]
+
+[tool.setuptools.package-data]
+"xinyu_runtime.builtin_skills" = ["**/*.md"]
+"xinyu_runtime" = ["web_dist/**/*", "app_icons/*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff.lint]
+select = ["F401", "F841"]
+
+[tool.briefcase]
+project_name = "XinYuTerrariumRuntime"
+bundle = "com.xinyu.terrarium"
+version = "1.1.0"
+url = "https://local.xinyu/runtime"
+license.file = "LICENSE"
+author = "Shih-Ying Yeh (KohakuBlueLeaf)"
+author_email = "apolloyeh0123@gmail.com"
+
+[tool.briefcase.app.xinyuterrarium]
+formal_name = "XinYu Runtime"
+description = "XinYu Runtime - Desktop App"
+icon = "src/xinyu_runtime/app_icons/app"
+sources = ["src/xinyu_runtime"]
+startup_module = "xinyu_runtime.__briefcase__"
+requires = [
+    # All base dependencies are in [project].dependencies.
+    # Briefcase doesn't support extras, so we list them explicitly.
+    "httpx>=0.27.0",
+    "openai>=2.0.0",
+    "pydantic>=2.0.0",
+    "rich>=14.0.0",
+    "prompt_toolkit>=3.0.0",
+    "pyyaml>=6.0.0",
+    "ruamel.yaml>=0.18.0",
+    "jinja2>=3.1.0",
+    "libcst>=1.4.0",
+    "aiofiles>=25.1.0",
+    "python-dotenv>=1.0.0",
+    "kohakuvault>=0.8.1",
+    "textual>=8.0.0",
+    "html2text>=2025.0.0",
+    "gitpython>=3.1.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "pywebview==6.1",
+    "trafilatura>=2.0.0",
+    "ddgs>=9.0.0",
+    "pymupdf>=1.24.0",
+    "mcp>=1.0.0",
+    "model2vec>=0.8.0",
+]
+# proxy_tools (pywebview dep) only has sdist on PyPI — pre-build wheel in CI
+requirement_installer_args = ["--find-links", "wheels"]
+
+[tool.briefcase.app.xinyuterrarium.macOS]
+universal_build = false
+requires = [
+    "std-nslog~=1.0.0",
+]
+
+[tool.briefcase.app.xinyuterrarium.windows]
+requires = [
+    "pywinpty>=2.0.0",
+]

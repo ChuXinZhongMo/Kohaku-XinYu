@@ -1,0 +1,6 @@
+qdrant-client>=1.9
+chromadb>=0.5
+numpy>=1.26
+pydantic>=2.7
+anyio>=4.0
+

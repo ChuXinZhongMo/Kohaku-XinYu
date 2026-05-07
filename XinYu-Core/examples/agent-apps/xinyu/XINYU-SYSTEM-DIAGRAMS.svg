@@ -1,0 +1,225 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1900" viewBox="0 0 1600 1900">
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#28333f"/>
+    </marker>
+    <style>
+      .title { font: 700 30px "Microsoft YaHei", "Segoe UI", sans-serif; fill: #111827; }
+      .section { font: 700 24px "Microsoft YaHei", "Segoe UI", sans-serif; fill: #111827; }
+      .label { font: 600 17px "Microsoft YaHei", "Segoe UI", sans-serif; fill: #16202a; }
+      .small { font: 14px "Microsoft YaHei", "Segoe UI", sans-serif; fill: #334155; }
+      .note { font: 15px "Microsoft YaHei", "Segoe UI", sans-serif; fill: #475569; }
+      .box { fill: #f8fafc; stroke: #64748b; stroke-width: 1.5; rx: 8; }
+      .core { fill: #eef2ff; stroke: #4f46e5; stroke-width: 2; rx: 8; }
+      .state { fill: #ecfdf5; stroke: #059669; stroke-width: 1.8; rx: 8; }
+      .guard { fill: #fff7ed; stroke: #ea580c; stroke-width: 1.8; rx: 8; }
+      .v1 { fill: #fdf2f8; stroke: #be185d; stroke-width: 1.8; rx: 8; }
+      .line { stroke: #28333f; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+      .dash { stroke: #64748b; stroke-width: 2; fill: none; stroke-dasharray: 7 6; marker-end: url(#arrow); }
+      .thin { stroke: #94a3b8; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1900" fill="#ffffff"/>
+  <text x="50" y="58" class="title">XinYu 当前整体架构、消息流程、后台运转图</text>
+  <text x="50" y="88" class="note">主链路：NapCat QQ -> xinyu_qq_gateway.py -> xinyu_core_bridge.py -> XinYu Agent Runtime。v1 目前是 shadow / canary，不是全量主路由。</text>
+
+  <!-- Architecture -->
+  <text x="50" y="145" class="section">1. 整体架构图</text>
+  <rect x="50" y="175" width="1500" height="430" fill="#f8fafc" stroke="#cbd5e1" rx="12"/>
+
+  <rect x="90" y="245" width="150" height="74" class="box"/>
+  <text x="165" y="276" text-anchor="middle" class="label">Owner / QQ</text>
+  <text x="165" y="300" text-anchor="middle" class="small">私聊、群消息</text>
+
+  <rect x="285" y="245" width="150" height="74" class="box"/>
+  <text x="360" y="276" text-anchor="middle" class="label">NapCat</text>
+  <text x="360" y="300" text-anchor="middle" class="small">OneBot</text>
+
+  <rect x="480" y="235" width="210" height="94" class="box"/>
+  <text x="585" y="267" text-anchor="middle" class="label">QQ Gateway</text>
+  <text x="585" y="291" text-anchor="middle" class="small">xinyu_qq_gateway.py</text>
+  <text x="585" y="313" text-anchor="middle" class="small">白名单 / 群触发 / ack</text>
+
+  <rect x="750" y="220" width="250" height="124" class="core"/>
+  <text x="875" y="255" text-anchor="middle" class="label">Core Bridge</text>
+  <text x="875" y="281" text-anchor="middle" class="small">xinyu_core_bridge.py</text>
+  <text x="875" y="303" text-anchor="middle" class="small">/chat / health / learning / codex</text>
+  <text x="875" y="325" text-anchor="middle" class="small">全局 turn lock + session manager</text>
+
+  <rect x="1070" y="235" width="220" height="94" class="core"/>
+  <text x="1180" y="267" text-anchor="middle" class="label">XinYu Agent Runtime</text>
+  <text x="1180" y="291" text-anchor="middle" class="small">主回复生成</text>
+  <text x="1180" y="313" text-anchor="middle" class="small">prompt + tools + chunks</text>
+
+  <rect x="1340" y="245" width="160" height="74" class="box"/>
+  <text x="1420" y="276" text-anchor="middle" class="label">可见回复</text>
+  <text x="1420" y="300" text-anchor="middle" class="small">OneBot send</text>
+
+  <path d="M240 282 H285" class="line"/>
+  <path d="M435 282 H480" class="line"/>
+  <path d="M690 282 H750" class="line"/>
+  <path d="M1000 282 H1070" class="line"/>
+  <path d="M1290 282 H1340" class="line"/>
+
+  <rect x="170" y="410" width="230" height="100" class="state"/>
+  <text x="285" y="441" text-anchor="middle" class="label">Memory / State</text>
+  <text x="285" y="466" text-anchor="middle" class="small">memory/context, self, emotions</text>
+  <text x="285" y="488" text-anchor="middle" class="small">archive, runtime jsonl</text>
+
+  <rect x="455" y="410" width="230" height="100" class="guard"/>
+  <text x="570" y="441" text-anchor="middle" class="label">Turn Sidecars</text>
+  <text x="570" y="466" text-anchor="middle" class="small">event / persona / retrieval</text>
+  <text x="570" y="488" text-anchor="middle" class="small">guard / archive / review</text>
+
+  <rect x="740" y="410" width="230" height="100" class="v1"/>
+  <text x="855" y="441" text-anchor="middle" class="label">v1 Shadow</text>
+  <text x="855" y="466" text-anchor="middle" class="small">normalizer / router / memory</text>
+  <text x="855" y="488" text-anchor="middle" class="small">canary readiness, 不全量切</text>
+
+  <rect x="1025" y="410" width="230" height="100" class="guard"/>
+  <text x="1140" y="441" text-anchor="middle" class="label">Learning / Codex</text>
+  <text x="1140" y="466" text-anchor="middle" class="small">source gate / study / reports</text>
+  <text x="1140" y="488" text-anchor="middle" class="small">self-code watchdog</text>
+
+  <rect x="1310" y="410" width="170" height="100" class="state"/>
+  <text x="1395" y="441" text-anchor="middle" class="label">QQ Outbox</text>
+  <text x="1395" y="466" text-anchor="middle" class="small">queue / claim / ack</text>
+  <text x="1395" y="488" text-anchor="middle" class="small">主动联系</text>
+
+  <path d="M790 344 C720 375 640 390 615 410" class="thin"/>
+  <path d="M825 344 C840 370 850 390 855 410" class="thin"/>
+  <path d="M900 344 C990 374 1080 390 1120 410" class="thin"/>
+  <path d="M545 410 C480 372 410 358 340 410" class="thin"/>
+  <path d="M970 460 H1025" class="dash"/>
+  <path d="M1255 460 H1310" class="dash"/>
+  <path d="M1395 410 C1395 365 1420 345 1420 319" class="dash"/>
+
+  <!-- Turn flow -->
+  <text x="50" y="680" class="section">2. 单轮消息流程图</text>
+  <rect x="50" y="710" width="1500" height="520" fill="#f8fafc" stroke="#cbd5e1" rx="12"/>
+
+  <rect x="100" y="765" width="210" height="70" class="box"/>
+  <text x="205" y="795" text-anchor="middle" class="label">1. QQ 输入</text>
+  <text x="205" y="818" text-anchor="middle" class="small">私聊 / 群 / 附件</text>
+
+  <rect x="370" y="765" width="240" height="70" class="box"/>
+  <text x="490" y="795" text-anchor="middle" class="label">2. Gateway 归一化</text>
+  <text x="490" y="818" text-anchor="middle" class="small">白名单、触发、合并片段</text>
+
+  <rect x="670" y="765" width="250" height="70" class="core"/>
+  <text x="795" y="795" text-anchor="middle" class="label">3. Core /chat</text>
+  <text x="795" y="818" text-anchor="middle" class="small">turn_started + 全局锁</text>
+
+  <rect x="980" y="765" width="260" height="70" class="guard"/>
+  <text x="1110" y="795" text-anchor="middle" class="label">4. 前置侧车</text>
+  <text x="1110" y="818" text-anchor="middle" class="small">event / private thought / persona</text>
+
+  <rect x="1300" y="765" width="190" height="70" class="v1"/>
+  <text x="1395" y="795" text-anchor="middle" class="label">5. v1 shadow</text>
+  <text x="1395" y="818" text-anchor="middle" class="small">只记录，不回复</text>
+
+  <path d="M310 800 H370" class="line"/>
+  <path d="M610 800 H670" class="line"/>
+  <path d="M920 800 H980" class="line"/>
+  <path d="M1240 800 H1300" class="line"/>
+
+  <rect x="100" y="900" width="260" height="74" class="guard"/>
+  <text x="230" y="930" text-anchor="middle" class="label">6. 注入实时上下文</text>
+  <text x="230" y="954" text-anchor="middle" class="small">presence / continuity / retrieval</text>
+
+  <rect x="430" y="900" width="230" height="74" class="core"/>
+  <text x="545" y="930" text-anchor="middle" class="label">7. Agent 生成 draft</text>
+  <text x="545" y="954" text-anchor="middle" class="small">LLM chunks</text>
+
+  <rect x="730" y="900" width="260" height="74" class="guard"/>
+  <text x="860" y="930" text-anchor="middle" class="label">8. 路由特殊任务</text>
+  <text x="860" y="954" text-anchor="middle" class="small">Codex / self-code / wait</text>
+
+  <rect x="1060" y="900" width="260" height="74" class="guard"/>
+  <text x="1190" y="930" text-anchor="middle" class="label">9. 输出守卫</text>
+  <text x="1190" y="954" text-anchor="middle" class="small">renderer / final guard / dedupe</text>
+
+  <path d="M1395 835 C1395 870 230 862 230 900" class="line"/>
+  <path d="M360 937 H430" class="line"/>
+  <path d="M660 937 H730" class="line"/>
+  <path d="M990 937 H1060" class="line"/>
+
+  <rect x="175" y="1040" width="260" height="82" class="state"/>
+  <text x="305" y="1071" text-anchor="middle" class="label">10. 写入与复盘</text>
+  <text x="305" y="1095" text-anchor="middle" class="small">archive / candidates / memory review</text>
+
+  <rect x="505" y="1040" width="260" height="82" class="state"/>
+  <text x="635" y="1071" text-anchor="middle" class="label">11. 运行状态</text>
+  <text x="635" y="1095" text-anchor="middle" class="small">interaction / presence / traces</text>
+
+  <rect x="835" y="1040" width="260" height="82" class="state"/>
+  <text x="965" y="1071" text-anchor="middle" class="label">12. outbox 侧路</text>
+  <text x="965" y="1095" text-anchor="middle" class="small">followup / sticker / proactive</text>
+
+  <rect x="1165" y="1040" width="220" height="82" class="box"/>
+  <text x="1275" y="1071" text-anchor="middle" class="label">13. 回复 QQ</text>
+  <text x="1275" y="1095" text-anchor="middle" class="small">send + ack + index</text>
+
+  <path d="M1190 974 C1120 1015 460 1000 305 1040" class="line"/>
+  <path d="M435 1081 H505" class="line"/>
+  <path d="M765 1081 H835" class="line"/>
+  <path d="M1095 1081 H1165" class="line"/>
+
+  <!-- Runtime loop -->
+  <text x="50" y="1305" class="section">3. 后台运转图</text>
+  <rect x="50" y="1335" width="1500" height="470" fill="#f8fafc" stroke="#cbd5e1" rx="12"/>
+
+  <rect x="100" y="1425" width="200" height="72" class="core"/>
+  <text x="200" y="1455" text-anchor="middle" class="label">Core 启动</text>
+  <text x="200" y="1478" text-anchor="middle" class="small">health ready</text>
+
+  <rect x="370" y="1425" width="240" height="72" class="core"/>
+  <text x="490" y="1455" text-anchor="middle" class="label">Autonomous Loop</text>
+  <text x="490" y="1478" text-anchor="middle" class="small">initial delay + interval</text>
+
+  <rect x="680" y="1395" width="300" height="132" class="guard"/>
+  <text x="830" y="1427" text-anchor="middle" class="label">维护侧车批处理</text>
+  <text x="830" y="1452" text-anchor="middle" class="small">watched sources / daily digest</text>
+  <text x="830" y="1474" text-anchor="middle" class="small">review inbox / self thought</text>
+  <text x="830" y="1496" text-anchor="middle" class="small">learning loop / memory review</text>
+
+  <rect x="1060" y="1425" width="250" height="72" class="state"/>
+  <text x="1185" y="1455" text-anchor="middle" class="label">状态与 trace</text>
+  <text x="1185" y="1478" text-anchor="middle" class="small">runtime_program_awareness</text>
+
+  <rect x="112" y="1615" width="220" height="84" class="guard"/>
+  <text x="222" y="1646" text-anchor="middle" class="label">主动候选</text>
+  <text x="222" y="1670" text-anchor="middle" class="small">proactive request</text>
+
+  <rect x="402" y="1615" width="220" height="84" class="v1"/>
+  <text x="512" y="1646" text-anchor="middle" class="label">v1 canary</text>
+  <text x="512" y="1670" text-anchor="middle" class="small">达标后建议 owner</text>
+
+  <rect x="692" y="1615" width="220" height="84" class="guard"/>
+  <text x="802" y="1646" text-anchor="middle" class="label">Codex / 学习</text>
+  <text x="802" y="1670" text-anchor="middle" class="small">报告、附件、followup</text>
+
+  <rect x="982" y="1615" width="220" height="84" class="state"/>
+  <text x="1092" y="1646" text-anchor="middle" class="label">QQ Outbox</text>
+  <text x="1092" y="1670" text-anchor="middle" class="small">queue / claim / ack</text>
+
+  <rect x="1272" y="1615" width="180" height="84" class="box"/>
+  <text x="1362" y="1646" text-anchor="middle" class="label">Gateway 发送</text>
+  <text x="1362" y="1670" text-anchor="middle" class="small">OneBot -> QQ</text>
+
+  <path d="M300 1461 H370" class="line"/>
+  <path d="M610 1461 H680" class="line"/>
+  <path d="M980 1461 H1060" class="line"/>
+  <path d="M830 1527 C760 1580 310 1570 222 1615" class="line"/>
+  <path d="M830 1527 C760 1585 560 1575 512 1615" class="dash"/>
+  <path d="M830 1527 C805 1575 802 1585 802 1615" class="dash"/>
+  <path d="M332 1657 H402" class="thin"/>
+  <path d="M622 1657 H692" class="thin"/>
+  <path d="M912 1657 H982" class="line"/>
+  <path d="M1202 1657 H1272" class="line"/>
+  <path d="M1362 1615 C1420 1540 1330 1460 1310 1460" class="dash"/>
+  <path d="M1185 1497 C1185 1545 1110 1565 1092 1615" class="thin"/>
+
+  <text x="70" y="1840" class="note">边界：主回复仍走 Core Bridge + XinYu Agent Runtime；v1 只旁路观察；稳定记忆写入经侧车和 review 门控；主动联系经 outbox claim/ack。</text>
+</svg>

@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "targets": {
+    "xinyu_logs": {
+      "kind": "logs",
+      "read_roots": [
+        "logs"
+      ],
+      "patterns": [
+        "*.log",
+        "*.jsonl"
+      ],
+      "owner_setup_required": false,
+      "notes": [
+        "read_only_runtime_logs"
+      ]
+    },
+    "minecraft_server": {
+      "kind": "logs",
+      "read_roots": [
+        "D:/XinYu/XinYu-Local-Scope/TestTargets/minecraft_server"
+      ],
+      "patterns": [
+        "logs/latest.log",
+        "logs/*.log",
+        "crash-reports/*.txt"
+      ],
+      "owner_setup_required": false,
+      "notes": [
+        "read_only_test_minecraft_server_logs"
+      ]
+    }
+  }
+}

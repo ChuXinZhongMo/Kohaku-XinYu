@@ -1,0 +1,83 @@
+.environment-valve {
+  --environment-load: 0.38;
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--app-border, rgba(167, 133, 191, 0.2));
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--app-panel-solid, #fff) 72%, var(--app-accent-faint, #faf4ff));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+}
+
+.environment-valve__top {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+}
+
+.environment-valve__top span {
+  color: var(--app-muted, #8a7895);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.environment-valve__top strong {
+  min-width: 0;
+  color: var(--app-text, #31263a);
+  font-size: 13px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.environment-valve__bar {
+  position: relative;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-accent, #a67bd7) 10%, rgba(255, 255, 255, 0.82));
+}
+
+.environment-valve__bar span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--environment-load) * 100%);
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    var(--app-good, #5fc9bd),
+    var(--app-accent, #a67bd7) 62%,
+    var(--app-warm, #d79abd)
+  );
+}
+
+.environment-valve__meta {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  color: var(--app-muted, #8a7895);
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.environment-valve__meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.environment-valve__reason {
+  min-width: 0;
+  color: var(--app-subtle, #ad8b9b);
+  font-size: 10px;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

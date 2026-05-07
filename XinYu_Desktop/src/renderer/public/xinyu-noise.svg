@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="XinYu static noise texture">
+  <filter id="grain" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="4" seed="31" stitchTiles="stitch" />
+    <feColorMatrix type="matrix" values="0.28 0 0 0 0.02 0 0.24 0 0 0.015 0 0 0.18 0 0.01 0 0 0 0.42 0" />
+  </filter>
+  <rect width="256" height="256" filter="url(#grain)" opacity="0.85" />
+</svg>

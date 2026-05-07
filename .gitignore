@@ -1,0 +1,79 @@
+# XinYu private workspace guard
+
+# Secrets and local credentials
+.xinyu_bridge_token
+*.env
+*.local.env
+*.key
+*.pem
+
+# Root-local runtimes, installers, and generated environments
+NapCatQQ/
+Python312/
+ocr-venv/
+vision-venv/
+
+# Dependency and build outputs
+node_modules/
+out/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+*.log
+
+# Desktop shell generated files
+XinYu_Desktop/node_modules/
+XinYu_Desktop/out/
+XinYu_Desktop/logs/
+XinYu_Desktop/*.log
+
+# Core local runtime and private state
+XinYu-Core/examples/agent-apps/xinyu/.venv/
+XinYu-Core/src/xinyu_runtime/web_dist/
+XinYu-Core/examples/agent-apps/xinyu/xinyu.local.env
+XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.config.json
+XinYu-Core/examples/agent-apps/xinyu/logs/
+XinYu-Core/examples/agent-apps/xinyu/memory/
+XinYu-Core/examples/agent-apps/xinyu/runtime/
+XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/
+XinYu-Core/examples/agent-apps/xinyu/learning/self_found/
+XinYu-Core/examples/agent-apps/xinyu/context/
+XinYu-Core/examples/agent-apps/xinyu/self/
+XinYu-Core/examples/agent-apps/xinyu/emotions/
+XinYu-Core/examples/agent-apps/xinyu/.codex_tmp/
+XinYu-Core/examples/agent-apps/xinyu/codex-qq-*/
+XinYu-Core/examples/agent-apps/xinyu/codex-qq-*-report.md
+XinYu-Core/examples/agent-apps/xinyu/test-temp-*/
+XinYu-Core/examples/agent-apps/xinyu/xinyu-qq-outbox-*/
+XinYu-Core/examples/agent-apps/xinyu/xinyu-qq-gateway-image-*/
+
+# Nested local-scope runtime/private materials copied under Core examples
+XinYu-Core/examples/agent-apps/XinYu-Local-Scope/**
+!XinYu-Core/examples/agent-apps/XinYu-Local-Scope/
+!XinYu-Core/examples/agent-apps/XinYu-Local-Scope/README.md
+
+# Owner-visible private state surfaces
+XinYu-Autonomy/**
+!XinYu-Autonomy/
+!XinYu-Autonomy/README.md
+
+XinYu-Local-Scope/**
+!XinYu-Local-Scope/
+!XinYu-Local-Scope/README.md
+
+# Personal/source materials and transient OCR artifacts
+素材库/
+*_extracted.txt
+ocr-test*.png
+
+# OS and editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

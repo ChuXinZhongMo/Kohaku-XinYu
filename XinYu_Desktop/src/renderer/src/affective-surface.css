@@ -1,0 +1,83 @@
+.app-shell {
+  --affective-intensity: 0.48;
+  --affective-warmth: 0.48;
+  --affective-noise-opacity: 0.06;
+  --affective-ambient-opacity: calc(0.08 + var(--affective-intensity) * 0.12);
+  --affective-noise-image: none;
+  position: relative;
+  isolation: isolate;
+}
+
+.topbar,
+.presence-workspace {
+  position: relative;
+  z-index: 1;
+}
+
+.affective-noise,
+.affective-ambient-light {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.affective-noise {
+  background-image: var(--affective-noise-image);
+  background-size: 220px 220px;
+  opacity: var(--affective-noise-opacity);
+  mix-blend-mode: multiply;
+  transform: translate3d(0, 0, 0);
+  transition: opacity 280ms ease;
+}
+
+.affective-ambient-light {
+  background:
+    radial-gradient(
+      circle at 17% 18%,
+      color-mix(in srgb, var(--app-good, #5fc9bd) 15%, transparent),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 82% 24%,
+      color-mix(in srgb, var(--app-warm, #d79abd) 22%, transparent),
+      transparent 34%
+    ),
+    linear-gradient(
+      135deg,
+      transparent 0%,
+      color-mix(in srgb, var(--app-accent, #a67bd7) 10%, transparent) 58%,
+      transparent 100%
+    );
+  opacity: var(--affective-ambient-opacity);
+  filter: blur(18px) saturate(calc(0.92 + var(--affective-intensity) * 0.28));
+  transform: scale(1);
+  transition:
+    opacity 320ms ease,
+    filter 320ms ease;
+}
+
+html[data-theme='night'] .affective-noise {
+  mix-blend-mode: screen;
+}
+
+html[data-theme='night'] .affective-ambient-light {
+  opacity: calc(var(--affective-ambient-opacity) * 1.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell,
+  .character-art,
+  .environment-valve,
+  .environment-valve::before,
+  .environment-valve::after,
+  .environment-valve__skin-sheen,
+  .environment-valve__skin-heat {
+    animation: none !important;
+  }
+
+  .affective-noise,
+  .affective-ambient-light {
+    transition: none;
+  }
+}

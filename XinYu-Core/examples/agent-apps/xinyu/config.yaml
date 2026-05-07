@@ -1,0 +1,409 @@
+name: xinyu
+version: "0.1"
+description: Xinyu early-stage self-forming agent scaffold
+
+controller:
+  model: "${XINYU_LLM_MODEL:mimo-v2.5-pro}"
+  provider: "${XINYU_LLM_PROVIDER:ciallo}"
+  temperature: 0.7
+  max_tokens: 4096
+  api_key_env: XINYU_API_KEY
+  base_url: "${XINYU_BASE_URL:}"
+
+system_prompt_file: prompts/system.md
+
+prompt_context_files:
+  live_voice_card: prompts/live_voice_card.md
+  memory_weight_state: memory/context/memory_weight_state.md
+  persona_surface_state: memory/context/persona_surface_state.md
+  self_core: memory/self/core.md
+  self_personality: memory/self/personality_profile.md
+  life_month_slots: memory/context/life_month_slots.md
+  current_life_month_context: memory/context/current_life_month_context.md
+  mind_loop_policy: memory/self/mind_loop_policy.md
+  mind_loop_state: memory/self/mind_loop_state.md
+  voice_profile_zh: memory/self/voice_profile_zh.md
+  voice_calibration_log: memory/self/voice_calibration_log.md
+  self_narrative: memory/self/narrative.md
+  emotion_taxonomy: memory/emotions/taxonomy.md
+  emotion_state: memory/emotions/current_state.md
+  relationship_vector_model: memory/relationships/vector_model.md
+  relationship_index: memory/relationships/index.md
+  people_index: memory/people/index.md
+  owner_profile: memory/people/owner.md
+  time_anchor: memory/context/time_anchor.md
+  real_world_anchor_policy: memory/context/real_world_anchor_policy.md
+  real_life_input_policy: memory/context/real_life_input_adapter_policy.md
+  recent_context: memory/context/recent_context.md
+  watched_source_state: memory/context/watched_source_state.md
+  github_learning_state: memory/context/github_learning_state.md
+  memory_self_review_state: memory/context/memory_self_review_state.md
+  initiative_policy: memory/context/initiative_policy.md
+  initiative_state: memory/context/initiative_state.md
+  owner_permission_grants: memory/context/owner_permission_grants.md
+  codex_delegation_policy: memory/context/codex_delegation_policy.md
+  runtime_bridge: memory/context/runtime_bridge_state.md
+  maintenance_recommendations: memory/context/maintenance_recommendations.md
+  maintenance_dispatch: memory/context/maintenance_dispatch_state.md
+  inner_cycle_state: memory/context/inner_cycle_state.md
+  maintenance_schedule_state: memory/context/maintenance_schedule_state.md
+  dream_weight_state: memory/dreams/dream_weight_state.md
+  long_term_memory_gate: memory/archive/long_term_memory_gate_state.md
+  personality_change_state: memory/self/personality_change_state.md
+  personality_self_review_state: memory/self/personality_self_review_state.md
+  ai_self_iteration_state: memory/self/ai_self_iteration_state.md
+  ai_self_iteration_review_state: memory/self/ai_self_iteration_review_state.md
+  expression_self_learning_state: memory/self/expression_self_learning_state.md
+  learning_closed_loop_state: memory/self/learning_closed_loop_state.md
+  ai_domain: memory/knowledge/ai_domain.md
+  social_inquiry_policy: memory/knowledge/social_inquiry_policy.md
+
+input:
+  type: cli
+  prompt: "You: "
+
+plugins:
+  - name: xinyu_turn_mode_bridge
+    type: custom
+    module: ./custom/turn_mode_bridge_plugin.py
+    class: TurnModeBridgePlugin
+    options:
+      enabled: true
+  - name: xinyu_time_context
+    type: custom
+    module: ./custom/time_context_plugin.py
+    class: TimeContextPlugin
+    options:
+      inject_timezone: true
+      inject_day_phase: true
+  - name: xinyu_memory_sync
+    type: custom
+    module: ./custom/memory_sync_plugin.py
+    class: MemorySyncPlugin
+    options:
+      enabled: true
+  - name: xinyu_automation_bridge
+    type: custom
+    module: ./custom/automation_bridge_plugin.py
+    class: AutomationBridgePlugin
+    options:
+      enabled: true
+  - name: xinyu_question_pipeline_bridge
+    type: custom
+    module: ./custom/question_pipeline_bridge_plugin.py
+    class: QuestionPipelineBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 1800
+  - name: xinyu_initiative_loop_bridge
+    type: custom
+    module: ./custom/initiative_loop_bridge_plugin.py
+    class: InitiativeLoopBridgePlugin
+    options:
+      enabled: true
+      cooldown_seconds: 900
+  - name: xinyu_slow_reprocess_bridge
+    type: custom
+    module: ./custom/slow_reprocess_bridge_plugin.py
+    class: SlowReprocessBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 3600
+  - name: xinyu_reflection_output_bridge
+    type: custom
+    module: ./custom/reflection_output_bridge_plugin.py
+    class: ReflectionOutputBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 5400
+  - name: xinyu_dream_output_bridge
+    type: custom
+    module: ./custom/dream_output_bridge_plugin.py
+    class: DreamOutputBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 7200
+  - name: xinyu_source_gate_bridge
+    type: custom
+    module: ./custom/source_gate_bridge_plugin.py
+    class: SourceGateBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 7200
+  - name: xinyu_source_reliability_bridge
+    type: custom
+    module: ./custom/source_reliability_bridge_plugin.py
+    class: SourceReliabilityBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 7800
+  - name: xinyu_source_integration_gate_bridge
+    type: custom
+    module: ./custom/source_integration_gate_bridge_plugin.py
+    class: SourceIntegrationGateBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 8100
+  - name: xinyu_source_request_planner_bridge
+    type: custom
+    module: ./custom/source_request_planner_bridge_plugin.py
+    class: SourceRequestPlannerBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 8400
+  - name: xinyu_source_search_resolver_bridge
+    type: custom
+    module: ./custom/source_search_resolver_bridge_plugin.py
+    class: SourceSearchResolverBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 8400
+  - name: xinyu_autonomous_search_activation_bridge
+    type: custom
+    module: ./custom/autonomous_search_activation_bridge_plugin.py
+    class: AutonomousSearchActivationBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 8400
+  - name: xinyu_source_search_provider_bridge
+    type: custom
+    module: ./custom/source_search_provider_bridge_plugin.py
+    class: SourceSearchProviderBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 8400
+  - name: xinyu_github_autonomous_learning_bridge
+    type: custom
+    module: ./custom/github_autonomous_learning_bridge_plugin.py
+    class: GitHubAutonomousLearningBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 21600
+      max_stage: 1
+  - name: xinyu_research_handoff_bridge
+    type: custom
+    module: ./custom/research_handoff_bridge_plugin.py
+    class: ResearchHandoffBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 1800
+      execution_level: execute
+      allow_live_search: true
+      allow_codex: false
+  - name: xinyu_search_result_gate_bridge
+    type: custom
+    module: ./custom/search_result_gate_bridge_plugin.py
+    class: SearchResultGateBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 8400
+  - name: xinyu_outward_source_bridge
+    type: custom
+    module: ./custom/outward_source_bridge_plugin.py
+    class: OutwardSourceBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 8400
+  - name: xinyu_source_comparison_bridge
+    type: custom
+    module: ./custom/source_comparison_bridge_plugin.py
+    class: SourceComparisonBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 8400
+  - name: xinyu_learner_integration_bridge
+    type: custom
+    module: ./custom/learner_integration_bridge_plugin.py
+    class: LearnerIntegrationBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 8400
+  - name: xinyu_learning_quality_bridge
+    type: custom
+    module: ./custom/learning_quality_bridge_plugin.py
+    class: LearningQualityBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 9000
+  - name: xinyu_ai_self_iteration_gate_bridge
+    type: custom
+    module: ./custom/ai_self_iteration_gate_bridge_plugin.py
+    class: AiSelfIterationGateBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 10800
+  - name: xinyu_ai_self_iteration_review_bridge
+    type: custom
+    module: ./custom/ai_self_iteration_review_bridge_plugin.py
+    class: AiSelfIterationReviewBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 10800
+  - name: xinyu_consolidation_bridge
+    type: custom
+    module: ./custom/consolidation_bridge_plugin.py
+    class: ConsolidationBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 9600
+  - name: xinyu_long_term_memory_gate_bridge
+    type: custom
+    module: ./custom/long_term_memory_gate_bridge_plugin.py
+    class: LongTermMemoryGateBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 9300
+  - name: xinyu_retention_gate_bridge
+    type: custom
+    module: ./custom/retention_gate_bridge_plugin.py
+    class: RetentionGateBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 9300
+  - name: xinyu_archive_output_bridge
+    type: custom
+    module: ./custom/archive_output_bridge_plugin.py
+    class: ArchiveOutputBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 9000
+  - name: xinyu_archive_commit_bridge
+    type: custom
+    module: ./custom/archive_commit_bridge_plugin.py
+    class: ArchiveCommitBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 9900
+  - name: xinyu_personality_growth_gate_bridge
+    type: custom
+    module: ./custom/personality_growth_gate_bridge_plugin.py
+    class: PersonalityGrowthGateBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 10800
+  - name: xinyu_inner_cycle_bridge
+    type: custom
+    module: ./custom/inner_cycle_bridge_plugin.py
+    class: InnerCycleBridgePlugin
+    options:
+      enabled: true
+  - name: xinyu_desktop_thoughts_bridge
+    type: custom
+    module: ./custom/desktop_thoughts_bridge_plugin.py
+    class: DesktopThoughtsBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 3600
+      startup_min_interval_seconds: 7200
+      write_on_startup_if_stale: true
+  - name: xinyu_maintenance_schedule_bridge
+    type: custom
+    module: ./custom/maintenance_schedule_bridge_plugin.py
+    class: MaintenanceScheduleBridgePlugin
+    options:
+      enabled: true
+      install_once: true
+      time_anchor_daily_at: "09:10"
+      reflection_daily_at: "03:40"
+
+tools:
+  - name: read
+    type: builtin
+  - name: write
+    type: builtin
+  - name: scratchpad
+    type: builtin
+  - name: add_timer
+    type: trigger
+  - name: add_schedule
+    type: trigger
+
+subagents:
+  - name: memory_read
+    type: builtin
+
+  - name: memory_write
+    type: builtin
+
+  - name: emotion_writer
+    type: custom
+    description: Update current emotional state and emotional event memory
+    prompt_file: prompts/emotion_writer.md
+    tools: [read, write]
+    max_turns: 4
+
+  - name: relationship_writer
+    type: custom
+    description: Update relationship index and person relationship files
+    prompt_file: prompts/relationship_writer.md
+    tools: [read, write]
+    max_turns: 4
+
+  - name: self_narrative_writer
+    type: custom
+    description: Update Xinyu self-narrative after meaningful internal change
+    prompt_file: prompts/self_narrative_writer.md
+    tools: [read, write]
+    max_turns: 4
+
+  - name: context_writer
+    type: custom
+    description: Update recent context and unfinished experiences after meaningful interaction
+    prompt_file: prompts/context_writer.md
+    tools: [read, write]
+    max_turns: 4
+
+  - name: question_writer
+    type: custom
+    description: Update active questions when a turn creates lingering doubt, curiosity, or unresolved inward pull
+    prompt_file: prompts/question_writer.md
+    tools: [read, write]
+    max_turns: 4
+
+  - name: time_writer
+    type: custom
+    description: Refresh Xinyu's explicit real-time anchor and time-aware context
+    prompt_file: prompts/time_writer.md
+    tools: [read, write]
+    max_turns: 4
+
+  - name: reflection_writer
+    type: custom
+    description: Update reflection and growth logs after meaningful reinterpretation
+    prompt_file: prompts/reflection_writer.md
+    tools: [tree, read, edit, multi_edit, write]
+    max_turns: 2
+
+  - name: dream_writer
+    type: custom
+    description: Update dream memory without confusing dreams with reality
+    prompt_file: prompts/dream_writer.md
+    tools: [tree, read, edit, multi_edit, write]
+    max_turns: 2
+
+  - name: archive_writer
+    type: custom
+    description: Compress, archive, or mark memories dormant without losing continuity
+    prompt_file: prompts/archive_writer.md
+    tools: [tree, read, edit, multi_edit, write]
+    max_turns: 2
+
+  - name: learner_writer
+    type: custom
+    description: Integrate external answers into knowledge and question state without destabilizing self continuity
+    prompt_file: prompts/learner_writer.md
+    tools: [tree, read, edit, multi_edit, write]
+    max_turns: 2
+
+output:
+  type: stdout
+  controller_direct: true
+  named_outputs:
+    default:
+      type: stdout
+
+memory:
+  path: ./memory
+
+compact:
+  max_tokens: 1000000

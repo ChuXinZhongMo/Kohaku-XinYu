@@ -1,0 +1,131 @@
+"""
+Tool initialization factory.
+
+Registers tools from agent config into the module registry.
+"""
+
+from typing import Any
+
+from xinyu_runtime.builtins.tool_catalog import get_builtin_tool
+from xinyu_runtime.core.config import AgentConfig
+from xinyu_runtime.core.loader import ModuleLoader, ModuleLoadError
+from xinyu_runtime.core.registry import Registry
+from xinyu_runtime.modules.tool.base import BaseTool, ToolConfig
+from xinyu_runtime.modules.trigger.base import BaseTrigger
+from xinyu_runtime.modules.trigger.callable import CallableTriggerTool
+from xinyu_runtime.utils.logging import get_logger
+
+logger = get_logger(__name__)
+
+
+# Universal trigger classes the framework ships. `type: trigger` entries
+# look up the trigger by its `setup_tool_name`.
+def _universal_trigger_classes() -> list[type[BaseTrigger]]:
+    # Import locally to avoid circulars at module load time.
+    from xinyu_runtime.modules.trigger.channel import ChannelTrigger
+    from xinyu_runtime.modules.trigger.scheduler import SchedulerTrigger
+    from xinyu_runtime.modules.trigger.timer import TimerTrigger
+
+    return [
+        cls
+        for cls in (TimerTrigger, ChannelTrigger, SchedulerTrigger)
+        if getattr(cls, "universal", False) and getattr(cls, "setup_tool_name", "")
+    ]
+
+
+def _lookup_trigger_class(name: str) -> type[BaseTrigger] | None:
+    for cls in _universal_trigger_classes():
+        if cls.setup_tool_name == name:
+            return cls
+    return None
+
+
+def create_tool(
+    tool_config: Any,
+    loader: ModuleLoader | None,
+) -> BaseTool | None:
+    """Create a single tool instance from a tool config entry.
+
+    Handles builtin, custom, and package tool types. Returns None
+    if the tool could not be created.
+    """
+    match tool_config.type:
+        case "builtin":
+            raw_options = dict(tool_config.options or {})
+            tool_cfg_keys = {
+                "timeout",
+                "max_output",
+                "working_dir",
+                "env",
+                "notify_controller_on_background_complete",
+            }
+            tool_cfg = ToolConfig(
+                **{
+                    k: raw_options.pop(k)
+                    for k in list(raw_options)
+                    if k in tool_cfg_keys
+                },
+                extra=raw_options,
+            )
+            tool = get_builtin_tool(tool_config.name, config=tool_cfg)
+            if tool is None:
+                logger.warning("Unknown built-in tool", tool_name=tool_config.name)
+            return tool
+
+        case "trigger":
+            trigger_cls = _lookup_trigger_class(tool_config.name)
+            if trigger_cls is None:
+                available = ", ".join(
+                    cls.setup_tool_name for cls in _universal_trigger_classes()
+                )
+                logger.warning(
+                    "Unknown setup-able trigger",
+                    tool_name=tool_config.name,
+                    available=available,
+                )
+                return None
+            return CallableTriggerTool(trigger_cls)
+
+        case "custom" | "package":
+            if not tool_config.module or not tool_config.class_name:
+                logger.warning(
+                    "Custom tool missing module or class",
+                    tool_name=tool_config.name,
+                )
+                return None
+            if loader is None:
+                logger.warning(
+                    "No module loader available for custom tool",
+                    tool_name=tool_config.name,
+                )
+                return None
+            try:
+                return loader.load_instance(
+                    module_path=tool_config.module,
+                    class_name=tool_config.class_name,
+                    module_type=tool_config.type,
+                    options=tool_config.options,
+                )
+            except ModuleLoadError as e:
+                logger.error("Failed to load custom tool", error=str(e))
+                return None
+
+        case _:
+            logger.warning("Unknown tool type", tool_type=tool_config.type)
+            return None
+
+
+def init_tools(
+    config: AgentConfig,
+    registry: Registry,
+    loader: ModuleLoader | None,
+) -> None:
+    """Register all tools from agent config into the registry.
+
+    Iterates over config.tools and creates each tool via create_tool(),
+    registering successful results in the registry.
+    """
+    for tool_config in config.tools:
+        tool = create_tool(tool_config, loader)
+        if tool:
+            registry.register_tool(tool)
