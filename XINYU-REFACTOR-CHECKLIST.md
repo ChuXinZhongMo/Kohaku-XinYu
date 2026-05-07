@@ -61,6 +61,7 @@ Date: 2026-05-07
 - [x] Add `state_service.py` helper seed.
 - [x] Add long-run operations document.
 - [x] Add read-only health diagnostic script.
+- [x] Add opt-in runtime health history/checkpoint ledger.
 
 ## Completion Report Inputs
 

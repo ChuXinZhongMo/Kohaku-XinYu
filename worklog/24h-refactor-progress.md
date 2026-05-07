@@ -397,3 +397,24 @@ Workspace: D:\XinYu
 - Risk: Medium-low; chat orchestration, prompt assembly, persona, memory selection, v1 policy, and side effects remain in core unchanged.
 - Rollback: `git revert <loop-17-commit>`
 - Next: Add narrower long-run health history/checkpoint ledger.
+
+## Loop 18 - 19:56
+
+- Task: Add a long-run health history/checkpoint ledger.
+- Why: The long-running operations loop needs a durable diagnostic history that records degraded signals without making the default health command write state.
+- Files changed:
+  - `diagnostics/check_xinyu_health.py`
+  - `XINYU-LONG-RUN-OPERATIONS.md`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `XINYU-REFACTOR-CHECKLIST.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `git status --short --branch`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe -m py_compile diagnostics\check_xinyu_health.py`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --write-ledger --workspace D:\XinYu`
+- Result: `diagnostics/check_xinyu_health.py` remains read-only by default and now supports opt-in `--write-ledger` plus `--checkpoint`, writing compact JSONL rows under `runtime/diagnostics/xinyu_health_history.jsonl`. Compile and health commands passed. Live health still reported `critical` from existing `recent_exceptions` and `warn` from `v1_shadow_errors`; this was recorded but not treated as a stop condition.
+- Risk: Low; only opt-in runtime diagnostic writes were added. No QQ outbound, v1 traffic expansion, persona semantics, or long-term memory body content changed.
+- Rollback: `git revert <loop-18-commit>`
+- Next: Add service-boundary unit tests for new bridge modules.

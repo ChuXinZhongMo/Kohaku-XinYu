@@ -34,12 +34,29 @@ Use strict mode only in automation that is allowed to fail on degraded live serv
 python diagnostics\check_xinyu_health.py --strict
 ```
 
-The diagnostic is read-only. It does not start services, send QQ messages, write runtime files, or modify memory.
+The default diagnostic mode is read-only. It does not start services, send QQ messages, write runtime files, or modify memory.
+
+## Health History Ledger
+
+Long-running sessions can opt in to a compact runtime JSONL ledger:
+
+```powershell
+python diagnostics\check_xinyu_health.py --json --write-ledger
+python diagnostics\check_xinyu_health.py --json --write-ledger --checkpoint
+```
+
+The default ledger path is:
+
+```text
+XinYu-Core/examples/agent-apps/xinyu/runtime/diagnostics/xinyu_health_history.jsonl
+```
+
+The ledger records the check time, overall status, signal statuses, and degraded signal details. It is runtime diagnostic history only; it is not long-term memory content and is not a substitute for owner approval on high-risk actions.
 
 ## Operating Rhythm
 
-- Every 30 minutes: run `diagnostics\check_xinyu_health.py --json` and inspect `warn` or `critical` signals.
-- Every 2 hours: record a checkpoint with git status, latest commits, health summary, and any skipped live checks.
+- Every 30 minutes: run `diagnostics\check_xinyu_health.py --json --write-ledger` and inspect `warn` or `critical` signals.
+- Every 2 hours: run `diagnostics\check_xinyu_health.py --json --write-ledger --checkpoint`, then record git status, latest commits, health summary, and any skipped live checks.
 - Before each refactor slice: run the validation matrix gate for the touched capability.
 - After each successful refactor slice: record worklog, commit, and keep rollback command available.
 

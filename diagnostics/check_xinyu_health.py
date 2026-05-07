@@ -148,6 +148,42 @@ def _disk_space(workspace: Path) -> tuple[str, str]:
     return status, f"free_gb={free_gb:.1f}"
 
 
+def _default_ledger_path(workspace: Path) -> Path:
+    return workspace.resolve() / DEFAULT_APP_REL / "runtime/diagnostics/xinyu_health_history.jsonl"
+
+
+def _append_health_ledger(report: dict[str, Any], ledger_path: Path, *, kind: str) -> dict[str, Any]:
+    row = {
+        "kind": kind,
+        "checked_at": report.get("checked_at"),
+        "status": report.get("status"),
+        "workspace": report.get("workspace"),
+        "app_root": report.get("app_root"),
+        "signals": {
+            str(item.get("name")): str(item.get("status"))
+            for item in report.get("signals", [])
+            if isinstance(item, dict) and item.get("name")
+        },
+        "degraded": [
+            {
+                "name": item.get("name"),
+                "status": item.get("status"),
+                "detail": item.get("detail"),
+            }
+            for item in report.get("signals", [])
+            if isinstance(item, dict) and str(item.get("status")) != "ok"
+        ],
+    }
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    with ledger_path.open("a", encoding="utf-8", newline="\n") as handle:
+        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str) + "\n")
+    return {
+        "written": True,
+        "kind": kind,
+        "path": str(ledger_path),
+    }
+
+
 def collect_health(workspace: Path, core_url: str) -> dict[str, Any]:
     workspace = workspace.resolve()
     app_root = workspace / DEFAULT_APP_REL
@@ -198,20 +234,52 @@ def collect_health(workspace: Path, core_url: str) -> dict[str, Any]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Read-only XinYu long-run health diagnostic.")
+    parser = argparse.ArgumentParser(description="XinYu long-run health diagnostic. Default mode is read-only.")
     parser.add_argument("--workspace", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--core-url", default="http://127.0.0.1:8765")
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--strict", action="store_true", help="Exit non-zero on warn or critical status.")
+    parser.add_argument(
+        "--write-ledger",
+        action="store_true",
+        help="Append a compact health row to the runtime diagnostics JSONL ledger.",
+    )
+    parser.add_argument(
+        "--checkpoint",
+        action="store_true",
+        help="Mark the ledger row as a checkpoint entry. Requires --write-ledger.",
+    )
+    parser.add_argument(
+        "--ledger-path",
+        type=Path,
+        default=None,
+        help="Override the default runtime diagnostics ledger path.",
+    )
     args = parser.parse_args()
+    if args.checkpoint and not args.write_ledger:
+        parser.error("--checkpoint requires --write-ledger")
 
     report = collect_health(args.workspace, args.core_url)
+    if args.write_ledger:
+        ledger_path = args.ledger_path or _default_ledger_path(args.workspace)
+        try:
+            report["ledger"] = _append_health_ledger(
+                report,
+                ledger_path.resolve(),
+                kind="checkpoint" if args.checkpoint else "heartbeat",
+            )
+        except OSError as exc:
+            print(f"Failed to write health ledger: {type(exc).__name__}: {exc}", file=sys.stderr)
+            return 2
     if args.json:
         print(json.dumps(report, ensure_ascii=False, indent=2))
     else:
         print(f"XinYu health: {report['status']}")
         for item in report["signals"]:
             print(f"{item['status'].upper()} {item['name']}: {item['detail']}")
+        ledger = report.get("ledger")
+        if isinstance(ledger, dict) and ledger.get("written"):
+            print(f"LEDGER {ledger.get('kind')}: {ledger.get('path')}")
     if args.strict and report["status"] != "ok":
         return 1
     return 0

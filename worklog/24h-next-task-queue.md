@@ -6,7 +6,7 @@ Date: 2026-05-07
 
 - [ ] Triage `diagnostics\check_xinyu_health.py --json` critical `recent_exceptions`.
 - [ ] Triage v1 shadow tail errors before any canary scope change.
-- [ ] Decide whether health diagnostic exception scanning needs a narrower time window or structured error ledger.
+- [x] Decide whether health diagnostic exception scanning needs a narrower time window or structured error ledger. Added an opt-in structured runtime health ledger; exception-scan narrowing remains a separate triage decision.
 
 ## P0
 
@@ -24,7 +24,7 @@ Date: 2026-05-07
 ## P2
 
 - [x] Add chat service boundary.
-- [ ] Add narrower long-run health history/checkpoint ledger.
+- [x] Add narrower long-run health history/checkpoint ledger.
 - [ ] Add service-boundary unit tests for new bridge modules.
 
 ## Red Lines Remain
