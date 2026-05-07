@@ -73,7 +73,7 @@ For Python code changes, also compile the changed Python files:
 
 - `state_io_smoke.py` covers the existing shared markdown helper, but not a future full `state_service.py` contract.
 - `service_boundary_smoke.py` covers the first extracted pure contracts, but future boundary modules still need their own focused tests as they are split.
-- Current live health can still report `recent_exceptions` as `warn` from real recent traces; `critical` false positives from malformed WebSocket probes and v1 `error=none` rows were triaged.
+- Current live health can still report `recent_exceptions` as `critical` from real recent traces; false positives from malformed WebSocket probes and v1 `error=none` rows were triaged.
 
 ## Red Lines During Validation
 

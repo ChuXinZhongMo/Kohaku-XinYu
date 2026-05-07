@@ -482,3 +482,20 @@ Workspace: D:\XinYu
 - Risk: Low; documentation-only finalization.
 - Rollback: `git revert <loop-21-commit>`
 - Next: Final verification and report to owner.
+
+## Loop 22 - 20:14
+
+- Task: Correct the final health-status record.
+- Why: The last ledger checkpoint returned `recent_exceptions: critical` after a new source-stage trace pushed the count to the threshold; the final summary must reflect the live state instead of the earlier in-loop `warn` reading.
+- Files changed:
+  - `XINYU-24H-REFACTOR-SUMMARY.md`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `git status --short --branch`
+  - `git diff --check`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --write-ledger --checkpoint --workspace D:\XinYu`
+- Result: Final docs now state that v1 shadow errors are resolved as a diagnostic false positive, but live health remains `critical` from remaining real recent trace/log signals. This does not touch QQ, v1 traffic, memory, or persona semantics.
+- Risk: Low; documentation-only correction.
+- Rollback: `git revert <loop-22-commit>`
+- Next: Final report to owner.

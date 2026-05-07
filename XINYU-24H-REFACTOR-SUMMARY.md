@@ -2,7 +2,7 @@
 
 Date: 2026-05-07
 Workspace: `D:\XinYu`
-Closure state: tracked 24h queue complete; high-risk owner-confirmation actions were not required or performed.
+Closure state: tracked 24h queue complete; high-risk owner-confirmation actions were not required or performed. Final live health is still degraded by recent trace signals, but that condition was triaged and no longer blocks this user-requested run.
 
 ## Completed Loops
 
@@ -27,6 +27,7 @@ Closure state: tracked 24h queue complete; high-risk owner-confirmation actions 
 19. Service-boundary smoke coverage and Codex summary metadata filter.
 20. Health critical/v1 shadow triage and diagnostic false-positive reduction.
 21. Final summary refresh.
+22. Final health-status correction after the last ledger checkpoint.
 
 ## Commits
 
@@ -50,7 +51,8 @@ Closure state: tracked 24h queue complete; high-risk owner-confirmation actions 
 - `086daf3 chore: add health history ledger`
 - `9fb2405 test: add service boundary smoke`
 - `0c1dd98 chore: refine health diagnostics triage`
-- Final summary commit: this file's commit.
+- `84277dd docs: refresh 24h refactor summary`
+- Final health-status commit: this file's commit.
 
 ## Files Changed
 
@@ -78,7 +80,7 @@ Closure state: tracked 24h queue complete; high-risk owner-confirmation actions 
 
 - `check_sent_index.py` was not run as a live sent-index validation without a known `adapter_msg_id`; the matrix documents the required argument and the focused pytest fallback was used.
 - `service_boundary_smoke.py` failed once on first run because `Generated image path:` could enter the Codex visible summary. The same loop fixed the filter in `xinyu_codex_service.py`, then `service_boundary_smoke.py`, `codex_completion_outbox_smoke.py`, and `codex_delegate_smoke.py` passed.
-- Health initially reported `critical` from broad log scanning and v1 `error=none` false positives. Loop 20 triaged and reduced this to `warn`; remaining `recent_exceptions` are real current trace/log signals, not a stop condition.
+- Health initially reported `critical` from broad log scanning and v1 `error=none` false positives. Loop 20 removed those false positives and verified `v1_shadow_errors: ok`. The final checkpoint still reports `critical` because remaining real trace/log signals reached the threshold: `recent_exceptions hits=20`, led by `logs\xinyu_core_bridge.err.log`, `runtime\github_learning_trace.jsonl`, and `runtime\self_presence_trace.jsonl`. This was recorded, not used as a stop condition.
 - No real QQ outbound test was run.
 - No long-term memory body migration was attempted.
 - No v1 real traffic expansion was attempted.
@@ -97,7 +99,7 @@ Closure state: tracked 24h queue complete; high-risk owner-confirmation actions 
 - Full `xinyu_bridge/` package decomposition (`app`, `auth`, `context`, `http_server`, `sessions`) is still future work; current changes are compatibility-preserving service extraction slices.
 - Full `xinyu_qq/` package decomposition is still future work; gateway responsibilities are reduced but the monolithic gateway file still owns server orchestration.
 - Broader state governance remains: more projection/runtime writers should migrate to `state_service.py`; long-term memory body files remain intentionally untouched.
-- `recent_exceptions` is now `warn`, not fully green; remaining signals include existing bridge err/source/runtime traces.
+- Final live health is not green: `recent_exceptions` is `critical` at the threshold, and `git_state` is `dirty` because the user-provided `XINYU-24H-WORK-PLAN.md` remains intentionally untracked.
 - P3 items remain deliberately deferred: complete memory migration, full event/projection conversion, full chat pipeline rewrite, Desktop UI split, v1 real traffic expansion, and productized deployment.
 
 ## Untouched Red Lines
@@ -116,7 +118,8 @@ Closure state: tracked 24h queue complete; high-risk owner-confirmation actions 
 Use individual reverts in reverse order:
 
 ```powershell
-git revert <final-summary-commit>
+git revert <final-health-status-commit>
+git revert 84277dd
 git revert 0c1dd98
 git revert 9fb2405
 git revert 086daf3
@@ -141,7 +144,7 @@ git revert c4ddd59
 
 ## Recommended Next 24h Plan
 
-1. Keep health in ledger mode and drive `recent_exceptions` from `warn` toward `ok` by addressing the remaining source/runtime trace causes.
+1. Keep health in ledger mode and drive `recent_exceptions` from `critical` toward `ok` by addressing the remaining source/runtime trace causes.
 2. Continue thinning `xinyu_core_bridge.py` into a real `xinyu_bridge/` package, starting with auth/context/session boundaries.
 3. Continue thinning `xinyu_qq_gateway.py` into a real `xinyu_qq/` package, starting with server/config/normalizer boundaries.
 4. Migrate another low-risk runtime/projection writer to `state_service.py` with a focused smoke.
