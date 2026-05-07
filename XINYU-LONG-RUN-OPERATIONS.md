@@ -9,9 +9,9 @@ This document defines the minimum operating rhythm for long-running local XinYu 
 ## Health Signals
 
 - Bridge alive: `/health` on `127.0.0.1:8765`.
-- Desktop event stream alive: TCP connect to `127.0.0.1:8766`.
-- QQ gateway alive: TCP connect to `127.0.0.1:6199`.
-- NapCat reachable: TCP connect to `127.0.0.1:6099`.
+- Desktop event stream alive: minimal WebSocket handshake to `127.0.0.1:8766/desktop/events`.
+- QQ gateway alive: minimal WebSocket handshake to `127.0.0.1:6199`.
+- NapCat reachable: minimal WebSocket handshake to `127.0.0.1:6099`.
 - Outbox backlog: pending items in `memory/context/qq_outbox_queue.json`.
 - Memory/state write errors: inferred from recent logs and traces until a dedicated state-service ledger exists.
 - Recent exceptions: recent `logs/` and `runtime/` text/jsonl scan.
@@ -52,6 +52,8 @@ XinYu-Core/examples/agent-apps/xinyu/runtime/diagnostics/xinyu_health_history.js
 ```
 
 The ledger records the check time, overall status, signal statuses, and degraded signal details. It is runtime diagnostic history only; it is not long-term memory content and is not a substitute for owner approval on high-risk actions.
+
+Health probes must avoid creating their own error noise. WebSocket endpoints should be checked with a valid minimal WebSocket handshake, not a raw TCP connect that leaves malformed-handshake tracebacks in `logs/xinyu_core_bridge.err.log`.
 
 ## Operating Rhythm
 

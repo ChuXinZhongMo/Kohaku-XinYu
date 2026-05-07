@@ -443,3 +443,26 @@ Workspace: D:\XinYu
 - Risk: Low-medium; one visible-summary filter changed to avoid local artifact metadata leakage. No persona semantics, memory body content, QQ outbound, or v1 traffic changed.
 - Rollback: `git revert <loop-19-commit>`
 - Next: Triage current health critical `recent_exceptions` and v1 shadow tail errors without changing live traffic.
+
+## Loop 20 - 20:06
+
+- Task: Triage health `recent_exceptions` critical status and v1 shadow tail errors.
+- Why: The long-run health gate should distinguish actual degraded signals from diagnostic self-noise before any future canary or long-running automation decisions.
+- Files changed:
+  - `diagnostics/check_xinyu_health.py`
+  - `XINYU-LONG-RUN-OPERATIONS.md`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `git status --short --branch`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --write-ledger --checkpoint --workspace D:\XinYu`
+  - Read-only top-hit inspection of `logs/` and `runtime/` exception contributors.
+  - Read-only tail inspection of `runtime/v1_shadow_trace.jsonl`.
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe -m py_compile diagnostics\check_xinyu_health.py`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --workspace D:\XinYu`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --write-ledger --workspace D:\XinYu`
+- Result: v1 shadow tail rows were `accepted=true,error=none`, so the diagnostic no longer treats them as failures and now reports `v1_shadow_errors: ok`. Health checks now use minimal WebSocket handshakes with a client close frame instead of raw TCP probes, avoiding self-created malformed-handshake tracebacks. Structured JSONL exception counting no longer counts `error=none`, the diagnostic ledger, or the dedicated v1 shadow trace as generic recent exceptions. Overall health dropped from `critical` to `warn`; remaining `recent_exceptions` are `hits=19` from existing err/source/runtime traces.
+- Risk: Low; diagnostic classification changed, but no runtime files were cleaned, no services were restarted, and no v1/QQ behavior changed.
+- Rollback: `git revert <loop-20-commit>`
+- Next: Update the final 24h refactor summary and verify the queue is fully closed.

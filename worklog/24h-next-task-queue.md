@@ -4,8 +4,8 @@ Date: 2026-05-07
 
 ## Stop-Gap First
 
-- [ ] Triage `diagnostics\check_xinyu_health.py --json` critical `recent_exceptions`.
-- [ ] Triage v1 shadow tail errors before any canary scope change.
+- [x] Triage `diagnostics\check_xinyu_health.py --json` critical `recent_exceptions`. Diagnostic no longer counts its own ledger, v1 shadow trace, benign malformed WebSocket probe tracebacks, or JSONL `error=none` field names; current signal is `warn`.
+- [x] Triage v1 shadow tail errors before any canary scope change. Tail rows were `accepted=true,error=none`; diagnostic now reports `errors=0 window=200` without changing v1 traffic.
 - [x] Decide whether health diagnostic exception scanning needs a narrower time window or structured error ledger. Added an opt-in structured runtime health ledger; exception-scan narrowing remains a separate triage decision.
 
 ## P0
@@ -29,8 +29,8 @@ Date: 2026-05-07
 
 ## Red Lines Remain
 
-- [ ] No persona semantic edits.
-- [ ] No long-term memory body edits.
-- [ ] No real QQ outbound tests without owner approval.
-- [ ] No v1 real traffic expansion without owner approval.
-- [ ] No runtime/memory/Autonomy/Local-Scope deletion.
+- [x] No persona semantic edits.
+- [x] No long-term memory body edits.
+- [x] No real QQ outbound tests without owner approval.
+- [x] No v1 real traffic expansion without owner approval.
+- [x] No runtime/memory/Autonomy/Local-Scope deletion.

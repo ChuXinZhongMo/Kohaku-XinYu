@@ -17,6 +17,13 @@ from typing import Any
 
 DEFAULT_APP_REL = Path("XinYu-Core/examples/agent-apps/xinyu")
 EXCEPTION_RE = re.compile(r"(?i)(traceback|exception|error|failed)")
+NO_ERROR_VALUES = frozenset({"", "0", "false", "none", "null", "ok", "no_error"})
+BENIGN_TEXT_EXCEPTION_MARKERS = (
+    "websockets.exceptions.InvalidMessage: did not receive a valid HTTP request",
+    "websockets.exceptions.ConnectionClosedError: no close frame received or sent",
+    "EOFError: connection closed while reading HTTP request line",
+    "EOFError: stream ends after 0 bytes, before end of line",
+)
 
 
 @dataclass
@@ -46,6 +53,44 @@ def _read_json(path: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def _meaningful_error(value: Any) -> bool:
+    if value is None or value is False:
+        return False
+    text = str(value).strip().lower()
+    return text not in NO_ERROR_VALUES
+
+
+def _jsonl_exception_hits(text: str) -> int:
+    hits = 0
+    for line in text.splitlines()[-500:]:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            hits += len(EXCEPTION_RE.findall(line))
+            continue
+        if not isinstance(row, dict):
+            continue
+        if row.get("accepted") is False:
+            hits += 1
+            continue
+        if any(_meaningful_error(row.get(key)) for key in ("error", "error_message", "exception", "traceback")):
+            hits += 1
+            continue
+    return hits
+
+
+def _text_exception_hits(text: str) -> int:
+    hits = 0
+    for block in re.split(r"(?=Traceback \(most recent call last\):|opening handshake failed)", text):
+        if any(marker in block for marker in BENIGN_TEXT_EXCEPTION_MARKERS):
+            continue
+        hits += len(EXCEPTION_RE.findall(block))
+    return hits
+
+
 def _extract_assignment(path: Path, name: str) -> str:
     text = _read_text(path)
     match = re.search(rf"(?m)^{re.escape(name)}\s*=\s*['\"]([^'\"]+)['\"]", text)
@@ -56,6 +101,32 @@ def _tcp_connect(host: str, port: int, timeout: float = 0.75) -> bool:
     try:
         with socket.create_connection((host, port), timeout=timeout):
             return True
+    except OSError:
+        return False
+
+
+def _websocket_probe(host: str, port: int, path: str = "/", timeout: float = 0.75) -> bool:
+    request = (
+        f"GET {path or '/'} HTTP/1.1\r\n"
+        f"Host: {host}:{port}\r\n"
+        "Upgrade: websocket\r\n"
+        "Connection: Upgrade\r\n"
+        "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+        "Sec-WebSocket-Version: 13\r\n"
+        "\r\n"
+    )
+    try:
+        with socket.create_connection((host, port), timeout=timeout) as sock:
+            sock.settimeout(timeout)
+            sock.sendall(request.encode("ascii"))
+            response = sock.recv(256)
+            if b" 101 " in response or response.startswith(b"HTTP/1.1 101"):
+                try:
+                    sock.sendall(b"\x88\x80\x00\x00\x00\x00")
+                    sock.recv(256)
+                except OSError:
+                    pass
+            return response.startswith(b"HTTP/")
     except OSError:
         return False
 
@@ -110,17 +181,41 @@ def _recent_exception_count(app_root: Path) -> tuple[str, str]:
     candidates: list[Path] = []
     for folder in (app_root / "logs", app_root / "runtime"):
         if folder.exists():
-            candidates.extend(path for path in folder.rglob("*") if path.is_file() and path.suffix.lower() in {".log", ".txt", ".jsonl"})
+            for path in folder.rglob("*"):
+                if not path.is_file() or path.suffix.lower() not in {".log", ".txt", ".jsonl"}:
+                    continue
+                try:
+                    rel = path.relative_to(app_root)
+                except ValueError:
+                    rel = path
+                rel_parts = rel.parts
+                if len(rel_parts) >= 2 and rel_parts[:2] == ("runtime", "diagnostics"):
+                    continue
+                if rel_parts == ("runtime", "v1_shadow_trace.jsonl"):
+                    continue
+                candidates.append(path)
     hits = 0
     scanned = 0
+    file_hits: list[tuple[int, str]] = []
     for path in sorted(candidates, key=lambda item: item.stat().st_mtime if item.exists() else 0, reverse=True)[:30]:
         text = _read_text(path, limit=64 * 1024)
         if not text:
             continue
         scanned += 1
-        hits += len(EXCEPTION_RE.findall(text[-64 * 1024 :]))
+        if path.suffix.lower() == ".jsonl":
+            path_hits = _jsonl_exception_hits(text)
+        else:
+            path_hits = _text_exception_hits(text[-64 * 1024 :])
+        hits += path_hits
+        if path_hits:
+            try:
+                rel = str(path.relative_to(app_root))
+            except ValueError:
+                rel = str(path)
+            file_hits.append((path_hits, rel))
     status = "ok" if hits == 0 else ("warn" if hits < 20 else "critical")
-    return status, f"hits={hits} scanned_files={scanned}"
+    top = ",".join(f"{rel}:{count}" for count, rel in sorted(file_hits, reverse=True)[:3]) or "none"
+    return status, f"hits={hits} scanned_files={scanned} top={top}"
 
 
 def _v1_shadow_errors(app_root: Path) -> tuple[str, str]:
@@ -135,7 +230,7 @@ def _v1_shadow_errors(app_root: Path) -> tuple[str, str]:
             row = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if isinstance(row, dict) and (row.get("accepted") is False or row.get("error")):
+        if isinstance(row, dict) and (row.get("accepted") is False or _meaningful_error(row.get("error"))):
             failures += 1
     status = "ok" if failures == 0 else "warn"
     return status, f"errors={failures} window={len(lines)}"
@@ -205,9 +300,27 @@ def collect_health(workspace: Path, core_url: str) -> dict[str, Any]:
     core_status = "ok" if ok and isinstance(core, dict) and core.get("ok") else "warn"
     core_detail = f"version={core.get('version', 'unknown')} sessions={core.get('sessions', 'unknown')}" if isinstance(core, dict) else str(core)
     signals.append(HealthSignal("bridge_alive", core_status, core_detail))
-    signals.append(HealthSignal("desktop_ws_alive", "ok" if _tcp_connect("127.0.0.1", 8766) else "warn", "tcp 127.0.0.1:8766"))
-    signals.append(HealthSignal("qq_gateway_alive", "ok" if _tcp_connect("127.0.0.1", 6199) else "warn", "tcp 127.0.0.1:6199"))
-    signals.append(HealthSignal("napcat_reachable", "ok" if _tcp_connect("127.0.0.1", 6099) else "warn", "tcp 127.0.0.1:6099"))
+    signals.append(
+        HealthSignal(
+            "desktop_ws_alive",
+            "ok" if _websocket_probe("127.0.0.1", 8766, "/desktop/events") else "warn",
+            "websocket 127.0.0.1:8766/desktop/events",
+        )
+    )
+    signals.append(
+        HealthSignal(
+            "qq_gateway_alive",
+            "ok" if _websocket_probe("127.0.0.1", 6199) else "warn",
+            "websocket 127.0.0.1:6199",
+        )
+    )
+    signals.append(
+        HealthSignal(
+            "napcat_reachable",
+            "ok" if _websocket_probe("127.0.0.1", 6099) else "warn",
+            "websocket 127.0.0.1:6099",
+        )
+    )
 
     status, detail = _outbox_backlog(app_root)
     signals.append(HealthSignal("outbox_backlog", status, detail))
