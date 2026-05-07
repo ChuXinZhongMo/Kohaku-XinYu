@@ -51,9 +51,9 @@ Date: 2026-05-07
 - [x] Extract trust policy.
 - [x] Extract outbox dispatcher.
 - [x] Extract sender helpers.
-- [ ] Extract command router helpers.
-- [ ] Preserve OneBot payload compatibility.
-- [ ] Preserve no-real-outbound-test rule.
+- [x] Extract command router helpers.
+- [x] Preserve OneBot payload compatibility.
+- [x] Preserve no-real-outbound-test rule.
 
 ## State And Operations
 

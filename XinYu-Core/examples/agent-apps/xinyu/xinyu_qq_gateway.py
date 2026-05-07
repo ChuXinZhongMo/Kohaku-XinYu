@@ -2416,7 +2416,7 @@ class NativeQQGateway:
             return {"recorded": False, "notes": ["not_group_message"]}
         sender_id = _safe_str(event.get("user_id"), "unknown")
         self_id = _safe_str(event.get("self_id")).strip()
-        if self._is_self_message_event(event, sender_id=sender_id, self_id=self_id):
+        if xinyu_qq_command_router.is_self_message_event(self, event, sender_id=sender_id, self_id=self_id):
             return {"recorded": False, "notes": ["self_message"]}
         if self._is_blocked_user_id(sender_id):
             return {"recorded": False, "notes": ["sender_blocked"]}
@@ -2433,7 +2433,7 @@ class NativeQQGateway:
             text = _safe_str(rich_context.get("fallback_text")).strip()
         if not text:
             return {"recorded": False, "notes": ["group_shadow_empty_text"]}
-        triggered, normalized_text, reason = self._group_trigger_result(event, text=text)
+        triggered, normalized_text, reason = xinyu_qq_command_router.group_trigger_result(self, event, text=text)
         try:
             return record_group_shadow_observation(
                 self.xinyu_dir,
@@ -2615,7 +2615,7 @@ class NativeQQGateway:
         sender_id = _safe_str(event.get("user_id"), "unknown")
         self_id = _safe_str(event.get("self_id")).strip()
         group_id = _safe_str(event.get("group_id"), "")
-        if self._is_self_message_event(event, sender_id=sender_id, self_id=self_id):
+        if xinyu_qq_command_router.is_self_message_event(self, event, sender_id=sender_id, self_id=self_id):
             return None
         if self._is_blocked_user_id(sender_id):
             print(f"[xinyu_qq_gateway] ignored blocked sender={sender_id} kind={message_kind}", flush=True)
@@ -2632,7 +2632,7 @@ class NativeQQGateway:
         if not text and learning_material is None and sticker_material is None:
             return None
 
-        if text and self._is_blocked_command(text):
+        if text and xinyu_qq_command_router.is_blocked_command(self, text):
             print(f"[xinyu_qq_gateway] blocked command: {text.split(maxsplit=1)[0]}", flush=True)
             return None
 
@@ -2674,7 +2674,7 @@ class NativeQQGateway:
                 route="sticker_import",
             )
 
-        goldmark_command = self._extract_goldmark_command(text)
+        goldmark_command = xinyu_qq_command_router.extract_goldmark_command(self, text)
         if goldmark_command is not None:
             if message_kind != "private" or sender_id not in self.config.owner_user_ids:
                 print("[xinyu_qq_gateway] ignored goldmark outside owner private chat", flush=True)
@@ -2699,7 +2699,7 @@ class NativeQQGateway:
                 route="goldmark_mark",
             )
 
-        review_command = self._extract_review_admin_command(text)
+        review_command = xinyu_qq_command_router.extract_review_admin_command(self, text)
         if review_command is not None:
             if message_kind != "private" or sender_id not in self.config.owner_user_ids:
                 print("[xinyu_qq_gateway] ignored review admin outside owner private chat", flush=True)
@@ -2733,7 +2733,7 @@ class NativeQQGateway:
             )
 
         if message_kind == "group":
-            group_ok, normalized_text, reason = self._group_trigger_result(event, text=text)
+            group_ok, normalized_text, reason = xinyu_qq_command_router.group_trigger_result(self, event, text=text)
             if not group_ok:
                 print(f"[xinyu_qq_gateway] ignored group message: {reason}", flush=True)
                 return None
@@ -2741,7 +2741,7 @@ class NativeQQGateway:
             if not text:
                 return None
 
-        package_text = self._extract_package_install_command(text)
+        package_text = xinyu_qq_command_router.extract_package_install_command(self, text)
         if package_text is not None:
             if not self.config.package_install_enabled:
                 print("[xinyu_qq_gateway] ignored package install command: disabled", flush=True)
@@ -2762,7 +2762,7 @@ class NativeQQGateway:
                 route="package_install",
             )
 
-        codex_task = self._extract_codex_command(text)
+        codex_task = xinyu_qq_command_router.extract_codex_command(self, text)
         if codex_task is not None:
             if not self.config.codex_command_enabled:
                 print("[xinyu_qq_gateway] ignored Codex command: disabled", flush=True)
@@ -2786,7 +2786,7 @@ class NativeQQGateway:
                 route="codex_execute",
             )
 
-        if self._is_passthrough_command(text):
+        if xinyu_qq_command_router.is_passthrough_command(self, text):
             return None
 
         return PreparedMessage(
@@ -2799,7 +2799,7 @@ class NativeQQGateway:
         sender_id = _safe_str(event.get("user_id"), "unknown")
         self_id = _safe_str(event.get("self_id")).strip()
         group_id = _safe_str(event.get("group_id"), "")
-        if self._is_self_message_event(event, sender_id=sender_id, self_id=self_id):
+        if xinyu_qq_command_router.is_self_message_event(self, event, sender_id=sender_id, self_id=self_id):
             return "self_message"
         if self._is_blocked_user_id(sender_id):
             return "sender_blocked"
@@ -2813,7 +2813,7 @@ class NativeQQGateway:
             if rich_context.get("segments"):
                 return "rich_message_without_supported_route"
             return "empty_message"
-        if text and self._is_blocked_command(text):
+        if text and xinyu_qq_command_router.is_blocked_command(self, text):
             return "blocked_command"
         if self.config.private_only and message_kind != "private":
             return "private_only"
@@ -2832,12 +2832,12 @@ class NativeQQGateway:
             ):
                 return "file_learning_private_owner_only"
         if message_kind == "group":
-            group_ok, normalized_text, reason = self._group_trigger_result(event, text=text)
+            group_ok, normalized_text, reason = xinyu_qq_command_router.group_trigger_result(self, event, text=text)
             if not group_ok:
                 return reason
             if not normalized_text.strip():
                 return "group_trigger_empty_text"
-        package_text = self._extract_package_install_command(text)
+        package_text = xinyu_qq_command_router.extract_package_install_command(self, text)
         if package_text is not None:
             if not self.config.package_install_enabled:
                 return "package_install_disabled"
@@ -2845,7 +2845,7 @@ class NativeQQGateway:
                 message_kind != "private" or sender_id not in self.config.owner_user_ids
             ):
                 return "package_install_private_owner_only"
-        codex_task = self._extract_codex_command(text)
+        codex_task = xinyu_qq_command_router.extract_codex_command(self, text)
         if codex_task is not None:
             if not self.config.codex_command_enabled:
                 return "codex_command_disabled"
@@ -2853,16 +2853,9 @@ class NativeQQGateway:
                 return "codex_private_only"
             if sender_id not in self.config.owner_user_ids:
                 return "codex_owner_only"
-        if self._is_passthrough_command(text):
+        if xinyu_qq_command_router.is_passthrough_command(self, text):
             return "passthrough_command"
         return "prepare_none"
-
-    @staticmethod
-    def _is_self_message_event(event: dict[str, Any], *, sender_id: str, self_id: str) -> bool:
-        return xinyu_qq_command_router.is_self_message_event(None, event, sender_id=sender_id, self_id=self_id)
-
-    def _extract_goldmark_command(self, text: str) -> dict[str, str] | None:
-        return xinyu_qq_command_router.extract_goldmark_command(self, text)
 
     def _build_goldmark_mark_payload(
         self,
@@ -2915,9 +2908,6 @@ class NativeQQGateway:
         if "invalid_target" in lowered or "409" in lowered:
             return "这条不能标：目标回复没有有效 turn，或者被安全检查挡住了。"
         return "标记失败，Core 没接住这次请求。"
-
-    def _extract_review_admin_command(self, text: str) -> dict[str, Any] | None:
-        return xinyu_qq_command_router.extract_review_admin_command(self, text)
 
     def _build_review_admin_payload(
         self,
@@ -3250,21 +3240,6 @@ class NativeQQGateway:
 
     def _sender_name(self, event: dict[str, Any]) -> str:
         return xinyu_qq_normalizer.sender_name(self, event)
-
-    def _group_trigger_result(self, event: dict[str, Any], *, text: str) -> tuple[bool, str, str]:
-        return xinyu_qq_command_router.group_trigger_result(self, event, text=text)
-
-    def _strip_group_trigger_prefix(self, text: str) -> tuple[bool, str]:
-        return xinyu_qq_command_router.strip_group_trigger_prefix(self, text)
-
-    def _bot_was_mentioned(self, event: dict[str, Any], *, text: str) -> bool:
-        return xinyu_qq_command_router.bot_was_mentioned(self, event, text=text)
-
-    def _is_passthrough_command(self, text: str) -> bool:
-        return xinyu_qq_command_router.is_passthrough_command(self, text)
-
-    def _is_blocked_command(self, text: str) -> bool:
-        return xinyu_qq_command_router.is_blocked_command(self, text)
 
     def _build_chat_payload(
         self,
@@ -3710,19 +3685,6 @@ class NativeQQGateway:
             "timestamp": _as_int(event.get("time"), int(time.time())),
             "metadata": metadata,
         }
-
-    def _extract_codex_command(self, text: str) -> str | None:
-        return xinyu_qq_command_router.extract_codex_command(self, text)
-
-    def _extract_package_install_command(self, text: str) -> str | None:
-        return xinyu_qq_command_router.extract_package_install_command(self, text)
-
-    def _extract_natural_language_package_install(self, text: str) -> str | None:
-        return xinyu_qq_command_router.extract_natural_language_package_install(self, text)
-
-    @staticmethod
-    def _package_text_from_natural_language(text: str) -> str:
-        return xinyu_qq_command_router.package_text_from_natural_language(text)
 
     def _session_id(self, target: ReplyTarget) -> str:
         if target.message_kind == "group":

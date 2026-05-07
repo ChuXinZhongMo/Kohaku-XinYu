@@ -328,3 +328,25 @@ Workspace: D:\XinYu
 - Risk: Medium-low; send payload construction moved but real QQ outbound behavior was not exercised or expanded.
 - Rollback: `git revert <loop-14-commit>`
 - Next: Reduce QQ command router shims in `xinyu_qq_gateway.py`.
+
+## Loop 15 - 19:38
+
+- Task: Reduce pure QQ command-router shims in `xinyu_qq_gateway.py`.
+- Why: Command parsing already belongs to `xinyu_qq_command_router.py`; keeping gateway-only forwarding methods makes the gateway larger without adding behavior.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XINYU-REFACTOR-CHECKLIST.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `rg -n "def _extract_goldmark_command|def _extract_review_admin_command|def _is_passthrough_command|def _is_blocked_command|def _group_trigger_result|def _strip_group_trigger_prefix|def _bot_was_mentioned|def _extract_codex_command|def _extract_package_install_command|def _extract_natural_language_package_install|def _package_text_from_natural_language" xinyu_qq_gateway.py`
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py xinyu_qq_command_router.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_outbox_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_gateway_ack_spool.py::test_sent_reply_index_lookup_by_adapter_message_id -q`
+  - `git diff --check`
+- Result: Removed gateway-only forwarding methods for self-message detection, blocked/passthrough command checks, group trigger parsing, review/goldmark extraction, Codex extraction, and package-install extraction. Compile, QQ gateway smoke, QQ review smoke, QQ outbox smoke, focused ack spool pytest, and `git diff --check` passed.
+- Risk: Medium-low; routing call sites now call the same command-router functions directly. OneBot payload shape was not changed, and no real QQ outbound test was run.
+- Rollback: `git revert <loop-15-commit>`
+- Next: Extract Desktop REST/snapshot methods after health triage, or add chat service boundary if Desktop slice is too broad.

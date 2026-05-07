@@ -18,7 +18,7 @@ Date: 2026-05-07
 ## P1
 
 - [x] Extract QQ sender helpers from `xinyu_qq_gateway.py`.
-- [ ] Reduce QQ command router shims in `xinyu_qq_gateway.py`.
+- [x] Reduce QQ command router shims in `xinyu_qq_gateway.py`.
 - [ ] Extract Desktop REST/snapshot methods after health triage.
 
 ## P2
