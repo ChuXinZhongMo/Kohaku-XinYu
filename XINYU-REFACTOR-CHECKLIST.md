@@ -48,7 +48,7 @@ Date: 2026-05-07
 
 ## QQ Gateway Slices
 
-- [ ] Extract trust policy.
+- [x] Extract trust policy.
 - [ ] Extract outbox dispatcher.
 - [ ] Extract sender helpers.
 - [ ] Extract command router helpers.

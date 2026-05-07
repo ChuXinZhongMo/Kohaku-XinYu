@@ -39,7 +39,7 @@ For Python code changes, also compile the changed Python files:
 | Desktop WS/events | `xinyu_desktop_ws_smoke.py`; `xinyu_desktop_events_smoke.py` | Any desktop event bus, websocket, or event route change | Covered |
 | Desktop life/metabolism/proactive | `xinyu_desktop_life_state_smoke.py`; `xinyu_desktop_metabolism_ticket_smoke.py`; `xinyu_desktop_proactive_smoke.py` | Any desktop-facing life state, metabolism, or proactive state change | Covered |
 | QQ Gateway transport | `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py` | Any `xinyu_qq_gateway.py` or QQ adapter extraction | Covered, no real outbound |
-| QQ outbox | `qq_outbox_smoke.py`; `check_sent_index.py` | Any outbox claim/send/ack/index change | Covered, no real outbound |
+| QQ outbox | `qq_outbox_smoke.py`; `check_sent_index.py <adapter_msg_id>` for a known local test/live id; `python -m pytest tests\test_gateway_ack_spool.py::test_sent_reply_index_lookup_by_adapter_message_id -q` when no adapter id is available | Any outbox claim/send/ack/index change | Covered, no real outbound |
 | Codex delegation | `codex_delegate_smoke.py`; `codex_delegation_reality_smoke.py` | Any Codex request, delegation, or material contract change | Covered |
 | Codex completion outbox | `codex_completion_outbox_smoke.py`; `codex_report_material_smoke.py` | Any completion report or outbox handling change | Covered |
 | Learning ingest | `bridge_learning_ingest_smoke.py`; `.\.venv\Scripts\python.exe -m pytest tests\test_learning_closed_loop.py -q` | Any `/learning/*`, ingest scope, or learning write wrapper change | Covered |
@@ -61,7 +61,7 @@ For Python code changes, also compile the changed Python files:
 | Codex service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `codex_delegate_smoke.py`; `codex_completion_outbox_smoke.py`; `bridge_probe_smoke.py` |
 | Learning service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `bridge_learning_ingest_smoke.py`; `python -m pytest tests\test_learning_closed_loop.py -q`; `bridge_probe_smoke.py` |
 | State service helper | `python -m py_compile state_service.py`; `state_io_smoke.py`; any focused test added for the helper |
-| QQ trust/outbox extraction | `python -m py_compile xinyu_qq_gateway.py <new-module>`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py`; `qq_outbox_smoke.py`; `check_sent_index.py` |
+| QQ trust/outbox extraction | `python -m py_compile xinyu_qq_gateway.py <new-module>`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py`; `qq_outbox_smoke.py`; sent-index lookup via `check_sent_index.py <adapter_msg_id>` or the focused pytest fallback |
 | QQ sender/command extraction | `python -m py_compile xinyu_qq_gateway.py <new-module>`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py` |
 | v1 canary gate extraction | `python -m py_compile xinyu_v1_canary_readiness.py <new-module>`; `python -m pytest tests\test_v1_canary_readiness.py tests\v1\test_bridge_compatibility.py tests\v1\test_hybrid_router.py -q` |
 | Long-run diagnostic addition | `python -m py_compile diagnostics\check_xinyu_health.py`; `diagnostics\check_xinyu_health.py --json`; `long_run_status.py` |

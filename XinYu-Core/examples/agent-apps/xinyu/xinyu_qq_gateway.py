@@ -28,6 +28,7 @@ import xinyu_qq_attachment_resolver
 import xinyu_qq_command_router
 import xinyu_qq_normalizer
 import xinyu_qq_outbox_client
+import xinyu_qq_trust_policy
 from xinyu_visible_reply_guard import dedupe_visible_reply
 
 try:
@@ -697,58 +698,35 @@ class NativeQQGateway:
         self._connection_count = 0
 
     def _effective_whitelist_user_ids(self) -> set[str]:
-        return set(self.config.whitelist_user_ids) | set(self.config.owner_user_ids) | set(self.config.trusted_user_ids)
+        return xinyu_qq_trust_policy.effective_whitelist_user_ids(self.config)
 
     def _is_blocked_user_id(self, user_id: str) -> bool:
-        user_id = _safe_str(user_id).strip()
-        return bool(user_id and user_id not in self.config.owner_user_ids and user_id in self.config.blocked_user_ids)
+        return xinyu_qq_trust_policy.is_blocked_user_id(self.config, user_id)
 
     def _is_blocked_group_id(self, group_id: str) -> bool:
-        group_id = _safe_str(group_id).strip()
-        return bool(group_id and group_id in self.config.blocked_group_ids)
+        return xinyu_qq_trust_policy.is_blocked_group_id(self.config, group_id)
 
     def _is_trusted_user_id(self, user_id: str) -> bool:
-        user_id = _safe_str(user_id).strip()
-        if not user_id or user_id in self.config.owner_user_ids:
-            return False
-        return user_id in self.config.trusted_user_ids or user_id in self.config.whitelist_user_ids
+        return xinyu_qq_trust_policy.is_trusted_user_id(self.config, user_id)
 
     def _trust_level_for_user_id(self, user_id: str) -> str:
-        if user_id in self.config.owner_user_ids:
-            return "owner"
-        if self._is_trusted_user_id(user_id):
-            return "trusted"
-        return "external"
+        return xinyu_qq_trust_policy.trust_level_for_user_id(self.config, user_id)
 
     @staticmethod
     def _compact_command_text(text: str) -> str:
-        return re.sub(r"\s+", "", _safe_str(text)).lower()
+        return xinyu_qq_trust_policy.compact_command_text(text)
 
     def _looks_like_trust_command(self, text: str) -> bool:
-        compact = self._compact_command_text(text)
-        return bool(compact) and any(self._compact_command_text(marker) in compact for marker in TRUST_GRANT_TEXT_MARKERS)
+        return xinyu_qq_trust_policy.marker_command_matches(text, TRUST_GRANT_TEXT_MARKERS)
 
     def _looks_like_trust_revoke_command(self, text: str) -> bool:
-        compact = self._compact_command_text(text)
-        return bool(compact) and any(self._compact_command_text(marker) in compact for marker in TRUST_REVOKE_TEXT_MARKERS)
+        return xinyu_qq_trust_policy.marker_command_matches(text, TRUST_REVOKE_TEXT_MARKERS)
 
     def _trust_command_target(self, prepared: PreparedMessage) -> tuple[str, str]:
-        payload = prepared.payload if isinstance(prepared.payload, dict) else {}
-        metadata = payload.get("metadata")
-        if not isinstance(metadata, dict):
-            metadata = {}
-        reply_context = metadata.get("qq_reply_context")
-        if isinstance(reply_context, dict):
-            user_id = _safe_str(reply_context.get("user_id")).strip()
-            if user_id:
-                return user_id, _safe_str(reply_context.get("sender_name")).strip()
-
-        text = _safe_str(payload.get("text")).strip()
-        for match in re.finditer(r"(?<!\d)(\d{5,12})(?!\d)", text):
-            user_id = match.group(1)
-            if user_id and user_id not in self.config.owner_user_ids:
-                return user_id, ""
-        return "", ""
+        return xinyu_qq_trust_policy.trust_command_target(
+            prepared,
+            owner_user_ids=self.config.owner_user_ids,
+        )
 
     def _persist_trusted_user_ids(self, trusted_user_ids: set[str]) -> bool:
         if self.config_path is None:
@@ -2577,8 +2555,7 @@ class NativeQQGateway:
             return {"recorded": False, "notes": [f"group_shadow_error:{type(exc).__name__}"]}
 
     def _group_shadow_group_allowed(self, group_id: str) -> bool:
-        allowed = set(self.config.group_shadow_allowed_group_ids)
-        return bool(group_id and group_id in allowed)
+        return xinyu_qq_trust_policy.group_shadow_group_allowed(self.config, group_id)
 
     def _build_coalesced_prepared_message(self, prepareds: list[PreparedMessage]) -> PreparedMessage | None:
         items = [item for item in prepareds if item is not None]

@@ -116,3 +116,30 @@ Workspace: D:\XinYu
 - Risk: Low; helper is not wired into production callers, so no memory body, runtime state, QQ outbound, or v1 behavior changes.
 - Rollback: `git revert <loop-5-commit>`
 - Next: If validation passes, migrate one low-risk projection writer or move to QQ trust policy extraction.
+
+## Loop 6 - 19:25
+
+- Task: Extract QQ trust policy helpers from `xinyu_qq_gateway.py`.
+- Why: Trust, whitelist, block, and group-shadow decisions are policy logic; keeping the gateway methods as wrappers preserves tests while moving pure decisions out of the transport class.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_trust_policy.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `worklog/24h-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+  - `XINYU-REFACTOR-CHECKLIST.md`
+- Commands:
+  - `rg -n "whitelist|trusted|blocked|group_trigger|trust" xinyu_qq_gateway.py`
+  - `rg -n "TRUST_GRANT_TEXT_MARKERS|TRUST_REVOKE_TEXT_MARKERS|_looks_like_trust|_is_trusted|_trust_level|_effective_whitelist"`
+  - `Get-Content xinyu_qq_gateway.py` focused on trust methods
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py xinyu_qq_trust_policy.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_outbox_smoke.py`
+  - `.\.venv\Scripts\python.exe check_sent_index.py` failed once because the CLI requires `adapter_msg_id`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_gateway_ack_spool.py::test_sent_reply_index_lookup_by_adapter_message_id -q`
+  - `.\.venv\Scripts\python.exe check_sent_index.py --help`
+  - `git diff --check`
+- Result: Trust policy helpers extracted and wrapper behavior preserved. Compile, QQ gateway smoke, QQ review smoke, QQ outbox smoke, focused sent-index pytest fallback, `check_sent_index.py --help`, and `git diff --check` passed. The bare `check_sent_index.py` invocation was corrected in the validation matrix because it requires an adapter message id.
+- Risk: Medium-low; no OneBot payload shape, send path, real outbound behavior, config keys, or trust persistence format changed.
+- Rollback: `git revert <loop-6-commit>`
+- Next: If validation passes, extract QQ outbox dispatcher or add long-run diagnostics.
