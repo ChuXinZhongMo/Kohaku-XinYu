@@ -166,3 +166,27 @@ Workspace: D:\XinYu
 - Risk: Low; diagnostic is read-only and does not start services, write runtime files, send QQ messages, or modify memory.
 - Rollback: `git revert <loop-7-commit>`
 - Next: Continue with QQ outbox dispatcher or v1 canary gate isolation.
+
+## Loop 8 - 20:05
+
+- Task: Extract QQ outbox polling and dispatch loop from `xinyu_qq_gateway.py`.
+- Why: Outbox claim/send/ack is a transport dispatcher responsibility and can move behind the existing `_poll_qq_outbox` compatibility method without changing OneBot payloads.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_outbox_dispatcher.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `worklog/24h-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+  - `XINYU-REFACTOR-CHECKLIST.md`
+- Commands:
+  - `Get-Content xinyu_qq_gateway.py` focused on `_poll_qq_outbox`
+  - `rg -n "def _poll_qq_outbox|_poll_qq_outbox\(" xinyu_qq_gateway.py xinyu_qq_gateway_smoke.py qq_outbox_smoke.py`
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py xinyu_qq_outbox_dispatcher.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_outbox_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_gateway_ack_spool.py::test_sent_reply_index_lookup_by_adapter_message_id -q`
+  - `git diff --check`
+- Result: Outbox dispatcher extracted. Compile, QQ gateway smoke, QQ outbox smoke, QQ review smoke, sent-index pytest fallback, and `git diff --check` passed.
+- Risk: Medium; send path is structurally moved but real outbound tests are still not run. Existing smoke coverage must pass before commit.
+- Rollback: `git revert <loop-8-commit>`
+- Next: Continue with v1 gate isolation or final report docs.

@@ -32,7 +32,7 @@ Workspace: D:\XinYu
 - [ ] Extract Learning service boundary from the core bridge without write format changes.
 - [ ] Introduce `state_service.py` helper surface for atomic writes and JSONL append.
 - [x] Extract QQ trust policy from `xinyu_qq_gateway.py`.
-- [ ] Extract QQ outbox dispatcher from `xinyu_qq_gateway.py`.
+- [x] Extract QQ outbox dispatcher from `xinyu_qq_gateway.py`.
 
 ## P2
 

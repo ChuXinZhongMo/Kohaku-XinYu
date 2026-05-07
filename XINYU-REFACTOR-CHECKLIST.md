@@ -49,7 +49,7 @@ Date: 2026-05-07
 ## QQ Gateway Slices
 
 - [x] Extract trust policy.
-- [ ] Extract outbox dispatcher.
+- [x] Extract outbox dispatcher.
 - [ ] Extract sender helpers.
 - [ ] Extract command router helpers.
 - [ ] Preserve OneBot payload compatibility.

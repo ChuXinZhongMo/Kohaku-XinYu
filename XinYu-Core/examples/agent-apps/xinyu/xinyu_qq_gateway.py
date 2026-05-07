@@ -28,6 +28,7 @@ import xinyu_qq_attachment_resolver
 import xinyu_qq_command_router
 import xinyu_qq_normalizer
 import xinyu_qq_outbox_client
+import xinyu_qq_outbox_dispatcher
 import xinyu_qq_trust_policy
 from xinyu_visible_reply_guard import dedupe_visible_reply
 
@@ -873,118 +874,12 @@ class NativeQQGateway:
                     await ack_spool_task
 
     async def _poll_qq_outbox(self, websocket: Any, connection_id: str) -> None:
-        await asyncio.sleep(1)
-        while True:
-            try:
-                claim_id = f"{connection_id}-{int(time.time() * 1000)}"
-                claim = await self.client.qq_outbox_claim(
-                    {
-                        "claim_id": claim_id,
-                        "adapter": GATEWAY_NAME,
-                    }
-                )
-                if not claim.get("message_claimed"):
-                    await asyncio.sleep(self.config.qq_outbox_poll_seconds)
-                    continue
-
-                target = self._outbox_target(claim)
-                message_type = _safe_str(claim.get("message_type"), "").strip().lower()
-                image_path = _safe_str(claim.get("image_path")).strip()
-                file_path = _safe_str(claim.get("file_path")).strip()
-                file_name = _safe_str(claim.get("file_name")).strip()
-                message = self._visible_reply(_safe_str(claim.get("message"), ""))
-                if target is None:
-                    await self._ack_qq_outbox(
-                        claim,
-                        status="failed",
-                        error="invalid target",
-                    )
-                    continue
-
-                if image_path or message_type == "image":
-                    if not self.config.qq_outbox_image_enabled:
-                        await self._ack_qq_outbox(claim, status="failed", error="qq outbox image dispatch disabled")
-                        continue
-                    image_file, image_error = self._onebot_local_image_file(image_path)
-                    if image_error:
-                        await self._ack_qq_outbox(claim, status="failed", error=image_error)
-                        continue
-                    action_response = await self.send_image(websocket, target, image_file)
-                    ok, adapter_message_id, adapter_error = self._onebot_action_result(action_response)
-                    if ok and adapter_message_id:
-                        await self._ack_sent_outbox_delivery(
-                            claim,
-                            target=target,
-                            visible_text="",
-                            adapter_message_id=adapter_message_id,
-                            delivery_kind="image",
-                            adapter_error=adapter_error,
-                        )
-                    if ok and message:
-                        caption_response = await self.send_reply(websocket, target, message)
-                        caption_ok, caption_message_id, caption_error = self._onebot_action_result(caption_response)
-                        if caption_ok and caption_message_id:
-                            await self._ack_sent_outbox_delivery(
-                                claim,
-                                target=target,
-                                visible_text=message,
-                                adapter_message_id=caption_message_id,
-                                delivery_kind="caption",
-                                adapter_error=caption_error,
-                            )
-                            adapter_message_id = ",".join(part for part in (adapter_message_id, caption_message_id) if part)
-                        elif not caption_ok:
-                            adapter_error = f"caption_send_failed:{caption_error or 'unknown'}"
-                    await self._ack_qq_outbox(
-                        claim,
-                        status="sent" if ok else "failed",
-                        adapter_message_id=adapter_message_id,
-                        error=adapter_error,
-                    )
-                    continue
-                elif file_path or message_type == "file":
-                    if not self.config.qq_outbox_file_enabled:
-                        await self._ack_qq_outbox(claim, status="failed", error="qq outbox file dispatch disabled")
-                        continue
-                    local_file, local_name, file_error = self._onebot_local_file(file_path, file_name=file_name)
-                    if file_error:
-                        await self._ack_qq_outbox(claim, status="failed", error=file_error)
-                        continue
-                    action_response = await self.send_file(websocket, target, local_file, name=local_name)
-                else:
-                    if not message:
-                        await self._ack_qq_outbox(claim, status="failed", error="empty text message")
-                        continue
-                    bubbles = self._outbox_visible_reply_bubbles(target, message, claim)
-                    responses: list[dict[str, Any] | None] = []
-                    for index, bubble in enumerate(bubbles):
-                        if index > 0:
-                            delay = max(0.0, self.config.reply_bubble_delay_seconds)
-                            if delay:
-                                await asyncio.sleep(delay)
-                        responses.append(await self.send_reply(websocket, target, bubble))
-                    action_response = self._combined_reply_action_response(responses)
-                ok, adapter_message_id, adapter_error = self._onebot_action_result(action_response)
-                if ok and adapter_message_id and not (file_path or message_type == "file"):
-                    await self._ack_sent_outbox_delivery(
-                        claim,
-                        target=target,
-                        visible_text=message,
-                        adapter_message_id=adapter_message_id,
-                        delivery_kind=message_type or "text",
-                        adapter_error=adapter_error,
-                    )
-                await self._ack_qq_outbox(
-                    claim,
-                    status="sent" if ok else "failed",
-                    adapter_message_id=adapter_message_id,
-                    error=adapter_error,
-                )
-            except asyncio.CancelledError:
-                raise
-            except Exception as exc:
-                print(f"[xinyu_qq_gateway] QQ outbox poll error: {type(exc).__name__}: {exc}", flush=True)
-                await asyncio.sleep(max(5, self.config.qq_outbox_poll_seconds))
+        await xinyu_qq_outbox_dispatcher.poll_qq_outbox(
+            self,
+            websocket,
+            connection_id,
+            gateway_name=GATEWAY_NAME,
+        )
 
     def _outbox_target(self, claim: dict[str, Any]) -> ReplyTarget | None:
         return xinyu_qq_outbox_client.outbox_target(self, claim, ReplyTarget)
