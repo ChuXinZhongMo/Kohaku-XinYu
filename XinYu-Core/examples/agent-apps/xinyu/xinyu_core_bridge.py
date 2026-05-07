@@ -26,11 +26,8 @@ from xinyu_action_reply_composer import compose_action_reply
 from xinyu_bridge_http import XinYuBridgeHTTPServer, XinYuBridgeRequestHandler
 from xinyu_bridge_learning import (
     LearningBridgeError,
-    ingest as learning_ingest_bridge,
     stage_codex_report_material,
-    study as learning_study_bridge,
 )
-from xinyu_bridge_observation import observe as learning_observe_bridge
 from xinyu_bridge_proactive import acknowledge as proactive_ack_bridge, claim_or_preview as proactive_bridge
 from xinyu_bridge_renderer import BridgeRenderer
 import xinyu_bridge_action_routes
@@ -76,6 +73,7 @@ from xinyu_life_reply_policy import (
     build_life_reply_policy,
     build_life_reply_prompt_block,
 )
+from xinyu_learning_service import build_learning_service
 from xinyu_daily_digest import build_daily_digest_prompt_block, run_daily_digest_maintenance
 from xinyu_expression_self_learning import record_expression_self_learning_event
 from xinyu_goldmark import mark_goldmark_request as mark_goldmark_request_bridge
@@ -134,7 +132,7 @@ from xinyu_qq_outbox import (
     enqueue_qq_outbox_image,
     enqueue_qq_outbox_message,
 )
-from xinyu_recent_attachment_context import load_recent_attachment_context, record_recent_attachment_context
+from xinyu_recent_attachment_context import load_recent_attachment_context
 from xinyu_runtime_presence import (
     build_runtime_presence_prompt_block,
     record_bridge_heartbeat,
@@ -994,6 +992,14 @@ class XinYuBridgeRuntime:
         self._sessions: dict[str, AgentSession] = {}
         self._sessions_lock = asyncio.Lock()
         self._global_turn_lock = asyncio.Lock()
+        self.learning_service = build_learning_service(
+            xinyu_dir=self.xinyu_dir,
+            memory_root=self.memory_root,
+            cleanup_idle_sessions=self._cleanup_idle_sessions,
+            session_count=lambda: len(self._sessions),
+            lock=self._global_turn_lock,
+            load_local_env=_load_local_env,
+        )
         self._codex_delegate_lock = asyncio.Lock()
         self._review_admin_lock = asyncio.Lock()
         self.desktop_event_bus: Any | None = None
@@ -3860,32 +3866,9 @@ tags: [promise, followup, qq-outbox, continuity]
             raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
         payload = payload or {}
         try:
-            result = await learning_ingest_bridge(
-                xinyu_dir=self.xinyu_dir,
-                memory_root=self.memory_root,
-                payload=payload,
-                cleanup_idle_sessions=self._cleanup_idle_sessions,
-                session_count=lambda: len(self._sessions),
-                lock=self._global_turn_lock,
-                load_local_env=_load_local_env,
-            )
+            return await self.learning_service.ingest(payload)
         except LearningBridgeError as exc:
             raise BridgeRequestError(exc.status, exc.message) from exc
-
-        try:
-            if record_recent_attachment_context(self.xinyu_dir, payload, result):
-                notes = result.get("notes")
-                if not isinstance(notes, list):
-                    notes = []
-                    result["notes"] = notes
-                notes.append("recent_attachment_context_recorded")
-        except Exception as exc:
-            notes = result.get("notes")
-            if not isinstance(notes, list):
-                notes = []
-                result["notes"] = notes
-            notes.append(f"recent_attachment_context_error:{type(exc).__name__}")
-        return result
 
     async def sticker_import(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         if self._closed:
@@ -3987,29 +3970,14 @@ tags: [promise, followup, qq-outbox, continuity]
             raise BridgeRequestError(HTTPStatus.SERVICE_UNAVAILABLE, "bridge is shutting down")
         if payload is not None and not isinstance(payload, dict):
             raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
-        return await learning_study_bridge(
-            xinyu_dir=self.xinyu_dir,
-            memory_root=self.memory_root,
-            payload=payload or {},
-            cleanup_idle_sessions=self._cleanup_idle_sessions,
-            session_count=lambda: len(self._sessions),
-            lock=self._global_turn_lock,
-            load_local_env=_load_local_env,
-        )
+        return await self.learning_service.study(payload or {})
 
     async def learning_observe(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         if self._closed:
             raise BridgeRequestError(HTTPStatus.SERVICE_UNAVAILABLE, "bridge is shutting down")
         if payload is not None and not isinstance(payload, dict):
             raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
-        return await learning_observe_bridge(
-            xinyu_dir=self.xinyu_dir,
-            memory_root=self.memory_root,
-            payload=payload or {},
-            cleanup_idle_sessions=self._cleanup_idle_sessions,
-            session_count=lambda: len(self._sessions),
-            lock=self._global_turn_lock,
-        )
+        return await self.learning_service.observe(payload or {})
 
     async def codex_execute(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         if self._closed:

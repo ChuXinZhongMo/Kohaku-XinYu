@@ -41,7 +41,7 @@ Date: 2026-05-07
 - [x] Extract Desktop event service startup/shutdown boundary.
 - [ ] Extract Desktop REST/snapshot methods.
 - [x] Extract Codex service boundary.
-- [ ] Extract Learning service boundary.
+- [x] Extract Learning service boundary.
 - [ ] Extract state write helpers.
 - [x] Extract v1 canary gate.
 - [ ] Extract chat service boundary.

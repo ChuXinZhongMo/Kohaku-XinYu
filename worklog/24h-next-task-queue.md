@@ -11,7 +11,7 @@ Date: 2026-05-07
 ## P0
 
 - [x] Extract Codex service boundary from `xinyu_core_bridge.py`.
-- [ ] Extract Learning service boundary from `xinyu_core_bridge.py`.
+- [x] Extract Learning service boundary from `xinyu_core_bridge.py`.
 - [ ] Migrate one low-risk projection writer to `state_service.py`.
 - [ ] Add a focused state-service caller smoke for the migrated writer.
 

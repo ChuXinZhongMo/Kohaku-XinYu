@@ -257,3 +257,25 @@ Workspace: D:\XinYu
 - Risk: Medium-low; helper ownership moved, but route shape, Codex delegation execution, visible-window policy, and QQ outbox message contract were preserved. No real QQ outbound test was run.
 - Rollback: `git revert <loop-11-commit>`
 - Next: Extract Learning service boundary from `xinyu_core_bridge.py`.
+
+## Loop 12 - 19:21
+
+- Task: Extract the Learning service boundary from `xinyu_core_bridge.py`.
+- Why: `/learning/ingest`, `/learning/study`, and `/learning/observe` should be owned by a learning service wrapper while the bridge keeps only compatibility checks and HTTP error mapping.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_learning_service.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+  - `XINYU-REFACTOR-CHECKLIST.md`
+- Commands:
+  - `rg -n "def learning_ingest|def learning_study|def learning_observe|learning_ingest_bridge|learning_study_bridge|learning_observe_bridge|stage_codex_report_material|_run_learning_study_chain" xinyu_core_bridge.py xinyu_bridge_learning.py xinyu_bridge_observation.py bridge_learning_ingest_smoke.py tests\test_learning_closed_loop.py`
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_core_bridge.py xinyu_learning_service.py`
+  - `.\.venv\Scripts\python.exe bridge_learning_ingest_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_learning_closed_loop.py -q`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Added `xinyu_learning_service.py` and moved learning route orchestration plus recent attachment context recording behind it. Compile, learning ingest smoke, 12 closed-loop pytest cases, bridge probe, and `git diff --check` passed.
+- Risk: Low-medium; learning writes still go through the existing bridge learning/observation modules and existing locks. No memory body content or persona semantics were edited.
+- Rollback: `git revert <loop-12-commit>`
+- Next: Migrate one low-risk projection writer to `state_service.py` and add a focused caller smoke.
