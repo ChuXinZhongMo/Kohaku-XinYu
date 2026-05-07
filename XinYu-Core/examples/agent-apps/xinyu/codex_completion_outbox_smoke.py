@@ -59,19 +59,17 @@ def main() -> int:
         if message_claim.get("source") != "codex_completion":
             print(f"codex_completion_outbox_smoke failed: wrong message source {message_claim.get('source')!r}")
             return 1
-        if "codex-qq-smoke-report.md" not in str(message_claim.get("message", "")):
-            print("codex_completion_outbox_smoke failed: report label missing from completion message")
+        message_text = str(message_claim.get("message", ""))
+        if "smoke completed" not in message_text:
+            print("codex_completion_outbox_smoke failed: completion summary missing from message")
+            return 1
+        if "codex-qq-smoke-report.md" in message_text or ".md" in message_text:
+            print("codex_completion_outbox_smoke failed: completion message leaked report filename")
             return 1
 
         file_claim = claim_next_qq_outbox_message(root, {"claim_id": "claim-file", "adapter": "smoke"})
-        if not file_claim.get("message_claimed"):
-            print("codex_completion_outbox_smoke failed: report attachment not queued")
-            return 1
-        if file_claim.get("message_type") != "file":
-            print(f"codex_completion_outbox_smoke failed: expected file claim, got {file_claim.get('message_type')!r}")
-            return 1
-        if file_claim.get("file_name") != "codex-qq-smoke-report.md":
-            print(f"codex_completion_outbox_smoke failed: wrong report file name {file_claim.get('file_name')!r}")
+        if file_claim.get("message_claimed"):
+            print("codex_completion_outbox_smoke failed: report attachment should not be queued to QQ outbox")
             return 1
 
         print("codex_completion_outbox_smoke: ok")

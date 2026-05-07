@@ -232,3 +232,28 @@ Workspace: D:\XinYu
 - Risk: Documentation-only; no runtime, memory body, QQ outbound, persona, or v1 traffic behavior touched.
 - Rollback: `git revert <loop-10-commit>`
 - Next: Stop and report because health diagnostics require triage before further broad refactoring.
+
+## Loop 11 - 19:16
+
+- Task: Extract Codex formatting and completion-outbox helpers from `xinyu_core_bridge.py`.
+- Why: Codex status replies, completion summaries, image artifact discovery, and completion outbox enqueueing are Codex service responsibilities; the bridge should keep compatibility wrappers but not own the helper bodies.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_codex_service.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/codex_delegate_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/codex_completion_outbox_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+  - `XINYU-REFACTOR-CHECKLIST.md`
+- Commands:
+  - `git status --short --branch`
+  - `rg -n "def codex_execute|def _codex_status_reply|def _codex_completion_summary|def _codex_completion_outbox_message|def _enqueue_codex_completion_if_needed|def _codex_generated_image_artifacts|def _looks_like_codex_image_generation_task|codex" xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_core_bridge.py xinyu_codex_service.py codex_delegate_smoke.py codex_completion_outbox_smoke.py`
+  - `.\.venv\Scripts\python.exe codex_delegate_smoke.py`
+  - `.\.venv\Scripts\python.exe codex_completion_outbox_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Codex helper logic moved into `xinyu_codex_service.py`; core bridge compatibility methods now delegate to the service. The completion-outbox smoke was corrected to assert the current no-report-file/no-report-path QQ outbox contract instead of expanding outbound behavior. Compile, Codex delegate smoke, Codex completion outbox smoke, bridge probe, and `git diff --check` passed.
+- Risk: Medium-low; helper ownership moved, but route shape, Codex delegation execution, visible-window policy, and QQ outbox message contract were preserved. No real QQ outbound test was run.
+- Rollback: `git revert <loop-11-commit>`
+- Next: Extract Learning service boundary from `xinyu_core_bridge.py`.
