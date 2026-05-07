@@ -66,7 +66,14 @@ from xinyu_dialogue_working_memory import (
     save_dialogue_tail,
     session_tail_entries,
 )
-from xinyu_desktop_service import build_desktop_service
+from xinyu_desktop_service import (
+    build_desktop_service,
+    desktop_event_state as desktop_service_event_state,
+    desktop_events_recent as desktop_service_events_recent,
+    desktop_limit as desktop_service_limit,
+    desktop_recent_items as desktop_service_recent_items,
+    desktop_services as desktop_service_services,
+)
 from xinyu_environment_sensor import sample_environment
 from xinyu_life_kernel import build_entropy_state, evaluate_life_kernel
 from xinyu_life_reply_policy import (
@@ -1373,17 +1380,7 @@ class XinYuBridgeRuntime:
         }
 
     async def desktop_events_recent(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        limit = self._desktop_limit((payload or {}).get("limit"), default=100, maximum=500)
-        if self.desktop_event_bus is None:
-            return {"version": 1, "items": [], "latestEventId": "", "notes": ["desktop_event_bus_unavailable"]}
-        items = await self.desktop_event_bus.recent(limit=limit)
-        latest = await self.desktop_event_bus.latest_event_id()
-        return {
-            "version": 1,
-            "items": items,
-            "latestEventId": latest,
-            "notes": ["desktop_events_recent_v0"],
-        }
+        return await desktop_service_events_recent(self.desktop_event_bus, payload)
 
     async def desktop_proactive_inbox(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         _ = payload
@@ -1405,22 +1402,22 @@ class XinYuBridgeRuntime:
         }
 
     async def desktop_chat_recent(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        limit = self._desktop_limit((payload or {}).get("limit"), default=50, maximum=200)
-        items = list(self._desktop_recent_turns[-limit:])
-        return {
-            "version": 1,
-            "items": items,
-            "notes": ["desktop_chat_recent_v0_runtime_buffer"],
-        }
+        return desktop_service_recent_items(
+            self._desktop_recent_turns,
+            payload,
+            default=50,
+            maximum=200,
+            notes=["desktop_chat_recent_v0_runtime_buffer"],
+        )
 
     async def desktop_memory_recent(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        limit = self._desktop_limit((payload or {}).get("limit"), default=100, maximum=500)
-        items = list(self._desktop_recent_memory_events[-limit:])
-        return {
-            "version": 1,
-            "items": items,
-            "notes": ["desktop_memory_recent_v0_runtime_buffer"],
-        }
+        return desktop_service_recent_items(
+            self._desktop_recent_memory_events,
+            payload,
+            default=100,
+            maximum=500,
+            notes=["desktop_memory_recent_v0_runtime_buffer"],
+        )
 
     async def life_metabolism_ticket_get(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         payload = payload or {}
@@ -1504,52 +1501,18 @@ class XinYuBridgeRuntime:
         )
 
     async def _desktop_event_state(self) -> dict[str, Any]:
-        if self.desktop_event_bus is None:
-            return {
-                "version": 1,
-                "available": False,
-                "max_events": 0,
-                "buffer_size": 0,
-                "latest_event_id": "",
-                "subscriber_count": 0,
-            }
-        snapshot = await self.desktop_event_bus.snapshot()
-        snapshot["available"] = True
-        return snapshot
+        return await desktop_service_event_state(self.desktop_event_bus)
 
     def _desktop_services(self) -> list[dict[str, Any]]:
-        desktop_ws_status = "offline"
-        desktop_ws_port = 0
-        if self.desktop_ws_server is not None:
-            desktop_ws_status = "ready" if self.desktop_ws_server.server is not None else "configured"
-            desktop_ws_port = self.desktop_ws_server.bound_port
-        return [
-            {
-                "service": "core",
-                "status": "stopping" if self._closed else "ready",
-                "pid": os.getpid(),
-                "message": "xinyu_core_bridge runtime",
-            },
-            {
-                "service": "desktop_events",
-                "status": desktop_ws_status,
-                "port": desktop_ws_port,
-                "message": "desktop event stream dark launch",
-            },
-            {
-                "service": "memory",
-                "status": "ready" if self.memory_root.exists() else "degraded",
-                "message": "local memory root",
-            },
-        ]
+        return desktop_service_services(
+            ws_server=self.desktop_ws_server,
+            closed=self._closed,
+            memory_root_exists=self.memory_root.exists(),
+        )
 
     @staticmethod
     def _desktop_limit(value: Any, *, default: int, maximum: int) -> int:
-        try:
-            parsed = int(str(value).strip())
-        except (TypeError, ValueError):
-            parsed = default
-        return max(1, min(maximum, parsed))
+        return desktop_service_limit(value, default=default, maximum=maximum)
 
     async def _desktop_publish_event(
         self,

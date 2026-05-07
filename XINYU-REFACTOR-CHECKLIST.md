@@ -39,7 +39,7 @@ Date: 2026-05-07
 ## Core Bridge Slices
 
 - [x] Extract Desktop event service startup/shutdown boundary.
-- [ ] Extract Desktop REST/snapshot methods.
+- [x] Extract Desktop REST/snapshot methods.
 - [x] Extract Codex service boundary.
 - [x] Extract Learning service boundary.
 - [x] Extract state write helpers.

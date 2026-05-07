@@ -350,3 +350,26 @@ Workspace: D:\XinYu
 - Risk: Medium-low; routing call sites now call the same command-router functions directly. OneBot payload shape was not changed, and no real QQ outbound test was run.
 - Rollback: `git revert <loop-15-commit>`
 - Next: Extract Desktop REST/snapshot methods after health triage, or add chat service boundary if Desktop slice is too broad.
+
+## Loop 16 - 19:43
+
+- Task: Extract Desktop REST/snapshot helper methods.
+- Why: Desktop REST endpoints and snapshot assembly share event-state, service-list, limit, and recent-item helpers that can live in `xinyu_desktop_service.py` while runtime keeps compatibility method names.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_desktop_service.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-REFACTOR-CHECKLIST.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `rg -n "async def desktop_|def _desktop_|desktop_status|desktop_snapshot|Desktop" xinyu_core_bridge.py xinyu_desktop_service.py xinyu_desktop_rest_smoke.py`
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_core_bridge.py xinyu_desktop_service.py`
+  - `.\.venv\Scripts\python.exe xinyu_desktop_rest_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_desktop_events_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_desktop_ws_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Event-state, services list, limit parsing, recent events, recent chat, and recent memory helper logic now lives in `xinyu_desktop_service.py`; runtime methods delegate to it. Desktop REST, events, WS, bridge probe, compile, and `git diff --check` passed.
+- Risk: Low-medium; Desktop payload fields and routes are unchanged, but helper ownership moved.
+- Rollback: `git revert <loop-16-commit>`
+- Next: Add chat service boundary.
