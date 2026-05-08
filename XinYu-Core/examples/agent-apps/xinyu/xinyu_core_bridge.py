@@ -9,7 +9,6 @@ import re
 import sys
 import threading
 import time
-from dataclasses import dataclass, field
 from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
@@ -31,6 +30,7 @@ from xinyu_bridge_learning import (
 )
 from xinyu_bridge_proactive import acknowledge as proactive_ack_bridge, claim_or_preview as proactive_bridge
 from xinyu_bridge_renderer import BridgeRenderer
+from xinyu_bridge_session import AgentSession, session_key_from_payload, session_keys_to_expire
 import xinyu_bridge_action_routes
 from xinyu_bridge_turn_pipeline import run_pre_model_routes
 import xinyu_bridge_v1_routes
@@ -927,17 +927,6 @@ class _NullInputModule:
     def set_user_commands(self, commands: dict[str, Any], context: Any) -> None:
         self._user_commands = commands
         self._user_command_context = context
-
-
-@dataclass
-class AgentSession:
-    key: str
-    agent: Any
-    prompt_signature: str
-    chunks: list[str] = field(default_factory=list)
-    dialogue_tail: list[dict[str, str]] = field(default_factory=list)
-    created_at: float = field(default_factory=time.time)
-    last_used_at: float = field(default_factory=time.time)
 
 
 class XinYuBridgeRuntime:
@@ -5713,27 +5702,15 @@ tags: [promise, followup, qq-outbox, continuity]
         if self.session_idle_ttl_seconds <= 0 and self.max_sessions <= 0:
             return {"cleaned_sessions": 0, "remaining_sessions": len(self._sessions)}
 
-        now = time.time()
         to_stop: list[AgentSession] = []
         async with self._sessions_lock:
-            expire_keys: set[str] = set()
-            if self.session_idle_ttl_seconds > 0:
-                for key, session in self._sessions.items():
-                    if key in preserve_keys:
-                        continue
-                    if now - session.last_used_at > self.session_idle_ttl_seconds:
-                        expire_keys.add(key)
-
-            remaining = [
-                (key, session)
-                for key, session in self._sessions.items()
-                if key not in expire_keys and key not in preserve_keys
-            ]
-            if self.max_sessions > 0 and len(self._sessions) - len(expire_keys) > self.max_sessions:
-                overflow = len(self._sessions) - len(expire_keys) - self.max_sessions
-                oldest = sorted(remaining, key=lambda item: item[1].last_used_at)[:overflow]
-                expire_keys.update(key for key, _session in oldest)
-
+            expire_keys = session_keys_to_expire(
+                self._sessions,
+                now=time.time(),
+                idle_ttl_seconds=self.session_idle_ttl_seconds,
+                max_sessions=self.max_sessions,
+                preserve_keys=preserve_keys,
+            )
             for key in expire_keys:
                 session = self._sessions.pop(key, None)
                 if session is not None:
@@ -5756,11 +5733,7 @@ tags: [promise, followup, qq-outbox, continuity]
         return _safe_str(payload.get("raw_message")).strip()
 
     def _session_key(self, payload: dict[str, Any]) -> str:
-        for key in ("session_id", "user_id"):
-            value = _safe_str(payload.get(key)).strip()
-            if value:
-                return value
-        return "qq:default"
+        return session_key_from_payload(payload)
 
     def _looks_like_time_fact_correction(self, text: str) -> bool:
         compact = re.sub(r"\s+", "", _safe_str(text))

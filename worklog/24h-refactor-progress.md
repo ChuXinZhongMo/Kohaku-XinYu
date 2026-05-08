@@ -606,3 +606,26 @@ Workspace: D:\XinYu
 - Risk: Low; projection state persistence only. No persona semantics, long-term memory body text, QQ outbound behavior, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-27-commit>`
 - Next: After validation and commit, continue with a bridge session/context helper or QQ gateway boundary extraction.
+
+## Loop 28 - 10:36
+
+- Task: Extract a bridge session helper boundary.
+- Why: Session data shape, payload session-key fallback, and idle/overflow expiry selection are session responsibilities that can be tested outside `xinyu_core_bridge.py` before larger bridge decomposition.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_session.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_session_smoke.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_session.py xinyu_core_bridge.py bridge_session_smoke.py bridge_session_cleanup_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_session_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_session_cleanup_smoke.py`
+  - `git diff --check`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+- Result: `AgentSession`, session-key normalization, and pure expiry selection moved to `xinyu_bridge_session.py`; core bridge still starts/stops agents and owns session locks. Compile, session smoke, cleanup smoke, and bridge probe passed.
+- Retry note: The first `bridge_probe_smoke.py` attempt returned a live `/probe` HTTP 504. After confirming the listening bridge process, a second run passed with `sessions: 2->2`; no code rollback was needed.
+- Risk: Low; behavior-preserving helper extraction. No memory body, persona semantics, QQ outbound behavior, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-28-commit>`
+- Next: Continue with bridge context helper extraction or QQ gateway config/normalizer extraction.

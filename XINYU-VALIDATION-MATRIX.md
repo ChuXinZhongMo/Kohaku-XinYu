@@ -59,6 +59,7 @@ For Python code changes, also compile the changed Python files:
 | New Python helper without runtime wiring | `git diff --check`; `python -m py_compile <helper>` |
 | Core bridge module extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `bridge_probe_smoke.py`; relevant capability smoke |
 | Bridge auth boundary | `python -m py_compile xinyu_bridge_auth.py xinyu_bridge_http.py bridge_auth_smoke.py`; `bridge_auth_smoke.py`; `bridge_probe_smoke.py`; `runtime_security_smoke.py` |
+| Bridge session boundary | `python -m py_compile xinyu_bridge_session.py xinyu_core_bridge.py bridge_session_smoke.py bridge_session_cleanup_smoke.py`; `bridge_session_smoke.py`; `bridge_session_cleanup_smoke.py`; `bridge_probe_smoke.py` |
 | Desktop service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `xinyu_desktop_rest_smoke.py`; `xinyu_desktop_ws_smoke.py`; `xinyu_desktop_events_smoke.py`; `bridge_probe_smoke.py` |
 | Codex service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `codex_delegate_smoke.py`; `codex_completion_outbox_smoke.py`; `bridge_probe_smoke.py` |
 | Learning service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `bridge_learning_ingest_smoke.py`; `python -m pytest tests\test_learning_closed_loop.py -q`; `bridge_probe_smoke.py` |
