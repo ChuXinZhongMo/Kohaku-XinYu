@@ -77,6 +77,7 @@ For Python code changes, also compile the changed Python files:
 | QQ model extraction | `python -m py_compile xinyu_qq_models.py xinyu_qq_gateway.py qq_models_smoke.py`; `qq_models_smoke.py`; `xinyu_qq_gateway_smoke.py`; `python -m pytest tests\test_gateway_ack_spool.py -q` |
 | QQ CLI extraction | `python -m py_compile xinyu_qq_cli.py xinyu_qq_gateway.py qq_cli_smoke.py`; `qq_cli_smoke.py`; `xinyu_qq_gateway_smoke.py` |
 | QQ sticker semantics extraction | `python -m py_compile xinyu_qq_sticker_semantics.py xinyu_qq_gateway.py qq_sticker_semantics_smoke.py`; `qq_sticker_semantics_smoke.py`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py` |
+| QQ forward context extraction | `python -m py_compile xinyu_qq_forward_context.py xinyu_qq_gateway.py qq_forward_context_smoke.py`; `qq_forward_context_smoke.py`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py` |
 | v1 canary gate extraction | `python -m py_compile xinyu_v1_canary_readiness.py <new-module>`; `python -m pytest tests\test_v1_canary_readiness.py tests\v1\test_bridge_compatibility.py tests\v1\test_hybrid_router.py -q` |
 | Long-run diagnostic addition | `python -m py_compile diagnostics\check_xinyu_health.py`; `diagnostics\check_xinyu_health.py --json`; `diagnostics\check_xinyu_health.py --json --write-ledger`; `diagnostics\check_xinyu_health.py --json --recent-window-minutes 0`; `long_run_status.py` |
 

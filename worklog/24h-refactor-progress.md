@@ -995,3 +995,25 @@ Workspace: D:\XinYu
 - Risk: Low; pure classifier relocation. No real QQ outbound, sticker import writes, learning policy, OneBot payload shape, persona semantics, memory body text, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-45-commit>`
 - Next: Continue with rich/sticker segment constants or forward-context extraction from the QQ gateway.
+
+## Loop 46 - 11:28
+
+- Task: Extract QQ forward-context raw item helpers.
+- Why: Forward-message payload unpacking and duplicate filtering are pure helpers. Moving them to `xinyu_qq_forward_context.py` trims gateway context handling while keeping gateway wrapper methods for existing callers.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_forward_context.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_forward_context_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_forward_context.py xinyu_qq_gateway.py qq_forward_context_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_forward_context_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: Forward raw-item extraction, duplicate filtering, and forward context limits now live in `xinyu_qq_forward_context.py`; gateway wrappers delegate to the new module. Compile, forward context smoke, QQ gateway smoke, and QQ review smoke passed.
+- Risk: Low; pure forward-context helper relocation. No real QQ outbound, OneBot payload shape, trust policy, persona semantics, memory body text, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-46-commit>`
+- Next: Continue with rich segment constants or another isolated QQ parsing helper.

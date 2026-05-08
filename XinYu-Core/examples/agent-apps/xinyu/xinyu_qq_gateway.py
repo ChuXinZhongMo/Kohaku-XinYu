@@ -32,6 +32,7 @@ from xinyu_qq_config import (
     load_json_object as _load_json,
 )
 from xinyu_qq_core_client import BridgeError, CoreBridgeClient
+import xinyu_qq_forward_context
 from xinyu_qq_models import PendingAction, PreparedMessage, RecentStickerImportState, ReplyTarget
 import xinyu_qq_normalizer
 import xinyu_qq_outbox_client
@@ -58,8 +59,6 @@ SUPPORTED_IMAGE_SUFFIXES = frozenset({".bmp", ".gif", ".jfif", ".jpeg", ".jpg", 
 COMMAND_PREFIX_CHARS = "/!.！#"
 STICKER_SEGMENT_TYPES = frozenset({"face", "mface", "dice", "rps"})
 RICH_CONTEXT_SEGMENT_TYPES = frozenset({"reply", "forward", "face", "mface", "dice", "rps", "image", "json", "xml", "at"})
-QQ_FORWARD_CONTEXT_MAX_MESSAGES = 12
-QQ_FORWARD_CONTEXT_MAX_TEXT_CHARS = 5000
 def _quiet_websockets_handshake_noise() -> None:
     for logger_name in ("websockets.server", "websockets.protocol"):
         logging.getLogger(logger_name).setLevel(logging.CRITICAL)
@@ -593,7 +592,7 @@ class NativeQQGateway:
         context = {
             "forward_ids": forward_ids,
             "message_count": len(messages),
-            "messages": messages[:QQ_FORWARD_CONTEXT_MAX_MESSAGES],
+            "messages": messages[:xinyu_qq_forward_context.QQ_FORWARD_CONTEXT_MAX_MESSAGES],
             "fetched_ids": fetched_ids,
             "failed_ids": failed_ids,
         }
@@ -638,44 +637,17 @@ class NativeQQGateway:
             if not message:
                 continue
             text_len = len(_safe_str(message.get("text") or message.get("rich_summary") or message.get("raw_message")))
-            if messages and used_chars + text_len > QQ_FORWARD_CONTEXT_MAX_TEXT_CHARS:
+            if messages and used_chars + text_len > xinyu_qq_forward_context.QQ_FORWARD_CONTEXT_MAX_TEXT_CHARS:
                 break
             used_chars += text_len
             messages.append(message)
-            if len(messages) >= QQ_FORWARD_CONTEXT_MAX_MESSAGES:
+            if len(messages) >= xinyu_qq_forward_context.QQ_FORWARD_CONTEXT_MAX_MESSAGES:
                 break
         return messages
 
-    def _forward_raw_items(self, payload: Any) -> list[Any]:
-        if payload is None:
-            return []
-        if isinstance(payload, str):
-            stripped = payload.strip()
-            if not stripped:
-                return []
-            try:
-                return self._forward_raw_items(json.loads(stripped))
-            except json.JSONDecodeError:
-                return [stripped]
-        if isinstance(payload, list):
-            return payload
-        if not isinstance(payload, dict):
-            return []
-        for key in ("messages", "message", "content", "nodes", "node", "data"):
-            value = payload.get(key)
-            if isinstance(value, list):
-                return value
-            if isinstance(value, dict):
-                nested = self._forward_raw_items(value)
-                if nested:
-                    return nested
-            if isinstance(value, str) and value.strip().startswith(("[", "{")):
-                nested = self._forward_raw_items(value)
-                if nested:
-                    return nested
-        if any(key in payload for key in ("sender", "user_id", "nickname", "message", "content", "raw_message")):
-            return [payload]
-        return []
+    @staticmethod
+    def _forward_raw_items(payload: Any) -> list[Any]:
+        return xinyu_qq_forward_context.forward_raw_items(payload)
 
     def _summarize_forward_item(self, item: Any) -> dict[str, str]:
         if isinstance(item, str):
@@ -739,19 +711,7 @@ class NativeQQGateway:
 
     @staticmethod
     def _dedupe_forward_messages(messages: list[dict[str, str]]) -> list[dict[str, str]]:
-        deduped: list[dict[str, str]] = []
-        seen: set[tuple[str, str, str]] = set()
-        for item in messages:
-            key = (
-                _safe_str(item.get("message_id")).strip(),
-                _safe_str(item.get("sender_name") or item.get("user_id")).strip(),
-                _safe_str(item.get("text") or item.get("rich_summary") or item.get("raw_message")).strip(),
-            )
-            if key in seen:
-                continue
-            seen.add(key)
-            deduped.append(item)
-        return deduped
+        return xinyu_qq_forward_context.dedupe_forward_messages(messages)
 
     @staticmethod
     def _reply_file_learning_intent(text: str) -> bool:
