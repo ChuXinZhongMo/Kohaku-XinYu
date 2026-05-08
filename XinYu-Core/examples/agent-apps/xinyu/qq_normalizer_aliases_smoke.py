@@ -12,6 +12,7 @@ from xinyu_qq_normalizer import (
     parse_cq_segments,
     parse_ws_message,
     sender_name,
+    segment_data_value,
     strip_cq_segments,
 )
 
@@ -58,6 +59,11 @@ def main() -> int:
         failures.append("gateway message segments helper is not a direct static alias")
     if NativeQQGateway._message_segments(segment_event) != message_segments_from_event(segment_event):
         failures.append("gateway message segments alias no longer delegates")
+    segment = {"type": "text", "data": {"text": "hello"}}
+    if NativeQQGateway._segment_data is not segment_data_value:
+        failures.append("gateway segment data helper is not a direct static alias")
+    if NativeQQGateway._segment_data(segment) != segment_data_value(segment):
+        failures.append("gateway segment data alias no longer delegates")
 
     text_event = {"message": [{"type": "text", "data": {"text": "hello"}}, {"type": "image", "data": {}}]}
     if NativeQQGateway._extract_text is not extract_text:

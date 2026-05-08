@@ -2122,9 +2122,7 @@ class NativeQQGateway:
 
     _message_segments = staticmethod(xinyu_qq_normalizer.message_segments_from_event)
 
-    @staticmethod
-    def _segment_data(segment: dict[str, Any]) -> dict[str, Any]:
-        return xinyu_qq_normalizer.segment_data(None, segment)
+    _segment_data = staticmethod(xinyu_qq_normalizer.segment_data_value)
 
     def _extract_rich_message_context(self, event: dict[str, Any]) -> dict[str, Any]:
         summaries: list[str] = []

@@ -34,6 +34,10 @@ def message_segments_from_event(event: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def segment_data(gateway: Any, segment: dict[str, Any]) -> dict[str, Any]:
+    return segment_data_value(segment)
+
+
+def segment_data_value(segment: dict[str, Any]) -> dict[str, Any]:
     data = segment.get("data")
     return data if isinstance(data, dict) else {}
 

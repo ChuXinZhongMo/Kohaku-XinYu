@@ -2570,3 +2570,24 @@ Workspace: D:\XinYu
 - Risk: Low; only message segment normalization helper ownership changed. CQ segment parsing, rich context extraction, OneBot payload shape, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-119-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 120 - 19:57
+
+- Task: Replace QQ segment data wrapper with direct normalizer value alias.
+- Why: `_segment_data` in `xinyu_qq_gateway.py` only adapted away an unused legacy gateway parameter from `xinyu_qq_normalizer.segment_data`. Adding a same-signature value helper lets the gateway use a direct static alias while preserving the old normalizer compatibility entrypoint.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_normalizer.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_normalizer_aliases_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_normalizer_aliases_smoke.py xinyu_qq_normalizer.py`
+  - `.\.venv\Scripts\python.exe qq_normalizer_aliases_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_normalizer.segment_data_value` now owns the same-signature segment helper and gateway `_segment_data` directly aliases it. Compile, focused normalizer alias smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only segment data helper ownership changed. Rich context extraction, learning/sticker material extraction, OneBot payload shape, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-120-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.
