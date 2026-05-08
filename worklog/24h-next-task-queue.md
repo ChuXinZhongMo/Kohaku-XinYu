@@ -65,6 +65,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace core bridge desktop limit wrapper with direct service alias.
 - [x] Extract core bridge owner/trusted payload privacy policy helpers.
 - [x] Extract core bridge timestamp ISO helper into `xinyu_bridge_state_text.py`.
+- [x] Replace QQ trust command text wrappers with direct policy aliases.
 
 ## Stop-Gap First
 

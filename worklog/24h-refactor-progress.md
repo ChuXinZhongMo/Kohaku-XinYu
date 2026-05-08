@@ -1814,3 +1814,25 @@ Workspace: D:\XinYu
 - Risk: Low; only pure timestamp helper ownership moved. Autonomous next-run formatting, autonomous state write content, prompt/persona semantics, long-term memory body text, QQ outbound behavior, and v1 traffic behavior were unchanged.
 - Rollback: `git revert <loop-82-commit>`
 - Next: Continue with another isolated core bridge helper extraction or state governance slice.
+
+## Loop 83 - 13:38
+
+- Task: Replace QQ trust command text wrappers with direct policy aliases.
+- Why: `_compact_command_text`, `_looks_like_trust_command`, and `_looks_like_trust_revoke_command` were one-line wrappers around `xinyu_qq_trust_policy`. Replacing them with direct static aliases reduces `xinyu_qq_gateway.py` shim code while keeping compatibility names.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_trust_aliases_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_trust_aliases_smoke.py xinyu_qq_trust_policy.py`
+  - `.\.venv\Scripts\python.exe qq_trust_aliases_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_trust_policy_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: QQ gateway trust command text helpers now directly alias trust policy functions. Compile, focused trust alias smoke, trust policy smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only shim ownership changed. Trust grant/revoke markers, trust target extraction, trusted-user config persistence, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior were unchanged.
+- Rollback: `git revert <loop-83-commit>`
+- Next: Continue with another isolated QQ gateway shim or state governance slice.

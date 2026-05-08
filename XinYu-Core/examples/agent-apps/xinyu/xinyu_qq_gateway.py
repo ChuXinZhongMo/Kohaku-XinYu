@@ -115,15 +115,9 @@ class NativeQQGateway:
     def _trust_level_for_user_id(self, user_id: str) -> str:
         return xinyu_qq_trust_policy.trust_level_for_user_id(self.config, user_id)
 
-    @staticmethod
-    def _compact_command_text(text: str) -> str:
-        return xinyu_qq_trust_policy.compact_command_text(text)
-
-    def _looks_like_trust_command(self, text: str) -> bool:
-        return xinyu_qq_trust_policy.is_trust_grant_command(text)
-
-    def _looks_like_trust_revoke_command(self, text: str) -> bool:
-        return xinyu_qq_trust_policy.is_trust_revoke_command(text)
+    _compact_command_text = staticmethod(xinyu_qq_trust_policy.compact_command_text)
+    _looks_like_trust_command = staticmethod(xinyu_qq_trust_policy.is_trust_grant_command)
+    _looks_like_trust_revoke_command = staticmethod(xinyu_qq_trust_policy.is_trust_revoke_command)
 
     def _trust_command_target(self, prepared: PreparedMessage) -> tuple[str, str]:
         return xinyu_qq_trust_policy.trust_command_target(
