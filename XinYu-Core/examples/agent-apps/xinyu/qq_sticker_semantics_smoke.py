@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from xinyu_qq_gateway import NativeQQGateway
-from xinyu_qq_sticker_semantics import infer_received_sticker_semantics
+from xinyu_qq_sticker_semantics import image_segment_looks_like_sticker, infer_received_sticker_semantics
 
 
 def main() -> int:
@@ -22,6 +22,12 @@ def main() -> int:
     gateway_result = NativeQQGateway._infer_received_sticker_semantics("抱抱")
     if gateway_result.get("mood") != "comfort":
         failures.append("gateway sticker semantics wrapper no longer delegates")
+    if not image_segment_looks_like_sticker({"summary": "动画表情", "name": ""}):
+        failures.append("image sticker marker detection changed")
+    if image_segment_looks_like_sticker({"summary": "ordinary photo", "name": "photo.jpg"}):
+        failures.append("ordinary image should not be treated as sticker")
+    if not NativeQQGateway._image_segment_looks_like_sticker({"image_type": "mface"}):
+        failures.append("gateway image sticker wrapper no longer delegates")
 
     if failures:
         print("XinYu QQ sticker semantics smoke failed")

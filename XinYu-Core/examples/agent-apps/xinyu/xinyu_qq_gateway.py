@@ -2439,14 +2439,7 @@ class NativeQQGateway:
 
     @staticmethod
     def _image_segment_looks_like_sticker(data: dict[str, Any]) -> bool:
-        compact = " ".join(
-            _safe_str(data.get(key)).strip().lower()
-            for key in ("summary", "subType", "sub_type", "type", "image_type", "name")
-            if _safe_str(data.get(key)).strip()
-        )
-        if not compact:
-            return False
-        return any(marker in compact for marker in ("表情", "mface", "sticker", "marketface", "emoji"))
+        return xinyu_qq_sticker_semantics.image_segment_looks_like_sticker(data)
 
     def _summarize_replied_message(self, event: dict[str, Any]) -> dict[str, Any]:
         text = self._extract_text(event).strip()

@@ -1017,3 +1017,24 @@ Workspace: D:\XinYu
 - Risk: Low; pure forward-context helper relocation. No real QQ outbound, OneBot payload shape, trust policy, persona semantics, memory body text, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-46-commit>`
 - Next: Continue with rich segment constants or another isolated QQ parsing helper.
+
+## Loop 47 - 11:30
+
+- Task: Move image-sticker detection into sticker semantics.
+- Why: The gateway still owned the pure heuristic that decides whether an image segment is actually a sticker. Keeping it with received-sticker semantics makes the sticker parsing boundary more complete.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_sticker_semantics.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_sticker_semantics_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_sticker_semantics.py xinyu_qq_gateway.py qq_sticker_semantics_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_sticker_semantics_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: Image-sticker detection now lives in `xinyu_qq_sticker_semantics.py`; the gateway wrapper delegates to it. Compile, sticker semantics smoke, QQ gateway smoke, and QQ review smoke passed.
+- Risk: Low; pure classifier relocation. No real QQ outbound, sticker import writes, learning policy, OneBot payload shape, persona semantics, memory body text, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-47-commit>`
+- Next: Continue with rich segment constants or another isolated QQ parsing helper.

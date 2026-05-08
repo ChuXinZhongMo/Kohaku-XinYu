@@ -46,3 +46,14 @@ def infer_received_sticker_semantics(summary: str) -> dict[str, str]:
                 "confidence": "medium",
             }
     return {"mood": "unclear", "meaning": "QQ 只给了表情摘要，具体语气不确定", "confidence": "low"}
+
+
+def image_segment_looks_like_sticker(data: dict[str, Any]) -> bool:
+    compact = " ".join(
+        safe_str(data.get(key)).strip().lower()
+        for key in ("summary", "subType", "sub_type", "type", "image_type", "name")
+        if safe_str(data.get(key)).strip()
+    )
+    if not compact:
+        return False
+    return any(marker in compact for marker in ("表情", "mface", "sticker", "marketface", "emoji"))
