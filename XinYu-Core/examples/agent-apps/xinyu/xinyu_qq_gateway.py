@@ -315,8 +315,7 @@ class NativeQQGateway:
             action_response=action_response,
         )
 
-    async def _record_sent_message_ack_payload(self, payload: dict[str, Any]) -> bool:
-        return await xinyu_qq_outbox_client.record_sent_message_ack_payload(self, payload)
+    _record_sent_message_ack_payload = xinyu_qq_outbox_client.record_sent_message_ack_payload
 
     _spool_pending_message_ack = xinyu_qq_outbox_client.spool_pending_message_ack
 

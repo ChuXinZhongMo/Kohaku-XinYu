@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 
 import xinyu_qq_outbox_client as outbox_client
 from xinyu_qq_gateway import NativeQQGateway, PreparedMessage, ReplyTarget
@@ -84,6 +85,12 @@ def main() -> int:
     )
     if gateway.client.ack_payloads[-1].get("adapter_message_id") != "qq-msg-3":
         failures.append("gateway QQ outbox ack alias changed adapter message id")
+    if NativeQQGateway._record_sent_message_ack_payload is not outbox_client.record_sent_message_ack_payload:
+        failures.append("gateway sent-message ack record helper is not a direct method alias")
+    gateway.config = SimpleNamespace(bridge_token="", message_ack_url="")
+    record_result = asyncio.run(gateway._record_sent_message_ack_payload({"adapter_message_id": "qq-msg-4"}))
+    if record_result:
+        failures.append("gateway sent-message ack record alias ignored disabled bridge token")
 
     class _AckSpool:
         def __init__(self) -> None:
