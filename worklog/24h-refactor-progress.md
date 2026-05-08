@@ -1545,3 +1545,20 @@ Workspace: D:\XinYu
 - Risk: Low; direct aliasing only. Codex request/output semantics, prompt/persona semantics, long-term memory body text, QQ outbound, v1 traffic behavior, route payload shape, and state writes were unchanged.
 - Rollback: `git revert <loop-70-commit>`
 - Next: Continue with another isolated runtime helper wrapper or run a new health checkpoint after additional slices.
+
+## Loop 71 - 12:48
+
+- Task: Record a long-run health checkpoint.
+- Why: After another sequence of core bridge and QQ gateway extraction commits, the live chain needed a read-only checkpoint covering Bridge, Desktop WS, QQ gateway, NapCat, outbox, recent exceptions, v1 shadow, disk, and git state.
+- Files changed:
+  - `XINYU-LONG-RUN-OPERATIONS.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --workspace D:\XinYu`
+  - `git log --oneline -12`
+  - `git diff --check`
+- Result: Health reported bridge, desktop WS, QQ gateway, NapCat, outbox backlog, recent exceptions, v1 shadow errors, and disk space as `ok`. Outbox was `pending=0 total=72`; recent exceptions were `hits=0 scanned_files=17 window_minutes=120`; v1 shadow errors were `errors=0 window=200`; disk free space was `646.4 GB`. Overall status remained `warn` only because `git_state` saw the intentionally untracked user-provided `XINYU-24H-WORK-PLAN.md`.
+- Risk: Low; diagnostic documentation only. No runtime trace cleanup, real QQ outbound, v1 traffic expansion, persona semantics, memory body text, or runtime/memory deletion was performed.
+- Rollback: `git revert <loop-71-commit>`
+- Next: Continue with another isolated runtime helper extraction.
