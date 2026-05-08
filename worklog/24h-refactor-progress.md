@@ -629,3 +629,25 @@ Workspace: D:\XinYu
 - Risk: Low; behavior-preserving helper extraction. No memory body, persona semantics, QQ outbound behavior, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-28-commit>`
 - Next: Continue with bridge context helper extraction or QQ gateway config/normalizer extraction.
+
+## Loop 29 - 10:40
+
+- Task: Extract QQ gateway config route derivation helpers.
+- Why: `GatewayConfig.from_file` and `with_overrides` derive multiple Core Bridge route URLs; extracting that pure config logic starts the QQ config boundary without moving trust, transport, or message semantics.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_config.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_config_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_config.py xinyu_qq_config_smoke.py xinyu_qq_gateway.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_config_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: Core route URL derivation moved to `xinyu_qq_config.py`; `GatewayConfig` still owns config parsing and overrides. Config, gateway, and review smokes passed.
+- Risk: Low; pure URL helper extraction. No real QQ outbound, v1 traffic, persona semantics, or memory body content was touched.
+- Rollback: `git revert <loop-29-commit>`
+- Next: Continue with QQ server/config model split or bridge context helper extraction.

@@ -26,6 +26,15 @@ from xinyu_image_context import build_image_context, is_image_learning_payload
 from xinyu_codex_delegate import looks_like_owner_local_write_request
 import xinyu_qq_attachment_resolver
 import xinyu_qq_command_router
+from xinyu_qq_config import (
+    derive_codex_execute_url as _derive_codex_execute_url,
+    derive_core_route_url as _derive_core_route_url,
+    derive_goldmark_mark_url as _derive_goldmark_mark_url,
+    derive_learning_ingest_url as _derive_learning_ingest_url,
+    derive_package_install_url as _derive_package_install_url,
+    derive_review_inbox_command_url as _derive_review_inbox_command_url,
+    derive_sticker_import_url as _derive_sticker_import_url,
+)
 import xinyu_qq_normalizer
 import xinyu_qq_outbox_client
 import xinyu_qq_outbox_dispatcher
@@ -192,39 +201,6 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 def _maybe_int(value: str) -> int | str:
     return int(value) if value.isdigit() else value
-
-
-def _derive_codex_execute_url(core_chat_url: str) -> str:
-    return _derive_core_route_url(core_chat_url, "/codex/execute")
-
-
-def _derive_learning_ingest_url(core_chat_url: str) -> str:
-    return _derive_core_route_url(core_chat_url, "/learning/ingest")
-
-
-def _derive_sticker_import_url(core_chat_url: str) -> str:
-    return _derive_core_route_url(core_chat_url, "/sticker/import")
-
-
-def _derive_package_install_url(core_chat_url: str) -> str:
-    return _derive_core_route_url(core_chat_url, "/package/install")
-
-
-def _derive_review_inbox_command_url(core_chat_url: str) -> str:
-    return _derive_core_route_url(core_chat_url, "/review/inbox/command")
-
-
-def _derive_goldmark_mark_url(core_chat_url: str) -> str:
-    return _derive_core_route_url(core_chat_url, "/review/goldmark/mark_request")
-
-
-def _derive_core_route_url(core_chat_url: str, route: str) -> str:
-    url = (core_chat_url or "").strip()
-    if url:
-        trimmed = url.rstrip("/")
-        if trimmed.endswith("/chat"):
-            return trimmed[: -len("/chat")] + route
-    return "http://127.0.0.1:8765" + route
 
 
 @dataclass(frozen=True)
