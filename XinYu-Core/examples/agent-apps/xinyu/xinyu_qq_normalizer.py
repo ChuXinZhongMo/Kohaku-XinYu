@@ -20,6 +20,10 @@ def message_kind(gateway: Any, event: dict[str, Any]) -> str:
 
 
 def message_segments(gateway: Any, event: dict[str, Any]) -> list[dict[str, Any]]:
+    return message_segments_from_event(event)
+
+
+def message_segments_from_event(event: dict[str, Any]) -> list[dict[str, Any]]:
     message = event.get("message")
     if isinstance(message, list):
         return [segment for segment in message if isinstance(segment, dict)]

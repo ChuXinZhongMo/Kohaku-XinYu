@@ -101,6 +101,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace QQ first text field wrapper with direct resolver value alias.
 - [x] Replace QQ reply file learning intent wrapper with direct resolver text alias.
 - [x] Replace QQ clean CQ text wrapper with direct normalizer value alias.
+- [x] Replace QQ message segments wrapper with direct normalizer event alias.
 
 ## Stop-Gap First
 

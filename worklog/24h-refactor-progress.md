@@ -2549,3 +2549,24 @@ Workspace: D:\XinYu
 - Risk: Low; only clean-CQ-text helper ownership changed. CQ stripping behavior, forward summary cleanup, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-118-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 119 - 19:54
+
+- Task: Replace QQ message segments wrapper with direct normalizer event alias.
+- Why: `_message_segments` in `xinyu_qq_gateway.py` only adapted away an unused legacy gateway parameter from `xinyu_qq_normalizer.message_segments`. Adding a same-signature event helper lets the gateway use a direct static alias while preserving the old normalizer compatibility entrypoint.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_normalizer.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_normalizer_aliases_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_normalizer_aliases_smoke.py xinyu_qq_normalizer.py`
+  - `.\.venv\Scripts\python.exe qq_normalizer_aliases_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_normalizer.message_segments_from_event` now owns the same-signature event helper and gateway `_message_segments` directly aliases it. Compile, focused normalizer alias smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only message segment normalization helper ownership changed. CQ segment parsing, rich context extraction, OneBot payload shape, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-119-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.
