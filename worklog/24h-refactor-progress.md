@@ -904,3 +904,26 @@ Workspace: D:\XinYu
 - Risk: Low; diagnostic read/classification only. Runtime traces were not cleaned, QQ outbound was not tested, v1 traffic was not expanded, and memory/persona content was untouched.
 - Rollback: `git revert <loop-41-commit>`
 - Next: Continue with QQ config model extraction or final health checkpoint.
+
+## Loop 42 - 11:17
+
+- Task: Extract QQ config parsing helpers.
+- Why: `xinyu_qq_gateway.py` still owned generic config parsing helpers used by `GatewayConfig` and runtime metadata normalization. Moving their implementation to `xinyu_qq_config.py` is a small step toward a real QQ config boundary while keeping existing gateway call names stable through imports.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_config.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_config_helpers_smoke.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_config.py xinyu_qq_gateway.py qq_config_helpers_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_config_helpers_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_config_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: Config coercion, env-list merging, required prefix completion, and JSON-object loading now live in `xinyu_qq_config.py`; the gateway imports them under the previous private names. Compile, focused config helper smoke, existing config route smoke, QQ gateway smoke, and QQ review smoke passed.
+- Risk: Low; pure helper relocation with stable parsing behavior. No real QQ outbound, OneBot payload shape, trust policy, persona semantics, memory body text, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-42-commit>`
+- Next: Continue with moving the `GatewayConfig` dataclass itself behind the QQ config boundary.

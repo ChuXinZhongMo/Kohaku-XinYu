@@ -26,6 +26,10 @@ import xinyu_qq_attachment_resolver
 import xinyu_qq_command_router
 from xinyu_qq_cli import build_gateway_parser
 from xinyu_qq_config import (
+    as_bool as _as_bool,
+    as_float as _as_float,
+    as_int as _as_int,
+    as_str_list as _as_str_list,
     derive_codex_execute_url as _derive_codex_execute_url,
     derive_core_route_url as _derive_core_route_url,
     derive_goldmark_mark_url as _derive_goldmark_mark_url,
@@ -33,6 +37,10 @@ from xinyu_qq_config import (
     derive_package_install_url as _derive_package_install_url,
     derive_review_inbox_command_url as _derive_review_inbox_command_url,
     derive_sticker_import_url as _derive_sticker_import_url,
+    env_str_list as _env_str_list,
+    load_json_object as _load_json,
+    merge_str_lists as _merge_str_lists,
+    with_required_prefixes as _with_required_prefixes,
 )
 from xinyu_qq_core_client import BridgeError, CoreBridgeClient
 from xinyu_qq_models import PendingAction, PreparedMessage, RecentStickerImportState, ReplyTarget
@@ -135,70 +143,6 @@ def _hash_id(value: Any, *, length: int = 16) -> str:
 
 def _now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
-
-
-def _as_bool(value: Any, default: bool = False) -> bool:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        return value.strip().lower() in {"1", "true", "yes", "on"}
-    if value is None:
-        return default
-    return bool(value)
-
-
-def _as_int(value: Any, default: int) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _as_float(value: Any, default: float) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def _as_str_list(value: Any) -> list[str]:
-    if value is None:
-        return []
-    if isinstance(value, str):
-        return [part.strip() for part in value.split(",") if part.strip()]
-    if isinstance(value, (list, tuple, set)):
-        return [str(item).strip() for item in value if str(item).strip()]
-    text = str(value).strip()
-    return [text] if text else []
-
-
-def _env_str_list(*names: str) -> list[str]:
-    values: list[str] = []
-    for name in names:
-        values.extend(_as_str_list(os.environ.get(name)))
-    return list(dict.fromkeys(values))
-
-
-def _merge_str_lists(*values: Any) -> list[str]:
-    merged: list[str] = []
-    for value in values:
-        merged.extend(_as_str_list(value))
-    return list(dict.fromkeys(item for item in merged if item))
-
-
-def _with_required_prefixes(prefixes: list[str] | tuple[str, ...]) -> tuple[str, ...]:
-    values = [item for item in prefixes if item]
-    for required in ("/", "!", "！", "."):
-        if required not in values:
-            values.append(required)
-    return tuple(dict.fromkeys(values))
-
-
-def _load_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    data = json.loads(path.read_text(encoding="utf-8-sig"))
-    return data if isinstance(data, dict) else {}
 
 
 def _maybe_int(value: str) -> int | str:
