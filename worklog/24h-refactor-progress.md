@@ -1298,3 +1298,26 @@ Workspace: D:\XinYu
 - Risk: Low-medium; visible reply formatting ownership moved, but the normalization algorithm and existing edge cases are unchanged. No prompt/persona semantics, long-term memory body text, route payloads, QQ outbound, v1 traffic, or state writes were touched.
 - Rollback: `git revert <loop-59-commit>`
 - Next: Continue with another isolated core bridge or QQ gateway helper extraction.
+
+## Loop 60 - 12:16
+
+- Task: Extract core bridge bootstrap env/path helpers.
+- Why: `xinyu_core_bridge.py` still owned local env loading and repo `src` path setup. Moving these startup helpers to `xinyu_bridge_bootstrap.py` trims the entrypoint while preserving the old private names as compatibility aliases.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_bootstrap.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_bootstrap_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_bootstrap.py xinyu_core_bridge.py bridge_bootstrap_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_bootstrap_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `.\.venv\Scripts\python.exe runtime_security_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_auth_smoke.py`
+  - `git diff --check`
+- Result: Local env loading and repo `src` path setup now live in `xinyu_bridge_bootstrap.py`; core bridge imports them under `_load_local_env` and `_ensure_repo_src`. Compile, bootstrap smoke, bridge probe, runtime security smoke, bridge auth smoke, and diff check passed.
+- Risk: Low; startup helper relocation only. Env precedence and `sys.path` behavior are unchanged. No HTTP route semantics, prompt/persona semantics, long-term memory body text, state writes, QQ outbound, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-60-commit>`
+- Next: Continue with another isolated core bridge or QQ gateway helper extraction.

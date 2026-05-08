@@ -23,6 +23,8 @@ from xinyu_action_layer import XinyuActionLayer, codex_response_to_outcome
 from xinyu_action_reply_composer import compose_action_reply
 from state_service import atomic_write_text
 from xinyu_bridge_http import XinYuBridgeHTTPServer, XinYuBridgeRequestHandler
+from xinyu_bridge_bootstrap import ensure_repo_src as _ensure_repo_src
+from xinyu_bridge_bootstrap import load_local_env as _load_local_env
 from xinyu_bridge_learning import (
     LearningBridgeError,
     stage_codex_report_material,
@@ -644,30 +646,6 @@ class BridgeRequestError(RuntimeError):
         super().__init__(message)
         self.status = status
         self.message = message
-
-
-def _load_local_env(xinyu_dir: Path) -> None:
-    env_path = xinyu_dir / "xinyu.local.env"
-    if not env_path.exists():
-        return
-
-    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
-            os.environ[key] = value
-
-
-def _ensure_repo_src(xinyu_dir: Path) -> Path:
-    repo_root = xinyu_dir.parents[2]
-    src_root = repo_root / "src"
-    if str(src_root) not in sys.path:
-        sys.path.insert(0, str(src_root))
-    return src_root
 
 
 def _run_learning_study_chain(root: Path, mode: str) -> dict[str, object]:

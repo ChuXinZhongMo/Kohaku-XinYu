@@ -41,6 +41,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Harden action digest followup smoke freshness window after dated fixture aged past 24h.
 - [x] Reuse v1 canary attachment signal helper from core bridge compatibility alias.
 - [x] Extract core bridge reply text normalization helper into `xinyu_bridge_reply_text.py`.
+- [x] Extract core bridge bootstrap env/path helpers into `xinyu_bridge_bootstrap.py`.
 
 ## Stop-Gap First
 
