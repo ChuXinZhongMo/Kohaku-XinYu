@@ -100,8 +100,7 @@ class NativeQQGateway:
         self._recent_sticker_imports: dict[str, RecentStickerImportState] = {}
         self._connection_count = 0
 
-    def _effective_whitelist_user_ids(self) -> set[str]:
-        return xinyu_qq_trust_policy.effective_whitelist_user_ids(self.config)
+    _effective_whitelist_user_ids = xinyu_qq_trust_policy.gateway_effective_whitelist_user_ids
 
     def _is_blocked_user_id(self, user_id: str) -> bool:
         return xinyu_qq_trust_policy.is_blocked_user_id(self.config, user_id)

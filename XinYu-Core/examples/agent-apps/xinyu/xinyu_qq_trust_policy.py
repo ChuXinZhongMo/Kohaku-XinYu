@@ -60,6 +60,10 @@ def effective_whitelist_user_ids(config: Any) -> set[str]:
     return set(config.whitelist_user_ids) | set(config.owner_user_ids) | set(config.trusted_user_ids)
 
 
+def gateway_effective_whitelist_user_ids(gateway: Any) -> set[str]:
+    return effective_whitelist_user_ids(gateway.config)
+
+
 def is_blocked_user_id(config: Any, user_id: str) -> bool:
     user_id = safe_str(user_id).strip()
     return bool(user_id and user_id not in config.owner_user_ids and user_id in config.blocked_user_ids)

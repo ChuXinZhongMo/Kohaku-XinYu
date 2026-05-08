@@ -103,6 +103,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace QQ clean CQ text wrapper with direct normalizer value alias.
 - [x] Replace QQ message segments wrapper with direct normalizer event alias.
 - [x] Replace QQ segment data wrapper with direct normalizer value alias.
+- [x] Replace QQ effective whitelist wrapper with direct trust policy gateway alias.
 
 ## Stop-Gap First
 

@@ -1,7 +1,14 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from xinyu_qq_gateway import NativeQQGateway
-from xinyu_qq_trust_policy import compact_command_text, is_trust_grant_command, is_trust_revoke_command
+from xinyu_qq_trust_policy import (
+    compact_command_text,
+    gateway_effective_whitelist_user_ids,
+    is_trust_grant_command,
+    is_trust_revoke_command,
+)
 
 
 def main() -> int:
@@ -21,6 +28,17 @@ def main() -> int:
         failures.append("gateway trust grant alias matched ordinary chat")
     if NativeQQGateway._looks_like_trust_revoke_command("ordinary chat"):
         failures.append("gateway trust revoke alias matched ordinary chat")
+
+    config = SimpleNamespace(
+        whitelist_user_ids=frozenset({"trusted"}),
+        owner_user_ids=frozenset({"owner"}),
+        trusted_user_ids=frozenset({"friend"}),
+    )
+    gateway = SimpleNamespace(config=config)
+    if NativeQQGateway._effective_whitelist_user_ids is not gateway_effective_whitelist_user_ids:
+        failures.append("gateway whitelist alias no longer uses trust policy helper")
+    if NativeQQGateway._effective_whitelist_user_ids(gateway) != {"owner", "trusted", "friend"}:
+        failures.append("gateway whitelist alias changed unbound behavior")
 
     if failures:
         print("XinYu QQ trust aliases smoke failed")

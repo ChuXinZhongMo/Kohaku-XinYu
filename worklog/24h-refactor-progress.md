@@ -2591,3 +2591,26 @@ Workspace: D:\XinYu
 - Risk: Low; only segment data helper ownership changed. Rich context extraction, learning/sticker material extraction, OneBot payload shape, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-120-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 121 - 20:05
+
+- Task: Replace QQ effective whitelist wrapper with direct trust policy gateway alias.
+- Why: `_effective_whitelist_user_ids` in `xinyu_qq_gateway.py` only forwarded `self.config` into `xinyu_qq_trust_policy.effective_whitelist_user_ids`. A gateway-level helper keeps the ownership in trust policy while letting the gateway class use a direct bound method alias.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_trust_policy.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_trust_aliases_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py qq_trust_aliases_smoke.py xinyu_qq_trust_policy.py`
+  - `D:\XinYu\Python312\python.exe qq_trust_aliases_smoke.py`
+  - `D:\XinYu\Python312\python.exe qq_trust_policy_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_trust_policy.gateway_effective_whitelist_user_ids` now owns the gateway-bound whitelist helper and gateway `_effective_whitelist_user_ids` directly aliases it. Compile, focused trust alias/policy smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Validation note: The first rerun exposed missing local test dependencies in `D:\XinYu\Python312`; installed `websockets>=12.0` and `Pillow`, then the full validation group passed.
+- Risk: Low; only whitelist helper ownership changed. Whitelist union behavior, blocked/trusted user policy, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-121-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.
