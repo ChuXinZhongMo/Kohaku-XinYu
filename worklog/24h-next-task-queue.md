@@ -25,6 +25,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract QQ config parsing helpers from `xinyu_qq_gateway.py`.
 - [x] Move `GatewayConfig` itself into `xinyu_qq_config.py` while preserving gateway re-export compatibility.
 - [x] Move QQ owner trust command markers into `xinyu_qq_trust_policy.py`.
+- [x] Extract received-sticker mood semantics from `xinyu_qq_gateway.py`.
 
 ## Stop-Gap First
 
