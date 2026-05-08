@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
+from state_service import append_jsonl
 from xinyu_gateway_ack_spool import SentAckSpool
 from xinyu_group_shadow_observer import record_group_shadow_observation
 from xinyu_image_context import build_image_context, is_image_learning_payload
@@ -1642,9 +1643,7 @@ class NativeQQGateway:
                 "error": error[:500],
             }
             trace_path = Path(__file__).resolve().parent / QQ_INBOUND_TRACE_REL
-            trace_path.parent.mkdir(parents=True, exist_ok=True)
-            with trace_path.open("a", encoding="utf-8") as fh:
-                fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+            append_jsonl(trace_path, row)
         except OSError as exc:
             print(f"[xinyu_qq_gateway] inbound trace write failed: {type(exc).__name__}: {exc}", flush=True)
         except Exception as exc:
@@ -2067,9 +2066,7 @@ class NativeQQGateway:
         }
         try:
             trace_path = Path(__file__).resolve().parent / QQ_STICKER_IMPORT_TRACE_REL
-            trace_path.parent.mkdir(parents=True, exist_ok=True)
-            with trace_path.open("a", encoding="utf-8") as fh:
-                fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+            append_jsonl(trace_path, row)
         except OSError as exc:
             print(f"[xinyu_qq_gateway] sticker import trace write failed: {type(exc).__name__}: {exc}", flush=True)
 
@@ -2578,9 +2575,7 @@ class NativeQQGateway:
         }
         try:
             trace_path = Path(__file__).resolve().parent / QQ_RICH_CONTEXT_TRACE_REL
-            trace_path.parent.mkdir(parents=True, exist_ok=True)
-            with trace_path.open("a", encoding="utf-8") as fh:
-                fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+            append_jsonl(trace_path, row)
         except OSError as exc:
             print(f"[xinyu_qq_gateway] rich context trace write failed: {type(exc).__name__}: {exc}", flush=True)
 

@@ -753,3 +753,26 @@ Workspace: D:\XinYu
 - Risk: Low; projection state persistence only. The autonomous trace log, memory body text, persona semantics, QQ outbound behavior, and v1 traffic behavior were not changed.
 - Rollback: `git revert <loop-34-commit>`
 - Next: Continue with another low-risk runtime/projection writer or deeper QQ config/server extraction.
+
+## Loop 35 - 10:57
+
+- Task: Route QQ runtime trace appends through `state_service.py`.
+- Why: QQ inbound, rich-context, and sticker-import traces are runtime JSONL append surfaces still open-coded in `xinyu_qq_gateway.py`; using the shared append helper centralizes JSONL write conventions.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_runtime_trace_smoke.py`
+  - `XINYU-STATE-WRITE-AUDIT.md`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py state_service.py qq_runtime_trace_smoke.py`
+  - `.\.venv\Scripts\python.exe state_io_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_runtime_trace_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `_trace_qq_inbound`, `_trace_qq_rich_context`, and `_trace_sticker_import` now call `append_jsonl`; trace row fields are unchanged. Compile, state IO smoke, runtime trace smoke, QQ gateway smoke, and QQ review smoke passed.
+- Risk: Low; runtime diagnostic trace append formatting may become compact JSONL, but row semantics and file paths are preserved. No real QQ outbound, OneBot payload shape, trust policy, memory body text, persona semantics, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-35-commit>`
+- Next: Continue with another QQ runtime state writer or deeper config model extraction.

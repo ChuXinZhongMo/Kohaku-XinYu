@@ -15,6 +15,7 @@ Date: 2026-05-07 / continued 2026-05-08
 ## 2026-05-08 Extended Queue
 
 - [x] Migrate autonomous mind loop projection state to `state_service.py`.
+- [x] Migrate QQ inbound/rich/sticker runtime trace appends to `state_service.py`.
 
 ## Stop-Gap First
 

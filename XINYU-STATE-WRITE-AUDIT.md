@@ -45,7 +45,7 @@ Scope: first-pass write-surface audit before introducing broader state governanc
 | Area | Current path examples | Category | Current risk | Next action |
 | --- | --- | --- | --- | --- |
 | Trusted user config | `xinyu_qq_gateway.config.json` | Configuration | Runtime command can persist trust changes to config | Extract trust policy before changing persistence semantics. |
-| Inbound/rich/sticker traces | `runtime/qq_inbound_trace.jsonl`, `runtime/qq_rich_context_trace.jsonl`, `runtime/qq_sticker_import_trace.jsonl` | Runtime traces | Direct append JSONL | Candidate for shared JSONL append helper after QQ trust split. |
+| Inbound/rich/sticker traces | `runtime/qq_inbound_trace.jsonl`, `runtime/qq_rich_context_trace.jsonl`, `runtime/qq_sticker_import_trace.jsonl` | Runtime traces | Migrated to `state_service.append_jsonl` in Loop 35 | Keep row fields; validate with `qq_runtime_trace_smoke.py` and QQ gateway smoke. |
 | Group shadow observations | `runtime/group_shadow/group_shadow_observations.jsonl` | Runtime traces | Direct append JSONL | Candidate for shared JSONL append helper. |
 | Review output | Local-Scope review markdown/jsonl via `xinyu_qq_review.py` | Owner review artifact | Tool-owned output | Keep separate from runtime state service. |
 | Gateway ack spool | `runtime/gateway_ack_spool.jsonl` | Runtime transport state | Already has dedicated tests | Do not rewrite without `tests/test_gateway_ack_spool.py`. |
@@ -70,7 +70,7 @@ Scope: first-pass write-surface audit before introducing broader state governanc
    - `xinyu_core_bridge.py` proactive request state update. Done in Loop 27.
    - `xinyu_core_bridge.py` promise follow-up state. Done in Loop 13.
    - `xinyu_core_bridge.py` autonomous mind loop state. Done in Loop 34.
-   - QQ runtime trace appends after QQ trust/outbox extraction.
+   - QQ runtime trace appends after QQ trust/outbox extraction. Done in Loop 35.
 3. Leave long-term memory body writes in existing modules until the owner approves a memory-body migration slice.
 
 ## Required Validation For State Changes
