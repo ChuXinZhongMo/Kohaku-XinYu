@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-import hmac
 import json
 import traceback
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 from urllib.parse import parse_qs, urlparse
+
+from xinyu_bridge_auth import bridge_request_authorized
 
 
 DESKTOP_GET_ROUTES = {
@@ -306,15 +307,7 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
         return {key: values[-1] for key, values in parse_qs(parsed.query).items() if values}
 
     def _is_authorized(self) -> bool:
-        token = self.server.bridge_token
-        if not token:
-            return True
-        bearer = self.headers.get("Authorization", "")
-        header_token = self.headers.get("X-XinYu-Bridge-Token", "")
-        auth_token = ""
-        if bearer.lower().startswith("bearer "):
-            auth_token = bearer[7:].strip()
-        return hmac.compare_digest(token, auth_token) or hmac.compare_digest(token, header_token)
+        return bridge_request_authorized(self.headers, self.server.bridge_token)
 
     def _run_on_loop(self, coro: Any, *, timeout: int) -> Any:
         future = asyncio.run_coroutine_threadsafe(coro, self.server.loop)

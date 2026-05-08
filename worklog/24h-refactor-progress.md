@@ -560,3 +560,25 @@ Workspace: D:\XinYu
 - Risk: Low-medium; autonomous public GitHub learning retries are more conservative for failed candidates. No owner memory body, persona semantics, QQ outbound, or v1 traffic was touched.
 - Rollback: `git revert <loop-25-commit>`
 - Next: Start `xinyu_core_bridge.py` auth/context/session boundary extraction or migrate another low-risk state writer.
+
+## Loop 26 - 10:29
+
+- Task: Extract bridge HTTP auth helper boundary.
+- Why: HTTP token parsing and constant-time comparison are auth responsibilities and can be moved out of `xinyu_bridge_http.py` before larger bridge package decomposition.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_auth.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_http.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_auth_smoke.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `rg -n "Authorization|Bearer|bridge_token|loopback|token|_require|_auth|client_address|headers" ...`
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_auth.py xinyu_bridge_http.py bridge_auth_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_auth_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `.\.venv\Scripts\python.exe runtime_security_smoke.py`
+- Result: Added `xinyu_bridge_auth.py` and `bridge_auth_smoke.py`; `XinYuBridgeRequestHandler._is_authorized` now delegates to the auth helper. Header names, token semantics, unauthorized responses, and route behavior remain unchanged.
+- Risk: Low; pure helper extraction with focused smoke and bridge/runtime security validation.
+- Rollback: `git revert <loop-26-commit>`
+- Next: Extract a bridge session/context helper or migrate another low-risk state writer.

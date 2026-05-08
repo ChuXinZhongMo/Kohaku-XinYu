@@ -47,7 +47,7 @@ For Python code changes, also compile the changed Python files:
 | Service boundaries | `service_boundary_smoke.py`; plus the capability smoke for the touched service | Any extracted boundary helper, service wrapper, or transport sender contract change | Covered for pure boundary contracts |
 | Memory/state helpers | `state_io_smoke.py`; `memory_event_sourcing_smoke.py`; `private_thought_events_smoke.py`; `smoke_run.py --group memory` | Any state helper, event/projection, or memory-sidecar change | Covered for existing helper; broader state governance still pending |
 | Persona/voice behavior | `persona_contract_absence_smoke.py`; `personality_evolution_smoke.py`; `live_voice_card_smoke.py`; `pre_draft_turn_classifier_smoke.py`; `xinyu_speech_controller_smoke.py`; `smoke_run.py --group voice` | Any renderer, prompt assembly, voice, or final speaking-controller change | Covered; avoid changing semantics |
-| Runtime security/local scope | `runtime_security_smoke.py`; `local_scope_smoke.py`; `smoke_run.py --group privacy` | Any auth, token, loopback, path scope, or local file access change | Covered |
+| Runtime security/local scope | `bridge_auth_smoke.py`; `runtime_security_smoke.py`; `local_scope_smoke.py`; `smoke_run.py --group privacy` | Any auth, token, loopback, path scope, or local file access change | Covered |
 | v1 compatibility | `.\.venv\Scripts\python.exe -m pytest tests\test_v1_canary_readiness.py tests\v1\test_bridge_compatibility.py tests\v1\test_hybrid_router.py -q`; `xinyu_v1_owner_simple_canary_smoke.py` | Any v1 shadow/canary/gateway/routing compatibility change | Covered, review-only canary |
 | Long-run readiness | `runtime_readiness_smoke.py --offline`; `long_run_status.py`; from `D:\XinYu`: `python diagnostics\check_xinyu_health.py --json`; `python diagnostics\check_xinyu_health.py --json --write-ledger`; `python diagnostics\check_xinyu_health.py --json --recent-window-minutes 0` for historical-tail comparison | Any deployment, runtime readiness, live health, or long-run status change | Covered for health collection, recent-window scanning, and runtime ledger; live health can still be degraded |
 
@@ -58,6 +58,7 @@ For Python code changes, also compile the changed Python files:
 | Documentation-only | `git diff --check`; `git status --short --branch` |
 | New Python helper without runtime wiring | `git diff --check`; `python -m py_compile <helper>` |
 | Core bridge module extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `bridge_probe_smoke.py`; relevant capability smoke |
+| Bridge auth boundary | `python -m py_compile xinyu_bridge_auth.py xinyu_bridge_http.py bridge_auth_smoke.py`; `bridge_auth_smoke.py`; `bridge_probe_smoke.py`; `runtime_security_smoke.py` |
 | Desktop service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `xinyu_desktop_rest_smoke.py`; `xinyu_desktop_ws_smoke.py`; `xinyu_desktop_events_smoke.py`; `bridge_probe_smoke.py` |
 | Codex service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `codex_delegate_smoke.py`; `codex_completion_outbox_smoke.py`; `bridge_probe_smoke.py` |
 | Learning service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `bridge_learning_ingest_smoke.py`; `python -m pytest tests\test_learning_closed_loop.py -q`; `bridge_probe_smoke.py` |
