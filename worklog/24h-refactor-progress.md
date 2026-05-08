@@ -1202,3 +1202,24 @@ Workspace: D:\XinYu
 - Risk: Low; read-only helper relocation. No state writes, HTTP routes, prompt text, persona semantics, long-term memory body text, QQ outbound, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-55-commit>`
 - Next: Continue with another isolated core bridge helper extraction.
+
+## Loop 56 - 12:00
+
+- Task: Extract core bridge desktop action label helpers.
+- Why: `xinyu_core_bridge.py` still owned pure desktop action result/pressure/theme label helpers and action-marker scrubbing. Moving them to `xinyu_bridge_desktop_actions.py` reduces the bridge entrypoint without changing visible strings or sanitizer behavior.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_desktop_actions.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_desktop_actions_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_desktop_actions.py xinyu_core_bridge.py bridge_desktop_actions_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_desktop_actions_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Desktop action labels and marker scrubbing now live in `xinyu_bridge_desktop_actions.py`; `xinyu_core_bridge.py` imports them under the previous private names. The first smoke run had an incorrect truncation expectation and was fixed; compile, desktop action smoke, bridge probe smoke, and diff check passed.
+- Risk: Low; pure helper relocation. No HTTP routes, prompt text, persona semantics, long-term memory body text, state writes, QQ outbound, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-56-commit>`
+- Next: Continue with another isolated core bridge helper extraction.

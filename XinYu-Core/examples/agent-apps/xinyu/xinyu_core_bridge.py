@@ -28,6 +28,10 @@ from xinyu_bridge_learning import (
     stage_codex_report_material,
 )
 from xinyu_bridge_context import prompt_context_signature
+from xinyu_bridge_desktop_actions import desktop_action_pressure_label as _desktop_action_pressure_label
+from xinyu_bridge_desktop_actions import desktop_action_result_label as _desktop_action_result_label
+from xinyu_bridge_desktop_actions import desktop_action_theme_label as _desktop_action_theme_label
+from xinyu_bridge_desktop_actions import desktop_scrub_action_markers as _desktop_scrub_action_markers
 from xinyu_bridge_proactive import acknowledge as proactive_ack_bridge, claim_or_preview as proactive_bridge
 from xinyu_bridge_renderer import BridgeRenderer
 from xinyu_bridge_session import AgentSession, session_key_from_payload, session_keys_to_expire
@@ -190,7 +194,6 @@ from xinyu_uncertainty_pause import (
 )
 from xinyu_visible_reply_guard import dedupe_visible_reply
 from xinyu_visible_state_hygiene import sanitize_visible_state_files
-from xinyu_visible_text_sanitizer import sanitize_visible_text, visible_action_theme_label
 from xinyu_voice_learning import record_voice_correction
 from xinyu_voice_trial_overlay import build_voice_trial_overlay_prompt_block, record_voice_trial_overlay
 from xinyu_watched_sources import run_watched_source_check
@@ -662,40 +665,6 @@ def _ensure_repo_src(xinyu_dir: Path) -> Path:
     if str(src_root) not in sys.path:
         sys.path.insert(0, str(src_root))
     return src_root
-
-
-def _desktop_action_result_label(value: str) -> str:
-    if value == "success":
-        return "已完成"
-    if value in {"failure", "error"}:
-        return "执行失败"
-    if value == "timeout":
-        return "执行超时"
-    if value in {"blocked", "blocked_by_boundary"}:
-        return "边界拦住"
-    if not value or value == "unknown":
-        return "结果未知"
-    return _compact_text(value, 18)
-
-
-def _desktop_action_pressure_label(value: str) -> str:
-    if value == "high":
-        return "高负载"
-    if value == "medium":
-        return "中负载"
-    if value == "low":
-        return "低负载"
-    if not value or value == "unknown":
-        return "负载未知"
-    return _compact_text(value, 18)
-
-
-def _desktop_action_theme_label(value: str) -> str:
-    return visible_action_theme_label(value)
-
-
-def _desktop_scrub_action_markers(value: Any) -> str:
-    return sanitize_visible_text(value)
 
 
 def _memory_snapshot(memory_root: Path) -> dict[str, tuple[int, int]]:
