@@ -10,6 +10,7 @@ from xinyu_qq_trust_policy import (
     gateway_is_blocked_group_id,
     gateway_is_blocked_user_id,
     gateway_is_trusted_user_id,
+    gateway_trust_command_target,
     gateway_trust_level_for_user_id,
     is_trust_grant_command,
     is_trust_revoke_command,
@@ -81,6 +82,23 @@ def main() -> int:
         failures.append("gateway group-shadow alias stopped allowing configured group")
     if NativeQQGateway._group_shadow_group_allowed(gateway, "other"):
         failures.append("gateway group-shadow alias started allowing unrelated group")
+    if NativeQQGateway._trust_command_target is not gateway_trust_command_target:
+        failures.append("gateway trust-command target alias no longer uses trust policy helper")
+    reply_prepared = SimpleNamespace(
+        payload={
+            "metadata": {
+                "qq_reply_context": {
+                    "user_id": "67890",
+                    "sender_name": "Reply User",
+                },
+            },
+        },
+    )
+    if NativeQQGateway._trust_command_target(gateway, reply_prepared) != ("67890", "Reply User"):
+        failures.append("gateway trust-command target alias changed reply-context target")
+    text_prepared = SimpleNamespace(payload={"text": "please trust 67890"})
+    if NativeQQGateway._trust_command_target(gateway, text_prepared) != ("67890", ""):
+        failures.append("gateway trust-command target alias changed text target")
 
     if failures:
         print("XinYu QQ trust aliases smoke failed")

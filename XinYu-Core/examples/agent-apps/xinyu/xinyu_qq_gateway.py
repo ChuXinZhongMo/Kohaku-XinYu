@@ -114,11 +114,7 @@ class NativeQQGateway:
     _looks_like_trust_command = staticmethod(xinyu_qq_trust_policy.is_trust_grant_command)
     _looks_like_trust_revoke_command = staticmethod(xinyu_qq_trust_policy.is_trust_revoke_command)
 
-    def _trust_command_target(self, prepared: PreparedMessage) -> tuple[str, str]:
-        return xinyu_qq_trust_policy.trust_command_target(
-            prepared,
-            owner_user_ids=self.config.owner_user_ids,
-        )
+    _trust_command_target = xinyu_qq_trust_policy.gateway_trust_command_target
 
     def _persist_trusted_user_ids(self, trusted_user_ids: set[str]) -> bool:
         if self.config_path is None:

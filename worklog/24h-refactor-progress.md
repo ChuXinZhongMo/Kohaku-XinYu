@@ -2724,3 +2724,25 @@ Workspace: D:\XinYu
 - Risk: Low; only group-shadow allow-list helper ownership changed. Group shadow trace/projection writes, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-126-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 127 - 20:13
+
+- Task: Replace QQ trust-command target wrapper with direct trust policy gateway alias.
+- Why: `_trust_command_target` in `xinyu_qq_gateway.py` only forwarded the prepared message and `self.config.owner_user_ids` into `xinyu_qq_trust_policy.trust_command_target`. A gateway-level helper removes that shim while keeping trust target extraction in the trust policy module.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_trust_policy.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_trust_aliases_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py qq_trust_aliases_smoke.py xinyu_qq_trust_policy.py`
+  - `D:\XinYu\Python312\python.exe qq_trust_aliases_smoke.py`
+  - `D:\XinYu\Python312\python.exe qq_trust_policy_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_trust_policy.gateway_trust_command_target` now owns the gateway-bound trust-command target helper and gateway `_trust_command_target` directly aliases it. Compile, focused trust alias/policy smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only trust-command target helper ownership changed. Reply-context target extraction, numeric text target extraction, owner skip behavior, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-127-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.

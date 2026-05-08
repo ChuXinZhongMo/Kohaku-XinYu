@@ -126,6 +126,10 @@ def trust_command_target(prepared: Any, *, owner_user_ids: Iterable[str]) -> tup
     return "", ""
 
 
+def gateway_trust_command_target(gateway: Any, prepared: Any) -> tuple[str, str]:
+    return trust_command_target(prepared, owner_user_ids=gateway.config.owner_user_ids)
+
+
 def group_shadow_group_allowed(config: Any, group_id: str) -> bool:
     group_id = safe_str(group_id).strip()
     allowed = set(config.group_shadow_allowed_group_ids)
