@@ -2101,3 +2101,23 @@ Workspace: D:\XinYu
 - Risk: Low; only sticker import material data helper ownership changed. Sticker import material extraction, attachment resolver behavior, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-96-commit>`
 - Next: Continue with another isolated QQ gateway shim or core bridge helper slice.
+
+## Loop 97 - 18:54
+
+- Task: Replace QQ message kind normalizer wrapper with direct method alias.
+- Why: `_message_kind` only delegated to `xinyu_qq_normalizer.message_kind(self, event)`. Assigning the normalizer function directly preserves Python method binding and removes another gateway shim.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_normalizer_aliases_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_normalizer_aliases_smoke.py xinyu_qq_normalizer.py`
+  - `.\.venv\Scripts\python.exe qq_normalizer_aliases_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `_message_kind` now directly aliases `xinyu_qq_normalizer.message_kind` as a bound method. Compile, focused normalizer alias smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only message kind compatibility ownership changed. Private/group classification, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-97-commit>`
+- Next: Continue with another isolated QQ gateway shim or core bridge helper slice.

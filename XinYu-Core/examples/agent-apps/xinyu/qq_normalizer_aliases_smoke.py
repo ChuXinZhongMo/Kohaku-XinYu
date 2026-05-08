@@ -4,6 +4,7 @@ from xinyu_qq_gateway import NativeQQGateway
 from xinyu_qq_normalizer import (
     cq_bracket_continues_params,
     decode_cq_value,
+    message_kind,
     parse_cq_params,
     parse_cq_segments,
     strip_cq_segments,
@@ -31,6 +32,13 @@ def main() -> int:
         tricky, bracket_index
     ):
         failures.append("gateway CQ bracket continuation alias no longer delegates")
+
+    gateway = object.__new__(NativeQQGateway)
+    group_event = {"message_type": "private", "group_id": "10001"}
+    if NativeQQGateway._message_kind is not message_kind:
+        failures.append("gateway message kind helper is not a direct method alias")
+    if gateway._message_kind(group_event) != message_kind(gateway, group_event):
+        failures.append("gateway message kind alias no longer delegates")
 
     if failures:
         print("XinYu QQ normalizer aliases smoke failed")

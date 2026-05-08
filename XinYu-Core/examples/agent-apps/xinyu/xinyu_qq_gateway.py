@@ -2162,8 +2162,7 @@ class NativeQQGateway:
             },
         }
 
-    def _message_kind(self, event: dict[str, Any]) -> str:
-        return xinyu_qq_normalizer.message_kind(self, event)
+    _message_kind = xinyu_qq_normalizer.message_kind
 
     @staticmethod
     def _message_segments(event: dict[str, Any]) -> list[dict[str, Any]]:
