@@ -90,6 +90,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace QQ pending ack flush wrapper with direct method alias.
 - [x] Replace QQ local image file wrapper with direct method alias.
 - [x] Replace QQ local file wrapper with direct method alias.
+- [x] Record 2026-05-08 19:21 long-run health checkpoint.
 
 ## Stop-Gap First
 
