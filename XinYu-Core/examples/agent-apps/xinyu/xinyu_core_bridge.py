@@ -35,7 +35,11 @@ from xinyu_bridge_session import AgentSession, session_key_from_payload, session
 from xinyu_bridge_values import as_bool as _as_bool
 from xinyu_bridge_values import as_int as _as_int
 from xinyu_bridge_values import as_str_set as _as_str_set
+from xinyu_bridge_values import compact_text as _compact_text
+from xinyu_bridge_values import contains_any as _contains_any
+from xinyu_bridge_values import dedupe as _dedupe
 from xinyu_bridge_values import optional_int as _optional_int
+from xinyu_bridge_values import safe_str as _safe_str
 import xinyu_bridge_action_routes
 from xinyu_bridge_turn_pipeline import run_pre_model_routes
 import xinyu_bridge_v1_routes
@@ -656,19 +660,6 @@ def _ensure_repo_src(xinyu_dir: Path) -> Path:
     return src_root
 
 
-def _safe_str(value: Any, default: str = "") -> str:
-    if value is None:
-        return default
-    return str(value)
-
-
-def _compact_text(value: Any, limit: int) -> str:
-    text = re.sub(r"\s+", " ", _safe_str(value)).strip()
-    if len(text) <= limit:
-        return text
-    return text[: max(0, limit - 3)].rstrip() + "..."
-
-
 def _desktop_action_result_label(value: str) -> str:
     if value == "success":
         return "已完成"
@@ -701,18 +692,6 @@ def _desktop_action_theme_label(value: str) -> str:
 
 def _desktop_scrub_action_markers(value: Any) -> str:
     return sanitize_visible_text(value)
-
-
-def _dedupe(values: list[str] | tuple[str, ...]) -> list[str]:
-    seen: set[str] = set()
-    result: list[str] = []
-    for value in values:
-        text = _safe_str(value).strip()
-        if not text or text in seen:
-            continue
-        seen.add(text)
-        result.append(text)
-    return result
 
 
 def _memory_snapshot(memory_root: Path) -> dict[str, tuple[int, int]]:
@@ -827,10 +806,6 @@ def _payload_path(value: str) -> Path:
             path_text = path_text[1:]
         return Path(unquote(path_text))
     return Path(text)
-
-
-def _contains_any(text: str, markers: tuple[str, ...]) -> bool:
-    return any(marker in text for marker in markers)
 
 
 def _run_learning_study_chain(root: Path, mode: str) -> dict[str, object]:

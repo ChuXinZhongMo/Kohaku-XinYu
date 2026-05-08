@@ -1,6 +1,20 @@
 from __future__ import annotations
 
+import re
 from typing import Any
+
+
+def safe_str(value: Any, default: str = "") -> str:
+    if value is None:
+        return default
+    return str(value)
+
+
+def compact_text(value: Any, limit: int) -> str:
+    text = re.sub(r"\s+", " ", safe_str(value)).strip()
+    if len(text) <= limit:
+        return text
+    return text[: max(0, limit - 3)].rstrip() + "..."
 
 
 def as_bool(value: Any, default: bool = False) -> bool:
@@ -43,3 +57,19 @@ def as_str_set(value: Any) -> set[str]:
     else:
         raw_items = str(value).replace(";", ",").split(",")
     return {str(item).strip() for item in raw_items if str(item).strip()}
+
+
+def dedupe(values: list[str] | tuple[str, ...]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        text = safe_str(value).strip()
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        result.append(text)
+    return result
+
+
+def contains_any(text: str, markers: tuple[str, ...]) -> bool:
+    return any(marker in text for marker in markers)

@@ -34,6 +34,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract QQ rich segment summary helpers into `xinyu_qq_rich_context.py`.
 - [x] Re-export QQ gateway compatibility constants from their owner modules.
 - [x] Extract core bridge scalar value helpers into `xinyu_bridge_values.py`.
+- [x] Extract core bridge text/list helpers into `xinyu_bridge_values.py`.
 
 ## Stop-Gap First
 

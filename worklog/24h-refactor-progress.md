@@ -1161,3 +1161,23 @@ Workspace: D:\XinYu
 - Risk: Low; pure helper relocation. No HTTP routes, prompt text, persona semantics, long-term memory body text, state writes, QQ outbound, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-53-commit>`
 - Next: Continue with another isolated core bridge helper extraction.
+
+## Loop 54 - 11:51
+
+- Task: Extract core bridge text/list helpers.
+- Why: After scalar value parsing moved out, `xinyu_core_bridge.py` still owned pure text/list helpers for safe string conversion, compact display text, de-duplication, and marker checks. Keeping them in `xinyu_bridge_values.py` consolidates value normalization helpers.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_values.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_values_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_values.py xinyu_core_bridge.py bridge_values_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_values_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Safe string conversion, compact text, de-duplication, and marker membership helpers now live in `xinyu_bridge_values.py`; `xinyu_core_bridge.py` imports them under the previous private names. Compile, bridge values smoke, and bridge probe smoke passed.
+- Risk: Low; pure helper relocation. No HTTP routes, prompt text, persona semantics, long-term memory body text, state writes, QQ outbound, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-54-commit>`
+- Next: Continue with another isolated core bridge helper extraction.
