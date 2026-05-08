@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 import xinyu_qq_attachment_resolver as attachment_resolver
@@ -70,6 +71,12 @@ def main() -> int:
         failures.append("gateway local file helper is not a direct method alias")
     if NativeQQGateway._resolve_sticker_import_payload is not attachment_resolver.resolve_sticker_import_payload:
         failures.append("gateway sticker import resolver is not a direct method alias")
+    if NativeQQGateway._resolve_learning_ingest_payload is not attachment_resolver.resolve_learning_ingest_payload:
+        failures.append("gateway learning ingest resolver is not a direct method alias")
+    gateway = object.__new__(NativeQQGateway)
+    learning_payload = {"file_path": r"D:\XinYu\report.md", "metadata": {"segment_type": "file"}}
+    if asyncio.run(gateway._resolve_learning_ingest_payload(None, learning_payload)) != learning_payload:
+        failures.append("gateway learning ingest resolver alias no longer delegates")
 
     if failures:
         print("XinYu QQ attachment material smoke failed")

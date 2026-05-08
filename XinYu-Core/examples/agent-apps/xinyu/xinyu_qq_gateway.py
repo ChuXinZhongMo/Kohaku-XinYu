@@ -382,8 +382,7 @@ class NativeQQGateway:
 
     _flush_pending_message_acks = xinyu_qq_outbox_client.flush_pending_message_acks
 
-    async def _resolve_learning_ingest_payload(self, websocket: Any, payload: dict[str, Any]) -> dict[str, Any]:
-        return await xinyu_qq_attachment_resolver.resolve_learning_ingest_payload(self, websocket, payload)
+    _resolve_learning_ingest_payload = xinyu_qq_attachment_resolver.resolve_learning_ingest_payload
 
     _resolve_sticker_import_payload = xinyu_qq_attachment_resolver.resolve_sticker_import_payload
 

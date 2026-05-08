@@ -2366,3 +2366,23 @@ Workspace: D:\XinYu
 - Risk: Low; only sticker import payload resolver ownership changed. File resolution metadata, sticker import payload shape, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-109-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 110 - 19:27
+
+- Task: Replace QQ learning ingest payload resolver wrapper with direct method alias.
+- Why: `_resolve_learning_ingest_payload` only delegated to `xinyu_qq_attachment_resolver.resolve_learning_ingest_payload(self, websocket, payload)`. Assigning the attachment resolver coroutine directly preserves instance binding and removes another gateway shim.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_attachment_material_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_attachment_material_smoke.py xinyu_qq_attachment_resolver.py`
+  - `.\.venv\Scripts\python.exe qq_attachment_material_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `_resolve_learning_ingest_payload` now directly aliases `xinyu_qq_attachment_resolver.resolve_learning_ingest_payload` as a bound coroutine method. Compile, focused attachment material smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only learning ingest payload resolver ownership changed. Learning ingest payload shape, file resolution metadata, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-110-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.
