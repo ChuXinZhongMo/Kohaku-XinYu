@@ -339,6 +339,10 @@ def learning_material_from_data(segment_type: str, data: dict[str, Any]) -> dict
 
 
 def reply_file_learning_intent(gateway: Any, text: str) -> bool:
+    return reply_file_learning_intent_text(text)
+
+
+def reply_file_learning_intent_text(text: str) -> bool:
     stripped = text.strip()
     if not stripped:
         return False

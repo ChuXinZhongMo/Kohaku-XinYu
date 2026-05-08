@@ -636,9 +636,7 @@ class NativeQQGateway:
 
     _dedupe_forward_messages = staticmethod(xinyu_qq_forward_context.dedupe_forward_messages)
 
-    @staticmethod
-    def _reply_file_learning_intent(text: str) -> bool:
-        return xinyu_qq_attachment_resolver.reply_file_learning_intent(None, text)
+    _reply_file_learning_intent = staticmethod(xinyu_qq_attachment_resolver.reply_file_learning_intent_text)
 
     _extract_reply_message_id = staticmethod(xinyu_qq_forward_context.extract_reply_message_id)
     _extract_forward_message_ids = staticmethod(xinyu_qq_forward_context.extract_forward_message_ids)

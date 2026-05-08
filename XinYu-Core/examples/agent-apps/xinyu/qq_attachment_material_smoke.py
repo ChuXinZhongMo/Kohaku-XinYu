@@ -21,6 +21,10 @@ def main() -> int:
         != "https://example.invalid/a"
     ):
         failures.append("first text field value helper changed")
+    if not attachment_resolver.reply_file_learning_intent_text("please read this file"):
+        failures.append("reply file learning intent helper changed")
+    if attachment_resolver.reply_file_learning_intent_text("do not read this file"):
+        failures.append("reply file learning deny helper changed")
 
     learning = attachment_resolver.learning_material_from_data(
         "file",
@@ -77,6 +81,10 @@ def main() -> int:
         != "https://example.invalid/a"
     ):
         failures.append("gateway first text field alias no longer delegates")
+    if NativeQQGateway._reply_file_learning_intent is not attachment_resolver.reply_file_learning_intent_text:
+        failures.append("gateway reply file learning intent helper is not a direct static alias")
+    if not NativeQQGateway._reply_file_learning_intent("please read this file"):
+        failures.append("gateway reply file learning intent alias no longer delegates")
     if NativeQQGateway._onebot_local_image_file is not attachment_resolver.onebot_local_image_file:
         failures.append("gateway local image helper is not a direct method alias")
     if NativeQQGateway._onebot_local_file is not attachment_resolver.onebot_local_file:

@@ -2507,3 +2507,24 @@ Workspace: D:\XinYu
 - Risk: Low; only first-text-field helper ownership changed. Text field fallback behavior, attachment resolution, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-116-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 117 - 19:48
+
+- Task: Replace QQ reply file learning intent wrapper with direct resolver text alias.
+- Why: `_reply_file_learning_intent` in `xinyu_qq_gateway.py` only adapted away an unused legacy gateway parameter from `xinyu_qq_attachment_resolver.reply_file_learning_intent`. Adding a same-signature text helper lets the gateway use a direct static alias while preserving the old resolver compatibility entrypoint.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_attachment_resolver.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_attachment_material_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_attachment_material_smoke.py xinyu_qq_attachment_resolver.py`
+  - `.\.venv\Scripts\python.exe qq_attachment_material_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_attachment_resolver.reply_file_learning_intent_text` now owns the same-signature text helper and gateway `_reply_file_learning_intent` directly aliases it. Compile, focused attachment material smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only reply-file-learning intent helper ownership changed. Intent marker semantics, reply file upgrade flow, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-117-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.
