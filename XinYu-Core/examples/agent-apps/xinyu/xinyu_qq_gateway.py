@@ -415,8 +415,7 @@ class NativeQQGateway:
 
     _path_from_file_uri = staticmethod(xinyu_qq_attachment_resolver.path_from_file_uri)
 
-    def _onebot_local_image_file(self, image_path: str) -> tuple[str, str]:
-        return xinyu_qq_attachment_resolver.onebot_local_image_file(self, image_path)
+    _onebot_local_image_file = xinyu_qq_attachment_resolver.onebot_local_image_file
 
     def _onebot_local_file(self, file_path: str, *, file_name: str = "") -> tuple[str, str, str]:
         return xinyu_qq_attachment_resolver.onebot_local_file(self, file_path, file_name=file_name)
