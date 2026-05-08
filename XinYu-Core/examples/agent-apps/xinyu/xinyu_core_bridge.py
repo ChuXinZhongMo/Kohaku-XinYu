@@ -2662,8 +2662,7 @@ tags: [autonomy, maintenance, runtime]
 {note_lines}
 """
         try:
-            state_path.parent.mkdir(parents=True, exist_ok=True)
-            state_path.write_text(text, encoding="utf-8")
+            atomic_write_text(state_path, text)
         except Exception:
             pass
 

@@ -33,7 +33,7 @@ Scope: first-pass write-surface audit before introducing broader state governanc
 | Area | Current path examples | Category | Current risk | Next action |
 | --- | --- | --- | --- | --- |
 | Autonomous mind loop trace | `memory/context/autonomous_mind_loop_trace.log` | Log-like trace under memory | Append trace lives in `memory/context`, not `runtime/logs` | Audit only; do not move until readers are known. |
-| Autonomous mind loop state | `memory/context/autonomous_mind_loop_state.md` | Projection | Direct `write_text` from bridge | Candidate for atomic helper after tests cover the state shape. |
+| Autonomous mind loop state | `memory/context/autonomous_mind_loop_state.md` | Projection | Migrated to `state_service.atomic_write_text` in Loop 34 | Keep body shape; validate with `autonomous_state_smoke.py`. |
 | Desktop proactive request update | `memory/context/proactive_request_state.md` | Projection | Migrated to `state_service.atomic_write_text` in Loop 27 | Keep field semantics and validate with `xinyu_desktop_proactive_smoke.py`. |
 | Promise follow-up state | `memory/context/promise_followup_state.md` | Projection | Migrated to `state_service.atomic_write_text` in Loop 13 | Keep body shape; validate with `promise_followup_state_smoke.py` and focused promise follow-up pytest. |
 | Debug live system prompt | `runtime/debug/last_live_system_prompt.txt` | Runtime diagnostic cache | Already tmp-and-replace | Leave as runtime diagnostic, maybe move helper later. |
@@ -69,6 +69,7 @@ Scope: first-pass write-surface audit before introducing broader state governanc
 2. Migrate only runtime/projection writes first:
    - `xinyu_core_bridge.py` proactive request state update. Done in Loop 27.
    - `xinyu_core_bridge.py` promise follow-up state. Done in Loop 13.
+   - `xinyu_core_bridge.py` autonomous mind loop state. Done in Loop 34.
    - QQ runtime trace appends after QQ trust/outbox extraction.
 3. Leave long-term memory body writes in existing modules until the owner approves a memory-body migration slice.
 

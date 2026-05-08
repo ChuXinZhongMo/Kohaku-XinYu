@@ -12,6 +12,10 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Start `xinyu_qq_gateway.py` package boundary extraction with config/server/normalizer helpers. Config URL helper and WebSocket server helper boundaries are started; normalizer boundary already exists.
 - [x] Migrate another low-risk projection/runtime writer to `state_service.py`. Desktop proactive request state update now uses `atomic_write_text`.
 
+## 2026-05-08 Extended Queue
+
+- [x] Migrate autonomous mind loop projection state to `state_service.py`.
+
 ## Stop-Gap First
 
 - [x] Triage `diagnostics\check_xinyu_health.py --json` critical `recent_exceptions`. Diagnostic no longer counts its own ledger, v1 shadow trace, benign malformed WebSocket probe tracebacks, or JSONL `error=none` field names; current signal is `warn`.
