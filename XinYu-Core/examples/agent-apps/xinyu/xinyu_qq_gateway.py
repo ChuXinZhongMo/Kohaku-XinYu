@@ -25,6 +25,7 @@ import xinyu_qq_attachment_resolver
 import xinyu_qq_command_router
 from xinyu_qq_cli import build_gateway_parser
 from xinyu_qq_config import (
+    COMMAND_PREFIX_CHARS,
     GatewayConfig,
     as_bool as _as_bool,
     as_int as _as_int,
@@ -56,8 +57,9 @@ QQ_INBOUND_TRACE_REL = Path("runtime") / "qq_inbound_trace.jsonl"
 QQ_RICH_CONTEXT_TRACE_REL = Path("runtime") / "qq_rich_context_trace.jsonl"
 QQ_STICKER_IMPORT_TRACE_REL = Path("runtime") / "qq_sticker_import_trace.jsonl"
 QQ_RECENT_STICKER_STATE_REL = Path("runtime") / "qq_recent_sticker_state.json"
-SUPPORTED_IMAGE_SUFFIXES = frozenset({".bmp", ".gif", ".jfif", ".jpeg", ".jpg", ".png", ".webp"})
-COMMAND_PREFIX_CHARS = "/!.！#"
+SUPPORTED_IMAGE_SUFFIXES = xinyu_qq_attachment_resolver.SUPPORTED_IMAGE_SUFFIXES
+
+
 def _quiet_websockets_handshake_noise() -> None:
     for logger_name in ("websockets.server", "websockets.protocol"):
         logging.getLogger(logger_name).setLevel(logging.CRITICAL)

@@ -1119,3 +1119,24 @@ Workspace: D:\XinYu
 - Risk: Low-medium; rich context parsing ownership moved, but segment record shape and metadata fields are unchanged. No real QQ outbound, OneBot payload shape, sticker import writes, learning policy, persona semantics, memory body text, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-51-commit>`
 - Next: Continue with another isolated QQ parsing helper or remove gateway-only dead constants after confirming compatibility.
+
+## Loop 52 - 11:43
+
+- Task: Re-export QQ gateway compatibility constants from owner modules.
+- Why: `xinyu_qq_gateway.py` still duplicated command-prefix and supported-image suffix constants after config and attachment extraction. Re-exporting them preserves old imports while moving ownership to `xinyu_qq_config.py` and `xinyu_qq_attachment_resolver.py`.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_gateway_constants_smoke.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_gateway_constants_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_gateway_constants_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `COMMAND_PREFIX_CHARS` is imported from `xinyu_qq_config.py`; `SUPPORTED_IMAGE_SUFFIXES` re-exports the attachment resolver constant. Compile, constants smoke, QQ gateway smoke, and QQ review smoke passed.
+- Risk: Low; compatibility constant ownership only. No real QQ outbound, OneBot payload shape, trust policy, persona semantics, memory body text, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-52-commit>`
+- Next: Continue with another isolated QQ parsing helper.

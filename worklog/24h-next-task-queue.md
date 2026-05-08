@@ -32,6 +32,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract QQ attachment material builders into `xinyu_qq_attachment_resolver.py`.
 - [x] Record 2026-05-08 11:37 long-run health checkpoint.
 - [x] Extract QQ rich segment summary helpers into `xinyu_qq_rich_context.py`.
+- [x] Re-export QQ gateway compatibility constants from their owner modules.
 
 ## Stop-Gap First
 
