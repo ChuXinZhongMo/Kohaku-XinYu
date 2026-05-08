@@ -99,6 +99,7 @@ For Python code changes, also compile the changed Python files:
 | QQ rich context extraction | `python -m py_compile xinyu_qq_rich_context.py xinyu_qq_gateway.py qq_rich_context_smoke.py`; `qq_rich_context_smoke.py`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py` |
 | QQ gateway compatibility constants | `python -m py_compile xinyu_qq_gateway.py qq_gateway_constants_smoke.py`; `qq_gateway_constants_smoke.py`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py` |
 | QQ gateway utility helpers | `python -m py_compile xinyu_qq_gateway_utils.py xinyu_qq_gateway.py qq_gateway_utils_smoke.py`; `qq_gateway_utils_smoke.py`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py`; `python -m pytest tests\test_gateway_ack_spool.py -q` |
+| QQ trust config persistence | `python -m py_compile xinyu_qq_gateway.py qq_trust_config_persistence_smoke.py state_service.py`; `qq_trust_config_persistence_smoke.py`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py`; `state_io_smoke.py` |
 | v1 canary gate extraction | `python -m py_compile xinyu_v1_canary_readiness.py <new-module>`; `python -m pytest tests\test_v1_canary_readiness.py tests\v1\test_bridge_compatibility.py tests\v1\test_hybrid_router.py -q` |
 | Long-run diagnostic addition | `python -m py_compile diagnostics\check_xinyu_health.py`; `diagnostics\check_xinyu_health.py --json`; `diagnostics\check_xinyu_health.py --json --write-ledger`; `diagnostics\check_xinyu_health.py --json --recent-window-minutes 0`; `long_run_status.py` |
 

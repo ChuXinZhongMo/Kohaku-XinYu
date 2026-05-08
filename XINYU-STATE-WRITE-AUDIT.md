@@ -44,7 +44,7 @@ Scope: first-pass write-surface audit before introducing broader state governanc
 
 | Area | Current path examples | Category | Current risk | Next action |
 | --- | --- | --- | --- | --- |
-| Trusted user config | `xinyu_qq_gateway.config.json` | Configuration | Runtime command can persist trust changes to config | Extract trust policy before changing persistence semantics. |
+| Trusted user config | `xinyu_qq_gateway.config.json` | Configuration | Runtime command can persist trust changes to config | Migrated to `state_service.atomic_write_json(sort_keys=False)` in Loop 74 after trust policy extraction; keep config shape and validate with `qq_trust_config_persistence_smoke.py`. |
 | Inbound/rich/sticker traces | `runtime/qq_inbound_trace.jsonl`, `runtime/qq_rich_context_trace.jsonl`, `runtime/qq_sticker_import_trace.jsonl` | Runtime traces | Migrated to `state_service.append_jsonl` in Loop 35 | Keep row fields; validate with `qq_runtime_trace_smoke.py` and QQ gateway smoke. |
 | Recent sticker state | `runtime/qq_recent_sticker_state.json` | Runtime projection | Migrated to `state_service.atomic_write_json` in Loop 36 | Keep row fields; validate with `qq_recent_sticker_state_smoke.py`. |
 | Group shadow observations | `runtime/group_shadow/group_shadow_observations.jsonl`, `memory/context/group_shadow_state.md` | Runtime trace plus projection | Migrated to `state_service.append_jsonl` and `atomic_write_text` in Loop 37 | Keep no-reply/stable-memory-blocked boundary fields; validate with `group_shadow_state_smoke.py`. |
@@ -72,6 +72,7 @@ Scope: first-pass write-surface audit before introducing broader state governanc
    - `xinyu_core_bridge.py` promise follow-up state. Done in Loop 13.
    - `xinyu_core_bridge.py` autonomous mind loop state. Done in Loop 34.
    - QQ runtime trace appends after QQ trust/outbox extraction. Done in Loop 35.
+   - QQ trusted-user config persistence. Done in Loop 74.
 3. Leave long-term memory body writes in existing modules until the owner approves a memory-body migration slice.
 
 ## Required Validation For State Changes

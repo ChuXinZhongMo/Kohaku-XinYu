@@ -1608,3 +1608,26 @@ Workspace: D:\XinYu
 - Risk: Low-medium; Desktop event projection helper ownership moved, but event field names, privacy labels, hash format, avatar URL format, text preview rules, and proactive expiry behavior are unchanged. No route payload schema, prompt/persona semantics, long-term memory body text, QQ outbound, v1 traffic behavior, or state writes were touched.
 - Rollback: `git revert <loop-73-commit>`
 - Next: Continue with another isolated helper group or route wrapper boundary.
+
+## Loop 74 - 12:59
+
+- Task: Migrate QQ trusted-user config persistence to `state_service`.
+- Why: `_persist_trusted_user_ids` in `xinyu_qq_gateway.py` still hand-rolled temp-file JSON persistence for `xinyu_qq_gateway.config.json`. Switching to `state_service.atomic_write_json(sort_keys=False)` keeps the same config shape while moving another write through the shared state helper.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_trust_config_persistence_smoke.py`
+  - `XINYU-STATE-WRITE-AUDIT.md`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_trust_config_persistence_smoke.py state_service.py`
+  - `.\.venv\Scripts\python.exe qq_trust_config_persistence_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `.\.venv\Scripts\python.exe state_io_smoke.py`
+  - `git diff --check`
+- Result: QQ trusted-user config persistence now uses `state_service.atomic_write_json(sort_keys=False)`. The focused smoke verifies sorted trusted IDs, preservation of unrelated config keys, and no leftover temp file. Compile, trust config persistence smoke, QQ gateway smoke, QQ review smoke, state IO smoke, and diff check passed.
+- Risk: Low-medium; config write helper changed, but config path, JSON indentation, trusted id sorting, unrelated key preservation, trust policy, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior were unchanged.
+- Rollback: `git revert <loop-74-commit>`
+- Next: Continue with another state governance or helper extraction slice.

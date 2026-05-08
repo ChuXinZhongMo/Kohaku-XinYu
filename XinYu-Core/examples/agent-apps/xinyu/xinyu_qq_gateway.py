@@ -138,9 +138,7 @@ class NativeQQGateway:
             config_path = self.config_path.resolve()
             raw = _load_json(config_path)
             raw["trusted_user_ids"] = sorted(trusted_user_ids)
-            tmp_path = config_path.with_suffix(config_path.suffix + ".tmp")
-            tmp_path.write_text(json.dumps(raw, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-            tmp_path.replace(config_path)
+            atomic_write_json(config_path, raw, sort_keys=False)
             return True
         except OSError as exc:
             print(f"[xinyu_qq_gateway] trust config write failed: {type(exc).__name__}: {exc}", flush=True)
