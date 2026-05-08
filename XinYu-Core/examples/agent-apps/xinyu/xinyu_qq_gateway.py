@@ -272,25 +272,7 @@ class NativeQQGateway:
 
     _ack_qq_outbox = xinyu_qq_outbox_client.ack_qq_outbox
 
-    async def _ack_sent_outbox_delivery(
-        self,
-        claim: dict[str, Any],
-        *,
-        target: ReplyTarget,
-        visible_text: str,
-        adapter_message_id: str,
-        delivery_kind: str,
-        adapter_error: str = "",
-    ) -> None:
-        await xinyu_qq_outbox_client.ack_sent_outbox_delivery(
-            self,
-            claim,
-            target=target,
-            visible_text=visible_text,
-            adapter_message_id=adapter_message_id,
-            delivery_kind=delivery_kind,
-            adapter_error=adapter_error,
-        )
+    _ack_sent_outbox_delivery = xinyu_qq_outbox_client.ack_sent_outbox_delivery
 
     _outbox_message_ack_payload = xinyu_qq_outbox_client.outbox_message_ack_payload
 

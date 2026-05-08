@@ -2873,3 +2873,24 @@ Workspace: D:\XinYu
 - Risk: Low; only sent visible reply ack helper ownership changed. Disabled-token short circuit, sent-message ack creation, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-133-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 134 - 20:25
+
+- Task: Replace QQ sent outbox delivery ack wrapper with direct outbox client alias.
+- Why: `_ack_sent_outbox_delivery` in `xinyu_qq_gateway.py` only awaited `xinyu_qq_outbox_client.ack_sent_outbox_delivery` with the same gateway, claim, target, visible text, adapter id, delivery kind, and adapter error. The signatures already match, so the gateway can use a direct async method alias.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_outbox_route_alias_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py qq_outbox_route_alias_smoke.py xinyu_qq_outbox_client.py`
+  - `D:\XinYu\Python312\python.exe qq_outbox_route_alias_smoke.py`
+  - `D:\XinYu\Python312\python.exe qq_outbox_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: Gateway `_ack_sent_outbox_delivery` now directly aliases `xinyu_qq_outbox_client.ack_sent_outbox_delivery`. Compile, focused outbox route alias smoke with disabled-token short circuit, QQ outbox smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only sent outbox delivery ack helper ownership changed. Disabled-token short circuit, delivery ack payload creation, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-134-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.

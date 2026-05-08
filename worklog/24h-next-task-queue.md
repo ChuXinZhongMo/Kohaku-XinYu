@@ -116,6 +116,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace QQ sent-message ack record wrapper with direct outbox client alias.
 - [x] Replace QQ sent-message ack send wrapper with direct outbox client alias.
 - [x] Replace QQ sent visible reply ack wrapper with direct outbox client alias.
+- [x] Replace QQ sent outbox delivery ack wrapper with direct outbox client alias.
 
 ## Stop-Gap First
 

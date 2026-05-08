@@ -96,6 +96,24 @@ def main() -> int:
     record_result = asyncio.run(gateway._record_sent_message_ack_payload({"adapter_message_id": "qq-msg-4"}))
     if record_result:
         failures.append("gateway sent-message ack record alias ignored disabled bridge token")
+    if NativeQQGateway._ack_sent_outbox_delivery is not outbox_client.ack_sent_outbox_delivery:
+        failures.append("gateway sent outbox delivery ack helper is not a direct method alias")
+    asyncio.run(
+        gateway._ack_sent_outbox_delivery(
+            {
+                "message_id": "outbox-2",
+                "source": "smoke",
+                "message_type": "text",
+                "metadata": {"session_id": "qq:private:42"},
+            },
+            target=ReplyTarget(message_kind="private", user_id="42", group_id=""),
+            visible_text="sent reply",
+            adapter_message_id="qq-msg-6",
+            delivery_kind="text",
+        )
+    )
+    if gateway.client.message_ack_payloads:
+        failures.append("gateway sent outbox delivery ack alias ignored disabled bridge token")
 
     class _AckSpool:
         def __init__(self) -> None:
