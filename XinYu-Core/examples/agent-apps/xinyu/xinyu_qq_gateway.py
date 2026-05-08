@@ -270,21 +270,7 @@ class NativeQQGateway:
 
     _onebot_action_result = xinyu_qq_outbox_client.onebot_action_result
 
-    async def _ack_qq_outbox(
-        self,
-        claim: dict[str, Any],
-        *,
-        status: str,
-        adapter_message_id: str = "",
-        error: str = "",
-    ) -> None:
-        await xinyu_qq_outbox_client.ack_qq_outbox(
-            self,
-            claim,
-            status=status,
-            adapter_message_id=adapter_message_id,
-            error=error,
-        )
+    _ack_qq_outbox = xinyu_qq_outbox_client.ack_qq_outbox
 
     async def _ack_sent_outbox_delivery(
         self,

@@ -2789,3 +2789,24 @@ Workspace: D:\XinYu
 - Risk: Low; only sent-outbox ack payload helper ownership changed. Payload fields, outbox queue persistence, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-129-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 130 - 20:18
+
+- Task: Replace QQ outbox ack wrapper with direct outbox client alias.
+- Why: `_ack_qq_outbox` in `xinyu_qq_gateway.py` only awaited `xinyu_qq_outbox_client.ack_qq_outbox` with the same gateway/claim/status/adapter/error arguments. The signatures already match, so the gateway can use a direct async method alias.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_outbox_route_alias_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py qq_outbox_route_alias_smoke.py xinyu_qq_outbox_client.py`
+  - `D:\XinYu\Python312\python.exe qq_outbox_route_alias_smoke.py`
+  - `D:\XinYu\Python312\python.exe qq_outbox_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: Gateway `_ack_qq_outbox` now directly aliases `xinyu_qq_outbox_client.ack_qq_outbox`. Compile, focused outbox route alias smoke with fake client ack, QQ outbox smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only outbox ack helper ownership changed. Ack payload fields, outbox queue persistence, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-130-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.

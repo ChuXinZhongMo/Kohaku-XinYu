@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import xinyu_qq_outbox_client as outbox_client
 from xinyu_qq_gateway import NativeQQGateway, PreparedMessage, ReplyTarget
 from xinyu_qq_outbox_client import sent_outbox_delivery_route
@@ -61,6 +63,27 @@ def main() -> int:
         failures.append("gateway outbox message ack payload alias changed adapter id")
     if outbox_ack_payload.get("target", {}).get("user_id") != "42":
         failures.append("gateway outbox message ack payload alias changed target")
+    if NativeQQGateway._ack_qq_outbox is not outbox_client.ack_qq_outbox:
+        failures.append("gateway QQ outbox ack helper is not a direct method alias")
+
+    class _Client:
+        def __init__(self) -> None:
+            self.ack_payloads: list[dict[str, str]] = []
+
+        async def qq_outbox_ack(self, payload: dict[str, str]) -> dict[str, bool]:
+            self.ack_payloads.append(dict(payload))
+            return {"accepted": True}
+
+    gateway.client = _Client()
+    asyncio.run(
+        gateway._ack_qq_outbox(
+            {"message_id": "outbox-1", "claim_id": "claim-1"},
+            status="sent",
+            adapter_message_id="qq-msg-3",
+        )
+    )
+    if gateway.client.ack_payloads[-1].get("adapter_message_id") != "qq-msg-3":
+        failures.append("gateway QQ outbox ack alias changed adapter message id")
 
     class _AckSpool:
         def __init__(self) -> None:
