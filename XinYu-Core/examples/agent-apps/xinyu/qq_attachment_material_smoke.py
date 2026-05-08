@@ -47,6 +47,8 @@ def main() -> int:
         "file_id": "f1",
     }:
         failures.append("gateway learning material wrapper no longer delegates")
+    if NativeQQGateway._looks_like_file_path is not attachment_resolver.looks_like_file_path:
+        failures.append("gateway file path helper is not a direct alias")
     if not NativeQQGateway._looks_like_file_path(r"D:\XinYu\a.txt"):
         failures.append("gateway file path wrapper no longer delegates")
     if NativeQQGateway._path_from_file_uri("file:///D:/XinYu/a.txt") != Path("D:/XinYu/a.txt"):

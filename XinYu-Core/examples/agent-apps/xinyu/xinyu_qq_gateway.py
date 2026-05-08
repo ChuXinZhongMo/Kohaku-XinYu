@@ -2306,9 +2306,7 @@ class NativeQQGateway:
                 return material
         return None
 
-    @staticmethod
-    def _looks_like_file_path(value: str) -> bool:
-        return xinyu_qq_attachment_resolver.looks_like_file_path(value)
+    _looks_like_file_path = staticmethod(xinyu_qq_attachment_resolver.looks_like_file_path)
 
     def _sender_name(self, event: dict[str, Any]) -> str:
         return xinyu_qq_normalizer.sender_name(self, event)
