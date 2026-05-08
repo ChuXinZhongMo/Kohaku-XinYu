@@ -1232,9 +1232,7 @@ class XinYuBridgeRuntime:
             memory_root_exists=self.memory_root.exists(),
         )
 
-    @staticmethod
-    def _desktop_limit(value: Any, *, default: int, maximum: int) -> int:
-        return desktop_service_limit(value, default=default, maximum=maximum)
+    _desktop_limit = staticmethod(desktop_service_limit)
 
     async def _desktop_publish_event(
         self,

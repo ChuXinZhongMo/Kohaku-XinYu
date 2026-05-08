@@ -1745,3 +1745,25 @@ Workspace: D:\XinYu
 - Risk: Low; documentation and runtime diagnostic ledger observation only. No runtime/memory deletion, long-term memory body edit, prompt/persona semantic edit, real QQ outbound test, or v1 traffic expansion was performed.
 - Rollback: `git revert <loop-79-commit>`
 - Next: Continue with another isolated core bridge helper extraction or state governance slice.
+
+## Loop 80 - 13:23
+
+- Task: Replace core bridge desktop limit wrapper with direct service alias.
+- Why: `_desktop_limit` was a one-line static wrapper around `xinyu_desktop_service.desktop_limit`. Replacing it with a direct `staticmethod` alias removes another trivial helper body from `XinYuBridgeRuntime` while keeping the compatibility entrypoint.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_desktop_service_aliases_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile bridge_desktop_service_aliases_smoke.py xinyu_core_bridge.py xinyu_desktop_service.py`
+  - `.\.venv\Scripts\python.exe bridge_desktop_service_aliases_smoke.py`
+  - `.\.venv\Scripts\python.exe service_boundary_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_desktop_rest_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: `_desktop_limit` now directly aliases `desktop_service_limit`. Compile, focused desktop service alias smoke, service boundary smoke, Desktop REST smoke, bridge probe, and diff check passed.
+- Risk: Low; only a one-line compatibility wrapper changed. Desktop limit clamping, route payloads, event shapes, prompt/persona semantics, long-term memory body text, QQ outbound behavior, and v1 traffic behavior were unchanged.
+- Rollback: `git revert <loop-80-commit>`
+- Next: Continue with another isolated bridge helper extraction or state governance slice.
