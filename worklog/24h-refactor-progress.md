@@ -1500,3 +1500,26 @@ Workspace: D:\XinYu
 - Risk: Low-medium; visible reply bubble helper ownership moved, but split markers, numeric parsing, false-limitation markers, and runtime static entrypoints are unchanged. No prompt/persona semantics, long-term memory body text, QQ outbound, v1 traffic behavior, route payload shape, or state writes were touched.
 - Rollback: `git revert <loop-68-commit>`
 - Next: Continue with another isolated static helper group inside `XinYuBridgeRuntime`.
+
+## Loop 69 - 12:43
+
+- Task: Extract core bridge recent sticker reply helpers.
+- Why: `XinYuBridgeRuntime` owned three pure static helpers for recognizing owner follow-up questions about a recent QQ sticker and composing the current/tail reply. Moving them to `xinyu_bridge_recent_sticker_reply.py` trims sticker-specific reply logic out of the runtime class while preserving static method compatibility.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_recent_sticker_reply.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_recent_sticker_reply_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_recent_sticker_reply.py bridge_recent_sticker_reply_smoke.py xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe bridge_recent_sticker_reply_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_speech_controller_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Recent sticker question detection and reply helpers now live in `xinyu_bridge_recent_sticker_reply.py`; runtime static entrypoints keep their previous names. Compile, focused sticker reply smoke, QQ gateway smoke, speech controller smoke, bridge probe, and diff check passed.
+- Risk: Low-medium; sticker follow-up reply helper ownership moved, but question markers, metadata keys, tail parsing, and reply strings are unchanged. No prompt/persona semantics, long-term memory body text, real QQ outbound, v1 traffic behavior, route payload shape, or state writes were touched.
+- Rollback: `git revert <loop-69-commit>`
+- Next: Continue with another isolated static helper group inside `XinYuBridgeRuntime`.

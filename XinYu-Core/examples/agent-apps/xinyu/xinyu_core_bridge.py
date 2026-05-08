@@ -46,6 +46,9 @@ from xinyu_bridge_reply_text import normalize_bridge_reply as _normalize_reply
 from xinyu_bridge_reply_bubbles import looks_like_false_single_bubble_limitation
 from xinyu_bridge_reply_bubbles import numeric_bubble_units_from_text
 from xinyu_bridge_reply_bubbles import owner_requested_reply_bubble_units
+from xinyu_bridge_recent_sticker_reply import current_sticker_question_reply
+from xinyu_bridge_recent_sticker_reply import is_recent_sticker_question
+from xinyu_bridge_recent_sticker_reply import recent_sticker_question_reply
 from xinyu_bridge_renderer import BridgeRenderer
 from xinyu_bridge_session import AgentSession, session_key_from_payload, session_keys_to_expire
 from xinyu_bridge_state_text import parse_iso as _parse_iso
@@ -5980,92 +5983,9 @@ tags: [promise, followup, qq-outbox, continuity]
         parts.append("【收到的表情记录】" + "；".join(details))
         return "\n".join(parts)
 
-    @staticmethod
-    def _is_recent_sticker_question(user_text: str) -> bool:
-        compact = re.sub(r"\s+", "", _safe_str(user_text))
-        if not compact:
-            return False
-        exact_markers = (
-            "我刚发的是什么",
-            "刚发的是什么",
-            "刚才发的是什么",
-            "我刚发了什么",
-            "刚发了什么",
-            "刚才发了什么",
-            "我发的是什么",
-            "我发了什么",
-            "刚那个表情是什么",
-            "刚才那个表情是什么",
-            "刚刚那个表情是什么",
-        )
-        if any(marker in compact for marker in exact_markers):
-            return True
-        return "刚" in compact and "表情" in compact and any(marker in compact for marker in ("什么", "啥", "内容"))
-
-    @staticmethod
-    def _current_sticker_question_reply(user_text: str, payload: dict[str, Any]) -> str:
-        if not XinYuBridgeRuntime._is_recent_sticker_question(user_text):
-            return ""
-        metadata = payload.get("metadata") if isinstance(payload, dict) else {}
-        if not isinstance(metadata, dict):
-            return ""
-        if _as_bool(metadata.get("recent_sticker_unavailable"), default=False):
-            return "你刚发的是一张表情包。但这次 QQ 只给了动画表情占位，我没抓到具体画面。"
-        if not (
-            _as_bool(metadata.get("recent_sticker_question"), default=False)
-            or _as_bool(metadata.get("sticker_import_completed"), default=False)
-        ):
-            return ""
-        if not _as_bool(metadata.get("sticker_import_completed"), default=False):
-            return ""
-        label = _safe_str(metadata.get("sticker_mood_label") or metadata.get("sticker_mood")).strip()
-        confidence = _safe_str(metadata.get("sticker_confidence")).strip()
-        image_context = metadata.get("qq_image_context")
-        image_context = image_context if isinstance(image_context, dict) else {}
-        meaning = _safe_str(image_context.get("meaning")).strip()
-        if label:
-            reply = f"你刚发的是偏{label}的表情包。"
-        else:
-            reply = "你刚发的是一张表情包。"
-        if meaning:
-            reply += f"看起来是{meaning}。"
-        if confidence.lower() in {"low", "低", "unclear"}:
-            reply += "不过这个判断不太稳。"
-        return reply
-
-    @staticmethod
-    def _recent_sticker_question_reply(user_text: str, dialogue_tail: list[dict[str, str]]) -> str:
-        if not XinYuBridgeRuntime._is_recent_sticker_question(user_text):
-            return ""
-        for item in reversed(dialogue_tail[-12:]):
-            content = _safe_str(item.get("content"))
-            marker = "【收到的表情记录】"
-            if marker not in content:
-                continue
-            detail = content.split(marker, 1)[1]
-            label = ""
-            meaning = ""
-            confidence = ""
-            for key, assign in (("label", "分类="), ("meaning", "语义="), ("confidence", "置信度=")):
-                match = re.search(re.escape(assign) + r"([^；\n]+)", detail)
-                if not match:
-                    continue
-                if key == "label":
-                    label = match.group(1).strip()
-                elif key == "meaning":
-                    meaning = match.group(1).strip()
-                else:
-                    confidence = match.group(1).strip()
-            if label:
-                reply = f"你刚发的是偏{label}的表情包。"
-            else:
-                reply = "你刚发的是一张表情包。"
-            if meaning:
-                reply += f"看起来是{meaning}。"
-            if confidence and confidence.lower() in {"low", "低", "unclear"}:
-                reply += "不过这个判断不太稳。"
-            return reply
-        return ""
+    _is_recent_sticker_question = staticmethod(is_recent_sticker_question)
+    _current_sticker_question_reply = staticmethod(current_sticker_question_reply)
+    _recent_sticker_question_reply = staticmethod(recent_sticker_question_reply)
 
     def _append_sticker_delivery_tail(self, session: AgentSession, sticker_reply: dict[str, Any]) -> bool:
         if not isinstance(sticker_reply, dict) or not _as_bool(sticker_reply.get("queued"), default=False):
