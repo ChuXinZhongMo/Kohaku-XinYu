@@ -380,8 +380,7 @@ class NativeQQGateway:
             spool_on_failure=spool_on_failure,
         )
 
-    async def _flush_pending_message_acks(self, *, limit: int = 20) -> dict[str, Any]:
-        return await xinyu_qq_outbox_client.flush_pending_message_acks(self, limit=limit)
+    _flush_pending_message_acks = xinyu_qq_outbox_client.flush_pending_message_acks
 
     async def _resolve_learning_ingest_payload(self, websocket: Any, payload: dict[str, Any]) -> dict[str, Any]:
         return await xinyu_qq_attachment_resolver.resolve_learning_ingest_payload(self, websocket, payload)

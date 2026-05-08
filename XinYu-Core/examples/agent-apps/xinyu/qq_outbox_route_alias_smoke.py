@@ -68,6 +68,8 @@ def main() -> int:
     )
     if ack_payload.get("adapter_message_id") != "qq-msg-1" or ack_payload.get("visible_text") != "visible reply":
         failures.append("gateway sent-message ack payload alias no longer delegates")
+    if NativeQQGateway._flush_pending_message_acks is not outbox_client.flush_pending_message_acks:
+        failures.append("gateway pending ack flush helper is not a direct method alias")
 
     if failures:
         print("XinYu QQ outbox route alias smoke failed")
