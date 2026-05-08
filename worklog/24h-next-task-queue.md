@@ -97,6 +97,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace QQ OneBot file resolver wrapper with direct method alias.
 - [x] Replace QQ OneBot file URL action wrapper with direct method alias.
 - [x] Replace QQ OneBot action payload wrapper with direct method alias.
+- [x] Replace QQ OneBot action data wrapper with direct method alias.
 
 ## Stop-Gap First
 
