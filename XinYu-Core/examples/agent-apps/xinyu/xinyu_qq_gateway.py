@@ -278,8 +278,7 @@ class NativeQQGateway:
     def _outbox_target(self, claim: dict[str, Any]) -> ReplyTarget | None:
         return xinyu_qq_outbox_client.outbox_target(self, claim, ReplyTarget)
 
-    def _onebot_action_result(self, response: dict[str, Any] | None) -> tuple[bool, str, str]:
-        return xinyu_qq_outbox_client.onebot_action_result(self, response)
+    _onebot_action_result = xinyu_qq_outbox_client.onebot_action_result
 
     async def _ack_qq_outbox(
         self,

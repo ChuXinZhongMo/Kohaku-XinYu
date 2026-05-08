@@ -83,6 +83,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace QQ text extraction normalizer wrapper with direct method alias.
 - [x] Replace QQ sender name normalizer wrapper with direct method alias.
 - [x] Replace QQ websocket parser normalizer wrapper with direct method alias.
+- [x] Replace QQ OneBot action result wrapper with direct method alias.
 
 ## Stop-Gap First
 
