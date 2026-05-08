@@ -38,6 +38,7 @@ from xinyu_qq_config import (
 import xinyu_qq_normalizer
 import xinyu_qq_outbox_client
 import xinyu_qq_outbox_dispatcher
+import xinyu_qq_server
 import xinyu_qq_sender
 import xinyu_qq_trust_policy
 from xinyu_visible_reply_guard import dedupe_visible_reply
@@ -803,14 +804,14 @@ class NativeQQGateway:
                 loop.add_signal_handler(sig, stop_event.set)
 
     async def _handle_connection(self, websocket: Any) -> None:
-        path = _websocket_path(websocket)
-        if self.config.onebot_path and path not in {"", self.config.onebot_path}:
+        path = xinyu_qq_server.websocket_path(websocket)
+        if not xinyu_qq_server.websocket_path_allowed(path, self.config.onebot_path):
             print(f"[xinyu_qq_gateway] rejecting websocket path: {path}", flush=True)
             await websocket.close(code=1008, reason="invalid path")
             return
 
         self._connection_count += 1
-        connection_id = f"napcat-{int(time.time())}-{self._connection_count}"
+        connection_id = xinyu_qq_server.connection_id("napcat", int(time.time()), self._connection_count)
         self._websocket_connection_ids[id(websocket)] = connection_id
         print(f"[xinyu_qq_gateway] NapCat connected: {connection_id} path={path or self.config.onebot_path}", flush=True)
         outbox_task: asyncio.Task[Any] | None = None
@@ -3987,14 +3988,6 @@ class NativeQQGateway:
         except BridgeError as exc:
             print(f"[xinyu_qq_gateway] OneBot action failed: {action}: {exc}", flush=True)
             return None
-
-
-def _websocket_path(websocket: Any) -> str:
-    request = getattr(websocket, "request", None)
-    path = getattr(request, "path", "") if request is not None else ""
-    if path:
-        return str(path)
-    return _safe_str(getattr(websocket, "path", ""))
 
 
 def _build_parser() -> argparse.ArgumentParser:

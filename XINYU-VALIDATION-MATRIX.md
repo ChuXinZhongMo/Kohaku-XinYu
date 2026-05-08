@@ -69,6 +69,7 @@ For Python code changes, also compile the changed Python files:
 | State service helper | `python -m py_compile state_service.py`; `state_io_smoke.py`; `promise_followup_state_smoke.py`; `xinyu_desktop_proactive_smoke.py` for proactive request state; any focused test added for the helper |
 | QQ trust/outbox extraction | `python -m py_compile xinyu_qq_gateway.py <new-module>`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py`; `qq_outbox_smoke.py`; sent-index lookup via `check_sent_index.py <adapter_msg_id>` or the focused pytest fallback |
 | QQ config/sender/command extraction | `python -m py_compile xinyu_qq_gateway.py <new-module>`; `xinyu_qq_config_smoke.py` for config helpers; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py` |
+| QQ server extraction | `python -m py_compile xinyu_qq_server.py xinyu_qq_gateway.py xinyu_qq_server_smoke.py`; `xinyu_qq_server_smoke.py`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py` |
 | v1 canary gate extraction | `python -m py_compile xinyu_v1_canary_readiness.py <new-module>`; `python -m pytest tests\test_v1_canary_readiness.py tests\v1\test_bridge_compatibility.py tests\v1\test_hybrid_router.py -q` |
 | Long-run diagnostic addition | `python -m py_compile diagnostics\check_xinyu_health.py`; `diagnostics\check_xinyu_health.py --json`; `diagnostics\check_xinyu_health.py --json --write-ledger`; `diagnostics\check_xinyu_health.py --json --recent-window-minutes 0`; `long_run_status.py` |
 

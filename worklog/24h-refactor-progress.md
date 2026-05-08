@@ -691,3 +691,25 @@ Workspace: D:\XinYu
 - Risk: Low; pure helper extraction around file metadata. No prompt text, persona semantics, memory body content, QQ outbound behavior, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-31-commit>`
 - Next: Continue with QQ server/config model split or another state-service migration.
+
+## Loop 32 - 10:44
+
+- Task: Extract QQ WebSocket server helper functions.
+- Why: `xinyu_qq_gateway.py` still owns low-level server concerns such as WebSocket path compatibility and connection id formatting. Extracting pure helpers starts the server boundary without changing transport behavior.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_server.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_server_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_server.py xinyu_qq_server_smoke.py xinyu_qq_gateway.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_server_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: WebSocket path extraction, path allow checks, and connection id formatting now live in `xinyu_qq_server.py`. Compile, server smoke, gateway smoke, and review smoke passed.
+- Risk: Low; pure transport helper extraction. No real QQ outbound, OneBot payload shape, trust policy, persona semantics, memory body content, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-32-commit>`
+- Next: Continue with deeper QQ server class extraction or final queue reconciliation.
