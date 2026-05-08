@@ -31,10 +31,15 @@ def main() -> int:
     class _AckSpool:
         def __init__(self) -> None:
             self.pending_payloads: list[dict[str, str]] = []
+            self.acked_payloads: list[dict[str, str]] = []
 
         def append_pending(self, payload: dict[str, str]) -> dict[str, bool]:
             self.pending_payloads.append(dict(payload))
             return {"queued": True}
+
+        def append_acked(self, payload: dict[str, str]) -> dict[str, bool]:
+            self.acked_payloads.append(dict(payload))
+            return {"acked": True}
 
     gateway.ack_spool = _AckSpool()
     pending_payload = {"adapter_message_id": "qq-msg-1"}
@@ -42,6 +47,10 @@ def main() -> int:
         failures.append("gateway pending ack spool helper is not a direct method alias")
     if not gateway._spool_pending_message_ack(pending_payload):
         failures.append("gateway pending ack spool alias no longer delegates")
+    if NativeQQGateway._spool_acked_message_ack is not outbox_client.spool_acked_message_ack:
+        failures.append("gateway acked spool helper is not a direct method alias")
+    if not gateway._spool_acked_message_ack(pending_payload):
+        failures.append("gateway acked spool alias no longer delegates")
 
     if failures:
         print("XinYu QQ outbox route alias smoke failed")
