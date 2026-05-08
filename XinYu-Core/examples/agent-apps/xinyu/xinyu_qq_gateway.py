@@ -104,8 +104,7 @@ class NativeQQGateway:
 
     _is_blocked_user_id = xinyu_qq_trust_policy.gateway_is_blocked_user_id
 
-    def _is_blocked_group_id(self, group_id: str) -> bool:
-        return xinyu_qq_trust_policy.is_blocked_group_id(self.config, group_id)
+    _is_blocked_group_id = xinyu_qq_trust_policy.gateway_is_blocked_group_id
 
     def _is_trusted_user_id(self, user_id: str) -> bool:
         return xinyu_qq_trust_policy.is_trusted_user_id(self.config, user_id)

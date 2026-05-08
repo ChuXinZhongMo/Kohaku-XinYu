@@ -78,6 +78,10 @@ def is_blocked_group_id(config: Any, group_id: str) -> bool:
     return bool(group_id and group_id in config.blocked_group_ids)
 
 
+def gateway_is_blocked_group_id(gateway: Any, group_id: str) -> bool:
+    return is_blocked_group_id(gateway.config, group_id)
+
+
 def is_trusted_user_id(config: Any, user_id: str) -> bool:
     user_id = safe_str(user_id).strip()
     if not user_id or user_id in config.owner_user_ids:

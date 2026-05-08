@@ -6,6 +6,7 @@ from xinyu_qq_gateway import NativeQQGateway
 from xinyu_qq_trust_policy import (
     compact_command_text,
     gateway_effective_whitelist_user_ids,
+    gateway_is_blocked_group_id,
     gateway_is_blocked_user_id,
     is_trust_grant_command,
     is_trust_revoke_command,
@@ -35,6 +36,7 @@ def main() -> int:
         owner_user_ids=frozenset({"owner"}),
         trusted_user_ids=frozenset({"friend"}),
         blocked_user_ids=frozenset({"blocked"}),
+        blocked_group_ids=frozenset({"group"}),
     )
     gateway = SimpleNamespace(config=config)
     if NativeQQGateway._effective_whitelist_user_ids is not gateway_effective_whitelist_user_ids:
@@ -47,6 +49,12 @@ def main() -> int:
         failures.append("gateway blocked-user alias stopped blocking configured user")
     if NativeQQGateway._is_blocked_user_id(gateway, "owner"):
         failures.append("gateway blocked-user alias started blocking owner")
+    if NativeQQGateway._is_blocked_group_id is not gateway_is_blocked_group_id:
+        failures.append("gateway blocked-group alias no longer uses trust policy helper")
+    if not NativeQQGateway._is_blocked_group_id(gateway, "group"):
+        failures.append("gateway blocked-group alias stopped blocking configured group")
+    if NativeQQGateway._is_blocked_group_id(gateway, "open"):
+        failures.append("gateway blocked-group alias started blocking unrelated group")
 
     if failures:
         print("XinYu QQ trust aliases smoke failed")

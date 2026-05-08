@@ -105,6 +105,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace QQ segment data wrapper with direct normalizer value alias.
 - [x] Replace QQ effective whitelist wrapper with direct trust policy gateway alias.
 - [x] Replace QQ blocked-user wrapper with direct trust policy gateway alias.
+- [x] Replace QQ blocked-group wrapper with direct trust policy gateway alias.
 
 ## Stop-Gap First
 
