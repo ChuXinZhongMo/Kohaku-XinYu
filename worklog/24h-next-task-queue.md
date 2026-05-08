@@ -86,6 +86,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace QQ OneBot action result wrapper with direct method alias.
 - [x] Replace QQ pending ack spool wrapper with direct method alias.
 - [x] Replace QQ acked ack spool wrapper with direct method alias.
+- [x] Replace QQ sent-message ack payload wrapper with direct method alias.
 
 ## Stop-Gap First
 

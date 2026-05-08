@@ -2245,3 +2245,24 @@ Workspace: D:\XinYu
 - Risk: Low; only acked spool helper ownership changed. Acked-spool compaction, ack retry behavior, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-103-commit>`
 - Next: Continue with another isolated QQ gateway shim or core bridge helper slice.
+
+## Loop 104 - 19:11
+
+- Task: Replace QQ sent-message ack payload wrapper with direct method alias.
+- Why: `_sent_message_ack_payload` only delegated to `xinyu_qq_outbox_client.sent_message_ack_payload(self, prepared, ...)`. Assigning the outbox client function directly preserves instance binding and removes another gateway shim.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_outbox_route_alias_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_outbox_route_alias_smoke.py xinyu_qq_outbox_client.py`
+  - `.\.venv\Scripts\python.exe qq_outbox_route_alias_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_gateway_ack_spool.py -q`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `_sent_message_ack_payload` now directly aliases `xinyu_qq_outbox_client.sent_message_ack_payload` as a bound method. Compile, focused outbox alias smoke, ack spool pytest, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only sent-message ack payload helper ownership changed. Ack payload fields, sent reply indexing inputs, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-104-commit>`
+- Next: Continue with another isolated QQ gateway shim or core bridge helper slice.

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import xinyu_qq_outbox_client as outbox_client
-from xinyu_qq_gateway import NativeQQGateway
+from xinyu_qq_gateway import NativeQQGateway, PreparedMessage, ReplyTarget
 from xinyu_qq_outbox_client import sent_outbox_delivery_route
 
 
@@ -51,6 +51,23 @@ def main() -> int:
         failures.append("gateway acked spool helper is not a direct method alias")
     if not gateway._spool_acked_message_ack(pending_payload):
         failures.append("gateway acked spool alias no longer delegates")
+
+    prepared = PreparedMessage(
+        target=ReplyTarget(message_kind="private", user_id="42", group_id=""),
+        payload={"session_id": "qq:private:42", "message_id": "source-1"},
+        route="chat",
+    )
+    core_response = {"session_id": "qq:private:42", "turn_id": "turn-1", "reply_hash": "sha256:reply"}
+    if NativeQQGateway._sent_message_ack_payload is not outbox_client.sent_message_ack_payload:
+        failures.append("gateway sent-message ack payload helper is not a direct method alias")
+    ack_payload = gateway._sent_message_ack_payload(
+        prepared,
+        reply="visible reply",
+        core_response=core_response,
+        action_response=ok_response,
+    )
+    if ack_payload.get("adapter_message_id") != "qq-msg-1" or ack_payload.get("visible_text") != "visible reply":
+        failures.append("gateway sent-message ack payload alias no longer delegates")
 
     if failures:
         print("XinYu QQ outbox route alias smoke failed")

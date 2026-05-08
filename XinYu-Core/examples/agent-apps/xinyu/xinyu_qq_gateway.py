@@ -364,21 +364,7 @@ class NativeQQGateway:
 
     _spool_acked_message_ack = xinyu_qq_outbox_client.spool_acked_message_ack
 
-    def _sent_message_ack_payload(
-        self,
-        prepared: PreparedMessage,
-        *,
-        reply: str,
-        core_response: dict[str, Any],
-        action_response: dict[str, Any] | None,
-    ) -> dict[str, Any]:
-        return xinyu_qq_outbox_client.sent_message_ack_payload(
-            self,
-            prepared,
-            reply=reply,
-            core_response=core_response,
-            action_response=action_response,
-        )
+    _sent_message_ack_payload = xinyu_qq_outbox_client.sent_message_ack_payload
 
     async def _send_message_ack_payload(
         self,
