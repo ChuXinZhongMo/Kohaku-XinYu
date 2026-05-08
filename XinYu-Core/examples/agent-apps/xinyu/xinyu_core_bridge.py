@@ -21,6 +21,7 @@ from xinyu_async_exploration import (
 from xinyu_action_layer import XinyuActionLayer, codex_response_to_outcome
 from xinyu_action_reply_composer import compose_action_reply
 from state_service import atomic_write_text
+from xinyu_bridge_errors import BridgeRequestError
 from xinyu_bridge_http import XinYuBridgeHTTPServer, XinYuBridgeRequestHandler
 from xinyu_bridge_bootstrap import ensure_repo_src as _ensure_repo_src
 from xinyu_bridge_bootstrap import load_local_env as _load_local_env
@@ -644,13 +645,6 @@ AUTONOMOUS_MAINTENANCE_PROMPT = (
     "subsystem is due. Do not initiate visible chat. If any outward text is "
     "unavoidable, output exactly [WAITING]."
 )
-
-
-class BridgeRequestError(RuntimeError):
-    def __init__(self, status: HTTPStatus, message: str) -> None:
-        super().__init__(message)
-        self.status = status
-        self.message = message
 
 
 class XinYuBridgeRuntime:

@@ -49,6 +49,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract core bridge loop thread helper into `xinyu_bridge_loop_thread.py`.
 - [x] Extract core bridge CLI parser into `xinyu_bridge_cli.py`.
 - [x] Extract core bridge null input adapter into `xinyu_bridge_null_input.py`.
+- [x] Extract core bridge request error type into `xinyu_bridge_errors.py`.
 
 ## Stop-Gap First
 

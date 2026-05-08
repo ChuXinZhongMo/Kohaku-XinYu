@@ -72,6 +72,7 @@ For Python code changes, also compile the changed Python files:
 | Bridge loop thread helper | `python -m py_compile xinyu_bridge_loop_thread.py bridge_loop_thread_smoke.py xinyu_core_bridge.py`; `bridge_loop_thread_smoke.py`; `bridge_probe_smoke.py`; `runtime_readiness_smoke.py --offline` |
 | Bridge CLI parser | `python -m py_compile xinyu_bridge_cli.py bridge_cli_smoke.py xinyu_core_bridge.py`; `bridge_cli_smoke.py`; `bridge_probe_smoke.py`; `bridge_auth_smoke.py`; `runtime_security_smoke.py` |
 | Bridge null input adapter | `python -m py_compile xinyu_bridge_null_input.py bridge_null_input_smoke.py xinyu_core_bridge.py`; `bridge_null_input_smoke.py`; `bridge_probe_smoke.py`; `bridge_session_cleanup_smoke.py` |
+| Bridge request error type | `python -m py_compile xinyu_bridge_errors.py bridge_errors_smoke.py xinyu_core_bridge.py`; `bridge_errors_smoke.py`; `bridge_probe_smoke.py`; HTTP/service smoke for touched route family |
 | Desktop service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `xinyu_desktop_rest_smoke.py`; `xinyu_desktop_ws_smoke.py`; `xinyu_desktop_events_smoke.py`; `bridge_probe_smoke.py` |
 | Codex service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `codex_delegate_smoke.py`; `codex_completion_outbox_smoke.py`; `bridge_probe_smoke.py` |
 | Learning service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `bridge_learning_ingest_smoke.py`; `python -m pytest tests\test_learning_closed_loop.py -q`; `bridge_probe_smoke.py` |

@@ -1454,3 +1454,26 @@ Workspace: D:\XinYu
 - Risk: Low; adapter relocation only. No controller behavior, route payloads, prompt/persona semantics, long-term memory body text, QQ outbound, v1 traffic, or state writes were touched.
 - Rollback: `git revert <loop-66-commit>`
 - Next: Re-observe remaining core bridge entrypoint boundaries and choose the next isolated slice.
+
+## Loop 67 - 12:36
+
+- Task: Extract core bridge request error type.
+- Why: `BridgeRequestError` is a small cross-route error contract carrying HTTP status and message. Moving it to `xinyu_bridge_errors.py` separates the error contract from the large runtime class while keeping the same core import name.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_errors.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_errors_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_errors.py bridge_errors_smoke.py xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe bridge_errors_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `.\.venv\Scripts\python.exe metabolism_http_smoke.py`
+  - `.\.venv\Scripts\python.exe service_boundary_smoke.py`
+  - `git diff --check`
+- Result: Bridge request error type now lives in `xinyu_bridge_errors.py`; core bridge imports and re-exports it under the same name. Compile, errors smoke, bridge probe, metabolism HTTP smoke, service boundary smoke, and diff check passed.
+- Risk: Low; error type relocation only. Status/message attributes, string representation, route semantics, prompt/persona semantics, long-term memory body text, QQ outbound, v1 traffic, and state writes were unchanged.
+- Rollback: `git revert <loop-67-commit>`
+- Next: Re-observe remaining core bridge runtime class boundaries and choose the next isolated slice.
