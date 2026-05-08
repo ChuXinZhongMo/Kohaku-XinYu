@@ -1276,3 +1276,25 @@ Workspace: D:\XinYu
 - Risk: Low; duplicate pure helper removal only. No canary scope expansion, v1 real traffic change, state writes, HTTP route semantics, prompt text, persona semantics, long-term memory body text, or QQ outbound behavior was touched.
 - Rollback: `git revert <loop-58-commit>`
 - Next: Continue with another isolated core bridge or QQ gateway helper extraction.
+
+## Loop 59 - 12:14
+
+- Task: Extract core bridge reply text normalization helper.
+- Why: `xinyu_core_bridge.py` still owned `_normalize_reply`, a pure visible-reply formatting helper used across bridge response paths. Moving it to `xinyu_bridge_reply_text.py` trims the bridge entrypoint and gives the legacy normalization behavior focused coverage.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_reply_text.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_reply_text_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_reply_text.py xinyu_core_bridge.py bridge_reply_text_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_reply_text_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_speech_controller_smoke.py`
+  - `git diff --check`
+- Result: Core bridge reply normalization now delegates to `xinyu_bridge_reply_text.normalize_bridge_reply`. The first focused smoke expected ideal markdown behavior, but the existing algorithm treats leading `*` as a list marker before markdown unwrap; the smoke was corrected to preserve current behavior. Compile, reply text smoke, bridge probe, speech controller smoke, and diff check passed.
+- Risk: Low-medium; visible reply formatting ownership moved, but the normalization algorithm and existing edge cases are unchanged. No prompt/persona semantics, long-term memory body text, route payloads, QQ outbound, v1 traffic, or state writes were touched.
+- Rollback: `git revert <loop-59-commit>`
+- Next: Continue with another isolated core bridge or QQ gateway helper extraction.

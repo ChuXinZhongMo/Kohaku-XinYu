@@ -34,6 +34,7 @@ from xinyu_bridge_desktop_actions import desktop_action_theme_label as _desktop_
 from xinyu_bridge_desktop_actions import desktop_scrub_action_markers as _desktop_scrub_action_markers
 from xinyu_bridge_memory_snapshot import memory_snapshot as _memory_snapshot
 from xinyu_bridge_proactive import acknowledge as proactive_ack_bridge, claim_or_preview as proactive_bridge
+from xinyu_bridge_reply_text import normalize_bridge_reply as _normalize_reply
 from xinyu_bridge_renderer import BridgeRenderer
 from xinyu_bridge_session import AgentSession, session_key_from_payload, session_keys_to_expire
 from xinyu_bridge_state_text import parse_iso as _parse_iso
@@ -667,31 +668,6 @@ def _ensure_repo_src(xinyu_dir: Path) -> Path:
     if str(src_root) not in sys.path:
         sys.path.insert(0, str(src_root))
     return src_root
-
-
-def _normalize_reply(text: str) -> str:
-    lines = [line.strip() for line in text.replace("\r\n", "\n").split("\n")]
-    compact_lines: list[str] = []
-
-    for line in lines:
-        if not line.strip():
-            continue
-        line = re.sub(r"^\s*(?:[-*•>]+|\d+[.)])\s*", "", line).strip()
-        line = re.sub(r"^\*{1,2}(.+?)\*{1,2}$", r"\1", line).strip()
-        compact_lines.append(line)
-
-    if not compact_lines:
-        return ""
-
-    # QQ already wraps long bubbles. Model-authored line breaks make normal chat
-    # look like formatted prose, so collapse visible replies into one paragraph.
-    reply = compact_lines[0]
-    for line in compact_lines[1:]:
-        if reply and reply[-1].isascii() and line and line[0].isascii():
-            reply += " " + line
-        else:
-            reply += line
-    return reply.strip()
 
 
 def _run_learning_study_chain(root: Path, mode: str) -> dict[str, object]:

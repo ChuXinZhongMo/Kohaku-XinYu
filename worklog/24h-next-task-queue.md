@@ -40,6 +40,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract shared bridge memory snapshot helper into `xinyu_bridge_memory_snapshot.py`.
 - [x] Harden action digest followup smoke freshness window after dated fixture aged past 24h.
 - [x] Reuse v1 canary attachment signal helper from core bridge compatibility alias.
+- [x] Extract core bridge reply text normalization helper into `xinyu_bridge_reply_text.py`.
 
 ## Stop-Gap First
 
