@@ -59,6 +59,7 @@ from xinyu_bridge_reply_text import normalize_bridge_reply as _normalize_reply
 from xinyu_bridge_reply_bubbles import looks_like_false_single_bubble_limitation
 from xinyu_bridge_reply_bubbles import numeric_bubble_units_from_text
 from xinyu_bridge_reply_bubbles import owner_requested_reply_bubble_units
+from xinyu_bridge_promises import compact_promise_text
 from xinyu_bridge_recent_sticker_reply import current_sticker_question_reply
 from xinyu_bridge_recent_sticker_reply import is_recent_sticker_question
 from xinyu_bridge_recent_sticker_reply import recent_sticker_question_reply
@@ -3078,9 +3079,7 @@ tags: [autonomy, maintenance, runtime]
             "dedupe_key": f"promise_followup:{digest}",
         }
 
-    @staticmethod
-    def _compact_promise_text(text: str) -> str:
-        return re.sub(r"[\s，。！？、；：,.!?;:<>《》\"'`]+", "", _safe_str(text).lower())
+    _compact_promise_text = staticmethod(compact_promise_text)
 
     def _schedule_promised_followup_if_needed(
         self,

@@ -1654,3 +1654,26 @@ Workspace: D:\XinYu
 - Risk: Low; runtime/debug cache write helper changed only. No prompt content semantics, long-term memory body text, route payloads, QQ outbound, v1 traffic behavior, or runtime/memory deletion was touched.
 - Rollback: `git revert <loop-75-commit>`
 - Next: Continue with another state governance or helper extraction slice.
+
+## Loop 76 - 13:09
+
+- Task: Extract promise followup text compaction helper.
+- Why: `_compact_promise_text` was a pure helper still owned by `XinYuBridgeRuntime` and used by promise followup detection and owner self-code grant checks. Moving it into `xinyu_bridge_promises.py` reduces bridge class helper ownership while preserving the runtime static entrypoint.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_promises.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_promises_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_promises.py bridge_promises_smoke.py xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe bridge_promises_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_dialogue_curiosity_bridge_injection.py::test_promised_followup_queues_owner_private_completion tests\test_dialogue_curiosity_bridge_injection.py::test_promised_followup_ignores_completed_review_reply tests\test_dialogue_curiosity_bridge_injection.py::test_promised_followup_status_check_queues_completion -q`
+  - `.\.venv\Scripts\python.exe promise_followup_state_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Promise followup text compaction now lives in `xinyu_bridge_promises.py`; `XinYuBridgeRuntime._compact_promise_text` remains as a compatibility static alias. Compile, focused promise helper smoke, three promise followup pytest cases, promise followup state smoke, bridge probe, and diff check passed.
+- Risk: Low; only pure separator compaction ownership moved. Promise markers, dedupe key inputs, outbox enqueue behavior, promise state path/content, prompt/persona semantics, long-term memory body text, QQ outbound behavior, and v1 traffic behavior were unchanged.
+- Rollback: `git revert <loop-76-commit>`
+- Next: Continue with another isolated core bridge helper extraction or state governance slice.
