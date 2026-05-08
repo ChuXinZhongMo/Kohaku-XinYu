@@ -1,0 +1,61 @@
+from __future__ import annotations
+
+import xinyu_qq_attachment_resolver as attachment_resolver
+from xinyu_qq_gateway import NativeQQGateway
+
+
+def main() -> int:
+    failures: list[str] = []
+
+    if not attachment_resolver.looks_like_file_path(r"C:\XinYu\file.png"):
+        failures.append("Windows file path detection changed")
+    if not attachment_resolver.looks_like_file_path("file:///D:/XinYu/file.png"):
+        failures.append("file URI detection changed")
+    if attachment_resolver.looks_like_file_path("not-a-path"):
+        failures.append("plain file id should not look like a path")
+
+    learning = attachment_resolver.learning_material_from_data(
+        "file",
+        {"name": "report.md", "file": "abc123"},
+    )
+    if learning != {"segment_type": "file", "name": "report.md", "url": "", "path": "", "file_id": "abc123"}:
+        failures.append(f"learning material from file id changed: {learning!r}")
+
+    sticker = attachment_resolver.sticker_import_material_from_data(
+        "mface",
+        {"summary": "funny", "file": r"D:\XinYu\sticker.webp"},
+    )
+    expected_sticker = {
+        "segment_type": "mface",
+        "name": r"D:\XinYu\sticker.webp",
+        "summary": "funny",
+        "url": "",
+        "path": r"D:\XinYu\sticker.webp",
+        "file_id": "",
+    }
+    if sticker != expected_sticker:
+        failures.append(f"sticker import material changed: {sticker!r}")
+
+    gateway = object.__new__(NativeQQGateway)
+    if NativeQQGateway._learning_material_from_data(gateway, "file", {"file_id": "f1"}) != {
+        "segment_type": "file",
+        "name": "qq-file",
+        "url": "",
+        "path": "",
+        "file_id": "f1",
+    }:
+        failures.append("gateway learning material wrapper no longer delegates")
+    if not NativeQQGateway._looks_like_file_path(r"D:\XinYu\a.txt"):
+        failures.append("gateway file path wrapper no longer delegates")
+
+    if failures:
+        print("XinYu QQ attachment material smoke failed")
+        for failure in failures:
+            print(f"- {failure}")
+        return 1
+    print("XinYu QQ attachment material smoke passed")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

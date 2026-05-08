@@ -1059,3 +1059,25 @@ Workspace: D:\XinYu
 - Risk: Low-medium; richer forward/reply parsing moved, but payload keys and metadata fields are unchanged. No real QQ outbound, OneBot payload shape, trust policy, persona semantics, memory body text, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-48-commit>`
 - Next: Continue with another isolated QQ parsing helper or a long-run health checkpoint.
+
+## Loop 49 - 11:36
+
+- Task: Extract QQ attachment material builders.
+- Why: Learning and sticker-import material construction from OneBot segment data is attachment-resolver work. Moving it out of `xinyu_qq_gateway.py` keeps gateway focused on flow control and message routing.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_attachment_resolver.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_attachment_material_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_attachment_resolver.py xinyu_qq_gateway.py qq_attachment_material_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_attachment_material_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: File-path detection, learning material construction, and sticker import material construction now live in `xinyu_qq_attachment_resolver.py`; gateway wrappers delegate to the resolver. Compile, attachment material smoke, QQ gateway smoke, and QQ review smoke passed.
+- Risk: Low-medium; attachment material shaping moved, but field names and empty-result rules are unchanged. No real QQ outbound, attachment learning policy, sticker import writes, OneBot payload shape, persona semantics, memory body text, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-49-commit>`
+- Next: Continue with another isolated QQ parsing helper or run a health checkpoint.

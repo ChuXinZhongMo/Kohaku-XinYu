@@ -246,6 +246,94 @@ def _first_text_field(data: dict[str, Any], keys: tuple[str, ...]) -> str:
     return ""
 
 
+def looks_like_file_path(value: str) -> bool:
+    text = value.strip()
+    if not text:
+        return False
+    if text.lower().startswith("file://"):
+        return True
+    if len(text) > 2 and text[1] == ":" and text[2] in {"\\", "/"}:
+        return True
+    return "\\" in text or "/" in text
+
+
+def sticker_import_material_from_data(segment_type: str, data: dict[str, Any]) -> dict[str, str] | None:
+    name = (
+        _safe_str(data.get("name")).strip()
+        or _safe_str(data.get("file_name")).strip()
+        or _safe_str(data.get("filename")).strip()
+        or _safe_str(data.get("file")).strip()
+        or _safe_str(data.get("summary")).strip()
+        or _safe_str(data.get("text")).strip()
+        or f"qq-{segment_type}-sticker"
+    )
+    url = (
+        _safe_str(data.get("url")).strip()
+        or _safe_str(data.get("file_url")).strip()
+        or _safe_str(data.get("download_url")).strip()
+    )
+    path = (
+        _safe_str(data.get("file_path")).strip()
+        or _safe_str(data.get("path")).strip()
+        or _safe_str(data.get("local_path")).strip()
+    )
+    file_value = _safe_str(data.get("file")).strip()
+    file_id = (
+        _safe_str(data.get("file_id")).strip()
+        or _safe_str(data.get("fileId")).strip()
+        or _safe_str(data.get("fid")).strip()
+    )
+    if not path and looks_like_file_path(file_value):
+        path = file_value
+    if not file_id and file_value and not path:
+        file_id = file_value
+    if not url and not path and not file_id:
+        return None
+    return {
+        "segment_type": segment_type,
+        "name": name,
+        "summary": _safe_str(data.get("summary") or data.get("text") or name).strip(),
+        "url": url,
+        "path": path,
+        "file_id": file_id,
+    }
+
+
+def learning_material_from_data(segment_type: str, data: dict[str, Any]) -> dict[str, str] | None:
+    name = (
+        _safe_str(data.get("name")).strip()
+        or _safe_str(data.get("file_name")).strip()
+        or _safe_str(data.get("filename")).strip()
+        or _safe_str(data.get("file")).strip()
+        or f"qq-{segment_type}"
+    )
+    url = _safe_str(data.get("url")).strip()
+    path = (
+        _safe_str(data.get("file_path")).strip()
+        or _safe_str(data.get("path")).strip()
+        or _safe_str(data.get("local_path")).strip()
+    )
+    file_value = _safe_str(data.get("file")).strip()
+    file_id = (
+        _safe_str(data.get("file_id")).strip()
+        or _safe_str(data.get("id")).strip()
+        or _safe_str(data.get("fid")).strip()
+    )
+    if not path and looks_like_file_path(file_value):
+        path = file_value
+    if not file_id and file_value and not path:
+        file_id = file_value
+    if not url and not path and not file_id:
+        return None
+    return {
+        "segment_type": segment_type,
+        "name": name,
+        "url": url,
+        "path": path,
+        "file_id": file_id,
+    }
+
+
 def reply_file_learning_intent(gateway: Any, text: str) -> bool:
     stripped = text.strip()
     if not stripped:
