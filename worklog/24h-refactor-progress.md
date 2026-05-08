@@ -2915,3 +2915,25 @@ Workspace: D:\XinYu
 - Risk: Low; only pending ack poll helper ownership changed. The long-running poll loop was not started by the smoke; runtime polling cadence, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-135-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 136 - 20:28
+
+- Task: Replace QQ outbox poll wrapper with direct dispatcher gateway alias.
+- Why: `_poll_qq_outbox` in `xinyu_qq_gateway.py` only injected the native gateway adapter name into `xinyu_qq_outbox_dispatcher.poll_qq_outbox`. A dispatcher-owned gateway helper removes that shim while keeping the long-running outbox poll loop in the dispatcher module.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_outbox_dispatcher.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_outbox_route_alias_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py qq_outbox_route_alias_smoke.py xinyu_qq_outbox_client.py xinyu_qq_outbox_dispatcher.py`
+  - `D:\XinYu\Python312\python.exe qq_outbox_route_alias_smoke.py`
+  - `D:\XinYu\Python312\python.exe qq_outbox_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_outbox_dispatcher.gateway_poll_qq_outbox` now owns the gateway-name-bound outbox poll helper and gateway `_poll_qq_outbox` directly aliases it. Compile, focused outbox route alias smoke, QQ outbox smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only outbox poll helper ownership changed. The long-running poll loop was not started by the smoke; adapter name, runtime polling cadence, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-136-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.

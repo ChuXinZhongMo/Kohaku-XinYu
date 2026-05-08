@@ -258,13 +258,7 @@ class NativeQQGateway:
                 with contextlib.suppress(asyncio.CancelledError):
                     await ack_spool_task
 
-    async def _poll_qq_outbox(self, websocket: Any, connection_id: str) -> None:
-        await xinyu_qq_outbox_dispatcher.poll_qq_outbox(
-            self,
-            websocket,
-            connection_id,
-            gateway_name=GATEWAY_NAME,
-        )
+    _poll_qq_outbox = xinyu_qq_outbox_dispatcher.gateway_poll_qq_outbox
 
     _outbox_target = xinyu_qq_outbox_client.gateway_outbox_target
 

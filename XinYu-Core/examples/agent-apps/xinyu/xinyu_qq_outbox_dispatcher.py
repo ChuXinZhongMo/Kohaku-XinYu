@@ -4,11 +4,17 @@ import asyncio
 import time
 from typing import Any
 
+from xinyu_qq_outbox_client import GATEWAY_NAME
+
 
 def _safe_str(value: Any, default: str = "") -> str:
     if value is None:
         return default
     return str(value)
+
+
+async def gateway_poll_qq_outbox(gateway: Any, websocket: Any, connection_id: str) -> None:
+    await poll_qq_outbox(gateway, websocket, connection_id, gateway_name=GATEWAY_NAME)
 
 
 async def poll_qq_outbox(gateway: Any, websocket: Any, connection_id: str, *, gateway_name: str) -> None:

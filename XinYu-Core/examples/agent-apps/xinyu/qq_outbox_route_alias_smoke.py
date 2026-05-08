@@ -4,6 +4,7 @@ import asyncio
 from types import SimpleNamespace
 
 import xinyu_qq_outbox_client as outbox_client
+import xinyu_qq_outbox_dispatcher as outbox_dispatcher
 from xinyu_qq_gateway import NativeQQGateway, PreparedMessage, ReplyTarget
 from xinyu_qq_outbox_client import sent_outbox_delivery_route
 
@@ -30,6 +31,8 @@ def main() -> int:
         failures.append("gateway OneBot action result helper is not a direct method alias")
     if gateway._onebot_action_result(ok_response) != outbox_client.onebot_action_result(gateway, ok_response):
         failures.append("gateway OneBot action result alias no longer delegates")
+    if NativeQQGateway._poll_qq_outbox is not outbox_dispatcher.gateway_poll_qq_outbox:
+        failures.append("gateway QQ outbox poll helper is not a direct method alias")
 
     outbox_claim = {
         "target": {
