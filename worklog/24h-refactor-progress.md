@@ -1767,3 +1767,27 @@ Workspace: D:\XinYu
 - Risk: Low; only a one-line compatibility wrapper changed. Desktop limit clamping, route payloads, event shapes, prompt/persona semantics, long-term memory body text, QQ outbound behavior, and v1 traffic behavior were unchanged.
 - Rollback: `git revert <loop-80-commit>`
 - Next: Continue with another isolated bridge helper extraction or state governance slice.
+
+## Loop 81 - 13:28
+
+- Task: Extract owner/trusted payload privacy policy helpers.
+- Why: `_owner_private_payload_matches` and `_trusted_private_payload_matches` were pure payload policy helpers implemented on `XinYuBridgeRuntime`. Moving them into `xinyu_bridge_payload_policy.py` reduces runtime privacy-policy helper ownership while keeping compatibility method names as static aliases.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_payload_policy.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_payload_policy_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_payload_policy.py bridge_payload_policy_smoke.py xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe bridge_payload_policy_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_dialogue_curiosity_bridge_injection.py::test_model_codex_delegate_rejects_non_owner_or_group_context tests\test_dialogue_curiosity_bridge_injection.py::test_model_codex_delegate_allows_trusted_public_search_only tests\test_dialogue_curiosity_bridge_injection.py::test_owner_private_live_context_exposes_promise_followup_contract -q`
+  - `.\.venv\Scripts\python.exe dialogue_privacy_scope_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_v1_owner_simple_canary_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Owner-private and trusted-private payload matching now live in `xinyu_bridge_payload_policy.py`; `XinYuBridgeRuntime` keeps both compatibility static aliases. Compile, focused payload policy smoke, three owner/trusted payload pytest cases, dialogue privacy scope smoke, v1 owner simple canary smoke, bridge probe, and diff check passed.
+- Risk: Low-medium; privacy gate ownership moved, but owner/trusted metadata handling, private/group distinction, trusted `group_id` compatibility values, prompt/persona semantics, long-term memory body text, QQ outbound behavior, and v1 traffic behavior were unchanged.
+- Rollback: `git revert <loop-81-commit>`
+- Next: Continue with another isolated core bridge helper extraction or state governance slice.

@@ -54,6 +54,8 @@ from xinyu_bridge_desktop_projection import desktop_top_recall_sources
 from xinyu_bridge_desktop_state_text import desktop_replace_frontmatter_field
 from xinyu_bridge_desktop_state_text import desktop_replace_list_field
 from xinyu_bridge_memory_snapshot import memory_snapshot as _memory_snapshot
+from xinyu_bridge_payload_policy import owner_private_payload_matches
+from xinyu_bridge_payload_policy import trusted_private_payload_matches
 from xinyu_bridge_proactive import acknowledge as proactive_ack_bridge, claim_or_preview as proactive_bridge
 from xinyu_bridge_reply_text import normalize_bridge_reply as _normalize_reply
 from xinyu_bridge_reply_bubbles import looks_like_false_single_bubble_limitation
@@ -3259,28 +3261,8 @@ tags: [promise, followup, qq-outbox, continuity]
                 "notes": [f"life_reply_policy_error:{type(exc).__name__}"],
             }
 
-    def _owner_private_payload_matches(self, payload: dict[str, Any]) -> bool:
-        metadata = payload.get("metadata")
-        if not isinstance(metadata, dict):
-            metadata = {}
-        if not _as_bool(metadata.get("is_owner_user"), default=False):
-            return False
-        message_type = _safe_str(payload.get("message_type")).lower()
-        return message_type.startswith("private") or not _safe_str(payload.get("group_id")).strip()
-
-    def _trusted_private_payload_matches(self, payload: dict[str, Any]) -> bool:
-        metadata = payload.get("metadata")
-        if not isinstance(metadata, dict):
-            metadata = {}
-        if _as_bool(metadata.get("is_owner_user"), default=False):
-            return False
-        if not _as_bool(metadata.get("is_trusted_user"), default=False):
-            return False
-        message_type = _safe_str(payload.get("message_type")).lower()
-        if message_type and not message_type.startswith("private"):
-            return False
-        group_id = _safe_str(payload.get("group_id")).strip()
-        return group_id in {"", "0", "none", "None"}
+    _owner_private_payload_matches = staticmethod(owner_private_payload_matches)
+    _trusted_private_payload_matches = staticmethod(trusted_private_payload_matches)
 
     @staticmethod
     def _trusted_public_search_task_allowed(task_text: str) -> bool:
