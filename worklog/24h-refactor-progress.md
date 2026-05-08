@@ -518,7 +518,25 @@ Workspace: D:\XinYu
   - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --workspace D:\XinYu`
   - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --workspace D:\XinYu --recent-window-minutes 0`
   - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --write-ledger --workspace D:\XinYu`
-- Result: Added `--recent-window-minutes` with a 120-minute default and `0` as historical-tail comparison mode. JSONL rows are filtered by their own timestamps; text logs are filtered by file mtime. Benign WebSocket handshake trace residue no longer counts standalone `opening handshake failed` lines. Default health now reports `recent_exceptions: warn` with `hits=5`; historical-tail mode still reports `critical`, confirming the old residue distinction.
+- Result: Added `--recent-window-minutes` with a 120-minute default and `0` as historical-tail comparison mode. JSONL rows are filtered by their own timestamps; text logs are filtered by file mtime. Benign WebSocket handshake trace residue no longer counts standalone `opening handshake failed` lines. Default health initially dropped from critical to warn; follow-up Loop 24 corrected true tail reading and reduced it further.
 - Risk: Low; diagnostic classification only. Runtime/log files were not cleaned, QQ outbound was not tested, v1 traffic was not expanded, and memory/persona content was not touched.
 - Rollback: `git revert <loop-23-commit>`
 - Next: Reduce the remaining 120-minute `recent_exceptions` hits from warn toward ok.
+
+## Loop 24 - 10:23
+
+- Task: Correct recent-exception tail reading.
+- Why: The new recent window exposed that `_read_text(limit=64K)` was reading the beginning of append-only logs, so old JSONL/log heads could still be counted as recent whenever the file mtime was current.
+- Files changed:
+  - `diagnostics/check_xinyu_health.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - Read-only per-file hit attribution for the 120-minute window.
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe -m py_compile diagnostics\check_xinyu_health.py`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --workspace D:\XinYu`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --write-ledger --workspace D:\XinYu`
+- Result: Added true tail reads for recent scans and dropped the first partial line when a tail read starts mid-file. Default health now reports `recent_exceptions: warn` with `hits=1`, only from `runtime\github_learning_trace.jsonl`.
+- Risk: Low; diagnostic read path only. No runtime files were cleaned or rewritten.
+- Rollback: `git revert <loop-24-commit>`
+- Next: Triage the remaining GitHub learning `stage_error` hit.

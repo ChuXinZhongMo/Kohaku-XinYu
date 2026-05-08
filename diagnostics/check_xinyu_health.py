@@ -46,6 +46,21 @@ def _read_text(path: Path, limit: int = 512 * 1024) -> str:
         return ""
 
 
+def _read_tail_text(path: Path, limit: int = 64 * 1024) -> str:
+    try:
+        with path.open("rb") as handle:
+            handle.seek(0, 2)
+            size = handle.tell()
+            start = max(0, size - limit)
+            handle.seek(start)
+            text = handle.read(limit).decode("utf-8-sig", errors="replace")
+            if start > 0 and "\n" in text:
+                text = text.split("\n", 1)[1]
+            return text
+    except OSError:
+        return ""
+
+
 def _read_json(path: Path) -> dict[str, Any]:
     try:
         data = json.loads(path.read_text(encoding="utf-8-sig"))
@@ -247,7 +262,7 @@ def _recent_exception_count(app_root: Path, *, window_minutes: int = DEFAULT_REC
     scanned = 0
     file_hits: list[tuple[int, str]] = []
     for path in sorted(candidates, key=lambda item: item.stat().st_mtime if item.exists() else 0, reverse=True)[:30]:
-        text = _read_text(path, limit=64 * 1024)
+        text = _read_tail_text(path, limit=64 * 1024)
         if not text:
             continue
         scanned += 1
