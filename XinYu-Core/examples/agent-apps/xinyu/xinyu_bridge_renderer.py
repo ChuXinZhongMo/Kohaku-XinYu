@@ -34,6 +34,21 @@ def normalize_reply(text: str) -> str:
     return dedupe_visible_reply(reply).text
 
 
+CRITICAL_FINAL_GUARD_FLAGS = frozenset(
+    {
+        "pseudo_tool_call_naturalized",
+        "machine_introspection_naturalized",
+        "visible_memory_mechanics_naturalized",
+        "false_codex_unavailable_claim_blocked",
+        "layered_voice_self_analysis_blocked",
+    }
+)
+
+
+def critical_final_guard_flags(flags: list[str] | tuple[str, ...]) -> list[str]:
+    return [flag for flag in flags if flag in CRITICAL_FINAL_GUARD_FLAGS]
+
+
 class BridgeRenderer:
     def __init__(
         self,

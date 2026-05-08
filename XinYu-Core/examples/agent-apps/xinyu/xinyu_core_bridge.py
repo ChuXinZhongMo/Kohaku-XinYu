@@ -63,7 +63,7 @@ from xinyu_bridge_promises import compact_promise_text
 from xinyu_bridge_recent_sticker_reply import current_sticker_question_reply
 from xinyu_bridge_recent_sticker_reply import is_recent_sticker_question
 from xinyu_bridge_recent_sticker_reply import recent_sticker_question_reply
-from xinyu_bridge_renderer import BridgeRenderer
+from xinyu_bridge_renderer import BridgeRenderer, critical_final_guard_flags
 from xinyu_bridge_session import AgentSession, session_key_from_payload, session_keys_to_expire
 from xinyu_bridge_state_text import parse_iso as _parse_iso
 from xinyu_bridge_state_text import payload_path as _payload_path
@@ -5970,16 +5970,7 @@ tags: [promise, followup, qq-outbox, continuity]
     def _empty_visible_reply_fallback(self, *, payload: dict[str, Any], user_text: str, delegate_note: str = "") -> str:
         return ""
 
-    @staticmethod
-    def _critical_final_guard_flags(flags: list[str] | tuple[str, ...]) -> list[str]:
-        critical = {
-            "pseudo_tool_call_naturalized",
-            "machine_introspection_naturalized",
-            "visible_memory_mechanics_naturalized",
-            "false_codex_unavailable_claim_blocked",
-            "layered_voice_self_analysis_blocked",
-        }
-        return [flag for flag in flags if flag in critical]
+    _critical_final_guard_flags = staticmethod(critical_final_guard_flags)
 
     def _renderer_memory_context(self) -> str:
         return self.renderer.renderer_memory_context()

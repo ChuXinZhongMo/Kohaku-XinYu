@@ -59,6 +59,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Migrate QQ trusted-user config persistence to `state_service.atomic_write_json`.
 - [x] Migrate core debug live system prompt dump to `state_service.atomic_write_text`.
 - [x] Extract core bridge promise followup text helper into `xinyu_bridge_promises.py`.
+- [x] Extract core bridge critical final guard flag helper into `xinyu_bridge_renderer.py`.
 
 ## Stop-Gap First
 

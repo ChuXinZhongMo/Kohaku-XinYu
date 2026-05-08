@@ -1677,3 +1677,28 @@ Workspace: D:\XinYu
 - Risk: Low; only pure separator compaction ownership moved. Promise markers, dedupe key inputs, outbox enqueue behavior, promise state path/content, prompt/persona semantics, long-term memory body text, QQ outbound behavior, and v1 traffic behavior were unchanged.
 - Rollback: `git revert <loop-76-commit>`
 - Next: Continue with another isolated core bridge helper extraction or state governance slice.
+
+## Loop 77 - 13:13
+
+- Task: Extract critical final guard flag filtering into the renderer boundary.
+- Why: `_critical_final_guard_flags` was a pure renderer/voice guard helper still implemented on `XinYuBridgeRuntime`. Moving the critical flag set and filter into `xinyu_bridge_renderer.py` keeps final guard policy ownership closer to renderer behavior while preserving the runtime static entrypoint.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_renderer.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_renderer_guard_flags_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_renderer.py bridge_renderer_guard_flags_smoke.py xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe bridge_renderer_guard_flags_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_speech_controller_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_dialogue_curiosity_bridge_injection.py::test_final_guard_critical_flags_are_detected -q` (failed: selector did not exist)
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_dialogue_curiosity_bridge_injection.py::test_false_codex_manual_only_claim_is_critical_guard_flag -q`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_expression_self_learning.py::test_final_guard_blocks_false_codex_manual_only_claim tests\test_expression_self_learning.py::test_final_guard_blocks_repair_meta_under_style_pressure tests\test_expression_self_learning.py::test_final_guard_blocks_self_diagnostic_style_pressure_reply -q`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Critical final guard flag filtering now lives in `xinyu_bridge_renderer.py`; `XinYuBridgeRuntime._critical_final_guard_flags` remains as a compatibility static alias. Compile, focused renderer guard smoke, speech controller smoke, corrected critical-flag pytest, three expression self-learning final-guard tests, bridge probe, and diff check passed after correcting the mistaken pytest selector.
+- Risk: Low; only pure critical flag filtering ownership moved. Critical flag names, filtering order, final reply guard behavior, repair path, prompt/persona semantics, long-term memory body text, QQ outbound behavior, and v1 traffic behavior were unchanged.
+- Rollback: `git revert <loop-77-commit>`
+- Next: Continue with another isolated helper extraction or state governance slice.
