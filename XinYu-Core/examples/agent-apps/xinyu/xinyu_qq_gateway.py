@@ -2772,15 +2772,7 @@ class NativeQQGateway:
 
     _hard_split_reply_text = staticmethod(xinyu_qq_reply_bubbles.hard_split_reply_text)
 
-    def _merge_tiny_reply_chunks(self, chunks: list[str], *, min_piece: int) -> list[str]:
-        merged = [chunk.strip() for chunk in chunks if chunk.strip()]
-        while len(merged) > 1 and len(merged[-1]) < min_piece:
-            tail = merged.pop()
-            merged[-1] = self._join_reply_fragments(merged[-1], tail)
-        while len(merged) > 1 and len(merged[0]) < min_piece:
-            head = merged.pop(0)
-            merged[0] = self._join_reply_fragments(head, merged[0])
-        return merged
+    _merge_tiny_reply_chunks = staticmethod(xinyu_qq_reply_bubbles.merge_tiny_reply_chunks)
 
     _join_reply_fragments = staticmethod(xinyu_qq_reply_bubbles.join_reply_fragments)
 

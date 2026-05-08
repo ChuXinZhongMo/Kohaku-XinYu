@@ -79,3 +79,14 @@ def hard_split_reply_text(text: str, *, soft_max: int, max_bubbles: int) -> list
     if rest:
         chunks.append(rest)
     return chunks
+
+
+def merge_tiny_reply_chunks(chunks: list[str], *, min_piece: int) -> list[str]:
+    merged = [chunk.strip() for chunk in chunks if chunk.strip()]
+    while len(merged) > 1 and len(merged[-1]) < min_piece:
+        tail = merged.pop()
+        merged[-1] = join_reply_fragments(merged[-1], tail)
+    while len(merged) > 1 and len(merged[0]) < min_piece:
+        head = merged.pop(0)
+        merged[0] = join_reply_fragments(head, merged[0])
+    return merged
