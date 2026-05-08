@@ -2121,3 +2121,23 @@ Workspace: D:\XinYu
 - Risk: Low; only message kind compatibility ownership changed. Private/group classification, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-97-commit>`
 - Next: Continue with another isolated QQ gateway shim or core bridge helper slice.
+
+## Loop 98 - 18:56
+
+- Task: Replace QQ text extraction normalizer wrapper with direct method alias.
+- Why: `_extract_text` only delegated to `xinyu_qq_normalizer.extract_text(self, event)`. Assigning the normalizer function directly preserves instance binding and removes another gateway shim.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_normalizer_aliases_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_normalizer_aliases_smoke.py xinyu_qq_normalizer.py`
+  - `.\.venv\Scripts\python.exe qq_normalizer_aliases_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `_extract_text` now directly aliases `xinyu_qq_normalizer.extract_text` as a bound method. Compile, focused normalizer alias smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only text extraction compatibility ownership changed. Text extraction, CQ stripping behavior, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-98-commit>`
+- Next: Continue with another isolated QQ gateway shim or core bridge helper slice.

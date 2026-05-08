@@ -4,6 +4,7 @@ from xinyu_qq_gateway import NativeQQGateway
 from xinyu_qq_normalizer import (
     cq_bracket_continues_params,
     decode_cq_value,
+    extract_text,
     message_kind,
     parse_cq_params,
     parse_cq_segments,
@@ -39,6 +40,12 @@ def main() -> int:
         failures.append("gateway message kind helper is not a direct method alias")
     if gateway._message_kind(group_event) != message_kind(gateway, group_event):
         failures.append("gateway message kind alias no longer delegates")
+
+    text_event = {"message": [{"type": "text", "data": {"text": "hello"}}, {"type": "image", "data": {}}]}
+    if NativeQQGateway._extract_text is not extract_text:
+        failures.append("gateway extract text helper is not a direct method alias")
+    if gateway._extract_text(text_event) != extract_text(gateway, text_event):
+        failures.append("gateway extract text alias no longer delegates")
 
     if failures:
         print("XinYu QQ normalizer aliases smoke failed")

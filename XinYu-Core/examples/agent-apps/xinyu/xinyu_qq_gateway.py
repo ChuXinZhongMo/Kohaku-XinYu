@@ -2241,8 +2241,7 @@ class NativeQQGateway:
             "forward_message_ids": rich.get("forward_message_ids", [])[:6],
         }
 
-    def _extract_text(self, event: dict[str, Any]) -> str:
-        return xinyu_qq_normalizer.extract_text(self, event)
+    _extract_text = xinyu_qq_normalizer.extract_text
 
     def _extract_learning_material(self, event: dict[str, Any]) -> dict[str, str] | None:
         message = event.get("message")
