@@ -71,6 +71,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract core bridge payload text helper and alias session key helper.
 - [x] Record 2026-05-08 13:53 long-run health checkpoint.
 - [x] Replace core bridge renderer mode wrapper with direct renderer alias.
+- [x] Record 2026-05-08 18:36 long-run health checkpoint.
 
 ## Stop-Gap First
 
