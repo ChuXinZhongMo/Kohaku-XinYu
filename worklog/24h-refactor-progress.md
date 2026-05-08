@@ -1181,3 +1181,24 @@ Workspace: D:\XinYu
 - Risk: Low; pure helper relocation. No HTTP routes, prompt text, persona semantics, long-term memory body text, state writes, QQ outbound, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-54-commit>`
 - Next: Continue with another isolated core bridge helper extraction.
+
+## Loop 55 - 11:55
+
+- Task: Extract core bridge state text/path helpers.
+- Why: `xinyu_core_bridge.py` had pure helpers for reading markdown state text, extracting bullet fields, parsing timestamps, and converting payload paths. Moving them to `xinyu_bridge_state_text.py` clarifies the read-only state-text boundary.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_state_text.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_state_text_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_state_text.py xinyu_core_bridge.py bridge_state_text_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_state_text_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Read-only state text helpers now live in `xinyu_bridge_state_text.py`; `xinyu_core_bridge.py` imports them under the previous private names. Compile, state text smoke, and bridge probe smoke passed.
+- Risk: Low; read-only helper relocation. No state writes, HTTP routes, prompt text, persona semantics, long-term memory body text, QQ outbound, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-55-commit>`
+- Next: Continue with another isolated core bridge helper extraction.

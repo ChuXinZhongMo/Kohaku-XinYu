@@ -13,7 +13,6 @@ from datetime import datetime
 from http import HTTPStatus
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
 
 from xinyu_async_exploration import (
     async_exploration_outbox_message,
@@ -32,6 +31,11 @@ from xinyu_bridge_context import prompt_context_signature
 from xinyu_bridge_proactive import acknowledge as proactive_ack_bridge, claim_or_preview as proactive_bridge
 from xinyu_bridge_renderer import BridgeRenderer
 from xinyu_bridge_session import AgentSession, session_key_from_payload, session_keys_to_expire
+from xinyu_bridge_state_text import parse_iso as _parse_iso
+from xinyu_bridge_state_text import payload_path as _payload_path
+from xinyu_bridge_state_text import read_text_safe as _read_text_safe
+from xinyu_bridge_state_text import seconds_since_iso as _seconds_since_iso
+from xinyu_bridge_state_text import state_field as _state_field
 from xinyu_bridge_values import as_bool as _as_bool
 from xinyu_bridge_values import as_int as _as_int
 from xinyu_bridge_values import as_str_set as _as_str_set
@@ -765,47 +769,6 @@ def _normalize_reply(text: str) -> str:
         else:
             reply += line
     return reply.strip()
-
-
-def _read_text_safe(path: Path) -> str:
-    try:
-        if not path.exists():
-            return ""
-        return path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
-        return ""
-
-
-def _state_field(text: str, field: str, default: str = "") -> str:
-    match = re.search(rf"(?m)^-\s+{re.escape(field)}:\s*(.*)$", text or "")
-    if not match:
-        return default
-    return re.sub(r"\s+", " ", match.group(1).strip()) or default
-
-
-def _parse_iso(value: str) -> datetime | None:
-    try:
-        return datetime.fromisoformat(value)
-    except Exception:
-        return None
-
-
-def _seconds_since_iso(value: str, *, default: float = 999999.0) -> float:
-    parsed = _parse_iso(value)
-    if parsed is None:
-        return default
-    return max(0.0, (datetime.now().astimezone() - parsed).total_seconds())
-
-
-def _payload_path(value: str) -> Path:
-    text = value.strip()
-    if text.lower().startswith("file://"):
-        parsed = urlparse(text)
-        path_text = parsed.path
-        if os.name == "nt" and len(path_text) > 2 and path_text[0] == "/" and path_text[2] == ":":
-            path_text = path_text[1:]
-        return Path(unquote(path_text))
-    return Path(text)
 
 
 def _run_learning_study_chain(root: Path, mode: str) -> dict[str, object]:

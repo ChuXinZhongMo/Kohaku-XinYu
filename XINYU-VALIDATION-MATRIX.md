@@ -62,6 +62,7 @@ For Python code changes, also compile the changed Python files:
 | Bridge context boundary | `python -m py_compile xinyu_bridge_context.py xinyu_core_bridge.py bridge_context_smoke.py`; `bridge_context_smoke.py`; focused prompt-signature pytest; `bridge_probe_smoke.py` |
 | Bridge session boundary | `python -m py_compile xinyu_bridge_session.py xinyu_core_bridge.py bridge_session_smoke.py bridge_session_cleanup_smoke.py`; `bridge_session_smoke.py`; `bridge_session_cleanup_smoke.py`; `bridge_probe_smoke.py` |
 | Bridge value helper boundary | `python -m py_compile xinyu_bridge_values.py xinyu_core_bridge.py bridge_values_smoke.py`; `bridge_values_smoke.py`; `bridge_probe_smoke.py` |
+| Bridge state text helper boundary | `python -m py_compile xinyu_bridge_state_text.py xinyu_core_bridge.py bridge_state_text_smoke.py`; `bridge_state_text_smoke.py`; `bridge_probe_smoke.py` |
 | Desktop service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `xinyu_desktop_rest_smoke.py`; `xinyu_desktop_ws_smoke.py`; `xinyu_desktop_events_smoke.py`; `bridge_probe_smoke.py` |
 | Codex service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `codex_delegate_smoke.py`; `codex_completion_outbox_smoke.py`; `bridge_probe_smoke.py` |
 | Learning service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `bridge_learning_ingest_smoke.py`; `python -m pytest tests\test_learning_closed_loop.py -q`; `bridge_probe_smoke.py` |
