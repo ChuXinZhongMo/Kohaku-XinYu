@@ -927,3 +927,27 @@ Workspace: D:\XinYu
 - Risk: Low; pure helper relocation with stable parsing behavior. No real QQ outbound, OneBot payload shape, trust policy, persona semantics, memory body text, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-42-commit>`
 - Next: Continue with moving the `GatewayConfig` dataclass itself behind the QQ config boundary.
+
+## Loop 43 - 11:21
+
+- Task: Move `GatewayConfig` into `xinyu_qq_config.py`.
+- Why: The QQ gateway still owned the full config model after helper extraction. Moving the dataclass and its file/override parsing into the config module makes the gateway a smaller transport surface while preserving the old `xinyu_qq_gateway.GatewayConfig` import path through re-export.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_config.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_config_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_config.py xinyu_qq_gateway.py xinyu_qq_config_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_config_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_config_helpers_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_gateway_ack_spool.py -q`
+  - `git diff --check`
+- Result: `GatewayConfig` now lives in `xinyu_qq_config.py`; `xinyu_qq_gateway.py` imports it so existing tests and callers can still import from the gateway module. Config smoke now covers direct config-file parsing and derived override URLs. Compile, config helper smoke, QQ gateway smoke, QQ review smoke, and ack spool pytest passed.
+- Risk: Low-medium; config parsing/model ownership moved, but route derivation, defaults, trigger prefixes, and gateway compatibility import were preserved. No real QQ outbound, OneBot payload shape, trust policy, persona semantics, memory body text, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-43-commit>`
+- Next: Continue with another single-responsibility QQ gateway extraction, likely runtime constants/prefix ownership or a focused sender/outbox boundary follow-up after observing the current module.

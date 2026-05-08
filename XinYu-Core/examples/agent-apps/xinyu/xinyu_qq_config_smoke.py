@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import tempfile
+from pathlib import Path
+
 from xinyu_qq_config import (
+    GatewayConfig,
     derive_codex_execute_url,
     derive_core_route_url,
     derive_goldmark_mark_url,
@@ -28,6 +32,36 @@ def main() -> int:
     for actual, wanted in expected.items():
         if actual != wanted:
             failures.append(f"route derivation changed: {actual!r} != {wanted!r}")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        config_path = Path(tmp) / "xinyu_qq_gateway.config.json"
+        config_path.write_text(
+            """{
+  "core_chat_url": "http://127.0.0.1:9900/chat",
+  "onebot_port": "6200",
+  "codex_command_prefixes": "/codex,/study",
+  "trusted_user_ids": ["42"],
+  "ignore_prefixes": ["#"]
+}
+""",
+            encoding="utf-8",
+        )
+        config = GatewayConfig.from_file(config_path)
+        if config.onebot_port != 6200:
+            failures.append("GatewayConfig integer parsing changed")
+        if config.codex_execute_url != "http://127.0.0.1:9900/codex/execute":
+            failures.append("GatewayConfig derived codex URL changed")
+        if config.codex_command_prefixes != ("/codex", "/study"):
+            failures.append("GatewayConfig command prefix parsing changed")
+        if config.trusted_user_ids != frozenset({"42"}):
+            failures.append("GatewayConfig trusted user parsing changed")
+        if config.ignore_prefixes != ("#", "/", "!", "\uff01", "."):
+            failures.append("GatewayConfig required ignore prefixes changed")
+        overridden = config.with_overrides(core_chat_url="http://127.0.0.1:9911/chat", port=6300)
+        if overridden.onebot_port != 6300:
+            failures.append("GatewayConfig port override changed")
+        if overridden.codex_execute_url != "http://127.0.0.1:9911/codex/execute":
+            failures.append("GatewayConfig derived URL override changed")
 
     if failures:
         print("XinYu QQ config smoke failed")
