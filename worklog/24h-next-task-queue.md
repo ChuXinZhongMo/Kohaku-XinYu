@@ -52,6 +52,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract core bridge request error type into `xinyu_bridge_errors.py`.
 - [x] Extract core bridge reply bubble helpers into `xinyu_bridge_reply_bubbles.py`.
 - [x] Extract core bridge recent sticker reply helpers into `xinyu_bridge_recent_sticker_reply.py`.
+- [x] Replace core bridge Codex static wrappers with direct service aliases.
 
 ## Stop-Gap First
 

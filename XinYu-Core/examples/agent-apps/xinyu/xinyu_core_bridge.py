@@ -4177,21 +4177,10 @@ tags: [promise, followup, qq-outbox, continuity]
             task_text=task_text,
         )
 
-    @staticmethod
-    def _codex_reply_variant(seed: str, options: tuple[str, ...]) -> str:
-        return codex_reply_variant(seed, options)
-
-    @staticmethod
-    def _codex_owner_task_text(text: str) -> str:
-        return codex_owner_task_text(text)
-
-    @staticmethod
-    def _codex_task_subject(task_text: str) -> str:
-        return codex_task_subject(task_text)
-
-    @staticmethod
-    def _codex_started_reply(task_subject: str, variant: int) -> str:
-        return codex_started_reply(task_subject, variant)
+    _codex_reply_variant = staticmethod(codex_reply_variant)
+    _codex_owner_task_text = staticmethod(codex_owner_task_text)
+    _codex_task_subject = staticmethod(codex_task_subject)
+    _codex_started_reply = staticmethod(codex_started_reply)
 
     def _codex_completion_summary(self, result: Any, *, limit: int = 220) -> str:
         return codex_completion_summary(self.xinyu_dir, result, limit=limit)
@@ -4235,9 +4224,7 @@ tags: [promise, followup, qq-outbox, continuity]
     def _codex_generated_image_artifacts(self, result: Any | None, *, task_text: str, limit: int = 3) -> list[Path]:
         return codex_generated_image_artifacts(self.xinyu_dir, result, task_text=task_text, limit=limit)
 
-    @staticmethod
-    def _looks_like_codex_image_generation_task(text: str) -> bool:
-        return looks_like_codex_image_generation_task(text)
+    _looks_like_codex_image_generation_task = staticmethod(looks_like_codex_image_generation_task)
 
     async def _codex_delegate_background(self, payload: dict[str, Any], *, text: str, auto_study: bool) -> None:
         trace_path = self.memory_root / "knowledge/codex_delegate_background_trace.log"

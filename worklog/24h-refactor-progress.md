@@ -1523,3 +1523,25 @@ Workspace: D:\XinYu
 - Risk: Low-medium; sticker follow-up reply helper ownership moved, but question markers, metadata keys, tail parsing, and reply strings are unchanged. No prompt/persona semantics, long-term memory body text, real QQ outbound, v1 traffic behavior, route payload shape, or state writes were touched.
 - Rollback: `git revert <loop-69-commit>`
 - Next: Continue with another isolated static helper group inside `XinYuBridgeRuntime`.
+
+## Loop 70 - 12:46
+
+- Task: Replace core bridge Codex static wrappers with direct service aliases.
+- Why: `XinYuBridgeRuntime` still had one-line static wrappers that simply delegated to `xinyu_codex_service.py`. Binding those functions directly as static methods reduces wrapper code while keeping the old runtime compatibility names.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_codex_aliases_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile bridge_codex_aliases_smoke.py xinyu_core_bridge.py xinyu_codex_service.py`
+  - `.\.venv\Scripts\python.exe bridge_codex_aliases_smoke.py`
+  - `.\.venv\Scripts\python.exe codex_delegate_smoke.py`
+  - `.\.venv\Scripts\python.exe codex_completion_outbox_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Codex reply variant, owner task text, task subject, started reply, and image-generation detector runtime static names now bind directly to `xinyu_codex_service.py` functions. Compile, alias smoke, Codex delegate smoke, Codex completion outbox smoke, bridge probe, and diff check passed.
+- Risk: Low; direct aliasing only. Codex request/output semantics, prompt/persona semantics, long-term memory body text, QQ outbound, v1 traffic behavior, route payload shape, and state writes were unchanged.
+- Rollback: `git revert <loop-70-commit>`
+- Next: Continue with another isolated runtime helper wrapper or run a new health checkpoint after additional slices.
