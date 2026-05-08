@@ -74,6 +74,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Record 2026-05-08 18:36 long-run health checkpoint.
 - [x] Replace QQ forward context wrappers with direct helper aliases.
 - [x] Replace QQ CQ normalizer wrappers with direct helper aliases.
+- [x] Replace QQ sticker semantics wrappers with direct helper aliases.
 
 ## Stop-Gap First
 

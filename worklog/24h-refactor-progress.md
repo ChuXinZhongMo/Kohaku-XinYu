@@ -2001,3 +2001,23 @@ Workspace: D:\XinYu
 - Risk: Low; only same-signature compatibility wrappers changed. CQ parsing, message segment handling, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior were unchanged.
 - Rollback: `git revert <loop-91-commit>`
 - Next: Continue with another isolated QQ gateway shim or core bridge helper slice.
+
+## Loop 92 - 18:45
+
+- Task: Replace QQ sticker semantics wrappers with direct helper aliases.
+- Why: `_infer_received_sticker_semantics` and `_image_segment_looks_like_sticker` only delegated to `xinyu_qq_sticker_semantics`. Replacing them with direct static aliases trims gateway shim code while preserving the compatibility method names.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_sticker_semantics_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_sticker_semantics_smoke.py xinyu_qq_sticker_semantics.py`
+  - `.\.venv\Scripts\python.exe qq_sticker_semantics_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `_infer_received_sticker_semantics` and `_image_segment_looks_like_sticker` now directly alias `xinyu_qq_sticker_semantics` helpers. Compile, focused sticker semantics smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only same-signature compatibility wrappers changed. Sticker semantic inference, image-as-sticker detection, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-92-commit>`
+- Next: Continue with another isolated QQ gateway shim or core bridge helper slice.

@@ -2226,13 +2226,8 @@ class NativeQQGateway:
     def _summarize_segment(self, segment_type: str, data: dict[str, Any]) -> dict[str, Any]:
         return xinyu_qq_rich_context.summarize_segment(segment_type, data)
 
-    @staticmethod
-    def _infer_received_sticker_semantics(summary: str) -> dict[str, str]:
-        return xinyu_qq_sticker_semantics.infer_received_sticker_semantics(summary)
-
-    @staticmethod
-    def _image_segment_looks_like_sticker(data: dict[str, Any]) -> bool:
-        return xinyu_qq_sticker_semantics.image_segment_looks_like_sticker(data)
+    _infer_received_sticker_semantics = staticmethod(xinyu_qq_sticker_semantics.infer_received_sticker_semantics)
+    _image_segment_looks_like_sticker = staticmethod(xinyu_qq_sticker_semantics.image_segment_looks_like_sticker)
 
     def _summarize_replied_message(self, event: dict[str, Any]) -> dict[str, Any]:
         text = self._extract_text(event).strip()

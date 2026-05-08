@@ -20,12 +20,16 @@ def main() -> int:
         failures.append(f"unclear sticker semantics changed: {unclear!r}")
 
     gateway_result = NativeQQGateway._infer_received_sticker_semantics("抱抱")
+    if NativeQQGateway._infer_received_sticker_semantics is not infer_received_sticker_semantics:
+        failures.append("gateway sticker semantics helper is not a direct alias")
     if gateway_result.get("mood") != "comfort":
         failures.append("gateway sticker semantics wrapper no longer delegates")
     if not image_segment_looks_like_sticker({"summary": "动画表情", "name": ""}):
         failures.append("image sticker marker detection changed")
     if image_segment_looks_like_sticker({"summary": "ordinary photo", "name": "photo.jpg"}):
         failures.append("ordinary image should not be treated as sticker")
+    if NativeQQGateway._image_segment_looks_like_sticker is not image_segment_looks_like_sticker:
+        failures.append("gateway image sticker helper is not a direct alias")
     if not NativeQQGateway._image_segment_looks_like_sticker({"image_type": "mface"}):
         failures.append("gateway image sticker wrapper no longer delegates")
 
