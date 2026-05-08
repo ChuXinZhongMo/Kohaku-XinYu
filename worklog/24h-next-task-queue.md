@@ -91,6 +91,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace QQ local image file wrapper with direct method alias.
 - [x] Replace QQ local file wrapper with direct method alias.
 - [x] Record 2026-05-08 19:21 long-run health checkpoint.
+- [x] Replace QQ sticker import payload resolver wrapper with direct method alias.
 
 ## Stop-Gap First
 

@@ -68,6 +68,8 @@ def main() -> int:
         failures.append("gateway local image helper is not a direct method alias")
     if NativeQQGateway._onebot_local_file is not attachment_resolver.onebot_local_file:
         failures.append("gateway local file helper is not a direct method alias")
+    if NativeQQGateway._resolve_sticker_import_payload is not attachment_resolver.resolve_sticker_import_payload:
+        failures.append("gateway sticker import resolver is not a direct method alias")
 
     if failures:
         print("XinYu QQ attachment material smoke failed")
