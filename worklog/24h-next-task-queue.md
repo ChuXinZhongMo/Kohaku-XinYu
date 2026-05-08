@@ -55,6 +55,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace core bridge Codex static wrappers with direct service aliases.
 - [x] Record 2026-05-08 12:48 long-run health checkpoint.
 - [x] Extract desktop proactive state text field helpers into `xinyu_bridge_desktop_state_text.py`.
+- [x] Extract desktop event projection helpers into `xinyu_bridge_desktop_projection.py`.
 
 ## Stop-Gap First
 

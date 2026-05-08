@@ -40,6 +40,17 @@ from xinyu_bridge_desktop_actions import desktop_action_pressure_label as _deskt
 from xinyu_bridge_desktop_actions import desktop_action_result_label as _desktop_action_result_label
 from xinyu_bridge_desktop_actions import desktop_action_theme_label as _desktop_action_theme_label
 from xinyu_bridge_desktop_actions import desktop_scrub_action_markers as _desktop_scrub_action_markers
+from xinyu_bridge_desktop_projection import desktop_avatar_url
+from xinyu_bridge_desktop_projection import desktop_display_id
+from xinyu_bridge_desktop_projection import desktop_group_avatar_url
+from xinyu_bridge_desktop_projection import desktop_hash
+from xinyu_bridge_desktop_projection import desktop_marker_count
+from xinyu_bridge_desktop_projection import desktop_privacy_for_payload
+from xinyu_bridge_desktop_projection import desktop_proactive_expired
+from xinyu_bridge_desktop_projection import desktop_recall_count
+from xinyu_bridge_desktop_projection import desktop_session_kind
+from xinyu_bridge_desktop_projection import desktop_text_preview
+from xinyu_bridge_desktop_projection import desktop_top_recall_sources
 from xinyu_bridge_desktop_state_text import desktop_replace_frontmatter_field
 from xinyu_bridge_desktop_state_text import desktop_replace_list_field
 from xinyu_bridge_memory_snapshot import memory_snapshot as _memory_snapshot
@@ -963,15 +974,7 @@ class XinYuBridgeRuntime:
             window["self_choice"] = self_choice_dream_bias
         return window
 
-    @staticmethod
-    def _desktop_marker_count(items: list[Any], markers: tuple[str, ...]) -> int:
-        lowered_markers = tuple(marker.lower() for marker in markers)
-        count = 0
-        for item in items:
-            text = _safe_str(item).lower()
-            if any(marker in text for marker in lowered_markers):
-                count += 1
-        return count
+    _desktop_marker_count = staticmethod(desktop_marker_count)
 
     def _desktop_xinyu_state(
         self,
@@ -1414,18 +1417,8 @@ class XinYuBridgeRuntime:
             "memoryRefHash": self._desktop_hash(memory_ref),
         }
 
-    @staticmethod
-    def _desktop_recall_count(result: Any) -> int:
-        if result is None:
-            return 0
-        return len(list(getattr(result, "items", ()) or ()))
-
-    @staticmethod
-    def _desktop_top_recall_sources(result: Any) -> list[str]:
-        if result is None:
-            return []
-        sources = [_safe_str(getattr(item, "source", "")) for item in list(getattr(result, "items", ()) or ())]
-        return _dedupe([source for source in sources if source])[:6]
+    _desktop_recall_count = staticmethod(desktop_recall_count)
+    _desktop_top_recall_sources = staticmethod(desktop_top_recall_sources)
 
     async def _desktop_publish_proactive_candidate_ready_from_state(
         self,
@@ -1637,14 +1630,7 @@ class XinYuBridgeRuntime:
             for candidate_id in stale:
                 self._desktop_proactive_inbox.pop(candidate_id, None)
 
-    @staticmethod
-    def _desktop_proactive_expired(expires_at: str) -> bool:
-        if expires_at in {"", "none", "unknown"}:
-            return False
-        parsed = _parse_iso(expires_at)
-        if parsed is None:
-            return False
-        return datetime.now().astimezone() >= parsed
+    _desktop_proactive_expired = staticmethod(desktop_proactive_expired)
 
     def _desktop_remember_turn(self, item: dict[str, Any]) -> None:
         self._desktop_recent_turns.append(dict(item))
@@ -1695,17 +1681,7 @@ class XinYuBridgeRuntime:
             "messageHash": self._desktop_hash(payload.get("message_id")),
         }
 
-    @staticmethod
-    def _desktop_session_kind(payload: dict[str, Any]) -> str:
-        message_type = _safe_str(payload.get("message_type")).lower()
-        platform = _safe_str(payload.get("platform")).lower()
-        if platform == "desktop" or message_type.startswith("desktop"):
-            return "desktop_private"
-        if message_type.startswith("group") or _safe_str(payload.get("group_id")).strip():
-            return "qq_group"
-        if message_type.startswith("private") or _safe_str(payload.get("user_id")).strip():
-            return "qq_private"
-        return "system"
+    _desktop_session_kind = staticmethod(desktop_session_kind)
 
     def _desktop_session_label(
         self,
@@ -1733,12 +1709,7 @@ class XinYuBridgeRuntime:
             return f"{relation} / {fallback_contact}"
         return "系统窗口"
 
-    @staticmethod
-    def _desktop_display_id(value: Any) -> str:
-        text = _safe_str(value).strip()
-        if re.fullmatch(r"\d{4,20}", text):
-            return text
-        return ""
+    _desktop_display_id = staticmethod(desktop_display_id)
 
     def _desktop_account_label(
         self,
@@ -1767,56 +1738,11 @@ class XinYuBridgeRuntime:
             return f"{prefix} {user_display_id}" if user_display_id else prefix
         return _safe_str(payload.get("platform"), "system")
 
-    @staticmethod
-    def _desktop_avatar_url(
-        payload: dict[str, Any],
-        *,
-        session_kind: str,
-        user_display_id: str,
-    ) -> str:
-        if session_kind in {"qq_private", "qq_group"} and user_display_id:
-            return f"https://q1.qlogo.cn/g?b=qq&nk={user_display_id}&s=100"
-        metadata = payload.get("metadata")
-        if isinstance(metadata, dict):
-            avatar = _safe_str(metadata.get("avatar_url") or metadata.get("qq_avatar_url")).strip()
-            if avatar.startswith(("http://", "https://")):
-                return avatar
-        return ""
-
-    @staticmethod
-    def _desktop_group_avatar_url(group_display_id: str) -> str:
-        if group_display_id:
-            return f"https://p.qlogo.cn/gh/{group_display_id}/{group_display_id}/100"
-        return ""
-
-    @staticmethod
-    def _desktop_privacy_for_payload(payload: dict[str, Any]) -> str:
-        metadata = payload.get("metadata")
-        if not isinstance(metadata, dict):
-            metadata = {}
-        message_type = _safe_str(payload.get("message_type")).lower()
-        source = _safe_str(payload.get("source") or metadata.get("source")).lower()
-        if message_type.startswith("group") or _safe_str(payload.get("group_id")).strip():
-            return "group_context"
-        if message_type.startswith("system") or source.startswith("maintenance"):
-            return "system_internal"
-        if _as_bool(metadata.get("is_owner_user"), default=False):
-            return "owner_private"
-        return "external_private"
-
-    @staticmethod
-    def _desktop_hash(value: Any, *, length: int = 16) -> str:
-        text = _safe_str(value).strip()
-        if not text:
-            return ""
-        return "sha256:" + hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest()[:length]
-
-    @staticmethod
-    def _desktop_text_preview(text: str, *, limit: int) -> str:
-        compact = re.sub(r"\s+", " ", _desktop_scrub_action_markers(text)).strip()
-        if limit > 3 and len(compact) > limit:
-            return compact[: limit - 3].rstrip() + "..."
-        return compact
+    _desktop_avatar_url = staticmethod(desktop_avatar_url)
+    _desktop_group_avatar_url = staticmethod(desktop_group_avatar_url)
+    _desktop_privacy_for_payload = staticmethod(desktop_privacy_for_payload)
+    _desktop_hash = staticmethod(desktop_hash)
+    _desktop_text_preview = staticmethod(desktop_text_preview)
 
     def _v1_health(self) -> dict[str, Any]:
         return xinyu_bridge_v1_routes.health(self)

@@ -1584,3 +1584,27 @@ Workspace: D:\XinYu
 - Risk: Low; pure state-text helper relocation only. Replacement format, default `none`, proactive state file path, write helper, route payloads, prompt/persona semantics, long-term memory body text, QQ outbound, and v1 traffic behavior were unchanged.
 - Rollback: `git revert <loop-72-commit>`
 - Next: Continue with another isolated desktop helper group or state governance slice.
+
+## Loop 73 - 12:55
+
+- Task: Extract desktop event projection helpers.
+- Why: `XinYuBridgeRuntime` still owned pure helpers for Desktop event projection fields: marker counts, recall summaries, proactive expiry, session kind, display ids, avatar URLs, privacy classification, hashes, and text previews. Moving them to `xinyu_bridge_desktop_projection.py` reduces Desktop projection logic inside the runtime class while preserving static method names.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_desktop_projection.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_desktop_projection_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_desktop_projection.py bridge_desktop_projection_smoke.py xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe bridge_desktop_projection_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_desktop_rest_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_desktop_events_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_desktop_proactive_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Desktop projection helpers now live in `xinyu_bridge_desktop_projection.py`; runtime static entrypoints keep their previous names. Compile, focused projection smoke, Desktop REST smoke, Desktop events smoke, Desktop proactive smoke, bridge probe, and diff check passed.
+- Risk: Low-medium; Desktop event projection helper ownership moved, but event field names, privacy labels, hash format, avatar URL format, text preview rules, and proactive expiry behavior are unchanged. No route payload schema, prompt/persona semantics, long-term memory body text, QQ outbound, v1 traffic behavior, or state writes were touched.
+- Rollback: `git revert <loop-73-commit>`
+- Next: Continue with another isolated helper group or route wrapper boundary.
