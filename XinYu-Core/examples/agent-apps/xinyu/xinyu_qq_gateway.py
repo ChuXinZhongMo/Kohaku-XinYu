@@ -306,25 +306,7 @@ class NativeQQGateway:
             adapter_error=adapter_error,
         )
 
-    def _outbox_message_ack_payload(
-        self,
-        claim: dict[str, Any],
-        *,
-        target: ReplyTarget,
-        visible_text: str,
-        adapter_message_id: str,
-        delivery_kind: str,
-        adapter_error: str = "",
-    ) -> dict[str, Any]:
-        return xinyu_qq_outbox_client.outbox_message_ack_payload(
-            self,
-            claim,
-            target=target,
-            visible_text=visible_text,
-            adapter_message_id=adapter_message_id,
-            delivery_kind=delivery_kind,
-            adapter_error=adapter_error,
-        )
+    _outbox_message_ack_payload = xinyu_qq_outbox_client.outbox_message_ack_payload
 
     _sent_outbox_delivery_route = staticmethod(xinyu_qq_outbox_client.sent_outbox_delivery_route)
 

@@ -2768,3 +2768,24 @@ Workspace: D:\XinYu
 - Risk: Low; only outbox target helper ownership changed. Private-target filtering, outbox queue persistence, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-128-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 129 - 20:17
+
+- Task: Replace QQ outbox message ack payload wrapper with direct outbox client alias.
+- Why: `_outbox_message_ack_payload` in `xinyu_qq_gateway.py` only forwarded the gateway, claim, target, visible text, adapter id, delivery kind, and adapter error into `xinyu_qq_outbox_client.outbox_message_ack_payload`. The signatures already match, so the gateway can use a direct method alias.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_outbox_route_alias_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py qq_outbox_route_alias_smoke.py xinyu_qq_outbox_client.py`
+  - `D:\XinYu\Python312\python.exe qq_outbox_route_alias_smoke.py`
+  - `D:\XinYu\Python312\python.exe qq_outbox_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: Gateway `_outbox_message_ack_payload` now directly aliases `xinyu_qq_outbox_client.outbox_message_ack_payload`. Compile, focused outbox route alias smoke, QQ outbox smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only sent-outbox ack payload helper ownership changed. Payload fields, outbox queue persistence, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-129-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.

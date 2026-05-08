@@ -43,6 +43,24 @@ def main() -> int:
     group_claim = {"target": {"message_kind": "group", "user_id": "42", "group_id": "7"}}
     if gateway._outbox_target(group_claim) is not None:
         failures.append("gateway outbox target alias started accepting non-private target")
+    if NativeQQGateway._outbox_message_ack_payload is not outbox_client.outbox_message_ack_payload:
+        failures.append("gateway outbox message ack payload helper is not a direct method alias")
+    outbox_ack_payload = gateway._outbox_message_ack_payload(
+        {
+            "message_id": "outbox-1",
+            "source": "smoke",
+            "message_type": "text",
+            "metadata": {"session_id": "qq:private:42"},
+        },
+        target=ReplyTarget(message_kind="private", user_id="42", group_id=""),
+        visible_text="sent reply",
+        adapter_message_id="qq-msg-2",
+        delivery_kind="text",
+    )
+    if outbox_ack_payload.get("adapter_message_id") != "qq-msg-2":
+        failures.append("gateway outbox message ack payload alias changed adapter id")
+    if outbox_ack_payload.get("target", {}).get("user_id") != "42":
+        failures.append("gateway outbox message ack payload alias changed target")
 
     class _AckSpool:
         def __init__(self) -> None:
