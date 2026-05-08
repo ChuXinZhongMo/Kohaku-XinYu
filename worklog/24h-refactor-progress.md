@@ -499,3 +499,26 @@ Workspace: D:\XinYu
 - Risk: Low; documentation-only correction.
 - Rollback: `git revert <loop-22-commit>`
 - Next: Final report to owner.
+
+## Loop 23 - 10:19
+
+- Task: Add a bounded recent-exception scan window to the health diagnostic.
+- Why: `recent_exceptions` was still being driven to `critical` by old log-tail residue mixed with current trace rows. Long-run health needs to distinguish current failures from historical tail comparison.
+- Files changed:
+  - `diagnostics/check_xinyu_health.py`
+  - `XINYU-LONG-RUN-OPERATIONS.md`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `git status --short --branch`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --write-ledger --checkpoint --workspace D:\XinYu`
+  - Read-only inspection of `runtime\github_learning_trace.jsonl`, `logs\xinyu_core_bridge.err.log`, and `runtime\self_presence_trace.jsonl`.
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe -m py_compile diagnostics\check_xinyu_health.py`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --workspace D:\XinYu`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --workspace D:\XinYu --recent-window-minutes 0`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --write-ledger --workspace D:\XinYu`
+- Result: Added `--recent-window-minutes` with a 120-minute default and `0` as historical-tail comparison mode. JSONL rows are filtered by their own timestamps; text logs are filtered by file mtime. Benign WebSocket handshake trace residue no longer counts standalone `opening handshake failed` lines. Default health now reports `recent_exceptions: warn` with `hits=5`; historical-tail mode still reports `critical`, confirming the old residue distinction.
+- Risk: Low; diagnostic classification only. Runtime/log files were not cleaned, QQ outbound was not tested, v1 traffic was not expanded, and memory/persona content was not touched.
+- Rollback: `git revert <loop-23-commit>`
+- Next: Reduce the remaining 120-minute `recent_exceptions` hits from warn toward ok.

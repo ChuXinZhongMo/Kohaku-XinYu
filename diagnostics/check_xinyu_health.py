@@ -10,12 +10,13 @@ import sys
 import urllib.error
 import urllib.request
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 
 DEFAULT_APP_REL = Path("XinYu-Core/examples/agent-apps/xinyu")
+DEFAULT_RECENT_WINDOW_MINUTES = 120
 EXCEPTION_RE = re.compile(r"(?i)(traceback|exception|error|failed)")
 NO_ERROR_VALUES = frozenset({"", "0", "false", "none", "null", "ok", "no_error"})
 BENIGN_TEXT_EXCEPTION_MARKERS = (
@@ -60,7 +61,40 @@ def _meaningful_error(value: Any) -> bool:
     return text not in NO_ERROR_VALUES
 
 
-def _jsonl_exception_hits(text: str) -> int:
+def _parse_timestamp(value: Any) -> datetime | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, (int, float)):
+        try:
+            return datetime.fromtimestamp(float(value)).astimezone()
+        except (OSError, OverflowError, ValueError):
+            return None
+    text = str(value).strip()
+    if not text:
+        return None
+    if text.isdigit():
+        try:
+            return datetime.fromtimestamp(float(text)).astimezone()
+        except (OSError, OverflowError, ValueError):
+            return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed.astimezone()
+
+
+def _row_timestamp(row: dict[str, Any]) -> datetime | None:
+    for key in ("checked_at", "observed_at", "created_at", "updated_at", "ts", "time"):
+        parsed = _parse_timestamp(row.get(key))
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _jsonl_exception_hits(text: str, cutoff: datetime | None) -> int:
     hits = 0
     for line in text.splitlines()[-500:]:
         line = line.strip()
@@ -72,6 +106,9 @@ def _jsonl_exception_hits(text: str) -> int:
             hits += len(EXCEPTION_RE.findall(line))
             continue
         if not isinstance(row, dict):
+            continue
+        row_time = _row_timestamp(row)
+        if cutoff is not None and row_time is not None and row_time < cutoff:
             continue
         if row.get("accepted") is False:
             hits += 1
@@ -87,7 +124,10 @@ def _text_exception_hits(text: str) -> int:
     for block in re.split(r"(?=Traceback \(most recent call last\):|opening handshake failed)", text):
         if any(marker in block for marker in BENIGN_TEXT_EXCEPTION_MARKERS):
             continue
-        hits += len(EXCEPTION_RE.findall(block))
+        normalized = block.replace("The above exception was the direct cause of the following exception:", "")
+        if normalized.strip() == "opening handshake failed":
+            continue
+        hits += len(EXCEPTION_RE.findall(normalized))
     return hits
 
 
@@ -177,7 +217,9 @@ def _outbox_backlog(app_root: Path) -> tuple[str, str]:
     return status, f"pending={len(pending)} total={len(items)}"
 
 
-def _recent_exception_count(app_root: Path) -> tuple[str, str]:
+def _recent_exception_count(app_root: Path, *, window_minutes: int = DEFAULT_RECENT_WINDOW_MINUTES) -> tuple[str, str]:
+    window_minutes = max(0, int(window_minutes))
+    cutoff = datetime.now().astimezone() - timedelta(minutes=window_minutes) if window_minutes else None
     candidates: list[Path] = []
     for folder in (app_root / "logs", app_root / "runtime"):
         if folder.exists():
@@ -193,6 +235,13 @@ def _recent_exception_count(app_root: Path) -> tuple[str, str]:
                     continue
                 if rel_parts == ("runtime", "v1_shadow_trace.jsonl"):
                     continue
+                if cutoff is not None:
+                    try:
+                        modified = datetime.fromtimestamp(path.stat().st_mtime).astimezone()
+                    except OSError:
+                        continue
+                    if modified < cutoff:
+                        continue
                 candidates.append(path)
     hits = 0
     scanned = 0
@@ -203,7 +252,7 @@ def _recent_exception_count(app_root: Path) -> tuple[str, str]:
             continue
         scanned += 1
         if path.suffix.lower() == ".jsonl":
-            path_hits = _jsonl_exception_hits(text)
+            path_hits = _jsonl_exception_hits(text, cutoff)
         else:
             path_hits = _text_exception_hits(text[-64 * 1024 :])
         hits += path_hits
@@ -215,7 +264,7 @@ def _recent_exception_count(app_root: Path) -> tuple[str, str]:
             file_hits.append((path_hits, rel))
     status = "ok" if hits == 0 else ("warn" if hits < 20 else "critical")
     top = ",".join(f"{rel}:{count}" for count, rel in sorted(file_hits, reverse=True)[:3]) or "none"
-    return status, f"hits={hits} scanned_files={scanned} top={top}"
+    return status, f"hits={hits} scanned_files={scanned} window_minutes={window_minutes} top={top}"
 
 
 def _v1_shadow_errors(app_root: Path) -> tuple[str, str]:
@@ -279,7 +328,12 @@ def _append_health_ledger(report: dict[str, Any], ledger_path: Path, *, kind: st
     }
 
 
-def collect_health(workspace: Path, core_url: str) -> dict[str, Any]:
+def collect_health(
+    workspace: Path,
+    core_url: str,
+    *,
+    recent_window_minutes: int = DEFAULT_RECENT_WINDOW_MINUTES,
+) -> dict[str, Any]:
     workspace = workspace.resolve()
     app_root = workspace / DEFAULT_APP_REL
     signals: list[HealthSignal] = []
@@ -324,7 +378,7 @@ def collect_health(workspace: Path, core_url: str) -> dict[str, Any]:
 
     status, detail = _outbox_backlog(app_root)
     signals.append(HealthSignal("outbox_backlog", status, detail))
-    status, detail = _recent_exception_count(app_root)
+    status, detail = _recent_exception_count(app_root, window_minutes=recent_window_minutes)
     signals.append(HealthSignal("recent_exceptions", status, detail))
     status, detail = _v1_shadow_errors(app_root)
     signals.append(HealthSignal("v1_shadow_errors", status, detail))
@@ -350,6 +404,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="XinYu long-run health diagnostic. Default mode is read-only.")
     parser.add_argument("--workspace", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--core-url", default="http://127.0.0.1:8765")
+    parser.add_argument(
+        "--recent-window-minutes",
+        type=int,
+        default=DEFAULT_RECENT_WINDOW_MINUTES,
+        help="Time window for recent exception scanning. Use 0 to scan the previous tail behavior.",
+    )
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--strict", action="store_true", help="Exit non-zero on warn or critical status.")
     parser.add_argument(
@@ -372,7 +432,7 @@ def main() -> int:
     if args.checkpoint and not args.write_ledger:
         parser.error("--checkpoint requires --write-ledger")
 
-    report = collect_health(args.workspace, args.core_url)
+    report = collect_health(args.workspace, args.core_url, recent_window_minutes=args.recent_window_minutes)
     if args.write_ledger:
         ledger_path = args.ledger_path or _default_ledger_path(args.workspace)
         try:

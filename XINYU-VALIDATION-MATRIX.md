@@ -49,7 +49,7 @@ For Python code changes, also compile the changed Python files:
 | Persona/voice behavior | `persona_contract_absence_smoke.py`; `personality_evolution_smoke.py`; `live_voice_card_smoke.py`; `pre_draft_turn_classifier_smoke.py`; `xinyu_speech_controller_smoke.py`; `smoke_run.py --group voice` | Any renderer, prompt assembly, voice, or final speaking-controller change | Covered; avoid changing semantics |
 | Runtime security/local scope | `runtime_security_smoke.py`; `local_scope_smoke.py`; `smoke_run.py --group privacy` | Any auth, token, loopback, path scope, or local file access change | Covered |
 | v1 compatibility | `.\.venv\Scripts\python.exe -m pytest tests\test_v1_canary_readiness.py tests\v1\test_bridge_compatibility.py tests\v1\test_hybrid_router.py -q`; `xinyu_v1_owner_simple_canary_smoke.py` | Any v1 shadow/canary/gateway/routing compatibility change | Covered, review-only canary |
-| Long-run readiness | `runtime_readiness_smoke.py --offline`; `long_run_status.py`; from `D:\XinYu`: `python diagnostics\check_xinyu_health.py --json`; `python diagnostics\check_xinyu_health.py --json --write-ledger` | Any deployment, runtime readiness, live health, or long-run status change | Covered for health collection and runtime ledger; live health can still be degraded |
+| Long-run readiness | `runtime_readiness_smoke.py --offline`; `long_run_status.py`; from `D:\XinYu`: `python diagnostics\check_xinyu_health.py --json`; `python diagnostics\check_xinyu_health.py --json --write-ledger`; `python diagnostics\check_xinyu_health.py --json --recent-window-minutes 0` for historical-tail comparison | Any deployment, runtime readiness, live health, or long-run status change | Covered for health collection, recent-window scanning, and runtime ledger; live health can still be degraded |
 
 ## Refactor Slice Gates
 
@@ -67,13 +67,13 @@ For Python code changes, also compile the changed Python files:
 | QQ trust/outbox extraction | `python -m py_compile xinyu_qq_gateway.py <new-module>`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py`; `qq_outbox_smoke.py`; sent-index lookup via `check_sent_index.py <adapter_msg_id>` or the focused pytest fallback |
 | QQ sender/command extraction | `python -m py_compile xinyu_qq_gateway.py <new-module>`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py` |
 | v1 canary gate extraction | `python -m py_compile xinyu_v1_canary_readiness.py <new-module>`; `python -m pytest tests\test_v1_canary_readiness.py tests\v1\test_bridge_compatibility.py tests\v1\test_hybrid_router.py -q` |
-| Long-run diagnostic addition | `python -m py_compile diagnostics\check_xinyu_health.py`; `diagnostics\check_xinyu_health.py --json`; `diagnostics\check_xinyu_health.py --json --write-ledger`; `long_run_status.py` |
+| Long-run diagnostic addition | `python -m py_compile diagnostics\check_xinyu_health.py`; `diagnostics\check_xinyu_health.py --json`; `diagnostics\check_xinyu_health.py --json --write-ledger`; `diagnostics\check_xinyu_health.py --json --recent-window-minutes 0`; `long_run_status.py` |
 
 ## Missing Or Weak Gates
 
 - `state_io_smoke.py` covers the existing shared markdown helper, but not a future full `state_service.py` contract.
 - `service_boundary_smoke.py` covers the first extracted pure contracts, but future boundary modules still need their own focused tests as they are split.
-- Current live health can still report `recent_exceptions` as `critical` from real recent traces; false positives from malformed WebSocket probes and v1 `error=none` rows were triaged.
+- Current live health can still report `recent_exceptions` as `warn` from real recent traces; the default 120-minute window avoids historical tail residue while `--recent-window-minutes 0` keeps a comparison path.
 
 ## Red Lines During Validation
 

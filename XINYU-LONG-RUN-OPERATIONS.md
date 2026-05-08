@@ -28,6 +28,15 @@ python diagnostics\check_xinyu_health.py
 python diagnostics\check_xinyu_health.py --json
 ```
 
+`recent_exceptions` uses a 120-minute default window so old log tails do not keep a long-running session permanently degraded. Use an explicit override when investigating older traces:
+
+```powershell
+python diagnostics\check_xinyu_health.py --json --recent-window-minutes 240
+python diagnostics\check_xinyu_health.py --json --recent-window-minutes 0
+```
+
+`--recent-window-minutes 0` restores the broad tail scan and is useful only for historical comparison.
+
 Use strict mode only in automation that is allowed to fail on degraded live services:
 
 ```powershell
@@ -59,6 +68,7 @@ Health probes must avoid creating their own error noise. WebSocket endpoints sho
 
 - Every 30 minutes: run `diagnostics\check_xinyu_health.py --json --write-ledger` and inspect `warn` or `critical` signals.
 - Every 2 hours: run `diagnostics\check_xinyu_health.py --json --write-ledger --checkpoint`, then record git status, latest commits, health summary, and any skipped live checks.
+- When health is degraded but the source is unclear: re-run with `--recent-window-minutes 0` to distinguish current failures from historical tail residue.
 - Before each refactor slice: run the validation matrix gate for the touched capability.
 - After each successful refactor slice: record worklog, commit, and keep rollback command available.
 
