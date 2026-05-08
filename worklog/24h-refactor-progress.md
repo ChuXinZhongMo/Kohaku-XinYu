@@ -1878,3 +1878,25 @@ Workspace: D:\XinYu
 - Risk: Low; only shim ownership changed. File URI parsing, attachment material payloads, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior were unchanged.
 - Rollback: `git revert <loop-85-commit>`
 - Next: Continue with another isolated QQ gateway shim or state governance slice.
+
+## Loop 86 - 13:51
+
+- Task: Extract payload text helper and alias session key helper.
+- Why: `_payload_text` was a pure helper still implemented on `XinYuBridgeRuntime`, and `_session_key` was a one-line wrapper around `session_key_from_payload`. Moving payload text extraction into `xinyu_bridge_values.py` and aliasing the session helper reduces core bridge compatibility shim code without changing session behavior.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_values.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_values_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_values.py bridge_values_smoke.py xinyu_core_bridge.py xinyu_bridge_session.py`
+  - `.\.venv\Scripts\python.exe bridge_values_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_session_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Payload text extraction now lives in `xinyu_bridge_values.py`; `_payload_text` and `_session_key` remain runtime compatibility static aliases. Compile, bridge values smoke, bridge session smoke, bridge probe, and diff check passed.
+- Risk: Low; only pure payload/session helper ownership changed. Text-vs-raw fallback order, `session_id` priority, route payloads, prompt/persona semantics, long-term memory body text, QQ outbound behavior, and v1 traffic behavior were unchanged.
+- Rollback: `git revert <loop-86-commit>`
+- Next: Continue with another isolated core bridge helper extraction or state governance slice.

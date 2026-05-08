@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from xinyu_bridge_values import as_bool, as_int, as_str_set, compact_text, contains_any, dedupe, optional_int, safe_str
+from xinyu_bridge_values import as_bool, as_int, as_str_set, compact_text, contains_any, dedupe, optional_int, payload_text, safe_str
 from xinyu_core_bridge import _as_bool, _as_int, _as_str_set, _compact_text, _contains_any, _dedupe, _optional_int, _safe_str
+from xinyu_core_bridge import XinYuBridgeRuntime
 
 
 def main() -> int:
@@ -25,6 +26,10 @@ def main() -> int:
         failures.append("bridge de-duplication changed")
     if not contains_any("hello world", ("absent", "world")):
         failures.append("bridge contains-any helper changed")
+    if payload_text({"text": " hello ", "raw_message": "fallback"}) != "hello":
+        failures.append("bridge payload text should prefer text")
+    if payload_text({"raw_message": " fallback "}) != "fallback":
+        failures.append("bridge payload text raw fallback changed")
 
     if _as_bool("on") is not True or _as_int("5", 0) != 5:
         failures.append("core bridge value aliases no longer delegate")
@@ -34,6 +39,10 @@ def main() -> int:
         failures.append("core bridge text aliases no longer delegate")
     if _dedupe(["x", "x", " y "]) != ["x", "y"] or not _contains_any("abc", ("z", "b")):
         failures.append("core bridge list aliases no longer delegate")
+    if XinYuBridgeRuntime._payload_text({"text": "", "raw_message": " raw "}) != "raw":
+        failures.append("core bridge payload text alias no longer delegates")
+    if XinYuBridgeRuntime._session_key({"session_id": "qq:private:42", "user_id": "42"}) != "qq:private:42":
+        failures.append("core bridge session key alias no longer delegates")
 
     if failures:
         print("XinYu bridge values smoke failed")

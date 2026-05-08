@@ -81,6 +81,7 @@ from xinyu_bridge_values import compact_text as _compact_text
 from xinyu_bridge_values import contains_any as _contains_any
 from xinyu_bridge_values import dedupe as _dedupe
 from xinyu_bridge_values import optional_int as _optional_int
+from xinyu_bridge_values import payload_text as _payload_text_from_payload
 from xinyu_bridge_values import safe_str as _safe_str
 import xinyu_bridge_action_routes
 from xinyu_bridge_turn_pipeline import run_pre_model_routes
@@ -5309,14 +5310,8 @@ tags: [promise, followup, qq-outbox, continuity]
 
         return {"cleaned_sessions": len(to_stop), "remaining_sessions": remaining_count}
 
-    def _payload_text(self, payload: dict[str, Any]) -> str:
-        text = _safe_str(payload.get("text")).strip()
-        if text:
-            return text
-        return _safe_str(payload.get("raw_message")).strip()
-
-    def _session_key(self, payload: dict[str, Any]) -> str:
-        return session_key_from_payload(payload)
+    _payload_text = staticmethod(_payload_text_from_payload)
+    _session_key = staticmethod(session_key_from_payload)
 
     def _looks_like_time_fact_correction(self, text: str) -> bool:
         compact = re.sub(r"\s+", "", _safe_str(text))

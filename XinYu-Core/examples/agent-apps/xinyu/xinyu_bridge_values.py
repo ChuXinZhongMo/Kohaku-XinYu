@@ -73,3 +73,10 @@ def dedupe(values: list[str] | tuple[str, ...]) -> list[str]:
 
 def contains_any(text: str, markers: tuple[str, ...]) -> bool:
     return any(marker in text for marker in markers)
+
+
+def payload_text(payload: dict[str, Any]) -> str:
+    text = safe_str(payload.get("text")).strip()
+    if text:
+        return text
+    return safe_str(payload.get("raw_message")).strip()
