@@ -8,6 +8,7 @@ from xinyu_qq_normalizer import (
     message_kind,
     parse_cq_params,
     parse_cq_segments,
+    sender_name,
     strip_cq_segments,
 )
 
@@ -46,6 +47,12 @@ def main() -> int:
         failures.append("gateway extract text helper is not a direct method alias")
     if gateway._extract_text(text_event) != extract_text(gateway, text_event):
         failures.append("gateway extract text alias no longer delegates")
+
+    sender_event = {"sender": {"card": "Owner", "nickname": "Nick", "user_id": "42"}}
+    if NativeQQGateway._sender_name is not sender_name:
+        failures.append("gateway sender name helper is not a direct method alias")
+    if gateway._sender_name(sender_event) != sender_name(gateway, sender_event):
+        failures.append("gateway sender name alias no longer delegates")
 
     if failures:
         print("XinYu QQ normalizer aliases smoke failed")
