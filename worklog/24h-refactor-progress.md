@@ -1980,3 +1980,24 @@ Workspace: D:\XinYu
 - Risk: Low; only compatibility wrapper ownership changed. Forward/reply id parsing, de-duplication, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior were unchanged.
 - Rollback: `git revert <loop-90-commit>`
 - Next: Continue with another isolated QQ gateway shim or core bridge helper slice.
+
+## Loop 91 - 18:42
+
+- Task: Replace QQ CQ normalizer wrappers with direct helper aliases.
+- Why: CQ parse/decode/strip compatibility methods in `xinyu_qq_gateway.py` were one-line wrappers around `xinyu_qq_normalizer`. Replacing same-signature wrappers with direct static aliases reduces gateway shim code without changing normalizer behavior.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_normalizer_aliases_smoke.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_normalizer_aliases_smoke.py xinyu_qq_normalizer.py`
+  - `.\.venv\Scripts\python.exe qq_normalizer_aliases_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `_parse_cq_params`, `_decode_cq_value`, `_cq_bracket_continues_params`, `_parse_cq_segments`, and `_strip_cq_segments` now directly alias `xinyu_qq_normalizer` helpers. Compile, focused normalizer alias smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only same-signature compatibility wrappers changed. CQ parsing, message segment handling, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior were unchanged.
+- Rollback: `git revert <loop-91-commit>`
+- Next: Continue with another isolated QQ gateway shim or core bridge helper slice.

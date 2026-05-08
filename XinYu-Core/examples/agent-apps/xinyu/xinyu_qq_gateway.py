@@ -684,25 +684,11 @@ class NativeQQGateway:
     _extract_forward_ids_from_text = staticmethod(xinyu_qq_forward_context.extract_forward_ids_from_text)
     _forward_ids_from_json = staticmethod(xinyu_qq_forward_context.forward_ids_from_json)
 
-    @staticmethod
-    def _parse_cq_params(raw_params: str) -> dict[str, str]:
-        return xinyu_qq_normalizer.parse_cq_params(raw_params)
-
-    @staticmethod
-    def _decode_cq_value(value: str) -> str:
-        return xinyu_qq_normalizer.decode_cq_value(value)
-
-    @staticmethod
-    def _cq_bracket_continues_params(raw_message: str, bracket_index: int) -> bool:
-        return xinyu_qq_normalizer.cq_bracket_continues_params(raw_message, bracket_index)
-
-    @staticmethod
-    def _parse_cq_segments(raw_message: str) -> list[dict[str, Any]]:
-        return xinyu_qq_normalizer.parse_cq_segments(raw_message)
-
-    @staticmethod
-    def _strip_cq_segments(text: str) -> str:
-        return xinyu_qq_normalizer.strip_cq_segments(text)
+    _parse_cq_params = staticmethod(xinyu_qq_normalizer.parse_cq_params)
+    _decode_cq_value = staticmethod(xinyu_qq_normalizer.decode_cq_value)
+    _cq_bracket_continues_params = staticmethod(xinyu_qq_normalizer.cq_bracket_continues_params)
+    _parse_cq_segments = staticmethod(xinyu_qq_normalizer.parse_cq_segments)
+    _strip_cq_segments = staticmethod(xinyu_qq_normalizer.strip_cq_segments)
 
     def _parse_ws_message(self, raw_message: Any) -> dict[str, Any] | None:
         return xinyu_qq_normalizer.parse_ws_message(self, raw_message)
