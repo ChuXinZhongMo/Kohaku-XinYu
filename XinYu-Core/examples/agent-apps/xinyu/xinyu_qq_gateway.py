@@ -2290,8 +2290,7 @@ class NativeQQGateway:
             return None
         return self._learning_material_from_data(segment_type, data)
 
-    def _learning_material_from_data(self, segment_type: str, data: dict[str, Any]) -> dict[str, str] | None:
-        return xinyu_qq_attachment_resolver.learning_material_from_data(segment_type, data)
+    _learning_material_from_data = staticmethod(xinyu_qq_attachment_resolver.learning_material_from_data)
 
     def _learning_material_from_cq(self, raw_message: str) -> dict[str, str] | None:
         for segment in self._parse_cq_segments(raw_message):

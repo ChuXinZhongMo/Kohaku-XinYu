@@ -2061,3 +2061,23 @@ Workspace: D:\XinYu
 - Risk: Low; only file path detection compatibility ownership changed. Attachment material extraction, file URI conversion, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-94-commit>`
 - Next: Continue with another isolated QQ gateway shim or core bridge helper slice.
+
+## Loop 95 - 18:50
+
+- Task: Replace QQ learning material data wrapper with direct helper alias.
+- Why: `_learning_material_from_data` only delegated to `xinyu_qq_attachment_resolver.learning_material_from_data`. Replacing it with a direct static alias trims the gateway attachment-material shim while preserving the compatibility method name.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_attachment_material_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_attachment_material_smoke.py xinyu_qq_attachment_resolver.py`
+  - `.\.venv\Scripts\python.exe qq_attachment_material_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `_learning_material_from_data` now directly aliases `xinyu_qq_attachment_resolver.learning_material_from_data`. Compile, focused attachment material smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only learning material data helper ownership changed. Learning material extraction, attachment resolver behavior, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-95-commit>`
+- Next: Continue with another isolated QQ gateway shim or core bridge helper slice.

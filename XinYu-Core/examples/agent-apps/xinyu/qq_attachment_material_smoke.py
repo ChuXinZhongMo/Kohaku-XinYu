@@ -38,8 +38,9 @@ def main() -> int:
     if sticker != expected_sticker:
         failures.append(f"sticker import material changed: {sticker!r}")
 
-    gateway = object.__new__(NativeQQGateway)
-    if NativeQQGateway._learning_material_from_data(gateway, "file", {"file_id": "f1"}) != {
+    if NativeQQGateway._learning_material_from_data is not attachment_resolver.learning_material_from_data:
+        failures.append("gateway learning material helper is not a direct alias")
+    if NativeQQGateway._learning_material_from_data("file", {"file_id": "f1"}) != {
         "segment_type": "file",
         "name": "qq-file",
         "url": "",
