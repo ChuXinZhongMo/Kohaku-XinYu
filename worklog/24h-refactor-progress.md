@@ -799,3 +799,25 @@ Workspace: D:\XinYu
 - Risk: Low; runtime JSON state persistence only. No real QQ outbound, OneBot payload shape, trust policy, memory body text, persona semantics, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-36-commit>`
 - Next: Continue with group shadow runtime JSONL append or QQ config model extraction.
+
+## Loop 37 - 11:01
+
+- Task: Route group shadow observation writes through `state_service.py`.
+- Why: Group shadow writes one runtime JSONL observation and one latest markdown projection; both are state-governance surfaces and can share the central append/atomic helpers without changing the no-reply boundary.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_group_shadow_observer.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/group_shadow_state_smoke.py`
+  - `XINYU-STATE-WRITE-AUDIT.md`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_group_shadow_observer.py state_service.py group_shadow_state_smoke.py`
+  - `.\.venv\Scripts\python.exe state_io_smoke.py`
+  - `.\.venv\Scripts\python.exe group_shadow_state_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `git diff --check`
+- Result: Group shadow trace appends now use `append_jsonl`; latest group shadow state now uses `atomic_write_text`. Compile, state IO smoke, group shadow smoke, and QQ gateway smoke passed.
+- Risk: Low; state persistence only. The no-reply, stable-memory-blocked, and owner-relationship-blocked semantics are unchanged. No real QQ outbound, persona semantics, memory body text, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-37-commit>`
+- Next: Continue with QQ config model extraction or final health checkpoint.

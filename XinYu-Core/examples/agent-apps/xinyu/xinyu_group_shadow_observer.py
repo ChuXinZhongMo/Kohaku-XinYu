@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from state_service import append_jsonl, atomic_write_text
 
 
 TRACE_REL = Path("runtime/group_shadow/group_shadow_observations.jsonl")
@@ -125,9 +126,7 @@ def record_group_shadow_observation(
         "normalized_text_excerpt": _trim(normalized_text or text, limit=max(40, int(max_text_chars))),
         **classification,
     }
-    trace_path.parent.mkdir(parents=True, exist_ok=True)
-    with trace_path.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+    append_jsonl(trace_path, row)
     _write_state(root, row)
     return {
         "recorded": True,
@@ -173,4 +172,4 @@ def _write_state(root: Path, row: dict[str, Any]) -> None:
             "- use: observe group social texture before enabling active replies",
         ]
     )
-    state_path.write_text(content + "\n", encoding="utf-8")
+    atomic_write_text(state_path, content)
