@@ -52,8 +52,14 @@ def main() -> int:
 
     if NativeQQGateway._forward_raw_items(raw_json)[0].get("message_id") != "3":
         failures.append("gateway forward raw item wrapper no longer delegates")
+    if NativeQQGateway._extract_reply_message_id(reply_event) != "reply-1":
+        failures.append("gateway reply id wrapper no longer delegates")
+    if NativeQQGateway._extract_forward_message_ids(forward_event) != ["forward-1"]:
+        failures.append("gateway forward message id wrapper no longer delegates")
     if NativeQQGateway._extract_forward_ids_from_text("forward_id=forward-3") != ["forward-3"]:
         failures.append("gateway forward id text wrapper no longer delegates")
+    if NativeQQGateway._forward_ids_from_json({"meta": {"resid": "forward-4"}}) != ["forward-4"]:
+        failures.append("gateway forward id JSON wrapper no longer delegates")
     if NativeQQGateway._dedupe_forward_messages(messages) != deduped:
         failures.append("gateway forward de-duplication wrapper no longer delegates")
 

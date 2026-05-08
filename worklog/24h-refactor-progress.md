@@ -1959,3 +1959,24 @@ Workspace: D:\XinYu
 - Risk: Low; documentation and runtime diagnostic ledger observation only. No runtime/memory deletion, long-term memory body edit, prompt/persona semantic edit, real QQ outbound test, or v1 traffic expansion was performed.
 - Rollback: `git revert <loop-89-commit>`
 - Next: Continue with another isolated refactor slice.
+
+## Loop 90 - 18:39
+
+- Task: Replace QQ forward context wrappers with direct helper aliases.
+- Why: Several forward-context compatibility methods in `xinyu_qq_gateway.py` only forwarded to `xinyu_qq_forward_context`. Replacing them with direct static aliases trims gateway shim code while preserving method names used by tests and neighboring gateway logic.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_forward_context_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_forward_context_smoke.py xinyu_qq_forward_context.py`
+  - `.\.venv\Scripts\python.exe qq_forward_context_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_gateway_ack_spool.py -q`
+  - `git diff --check`
+- Result: `_forward_raw_items`, `_dedupe_forward_messages`, `_extract_reply_message_id`, `_extract_forward_message_ids`, `_extract_forward_ids_from_text`, and `_forward_ids_from_json` now directly alias `xinyu_qq_forward_context` helpers. Compile, focused forward context smoke, QQ gateway smoke, QQ review smoke, ack spool pytest, and diff check passed.
+- Risk: Low; only compatibility wrapper ownership changed. Forward/reply id parsing, de-duplication, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior were unchanged.
+- Rollback: `git revert <loop-90-commit>`
+- Next: Continue with another isolated QQ gateway shim or core bridge helper slice.

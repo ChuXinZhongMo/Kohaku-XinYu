@@ -72,6 +72,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Record 2026-05-08 13:53 long-run health checkpoint.
 - [x] Replace core bridge renderer mode wrapper with direct renderer alias.
 - [x] Record 2026-05-08 18:36 long-run health checkpoint.
+- [x] Replace QQ forward context wrappers with direct helper aliases.
 
 ## Stop-Gap First
 

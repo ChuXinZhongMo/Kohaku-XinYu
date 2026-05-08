@@ -611,9 +611,7 @@ class NativeQQGateway:
                 break
         return messages
 
-    @staticmethod
-    def _forward_raw_items(payload: Any) -> list[Any]:
-        return xinyu_qq_forward_context.forward_raw_items(payload)
+    _forward_raw_items = staticmethod(xinyu_qq_forward_context.forward_raw_items)
 
     def _summarize_forward_item(self, item: Any) -> dict[str, str]:
         if isinstance(item, str):
@@ -675,27 +673,16 @@ class NativeQQGateway:
     def _clean_cq_text(text: str) -> str:
         return xinyu_qq_normalizer.clean_cq_text(None, text)
 
-    @staticmethod
-    def _dedupe_forward_messages(messages: list[dict[str, str]]) -> list[dict[str, str]]:
-        return xinyu_qq_forward_context.dedupe_forward_messages(messages)
+    _dedupe_forward_messages = staticmethod(xinyu_qq_forward_context.dedupe_forward_messages)
 
     @staticmethod
     def _reply_file_learning_intent(text: str) -> bool:
         return xinyu_qq_attachment_resolver.reply_file_learning_intent(None, text)
 
-    def _extract_reply_message_id(self, event: dict[str, Any]) -> str:
-        return xinyu_qq_forward_context.extract_reply_message_id(event)
-
-    def _extract_forward_message_ids(self, event: dict[str, Any]) -> list[str]:
-        return xinyu_qq_forward_context.extract_forward_message_ids(event)
-
-    @staticmethod
-    def _extract_forward_ids_from_text(text: str) -> list[str]:
-        return xinyu_qq_forward_context.extract_forward_ids_from_text(text)
-
-    @staticmethod
-    def _forward_ids_from_json(value: Any) -> list[str]:
-        return xinyu_qq_forward_context.forward_ids_from_json(value)
+    _extract_reply_message_id = staticmethod(xinyu_qq_forward_context.extract_reply_message_id)
+    _extract_forward_message_ids = staticmethod(xinyu_qq_forward_context.extract_forward_message_ids)
+    _extract_forward_ids_from_text = staticmethod(xinyu_qq_forward_context.extract_forward_ids_from_text)
+    _forward_ids_from_json = staticmethod(xinyu_qq_forward_context.forward_ids_from_json)
 
     @staticmethod
     def _parse_cq_params(raw_params: str) -> dict[str, str]:
