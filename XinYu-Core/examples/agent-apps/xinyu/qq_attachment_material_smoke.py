@@ -81,6 +81,19 @@ def main() -> int:
         failures.append("gateway OneBot media resolver is not a direct method alias")
     if NativeQQGateway._resolve_onebot_file is not attachment_resolver.resolve_onebot_file:
         failures.append("gateway OneBot file resolver is not a direct method alias")
+    if NativeQQGateway._onebot_file_url_action is not attachment_resolver.onebot_file_url_action:
+        failures.append("gateway OneBot file URL action helper is not a direct method alias")
+
+    class _ActionGateway(NativeQQGateway):
+        async def _onebot_action_data(self, websocket, action, params):
+            return {"url": "https://example.invalid/file"}
+
+    action_gateway = object.__new__(_ActionGateway)
+    if (
+        asyncio.run(action_gateway._onebot_file_url_action(None, "get_file", {"file_id": "f1"}))
+        != "https://example.invalid/file"
+    ):
+        failures.append("gateway OneBot file URL action alias no longer delegates")
 
     if failures:
         print("XinYu QQ attachment material smoke failed")
