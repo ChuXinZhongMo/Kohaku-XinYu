@@ -337,9 +337,7 @@ class NativeQQGateway:
             adapter_error=adapter_error,
         )
 
-    @staticmethod
-    def _sent_outbox_delivery_route(outbox_message_id: str, delivery_kind: str) -> str:
-        return xinyu_qq_outbox_client.sent_outbox_delivery_route(outbox_message_id, delivery_kind)
+    _sent_outbox_delivery_route = staticmethod(xinyu_qq_outbox_client.sent_outbox_delivery_route)
 
     async def _poll_pending_message_acks(self, connection_id: str) -> None:
         await xinyu_qq_outbox_client.poll_pending_message_acks(self, connection_id)

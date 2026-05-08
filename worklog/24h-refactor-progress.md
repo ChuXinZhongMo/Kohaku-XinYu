@@ -1836,3 +1836,25 @@ Workspace: D:\XinYu
 - Risk: Low; only shim ownership changed. Trust grant/revoke markers, trust target extraction, trusted-user config persistence, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior were unchanged.
 - Rollback: `git revert <loop-83-commit>`
 - Next: Continue with another isolated QQ gateway shim or state governance slice.
+
+## Loop 84 - 13:42
+
+- Task: Replace QQ outbox delivery route wrapper with direct client alias.
+- Why: `_sent_outbox_delivery_route` was a one-line static wrapper around `xinyu_qq_outbox_client.sent_outbox_delivery_route`. Replacing it with a direct static alias removes another QQ gateway shim while keeping the compatibility name.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_outbox_route_alias_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_outbox_route_alias_smoke.py xinyu_qq_outbox_client.py`
+  - `.\.venv\Scripts\python.exe qq_outbox_route_alias_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_gateway_ack_spool.py -q`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: QQ gateway outbox delivery route helper now directly aliases the outbox client helper. Compile, focused outbox route alias smoke, gateway ack spool pytest, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only shim ownership changed. Outbox route names, ack payload shape, sent-message spool behavior, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior were unchanged.
+- Rollback: `git revert <loop-84-commit>`
+- Next: Continue with another isolated QQ gateway shim or state governance slice.
