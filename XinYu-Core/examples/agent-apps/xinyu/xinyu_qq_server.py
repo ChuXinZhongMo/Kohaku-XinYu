@@ -1,6 +1,18 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import signal
 from typing import Any
+
+
+def install_signal_handlers(stop_event: asyncio.Event) -> None:
+    loop = asyncio.get_running_loop()
+    for sig in (getattr(signal, "SIGINT", None), getattr(signal, "SIGTERM", None)):
+        if sig is None:
+            continue
+        with contextlib.suppress(NotImplementedError):
+            loop.add_signal_handler(sig, stop_event.set)
 
 
 def websocket_path(websocket: Any) -> str:

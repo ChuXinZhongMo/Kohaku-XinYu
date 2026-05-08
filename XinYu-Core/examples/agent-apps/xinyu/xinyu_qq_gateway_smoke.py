@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from xinyu_image_context import _image_data_uri, build_image_context
+import xinyu_qq_server
 from xinyu_qq_gateway import GatewayConfig, NativeQQGateway, PreparedMessage, ReplyTarget
 
 
@@ -43,6 +44,7 @@ def main() -> int:
     assert gateway.client.learning_ingest_url.endswith("/learning/ingest")
     assert gateway.client.sticker_import_url.endswith("/sticker/import")
     assert gateway.client.review_inbox_command_url.endswith("/review/inbox/command")
+    assert NativeQQGateway._install_signal_handlers is xinyu_qq_server.install_signal_handlers
 
     with _smoke_dir(".qq_gateway_trusted_config_smoke_runtime") as tmp:
         config_path = tmp / "gateway.config.json"

@@ -120,6 +120,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace QQ pending message ack poll wrapper with direct outbox client alias.
 - [x] Replace QQ outbox poll wrapper with direct dispatcher gateway alias.
 - [x] Record 2026-05-08 20:30 long-run health checkpoint.
+- [x] Replace QQ signal handler wrapper with direct server helper alias.
 
 ## Stop-Gap First
 

@@ -4,7 +4,6 @@ import asyncio
 import contextlib
 import json
 import re
-import signal
 import sys
 import time
 import traceback
@@ -202,13 +201,7 @@ class NativeQQGateway:
         self._inbound_session_queues.clear()
         self._inbound_session_tasks.clear()
 
-    def _install_signal_handlers(self, stop_event: asyncio.Event) -> None:
-        loop = asyncio.get_running_loop()
-        for sig in (getattr(signal, "SIGINT", None), getattr(signal, "SIGTERM", None)):
-            if sig is None:
-                continue
-            with contextlib.suppress(NotImplementedError):
-                loop.add_signal_handler(sig, stop_event.set)
+    _install_signal_handlers = staticmethod(xinyu_qq_server.install_signal_handlers)
 
     async def _handle_connection(self, websocket: Any) -> None:
         path = xinyu_qq_server.websocket_path(websocket)

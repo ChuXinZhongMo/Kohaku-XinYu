@@ -2956,3 +2956,24 @@ Workspace: D:\XinYu
 - Risk: Low; health diagnostic is read-only except the opt-in runtime diagnostics ledger write. No services were started, no real QQ outbound test was run, no prompt/persona semantics or long-term memory body text was edited, and v1 traffic scope was not changed.
 - Rollback: `git revert <loop-137-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 138 - 20:33
+
+- Task: Replace QQ signal handler wrapper with direct server helper alias.
+- Why: `_install_signal_handlers` in `xinyu_qq_gateway.py` owned generic asyncio signal-handler installation even though the rest of the connection/server helpers already live in `xinyu_qq_server.py`. Moving the helper to the server module removes another gateway shim without changing runtime signal semantics.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_server.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py xinyu_qq_gateway_smoke.py xinyu_qq_server.py xinyu_qq_server_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_server_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_server.install_signal_handlers` now owns the signal-handler helper and gateway `_install_signal_handlers` directly aliases it as a static method. Compile, QQ server smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only helper ownership changed. Signal names, `NotImplementedError` handling, server startup, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-138-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.
