@@ -102,6 +102,10 @@ def trust_level_for_user_id(config: Any, user_id: str) -> str:
     return "external"
 
 
+def gateway_trust_level_for_user_id(gateway: Any, user_id: str) -> str:
+    return trust_level_for_user_id(gateway.config, user_id)
+
+
 def trust_command_target(prepared: Any, *, owner_user_ids: Iterable[str]) -> tuple[str, str]:
     payload = prepared.payload if isinstance(getattr(prepared, "payload", None), dict) else {}
     metadata = payload.get("metadata")

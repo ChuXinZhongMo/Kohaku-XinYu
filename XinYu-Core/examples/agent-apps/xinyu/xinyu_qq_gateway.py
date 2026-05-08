@@ -108,8 +108,7 @@ class NativeQQGateway:
 
     _is_trusted_user_id = xinyu_qq_trust_policy.gateway_is_trusted_user_id
 
-    def _trust_level_for_user_id(self, user_id: str) -> str:
-        return xinyu_qq_trust_policy.trust_level_for_user_id(self.config, user_id)
+    _trust_level_for_user_id = xinyu_qq_trust_policy.gateway_trust_level_for_user_id
 
     _compact_command_text = staticmethod(xinyu_qq_trust_policy.compact_command_text)
     _looks_like_trust_command = staticmethod(xinyu_qq_trust_policy.is_trust_grant_command)

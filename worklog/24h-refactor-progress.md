@@ -2680,3 +2680,25 @@ Workspace: D:\XinYu
 - Risk: Low; only trusted-user helper ownership changed. Owner classification, trusted/whitelist behavior, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-124-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 125 - 20:10
+
+- Task: Replace QQ trust-level wrapper with direct trust policy gateway alias.
+- Why: `_trust_level_for_user_id` in `xinyu_qq_gateway.py` only forwarded `self.config` and `user_id` into `xinyu_qq_trust_policy.trust_level_for_user_id`. A gateway-level helper removes that shim while preserving the same owner/trusted/external classification.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_trust_policy.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_trust_aliases_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py qq_trust_aliases_smoke.py xinyu_qq_trust_policy.py`
+  - `D:\XinYu\Python312\python.exe qq_trust_aliases_smoke.py`
+  - `D:\XinYu\Python312\python.exe qq_trust_policy_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_trust_policy.gateway_trust_level_for_user_id` now owns the gateway-bound trust-level helper and gateway `_trust_level_for_user_id` directly aliases it. Compile, focused trust alias/policy smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only trust-level helper ownership changed. Owner/trusted/external labels, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-125-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.
