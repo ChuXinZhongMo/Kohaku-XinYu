@@ -32,6 +32,10 @@ from xinyu_bridge_context import prompt_context_signature
 from xinyu_bridge_proactive import acknowledge as proactive_ack_bridge, claim_or_preview as proactive_bridge
 from xinyu_bridge_renderer import BridgeRenderer
 from xinyu_bridge_session import AgentSession, session_key_from_payload, session_keys_to_expire
+from xinyu_bridge_values import as_bool as _as_bool
+from xinyu_bridge_values import as_int as _as_int
+from xinyu_bridge_values import as_str_set as _as_str_set
+from xinyu_bridge_values import optional_int as _optional_int
 import xinyu_bridge_action_routes
 from xinyu_bridge_turn_pipeline import run_pre_model_routes
 import xinyu_bridge_v1_routes
@@ -782,48 +786,6 @@ def _normalize_reply(text: str) -> str:
         else:
             reply += line
     return reply.strip()
-
-
-def _as_bool(value: Any, default: bool = False) -> bool:
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        lowered = value.strip().lower()
-        if lowered in {"1", "true", "yes", "on"}:
-            return True
-        if lowered in {"0", "false", "no", "off"}:
-            return False
-    if value is None:
-        return default
-    return bool(value)
-
-
-def _as_int(value: Any, default: int) -> int:
-    if value is None:
-        return default
-    try:
-        return int(str(value).strip())
-    except (TypeError, ValueError):
-        return default
-
-
-def _optional_int(value: Any) -> int | None:
-    if value is None or value == "":
-        return None
-    try:
-        return int(str(value).strip())
-    except (TypeError, ValueError):
-        return None
-
-
-def _as_str_set(value: Any) -> set[str]:
-    if value is None:
-        return set()
-    if isinstance(value, (list, tuple, set)):
-        raw_items = value
-    else:
-        raw_items = str(value).replace(";", ",").split(",")
-    return {str(item).strip() for item in raw_items if str(item).strip()}
 
 
 def _read_text_safe(path: Path) -> str:

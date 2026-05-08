@@ -1140,3 +1140,24 @@ Workspace: D:\XinYu
 - Risk: Low; compatibility constant ownership only. No real QQ outbound, OneBot payload shape, trust policy, persona semantics, memory body text, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-52-commit>`
 - Next: Continue with another isolated QQ parsing helper.
+
+## Loop 53 - 11:48
+
+- Task: Extract core bridge scalar value helpers.
+- Why: `xinyu_core_bridge.py` still owned generic parsing helpers for booleans, integers, optional integers, and string sets. Moving them to `xinyu_bridge_values.py` starts another low-risk core bridge boundary without touching prompt or runtime semantics.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_values.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_values_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_values.py xinyu_core_bridge.py bridge_values_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_values_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Bridge scalar value helpers now live in `xinyu_bridge_values.py`; `xinyu_core_bridge.py` imports them under the previous private names. Compile, bridge values smoke, and bridge probe smoke passed.
+- Risk: Low; pure helper relocation. No HTTP routes, prompt text, persona semantics, long-term memory body text, state writes, QQ outbound, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-53-commit>`
+- Next: Continue with another isolated core bridge helper extraction.
