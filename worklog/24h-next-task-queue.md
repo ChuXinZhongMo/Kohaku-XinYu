@@ -46,6 +46,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract QQ gateway utility helpers into `xinyu_qq_gateway_utils.py`.
 - [x] Extract shared bridge learning sidecar helpers into `xinyu_bridge_learning_sidecars.py`.
 - [x] Update Codex delegate smoke static marker ownership after QQ config extraction.
+- [x] Extract core bridge loop thread helper into `xinyu_bridge_loop_thread.py`.
 
 ## Stop-Gap First
 

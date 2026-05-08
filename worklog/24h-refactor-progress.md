@@ -1387,3 +1387,25 @@ Workspace: D:\XinYu
 - Risk: Low-medium; learning sidecar ownership moved, but study-chain call modes and trigger markers are unchanged. The smoke fix only updates static marker ownership. No prompt/persona semantics, long-term memory body text, real QQ outbound, v1 traffic behavior, or route payload shape was touched.
 - Rollback: `git revert <loop-63-commit>`
 - Next: Continue with another isolated core bridge helper extraction.
+
+## Loop 64 - 12:27
+
+- Task: Extract core bridge loop thread helper.
+- Why: `xinyu_core_bridge.py` still owned the asyncio loop thread startup helper used by the bridge main entrypoint. Moving it to `xinyu_bridge_loop_thread.py` narrows startup infrastructure ownership while preserving the old private name.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_loop_thread.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_loop_thread_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_loop_thread.py bridge_loop_thread_smoke.py xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe bridge_loop_thread_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `.\.venv\Scripts\python.exe runtime_readiness_smoke.py --offline`
+  - `git diff --check`
+- Result: The bridge loop thread helper now lives in `xinyu_bridge_loop_thread.py`; core bridge imports it as `_start_loop_thread`. Compile, loop thread smoke, bridge probe, offline runtime readiness, and diff check passed. Runtime readiness produced ignored diagnostic logs only; no tracked runtime or memory files were changed.
+- Risk: Low-medium; startup infrastructure ownership moved, but loop creation, cancellation, thread name, and close behavior are unchanged. No route payloads, prompt/persona semantics, long-term memory body text, QQ outbound, v1 traffic behavior, or state writes were touched.
+- Rollback: `git revert <loop-64-commit>`
+- Next: Continue with core bridge CLI parser extraction or another isolated helper boundary.

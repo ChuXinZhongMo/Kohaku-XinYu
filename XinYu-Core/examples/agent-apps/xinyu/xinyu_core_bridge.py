@@ -32,6 +32,7 @@ from xinyu_bridge_learning import (
 from xinyu_bridge_learning_sidecars import int_result as _int_result
 from xinyu_bridge_learning_sidecars import run_learning_study_chain as _run_learning_study_chain
 from xinyu_bridge_learning_sidecars import should_run_learning_after_codex as _should_run_learning_after_codex
+from xinyu_bridge_loop_thread import start_loop_thread as _start_loop_thread
 from xinyu_bridge_context import prompt_context_signature
 from xinyu_bridge_desktop_actions import desktop_action_pressure_label as _desktop_action_pressure_label
 from xinyu_bridge_desktop_actions import desktop_action_result_label as _desktop_action_result_label
@@ -6366,32 +6367,6 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Disable the desktop WebSocket event stream dark launch.",
     )
     return parser
-
-
-def _start_loop_thread() -> tuple[asyncio.AbstractEventLoop, threading.Thread]:
-    ready = threading.Event()
-    holder: dict[str, asyncio.AbstractEventLoop] = {}
-
-    def run_loop() -> None:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        holder["loop"] = loop
-        ready.set()
-        loop.run_forever()
-        pending = [task for task in asyncio.all_tasks(loop) if not task.done()]
-        for task in pending:
-            task.cancel()
-        if pending:
-            loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
-        loop.close()
-
-    thread = threading.Thread(target=run_loop, name="xinyu-core-bridge-loop", daemon=True)
-    thread.start()
-    ready.wait(timeout=10)
-    loop = holder.get("loop")
-    if loop is None:
-        raise RuntimeError("failed to start asyncio loop")
-    return loop, thread
 
 
 def main() -> int:
