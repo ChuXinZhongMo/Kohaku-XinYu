@@ -61,6 +61,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract core bridge promise followup text helper into `xinyu_bridge_promises.py`.
 - [x] Extract core bridge critical final guard flag helper into `xinyu_bridge_renderer.py`.
 - [x] Extract core bridge trusted public search policy helper into `xinyu_bridge_trusted_search.py`.
+- [x] Record 2026-05-08 13:20 long-run health checkpoint.
 
 ## Stop-Gap First
 

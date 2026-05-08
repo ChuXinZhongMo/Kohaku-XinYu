@@ -1726,3 +1726,22 @@ Workspace: D:\XinYu
 - Risk: Low-medium; this is a security/policy gate, but only the existing algorithm moved. Public-search markers, local-path regex, local block markers, metadata shape, Codex delegate payloads, prompt/persona semantics, long-term memory body text, QQ outbound behavior, and v1 traffic behavior were unchanged.
 - Rollback: `git revert <loop-78-commit>`
 - Next: Continue with another isolated helper extraction or state governance slice.
+
+## Loop 79 - 13:20
+
+- Task: Record long-run health checkpoint.
+- Why: The long-running plan calls for periodic health observation during refactor work. More than 30 minutes had passed since the 12:48 checkpoint, so this slice only refreshed live health signals and recorded the result without changing runtime behavior.
+- Files changed:
+  - `XINYU-LONG-RUN-OPERATIONS.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `git status --short --branch`
+  - `python diagnostics\check_xinyu_health.py --json`
+  - `python diagnostics\check_xinyu_health.py --json --write-ledger`
+  - `.\.venv\Scripts\python.exe long_run_status.py`
+  - `git diff --check`
+- Result: Bridge, Desktop WS, QQ gateway, NapCat, outbox backlog, recent exceptions, v1 shadow errors, and disk space were `ok`. Outbox remained `pending=0 total=72`; recent exceptions were `hits=0 scanned_files=15 window_minutes=120`; v1 shadow errors were `errors=0 window=200`; disk free space was `646.4 GB`. Health ledger writing succeeded. Overall health remained `warn` only because `git_state` sees the intentionally untracked user-provided `XINYU-24H-WORK-PLAN.md`. `long_run_status.py` reported deployment gate `ok`, no missing docs/validations, and `learning_quality_grade: review_needed`.
+- Risk: Low; documentation and runtime diagnostic ledger observation only. No runtime/memory deletion, long-term memory body edit, prompt/persona semantic edit, real QQ outbound test, or v1 traffic expansion was performed.
+- Rollback: `git revert <loop-79-commit>`
+- Next: Continue with another isolated core bridge helper extraction or state governance slice.
