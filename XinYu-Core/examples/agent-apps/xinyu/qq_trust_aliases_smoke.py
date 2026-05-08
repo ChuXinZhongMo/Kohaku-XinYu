@@ -6,6 +6,7 @@ from xinyu_qq_gateway import NativeQQGateway
 from xinyu_qq_trust_policy import (
     compact_command_text,
     gateway_effective_whitelist_user_ids,
+    gateway_group_shadow_group_allowed,
     gateway_is_blocked_group_id,
     gateway_is_blocked_user_id,
     gateway_is_trusted_user_id,
@@ -39,6 +40,7 @@ def main() -> int:
         trusted_user_ids=frozenset({"friend"}),
         blocked_user_ids=frozenset({"blocked"}),
         blocked_group_ids=frozenset({"group"}),
+        group_shadow_allowed_group_ids=frozenset({"shadow"}),
     )
     gateway = SimpleNamespace(config=config)
     if NativeQQGateway._effective_whitelist_user_ids is not gateway_effective_whitelist_user_ids:
@@ -73,6 +75,12 @@ def main() -> int:
         failures.append("gateway trust-level alias changed trusted level")
     if NativeQQGateway._trust_level_for_user_id(gateway, "external") != "external":
         failures.append("gateway trust-level alias changed external level")
+    if NativeQQGateway._group_shadow_group_allowed is not gateway_group_shadow_group_allowed:
+        failures.append("gateway group-shadow alias no longer uses trust policy helper")
+    if not NativeQQGateway._group_shadow_group_allowed(gateway, "shadow"):
+        failures.append("gateway group-shadow alias stopped allowing configured group")
+    if NativeQQGateway._group_shadow_group_allowed(gateway, "other"):
+        failures.append("gateway group-shadow alias started allowing unrelated group")
 
     if failures:
         print("XinYu QQ trust aliases smoke failed")

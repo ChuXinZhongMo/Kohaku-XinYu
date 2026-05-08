@@ -1625,8 +1625,7 @@ class NativeQQGateway:
             print(f"[xinyu_qq_gateway] group shadow observation failed: {type(exc).__name__}: {exc}", flush=True)
             return {"recorded": False, "notes": [f"group_shadow_error:{type(exc).__name__}"]}
 
-    def _group_shadow_group_allowed(self, group_id: str) -> bool:
-        return xinyu_qq_trust_policy.group_shadow_group_allowed(self.config, group_id)
+    _group_shadow_group_allowed = xinyu_qq_trust_policy.gateway_group_shadow_group_allowed
 
     def _build_coalesced_prepared_message(self, prepareds: list[PreparedMessage]) -> PreparedMessage | None:
         items = [item for item in prepareds if item is not None]

@@ -130,3 +130,7 @@ def group_shadow_group_allowed(config: Any, group_id: str) -> bool:
     group_id = safe_str(group_id).strip()
     allowed = set(config.group_shadow_allowed_group_ids)
     return bool(group_id and group_id in allowed)
+
+
+def gateway_group_shadow_group_allowed(gateway: Any, group_id: str) -> bool:
+    return group_shadow_group_allowed(gateway.config, group_id)

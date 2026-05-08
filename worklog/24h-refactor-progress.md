@@ -2702,3 +2702,25 @@ Workspace: D:\XinYu
 - Risk: Low; only trust-level helper ownership changed. Owner/trusted/external labels, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-125-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 126 - 20:12
+
+- Task: Replace QQ group-shadow allow-list wrapper with direct trust policy gateway alias.
+- Why: `_group_shadow_group_allowed` in `xinyu_qq_gateway.py` only forwarded `self.config` and `group_id` into `xinyu_qq_trust_policy.group_shadow_group_allowed`. A gateway-level helper removes that shim while keeping group shadow allow-list policy in the trust policy module.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_trust_policy.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_trust_aliases_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py qq_trust_aliases_smoke.py xinyu_qq_trust_policy.py`
+  - `D:\XinYu\Python312\python.exe qq_trust_aliases_smoke.py`
+  - `D:\XinYu\Python312\python.exe qq_trust_policy_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_trust_policy.gateway_group_shadow_group_allowed` now owns the gateway-bound group-shadow allow-list helper and gateway `_group_shadow_group_allowed` directly aliases it. Compile, focused trust alias/policy smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only group-shadow allow-list helper ownership changed. Group shadow trace/projection writes, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-126-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.
