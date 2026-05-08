@@ -70,9 +70,14 @@ def main() -> int:
     class _Client:
         def __init__(self) -> None:
             self.ack_payloads: list[dict[str, str]] = []
+            self.message_ack_payloads: list[dict[str, str]] = []
 
         async def qq_outbox_ack(self, payload: dict[str, str]) -> dict[str, bool]:
             self.ack_payloads.append(dict(payload))
+            return {"accepted": True}
+
+        async def message_ack(self, payload: dict[str, str]) -> dict[str, bool]:
+            self.message_ack_payloads.append(dict(payload))
             return {"accepted": True}
 
     gateway.client = _Client()
@@ -115,6 +120,21 @@ def main() -> int:
         failures.append("gateway acked spool helper is not a direct method alias")
     if not gateway._spool_acked_message_ack(pending_payload):
         failures.append("gateway acked spool alias no longer delegates")
+    if NativeQQGateway._send_message_ack_payload is not outbox_client.send_message_ack_payload:
+        failures.append("gateway send message ack payload helper is not a direct method alias")
+    send_ok = asyncio.run(
+        gateway._send_message_ack_payload(
+            {"adapter_message_id": "qq-msg-5"},
+            mark_acked=True,
+            spool_on_failure=False,
+        )
+    )
+    if not send_ok:
+        failures.append("gateway send message ack payload alias stopped accepting successful send")
+    if gateway.client.message_ack_payloads[-1].get("adapter_message_id") != "qq-msg-5":
+        failures.append("gateway send message ack payload alias changed sent payload")
+    if gateway.ack_spool.acked_payloads[-1].get("adapter_message_id") != "qq-msg-5":
+        failures.append("gateway send message ack payload alias stopped marking acked payload")
 
     prepared = PreparedMessage(
         target=ReplyTarget(message_kind="private", user_id="42", group_id=""),
