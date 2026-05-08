@@ -2937,3 +2937,22 @@ Workspace: D:\XinYu
 - Risk: Low; only outbox poll helper ownership changed. The long-running poll loop was not started by the smoke; adapter name, runtime polling cadence, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-136-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 137 - 20:30
+
+- Task: Record long-run health checkpoint.
+- Why: The previous health checkpoint was at 19:21, and the long-run operating rhythm calls for periodic health checks while continuing refactor loops.
+- Files changed:
+  - `XINYU-LONG-RUN-OPERATIONS.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe diagnostics\check_xinyu_health.py --json --workspace D:\XinYu`
+  - `D:\XinYu\Python312\python.exe diagnostics\check_xinyu_health.py --json --write-ledger --workspace D:\XinYu`
+  - `git status --short --branch`
+  - `git diff --check`
+- Result: Health remained `warn` only because `git_state` saw the intentionally untracked `XINYU-24H-WORK-PLAN.md`. Bridge, desktop WS, QQ gateway, NapCat, outbox backlog, recent exceptions, v1 shadow errors, and disk space were `ok`; bridge `sessions=1`; outbox `pending=0 total=72`; recent exceptions `hits=0 scanned_files=11 window_minutes=120`; v1 shadow errors `errors=0 window=200`; disk free `646.3 GB`; ledger write succeeded at `runtime\diagnostics\xinyu_health_history.jsonl`.
+- Commits since last checkpoint: `90c84c2`, `a9bbdd7`, `de8761a`, `5a51e65`, `08caf15`, `f03d2ba`, `0fbff33`, `23eeec5`, `a3ca1c5`, `1662515`, `efb9bb2`, `0474537` plus earlier trust-policy alias commits in this work session.
+- Risk: Low; health diagnostic is read-only except the opt-in runtime diagnostics ledger write. No services were started, no real QQ outbound test was run, no prompt/persona semantics or long-term memory body text was edited, and v1 traffic scope was not changed.
+- Rollback: `git revert <loop-137-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.
