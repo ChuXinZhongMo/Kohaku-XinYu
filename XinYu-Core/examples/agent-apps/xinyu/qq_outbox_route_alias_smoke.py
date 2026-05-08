@@ -153,6 +153,8 @@ def main() -> int:
         failures.append("gateway send message ack payload alias changed sent payload")
     if gateway.ack_spool.acked_payloads[-1].get("adapter_message_id") != "qq-msg-5":
         failures.append("gateway send message ack payload alias stopped marking acked payload")
+    if NativeQQGateway._poll_pending_message_acks is not outbox_client.poll_pending_message_acks:
+        failures.append("gateway pending message ack poll helper is not a direct method alias")
 
     prepared = PreparedMessage(
         target=ReplyTarget(message_kind="private", user_id="42", group_id=""),

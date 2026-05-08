@@ -2894,3 +2894,24 @@ Workspace: D:\XinYu
 - Risk: Low; only sent outbox delivery ack helper ownership changed. Disabled-token short circuit, delivery ack payload creation, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-134-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 135 - 20:27
+
+- Task: Replace QQ pending message ack poll wrapper with direct outbox client alias.
+- Why: `_poll_pending_message_acks` in `xinyu_qq_gateway.py` only awaited `xinyu_qq_outbox_client.poll_pending_message_acks` with the same gateway and connection id. The signatures already match, so the gateway can use a direct async method alias.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_outbox_route_alias_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py qq_outbox_route_alias_smoke.py xinyu_qq_outbox_client.py`
+  - `D:\XinYu\Python312\python.exe qq_outbox_route_alias_smoke.py`
+  - `D:\XinYu\Python312\python.exe qq_outbox_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: Gateway `_poll_pending_message_acks` now directly aliases `xinyu_qq_outbox_client.poll_pending_message_acks`. Compile, focused outbox route alias smoke, QQ outbox smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only pending ack poll helper ownership changed. The long-running poll loop was not started by the smoke; runtime polling cadence, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-135-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.

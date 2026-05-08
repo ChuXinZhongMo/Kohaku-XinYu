@@ -278,8 +278,7 @@ class NativeQQGateway:
 
     _sent_outbox_delivery_route = staticmethod(xinyu_qq_outbox_client.sent_outbox_delivery_route)
 
-    async def _poll_pending_message_acks(self, connection_id: str) -> None:
-        await xinyu_qq_outbox_client.poll_pending_message_acks(self, connection_id)
+    _poll_pending_message_acks = xinyu_qq_outbox_client.poll_pending_message_acks
 
     _ack_sent_visible_reply = xinyu_qq_outbox_client.ack_sent_visible_reply
 
