@@ -32,3 +32,11 @@ def looks_like_structured_visible_reply(text: str) -> bool:
     if re.search(r"(?m)^\s*(?:[-*+]|\d+[.)])\s+\S", text):
         return True
     return text.count("|") >= 4 and "\n" in text
+
+
+def reply_sentence_units(text: str) -> list[str]:
+    pattern = re.compile(
+        r"\S[\s\S]*?(?:[\u3002\uff01\uff1f\uff1b]+[\)\]\}\"'\u201d\u2019]*|[.!?;]+[\)\]\}\"'\u201d\u2019]*(?:\s+|$)|\n+|$)"
+    )
+    units = [match.group(0) for match in pattern.finditer(text.strip()) if match.group(0).strip()]
+    return units or [text.strip()]

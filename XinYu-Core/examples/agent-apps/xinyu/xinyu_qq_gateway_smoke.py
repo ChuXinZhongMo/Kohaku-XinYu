@@ -576,6 +576,7 @@ def main() -> int:
 
     asyncio.run(_reply_bubble_smoke())
     assert NativeQQGateway._looks_like_structured_visible_reply is xinyu_qq_reply_bubbles.looks_like_structured_visible_reply
+    assert NativeQQGateway._reply_sentence_units is xinyu_qq_reply_bubbles.reply_sentence_units
 
     class OrderedInboundGateway(NativeQQGateway):
         def __init__(self):

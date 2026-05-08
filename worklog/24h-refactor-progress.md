@@ -2997,3 +2997,23 @@ Workspace: D:\XinYu
 - Risk: Low; only helper ownership changed. Structured reply detection markers, reply bubble splitting behavior, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-139-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 140 - 20:38
+
+- Task: Extract QQ reply sentence unit splitter into reply bubble helper module.
+- Why: `_reply_sentence_units` is pure sentence/unit splitting logic used by reply bubble chunking. Moving it into `xinyu_qq_reply_bubbles.py` continues the reply-bubble boundary while leaving the gateway with a direct static alias.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_reply_bubbles.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py xinyu_qq_gateway_smoke.py xinyu_qq_reply_bubbles.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_reply_bubbles.reply_sentence_units` now owns reply sentence/unit splitting and gateway `_reply_sentence_units` directly aliases it. Compile, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only helper ownership changed. Sentence split regex, reply bubble chunking behavior, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-140-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.

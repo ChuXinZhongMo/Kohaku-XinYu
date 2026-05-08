@@ -122,6 +122,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Record 2026-05-08 20:30 long-run health checkpoint.
 - [x] Replace QQ signal handler wrapper with direct server helper alias.
 - [x] Extract QQ structured visible reply detector into reply bubble helper module.
+- [x] Extract QQ reply sentence unit splitter into reply bubble helper module.
 
 ## Stop-Gap First
 

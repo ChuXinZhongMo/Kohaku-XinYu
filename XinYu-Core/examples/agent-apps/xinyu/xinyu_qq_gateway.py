@@ -2768,13 +2768,7 @@ class NativeQQGateway:
             return [text]
         return chunks[:max_bubbles]
 
-    @staticmethod
-    def _reply_sentence_units(text: str) -> list[str]:
-        pattern = re.compile(
-            r"\S[\s\S]*?(?:[\u3002\uff01\uff1f\uff1b]+[\)\]\}\"'\u201d\u2019]*|[.!?;]+[\)\]\}\"'\u201d\u2019]*(?:\s+|$)|\n+|$)"
-        )
-        units = [match.group(0) for match in pattern.finditer(text.strip()) if match.group(0).strip()]
-        return units or [text.strip()]
+    _reply_sentence_units = staticmethod(xinyu_qq_reply_bubbles.reply_sentence_units)
 
     def _hard_split_reply_text(self, text: str, *, soft_max: int, max_bubbles: int) -> list[str]:
         chunks: list[str] = []
