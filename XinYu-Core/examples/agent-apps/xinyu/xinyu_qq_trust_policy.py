@@ -4,6 +4,35 @@ import re
 from typing import Any, Iterable
 
 
+TRUST_GRANT_TEXT_MARKERS = (
+    "给个权限",
+    "给权限",
+    "加权限",
+    "开权限",
+    "给她权限",
+    "给他权限",
+    "信任这个人",
+    "信任她",
+    "信任他",
+    "允许她搜",
+    "允许他搜",
+    "让她搜",
+    "让他搜",
+    "给她搜索权限",
+    "给他搜索权限",
+    "trusted user",
+    "trust this user",
+)
+TRUST_REVOKE_TEXT_MARKERS = (
+    "取消权限",
+    "撤销权限",
+    "别信任",
+    "不信任这个人",
+    "取消信任",
+    "revoke trust",
+)
+
+
 def safe_str(value: Any, default: str = "") -> str:
     if value is None:
         return default
@@ -17,6 +46,14 @@ def compact_command_text(text: str) -> str:
 def marker_command_matches(text: str, markers: Iterable[str]) -> bool:
     compact = compact_command_text(text)
     return bool(compact) and any(compact_command_text(marker) in compact for marker in markers)
+
+
+def is_trust_grant_command(text: str) -> bool:
+    return marker_command_matches(text, TRUST_GRANT_TEXT_MARKERS)
+
+
+def is_trust_revoke_command(text: str) -> bool:
+    return marker_command_matches(text, TRUST_REVOKE_TEXT_MARKERS)
 
 
 def effective_whitelist_user_ids(config: Any) -> set[str]:

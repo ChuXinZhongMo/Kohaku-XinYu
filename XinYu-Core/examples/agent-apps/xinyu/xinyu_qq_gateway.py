@@ -83,35 +83,6 @@ RECEIVED_STICKER_MOOD_MEANING: dict[str, str] = {
     "surprised": "震惊、惊讶、没想到",
     "thinking": "思考、暂停判断",
 }
-TRUST_GRANT_TEXT_MARKERS = (
-    "给个权限",
-    "给权限",
-    "加权限",
-    "开权限",
-    "给她权限",
-    "给他权限",
-    "信任这个人",
-    "信任她",
-    "信任他",
-    "允许她搜",
-    "允许他搜",
-    "让她搜",
-    "让他搜",
-    "给她搜索权限",
-    "给他搜索权限",
-    "trusted user",
-    "trust this user",
-)
-TRUST_REVOKE_TEXT_MARKERS = (
-    "取消权限",
-    "撤销权限",
-    "别信任",
-    "不信任这个人",
-    "取消信任",
-    "revoke trust",
-)
-
-
 def _quiet_websockets_handshake_noise() -> None:
     for logger_name in ("websockets.server", "websockets.protocol"):
         logging.getLogger(logger_name).setLevel(logging.CRITICAL)
@@ -195,10 +166,10 @@ class NativeQQGateway:
         return xinyu_qq_trust_policy.compact_command_text(text)
 
     def _looks_like_trust_command(self, text: str) -> bool:
-        return xinyu_qq_trust_policy.marker_command_matches(text, TRUST_GRANT_TEXT_MARKERS)
+        return xinyu_qq_trust_policy.is_trust_grant_command(text)
 
     def _looks_like_trust_revoke_command(self, text: str) -> bool:
-        return xinyu_qq_trust_policy.marker_command_matches(text, TRUST_REVOKE_TEXT_MARKERS)
+        return xinyu_qq_trust_policy.is_trust_revoke_command(text)
 
     def _trust_command_target(self, prepared: PreparedMessage) -> tuple[str, str]:
         return xinyu_qq_trust_policy.trust_command_target(

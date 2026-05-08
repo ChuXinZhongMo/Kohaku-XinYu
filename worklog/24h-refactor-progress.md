@@ -951,3 +951,25 @@ Workspace: D:\XinYu
 - Risk: Low-medium; config parsing/model ownership moved, but route derivation, defaults, trigger prefixes, and gateway compatibility import were preserved. No real QQ outbound, OneBot payload shape, trust policy, persona semantics, memory body text, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-43-commit>`
 - Next: Continue with another single-responsibility QQ gateway extraction, likely runtime constants/prefix ownership or a focused sender/outbox boundary follow-up after observing the current module.
+
+## Loop 44 - 11:23
+
+- Task: Move QQ owner trust command markers into trust policy.
+- Why: `xinyu_qq_gateway.py` still carried the text marker lists for owner trust grant/revoke commands even though trust helpers already lived in `xinyu_qq_trust_policy.py`.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_trust_policy.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_trust_policy_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_trust_policy.py xinyu_qq_gateway.py qq_trust_policy_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_trust_policy_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: Trust grant/revoke markers and their classifier functions now live in `xinyu_qq_trust_policy.py`; gateway delegates through the existing compatibility methods. Compile, trust policy smoke, QQ gateway smoke, and QQ review smoke passed.
+- Risk: Low; command-marker ownership only. No real QQ outbound, OneBot payload shape, whitelist persistence format, persona semantics, memory body text, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-44-commit>`
+- Next: Continue with another small QQ gateway extraction, likely sticker mood constants or rich-segment constants.
