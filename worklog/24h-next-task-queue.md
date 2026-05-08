@@ -78,6 +78,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace QQ rich segment summary wrapper with direct helper alias.
 - [x] Replace QQ file path detection wrapper with direct helper alias.
 - [x] Replace QQ learning material data wrapper with direct helper alias.
+- [x] Replace QQ sticker import material data wrapper with direct helper alias.
 
 ## Stop-Gap First
 

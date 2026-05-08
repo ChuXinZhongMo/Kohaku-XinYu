@@ -38,6 +38,16 @@ def main() -> int:
     if sticker != expected_sticker:
         failures.append(f"sticker import material changed: {sticker!r}")
 
+    if (
+        NativeQQGateway._sticker_import_material_from_data
+        is not attachment_resolver.sticker_import_material_from_data
+    ):
+        failures.append("gateway sticker import material helper is not a direct alias")
+    if NativeQQGateway._sticker_import_material_from_data(
+        "mface",
+        {"summary": "funny", "file": r"D:\XinYu\sticker.webp"},
+    ) != expected_sticker:
+        failures.append("gateway sticker import material wrapper no longer delegates")
     if NativeQQGateway._learning_material_from_data is not attachment_resolver.learning_material_from_data:
         failures.append("gateway learning material helper is not a direct alias")
     if NativeQQGateway._learning_material_from_data("file", {"file_id": "f1"}) != {
