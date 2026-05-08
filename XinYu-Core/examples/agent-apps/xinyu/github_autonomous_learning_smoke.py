@@ -178,6 +178,39 @@ def main() -> int:
                     force=True,
                     min_interval_seconds=0,
                 )
+                failed_root = tmp_path / "failed-root"
+                _prepare_root(failed_root, search_url)
+                _write(
+                    failed_root / "memory/knowledge/github_learning_candidates.md",
+                    """# GitHub Learning Candidates
+
+## github-candidate-2026-05-06-001
+- source_id: fixture-agent-memory
+- question_id: github-fixture-agent-memory
+- query: fixture agent memory language:Python
+- full_name: example/demo-agent
+- url: https://github.com/example/demo-agent
+- description: previously failed fixture
+- language: Python
+- stars: 42
+- pushed_at: 2026-05-01T00:00:00Z
+- source_type: github_repository
+- status: candidate
+- stage_status: failed:RuntimeError
+- learning_item_id: none
+- material_id: none
+- discovered_at: 2026-05-06T06:00:00+08:00
+- last_seen_at: 2026-05-06T06:00:00+08:00
+- reason: smoke failed candidate should not restage
+""",
+                )
+                failed_skip = run_github_autonomous_learning(
+                    failed_root,
+                    checked_at="2026-05-06T07:10:00+08:00",
+                    mode="github_autonomous_learning_failed_skip_smoke",
+                    force=True,
+                    min_interval_seconds=0,
+                )
             finally:
                 xinyu_learning_library.github_archive_urls = original_archives
         finally:
@@ -198,6 +231,8 @@ def main() -> int:
             failures.append(f"first run did not stage fixture repo: {result}")
         if int(second["staged_repos"]) != 0:
             failures.append(f"second run should not restage duplicate repo: {second}")
+        if int(failed_skip["staged_repos"]) != 0 or failed_skip["status"] == "staged":
+            failures.append(f"failed candidate should not be restaged: {failed_skip}")
         for marker in (
             "status: staged",
         ):

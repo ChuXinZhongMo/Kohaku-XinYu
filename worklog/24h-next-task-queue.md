@@ -6,6 +6,7 @@ Date: 2026-05-07 / continued 2026-05-08
 
 - [x] Add a bounded recent-exception scan window so old log tails do not keep health permanently critical.
 - [x] Make recent-exception tail scans read actual file tails and ignore partial JSONL first lines.
+- [x] Prevent repeated GitHub learning `stage_error` traces for candidates already marked `failed:*`.
 - [ ] Reduce the remaining 120-minute `recent_exceptions` hits from warn toward ok.
 - [ ] Start `xinyu_core_bridge.py` package boundary extraction with auth/context/session helpers.
 - [ ] Start `xinyu_qq_gateway.py` package boundary extraction with config/server/normalizer helpers.

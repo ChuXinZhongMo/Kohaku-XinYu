@@ -611,6 +611,8 @@ def run_github_autonomous_learning(
                     if item.get("stage_status") != "staged":
                         item["stage_status"] = "duplicate"
                     continue
+                if str(item.get("stage_status") or "").lower().startswith("failed:"):
+                    continue
                 if staged_repos >= max(0, max_repos):
                     continue
                 if source.get("stage", "true").lower() not in ENABLED_VALUES:

@@ -540,3 +540,23 @@ Workspace: D:\XinYu
 - Risk: Low; diagnostic read path only. No runtime files were cleaned or rewritten.
 - Rollback: `git revert <loop-24-commit>`
 - Next: Triage the remaining GitHub learning `stage_error` hit.
+
+## Loop 25 - 10:26
+
+- Task: Stop repeated GitHub learning staging attempts for already failed candidates.
+- Why: The only remaining recent exception hit came from `runtime/github_learning_trace.jsonl`: a candidate with `stage_status: failed:RuntimeError` was found again and retried, creating repeated `stage_error` traces.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/custom/github_autonomous_learning_engine.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/github_autonomous_learning_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `git status --short --branch`
+  - Read-only inspection of `custom\github_autonomous_learning_engine.py`, `github_autonomous_learning_smoke.py`, `memory\knowledge\github_learning_candidates.md`, and `runtime\github_learning_trace.jsonl`.
+  - `.\.venv\Scripts\python.exe -m py_compile custom\github_autonomous_learning_engine.py github_autonomous_learning_smoke.py`
+  - `.\.venv\Scripts\python.exe github_autonomous_learning_smoke.py`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --workspace D:\XinYu`
+- Result: GitHub autonomous learning now skips candidates whose `stage_status` starts with `failed:`. The smoke adds a failed-candidate fixture to verify it is not restaged. The current health window still has one historical `stage_error` row until it ages out, but this path should not create another identical hit.
+- Risk: Low-medium; autonomous public GitHub learning retries are more conservative for failed candidates. No owner memory body, persona semantics, QQ outbound, or v1 traffic was touched.
+- Rollback: `git revert <loop-25-commit>`
+- Next: Start `xinyu_core_bridge.py` auth/context/session boundary extraction or migrate another low-risk state writer.
