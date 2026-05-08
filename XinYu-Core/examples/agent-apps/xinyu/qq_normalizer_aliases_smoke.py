@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from xinyu_qq_gateway import NativeQQGateway
 from xinyu_qq_normalizer import (
+    clean_cq_text_value,
     cq_bracket_continues_params,
     decode_cq_value,
     extract_text,
@@ -28,6 +29,14 @@ def main() -> int:
         failures.append("gateway CQ segment parser alias no longer delegates")
     if NativeQQGateway._strip_cq_segments(raw_message) != strip_cq_segments(raw_message):
         failures.append("gateway CQ strip alias no longer delegates")
+    if clean_cq_text_value(" [CQ:image,file=a.jpg] hello ") != "hello":
+        failures.append("clean CQ text value helper changed")
+    if NativeQQGateway._clean_cq_text is not clean_cq_text_value:
+        failures.append("gateway clean CQ text helper is not a direct static alias")
+    if NativeQQGateway._clean_cq_text(" [CQ:image,file=a.jpg] hello ") != clean_cq_text_value(
+        " [CQ:image,file=a.jpg] hello "
+    ):
+        failures.append("gateway clean CQ text alias no longer delegates")
 
     tricky = "[CQ:json,data={\"x\"] ,still=params]"
     bracket_index = tricky.find("]")

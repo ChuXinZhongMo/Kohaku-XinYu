@@ -630,9 +630,7 @@ class NativeQQGateway:
             "time": _safe_str(event_like.get("time")).strip(),
         }
 
-    @staticmethod
-    def _clean_cq_text(text: str) -> str:
-        return xinyu_qq_normalizer.clean_cq_text(None, text)
+    _clean_cq_text = staticmethod(xinyu_qq_normalizer.clean_cq_text_value)
 
     _dedupe_forward_messages = staticmethod(xinyu_qq_forward_context.dedupe_forward_messages)
 

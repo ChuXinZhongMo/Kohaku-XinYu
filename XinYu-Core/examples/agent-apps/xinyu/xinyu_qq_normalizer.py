@@ -69,6 +69,10 @@ def sender_name(gateway: Any, event: dict[str, Any]) -> str:
 
 
 def clean_cq_text(gateway: Any, text: str) -> str:
+    return clean_cq_text_value(text)
+
+
+def clean_cq_text_value(text: str) -> str:
     stripped = text.strip()
     if not stripped:
         return ""
