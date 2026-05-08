@@ -69,6 +69,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace QQ outbox delivery route wrapper with direct client alias.
 - [x] Replace QQ file URI path wrapper with direct attachment resolver alias.
 - [x] Extract core bridge payload text helper and alias session key helper.
+- [x] Record 2026-05-08 13:53 long-run health checkpoint.
 
 ## Stop-Gap First
 
