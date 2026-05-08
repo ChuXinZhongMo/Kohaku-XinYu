@@ -57,6 +57,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract desktop proactive state text field helpers into `xinyu_bridge_desktop_state_text.py`.
 - [x] Extract desktop event projection helpers into `xinyu_bridge_desktop_projection.py`.
 - [x] Migrate QQ trusted-user config persistence to `state_service.atomic_write_json`.
+- [x] Migrate core debug live system prompt dump to `state_service.atomic_write_text`.
 
 ## Stop-Gap First
 

@@ -5650,11 +5650,8 @@ tags: [promise, followup, qq-outbox, continuity]
         )
 
         path = self.xinyu_dir / DEBUG_LIVE_SYSTEM_PROMPT_REL
-        tmp_path = path.with_suffix(path.suffix + ".tmp")
         try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            tmp_path.write_text(content, encoding="utf-8")
-            tmp_path.replace(path)
+            atomic_write_text(path, content, final_newline=False)
         except OSError as exc:
             print(f"[xinyu_core_bridge] debug prompt dump failed: {type(exc).__name__}: {exc}", flush=True)
 

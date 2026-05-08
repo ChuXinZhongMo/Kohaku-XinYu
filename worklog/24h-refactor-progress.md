@@ -1631,3 +1631,26 @@ Workspace: D:\XinYu
 - Risk: Low-medium; config write helper changed, but config path, JSON indentation, trusted id sorting, unrelated key preservation, trust policy, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior were unchanged.
 - Rollback: `git revert <loop-74-commit>`
 - Next: Continue with another state governance or helper extraction slice.
+
+## Loop 75 - 13:04
+
+- Task: Migrate core debug live system prompt dump to `state_service`.
+- Why: `_maybe_dump_live_system_prompt` still hand-rolled a temp-file replace for `runtime/debug/last_live_system_prompt.txt`. This is a runtime diagnostic cache, not long-term memory, so routing it through `state_service.atomic_write_text(final_newline=False)` is a low-risk state governance improvement.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_debug_prompt_dump_smoke.py`
+  - `XINYU-STATE-WRITE-AUDIT.md`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile bridge_debug_prompt_dump_smoke.py xinyu_core_bridge.py state_service.py`
+  - `.\.venv\Scripts\python.exe bridge_debug_prompt_dump_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_dialogue_curiosity_bridge_injection.py -q`
+  - `.\.venv\Scripts\python.exe state_io_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Debug prompt dump now uses `state_service.atomic_write_text(final_newline=False)` with the same env gate, owner-private gate, path, and content. The first focused smoke failed because it called `_debug_dump_live_system_prompt`; the smoke was corrected to call the real `_maybe_dump_live_system_prompt` entrypoint. Focused smoke, dialogue curiosity bridge injection pytest, state IO smoke, bridge probe, compile, and diff check passed.
+- Risk: Low; runtime/debug cache write helper changed only. No prompt content semantics, long-term memory body text, route payloads, QQ outbound, v1 traffic behavior, or runtime/memory deletion was touched.
+- Rollback: `git revert <loop-75-commit>`
+- Next: Continue with another state governance or helper extraction slice.

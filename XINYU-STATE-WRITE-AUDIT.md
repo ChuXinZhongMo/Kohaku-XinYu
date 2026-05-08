@@ -36,7 +36,7 @@ Scope: first-pass write-surface audit before introducing broader state governanc
 | Autonomous mind loop state | `memory/context/autonomous_mind_loop_state.md` | Projection | Migrated to `state_service.atomic_write_text` in Loop 34 | Keep body shape; validate with `autonomous_state_smoke.py`. |
 | Desktop proactive request update | `memory/context/proactive_request_state.md` | Projection | Migrated to `state_service.atomic_write_text` in Loop 27 | Keep field semantics and validate with `xinyu_desktop_proactive_smoke.py`. |
 | Promise follow-up state | `memory/context/promise_followup_state.md` | Projection | Migrated to `state_service.atomic_write_text` in Loop 13 | Keep body shape; validate with `promise_followup_state_smoke.py` and focused promise follow-up pytest. |
-| Debug live system prompt | `runtime/debug/last_live_system_prompt.txt` | Runtime diagnostic cache | Already tmp-and-replace | Leave as runtime diagnostic, maybe move helper later. |
+| Debug live system prompt | `runtime/debug/last_live_system_prompt.txt` | Runtime diagnostic cache | Migrated to `state_service.atomic_write_text(final_newline=False)` in Loop 75 | Runtime diagnostic only; env-gated and owner-private-gated. |
 | Codex background traces | `memory/knowledge/codex_*_trace.log` | Log-like traces under memory | Append logs near knowledge material | Audit only; moving paths could break current review workflow. |
 | Dialogue tail sync | runtime dialogue tail helpers | Runtime/session state | Helper-owned, not direct bridge text write except save call | Leave behind existing helper boundary. |
 
@@ -73,6 +73,7 @@ Scope: first-pass write-surface audit before introducing broader state governanc
    - `xinyu_core_bridge.py` autonomous mind loop state. Done in Loop 34.
    - QQ runtime trace appends after QQ trust/outbox extraction. Done in Loop 35.
    - QQ trusted-user config persistence. Done in Loop 74.
+   - Core debug live system prompt runtime cache. Done in Loop 75.
 3. Leave long-term memory body writes in existing modules until the owner approves a memory-body migration slice.
 
 ## Required Validation For State Changes
