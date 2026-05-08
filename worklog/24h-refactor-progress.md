@@ -2406,3 +2406,23 @@ Workspace: D:\XinYu
 - Risk: Low; only OneBot media resolver ownership changed. Media file resolution attempts, metadata enrichment, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-111-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 112 - 19:31
+
+- Task: Replace QQ OneBot file resolver wrapper with direct method alias.
+- Why: `_resolve_onebot_file` only delegated to `xinyu_qq_attachment_resolver.resolve_onebot_file(self, websocket, file_id=..., metadata=...)`. Assigning the attachment resolver coroutine directly preserves instance binding and removes another gateway shim.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_attachment_material_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_attachment_material_smoke.py xinyu_qq_attachment_resolver.py`
+  - `.\.venv\Scripts\python.exe qq_attachment_material_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `_resolve_onebot_file` now directly aliases `xinyu_qq_attachment_resolver.resolve_onebot_file` as a bound coroutine method. Compile, focused attachment material smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only OneBot file resolver ownership changed. File resolution attempts, metadata enrichment, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-112-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.

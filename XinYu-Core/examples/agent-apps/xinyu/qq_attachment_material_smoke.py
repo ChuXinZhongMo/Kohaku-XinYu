@@ -79,6 +79,8 @@ def main() -> int:
         failures.append("gateway learning ingest resolver alias no longer delegates")
     if NativeQQGateway._resolve_onebot_media is not attachment_resolver.resolve_onebot_media:
         failures.append("gateway OneBot media resolver is not a direct method alias")
+    if NativeQQGateway._resolve_onebot_file is not attachment_resolver.resolve_onebot_file:
+        failures.append("gateway OneBot file resolver is not a direct method alias")
 
     if failures:
         print("XinYu QQ attachment material smoke failed")

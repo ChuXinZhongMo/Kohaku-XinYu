@@ -388,13 +388,7 @@ class NativeQQGateway:
 
     _resolve_onebot_media = xinyu_qq_attachment_resolver.resolve_onebot_media
 
-    async def _resolve_onebot_file(self, websocket: Any, *, file_id: str, metadata: dict[str, Any]) -> dict[str, str]:
-        return await xinyu_qq_attachment_resolver.resolve_onebot_file(
-            self,
-            websocket,
-            file_id=file_id,
-            metadata=metadata,
-        )
+    _resolve_onebot_file = xinyu_qq_attachment_resolver.resolve_onebot_file
 
     async def _onebot_file_url_action(self, websocket: Any, action: str, params: dict[str, Any]) -> str:
         return await xinyu_qq_attachment_resolver.onebot_file_url_action(self, websocket, action, params)
