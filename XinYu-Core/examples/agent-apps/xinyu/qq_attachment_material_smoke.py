@@ -94,6 +94,17 @@ def main() -> int:
         != "https://example.invalid/file"
     ):
         failures.append("gateway OneBot file URL action alias no longer delegates")
+    if NativeQQGateway._onebot_action_payload is not attachment_resolver.onebot_action_payload:
+        failures.append("gateway OneBot action payload helper is not a direct method alias")
+
+    class _SendActionGateway(NativeQQGateway):
+        async def send_action(self, websocket, action, params):
+            return {"status": "ok", "retcode": 0, "data": {"file": "resolved.dat"}}
+
+    send_gateway = object.__new__(_SendActionGateway)
+    action_payload = asyncio.run(send_gateway._onebot_action_payload(None, "get_file", {"file_id": "f1"}))
+    if action_payload != {"file": "resolved.dat"}:
+        failures.append("gateway OneBot action payload alias no longer delegates")
 
     if failures:
         print("XinYu QQ attachment material smoke failed")
