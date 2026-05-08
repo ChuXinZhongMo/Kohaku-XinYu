@@ -39,6 +39,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract core bridge desktop action label helpers into `xinyu_bridge_desktop_actions.py`.
 - [x] Extract shared bridge memory snapshot helper into `xinyu_bridge_memory_snapshot.py`.
 - [x] Harden action digest followup smoke freshness window after dated fixture aged past 24h.
+- [x] Reuse v1 canary attachment signal helper from core bridge compatibility alias.
 
 ## Stop-Gap First
 

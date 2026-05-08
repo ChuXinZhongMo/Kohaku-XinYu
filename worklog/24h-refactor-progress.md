@@ -1255,3 +1255,24 @@ Workspace: D:\XinYu
 - Risk: Low-medium; multiple bridge modules now share the same read-only helper, but the snapshot shape is unchanged and no memory file body is read or written by the helper. The smoke fix only changes a test fixture window. No HTTP route semantics, prompt text, persona semantics, long-term memory body text, QQ outbound, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-57-commit>`
 - Next: Continue with another isolated core bridge or QQ gateway helper extraction.
+
+## Loop 58 - 12:10
+
+- Task: Reuse v1 canary attachment signal helper from core bridge.
+- Why: `_payload_has_attachment_signal` in `xinyu_core_bridge.py` duplicated `v1_canary_gate.payload_has_attachment_signal` and had no direct call sites. Importing the v1 helper under the previous private name preserves compatibility while removing duplicate attachment-key scanning from the core bridge entrypoint.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_payload_attachment_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_core_bridge.py v1_canary_gate.py bridge_payload_attachment_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_payload_attachment_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_v1_canary_readiness.py tests\v1\test_bridge_compatibility.py tests\v1\test_hybrid_router.py -q`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Core bridge attachment signal compatibility now delegates to `v1_canary_gate.payload_has_attachment_signal`; focused smoke verifies top-level and metadata attachment signals plus the alias. The first `bridge_probe_smoke.py` run failed while parallel validation overlapped with live background memory trace/state writes; an immediate sequential rerun passed with `sessions: 2->2`. Compile, payload attachment smoke, v1 pytest, bridge probe rerun, and diff check passed.
+- Risk: Low; duplicate pure helper removal only. No canary scope expansion, v1 real traffic change, state writes, HTTP route semantics, prompt text, persona semantics, long-term memory body text, or QQ outbound behavior was touched.
+- Rollback: `git revert <loop-58-commit>`
+- Next: Continue with another isolated core bridge or QQ gateway helper extraction.

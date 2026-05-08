@@ -52,6 +52,7 @@ from xinyu_bridge_values import safe_str as _safe_str
 import xinyu_bridge_action_routes
 from xinyu_bridge_turn_pipeline import run_pre_model_routes
 import xinyu_bridge_v1_routes
+from v1_canary_gate import payload_has_attachment_signal as _payload_has_attachment_signal
 from xinyu_chat_service import ChatServiceError, build_chat_service
 from xinyu_codex_delegate import (
     looks_like_codex_request,
@@ -666,35 +667,6 @@ def _ensure_repo_src(xinyu_dir: Path) -> Path:
     if str(src_root) not in sys.path:
         sys.path.insert(0, str(src_root))
     return src_root
-
-
-def _payload_has_attachment_signal(payload: dict[str, Any]) -> bool:
-    attachment_keys = (
-        "attachments",
-        "attachment",
-        "image_path",
-        "file_path",
-        "file_name",
-        "image",
-        "file",
-        "raw_image",
-        "raw_images",
-    )
-    for key in attachment_keys:
-        value = payload.get(key)
-        if isinstance(value, (list, tuple, dict)) and value:
-            return True
-        if _safe_str(value).strip():
-            return True
-    metadata = payload.get("metadata")
-    if isinstance(metadata, dict):
-        for key in attachment_keys:
-            value = metadata.get(key)
-            if isinstance(value, (list, tuple, dict)) and value:
-                return True
-            if _safe_str(value).strip():
-                return True
-    return False
 
 
 def _normalize_reply(text: str) -> str:
