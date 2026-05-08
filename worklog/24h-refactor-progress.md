@@ -886,3 +886,21 @@ Workspace: D:\XinYu
 - Risk: Low; startup argument parsing only. No real QQ outbound, OneBot payload shape, trust policy, memory body text, persona semantics, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-40-commit>`
 - Next: Continue with QQ config model extraction or final health checkpoint.
+
+## Loop 41 - 11:10
+
+- Task: Honor `recorded_at` in health JSONL recent-window filtering.
+- Why: QQ runtime trace smokes append to existing JSONL files, updating file mtime. Without recognizing row-level `recorded_at`, old `accepted:false` sticker trace rows can re-enter the 120-minute recent-exception window.
+- Files changed:
+  - `diagnostics/check_xinyu_health.py`
+  - `XINYU-LONG-RUN-OPERATIONS.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe -m py_compile diagnostics\check_xinyu_health.py`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --workspace D:\XinYu`
+  - `git diff --check`
+- Result: JSONL row timestamp discovery now checks `recorded_at` in addition to existing timestamp keys. Health returned to `recent_exceptions: ok` with `hits=0`; overall `warn` is from dirty git state during the loop.
+- Risk: Low; diagnostic read/classification only. Runtime traces were not cleaned, QQ outbound was not tested, v1 traffic was not expanded, and memory/persona content was untouched.
+- Rollback: `git revert <loop-41-commit>`
+- Next: Continue with QQ config model extraction or final health checkpoint.

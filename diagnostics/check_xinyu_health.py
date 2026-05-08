@@ -102,7 +102,7 @@ def _parse_timestamp(value: Any) -> datetime | None:
 
 
 def _row_timestamp(row: dict[str, Any]) -> datetime | None:
-    for key in ("checked_at", "observed_at", "created_at", "updated_at", "ts", "time"):
+    for key in ("checked_at", "observed_at", "recorded_at", "created_at", "updated_at", "ts", "time"):
         parsed = _parse_timestamp(row.get(key))
         if parsed is not None:
             return parsed
