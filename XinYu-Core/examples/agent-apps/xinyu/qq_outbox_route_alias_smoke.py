@@ -28,6 +28,21 @@ def main() -> int:
     if gateway._onebot_action_result(ok_response) != outbox_client.onebot_action_result(gateway, ok_response):
         failures.append("gateway OneBot action result alias no longer delegates")
 
+    class _AckSpool:
+        def __init__(self) -> None:
+            self.pending_payloads: list[dict[str, str]] = []
+
+        def append_pending(self, payload: dict[str, str]) -> dict[str, bool]:
+            self.pending_payloads.append(dict(payload))
+            return {"queued": True}
+
+    gateway.ack_spool = _AckSpool()
+    pending_payload = {"adapter_message_id": "qq-msg-1"}
+    if NativeQQGateway._spool_pending_message_ack is not outbox_client.spool_pending_message_ack:
+        failures.append("gateway pending ack spool helper is not a direct method alias")
+    if not gateway._spool_pending_message_ack(pending_payload):
+        failures.append("gateway pending ack spool alias no longer delegates")
+
     if failures:
         print("XinYu QQ outbox route alias smoke failed")
         for failure in failures:

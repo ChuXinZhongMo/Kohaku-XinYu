@@ -360,8 +360,7 @@ class NativeQQGateway:
     async def _record_sent_message_ack_payload(self, payload: dict[str, Any]) -> bool:
         return await xinyu_qq_outbox_client.record_sent_message_ack_payload(self, payload)
 
-    def _spool_pending_message_ack(self, payload: dict[str, Any]) -> bool:
-        return xinyu_qq_outbox_client.spool_pending_message_ack(self, payload)
+    _spool_pending_message_ack = xinyu_qq_outbox_client.spool_pending_message_ack
 
     def _spool_acked_message_ack(self, payload: dict[str, Any]) -> bool:
         return xinyu_qq_outbox_client.spool_acked_message_ack(self, payload)

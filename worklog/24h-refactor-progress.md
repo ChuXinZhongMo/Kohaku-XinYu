@@ -2203,3 +2203,24 @@ Workspace: D:\XinYu
 - Risk: Low; only OneBot response result helper ownership changed. Action result parsing, ack spool behavior, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-101-commit>`
 - Next: Continue with another isolated QQ gateway shim or core bridge helper slice.
+
+## Loop 102 - 19:05
+
+- Task: Replace QQ pending ack spool wrapper with direct method alias.
+- Why: `_spool_pending_message_ack` only delegated to `xinyu_qq_outbox_client.spool_pending_message_ack(self, payload)`. Assigning the outbox client function directly preserves instance binding and removes another gateway shim.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_outbox_route_alias_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_outbox_route_alias_smoke.py xinyu_qq_outbox_client.py`
+  - `.\.venv\Scripts\python.exe qq_outbox_route_alias_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_gateway_ack_spool.py -q`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `_spool_pending_message_ack` now directly aliases `xinyu_qq_outbox_client.spool_pending_message_ack` as a bound method. Compile, focused outbox alias smoke, ack spool pytest, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only pending ack spool helper ownership changed. Write-ahead ack spooling, ack retry behavior, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-102-commit>`
+- Next: Continue with another isolated QQ gateway shim or core bridge helper slice.
