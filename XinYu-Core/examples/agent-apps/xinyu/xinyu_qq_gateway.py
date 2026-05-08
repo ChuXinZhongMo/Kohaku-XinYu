@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import asyncio
 import contextlib
 import hashlib
@@ -25,6 +24,7 @@ from xinyu_image_context import build_image_context, is_image_learning_payload
 from xinyu_codex_delegate import looks_like_owner_local_write_request
 import xinyu_qq_attachment_resolver
 import xinyu_qq_command_router
+from xinyu_qq_cli import build_gateway_parser
 from xinyu_qq_config import (
     derive_codex_execute_url as _derive_codex_execute_url,
     derive_core_route_url as _derive_core_route_url,
@@ -3854,17 +3854,6 @@ class NativeQQGateway:
             return None
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Native XinYu QQ gateway for NapCat OneBot reverse WebSocket.")
-    parser.add_argument("--config", type=Path, default=Path(__file__).resolve().with_name("xinyu_qq_gateway.config.json"))
-    parser.add_argument("--host", default="")
-    parser.add_argument("--port", type=int, default=0)
-    parser.add_argument("--path", default="")
-    parser.add_argument("--core-url", default="")
-    parser.add_argument("--bridge-token", default=None)
-    return parser
-
-
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -3872,7 +3861,7 @@ def main() -> int:
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     _quiet_websockets_handshake_noise()
 
-    args = _build_parser().parse_args()
+    args = build_gateway_parser(Path(__file__).resolve().with_name("xinyu_qq_gateway.config.json")).parse_args()
     config = GatewayConfig.from_file(args.config).with_overrides(
         host=args.host or None,
         port=args.port or None,

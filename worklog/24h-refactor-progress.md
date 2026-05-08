@@ -865,3 +865,24 @@ Workspace: D:\XinYu
 - Risk: Low; pure model relocation. No real QQ outbound, OneBot payload shape, trust policy, memory body text, persona semantics, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-39-commit>`
 - Next: Continue with QQ config model extraction or final health checkpoint.
+
+## Loop 40 - 11:07
+
+- Task: Extract QQ gateway CLI parser.
+- Why: Startup argument parsing is an app-entry responsibility and can leave the gateway module before deeper config extraction.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_cli.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_cli_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_cli.py qq_cli_smoke.py xinyu_qq_gateway.py`
+  - `.\.venv\Scripts\python.exe qq_cli_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `git diff --check`
+- Result: CLI parser construction moved to `xinyu_qq_cli.py`; `main()` still resolves the same default config path and applies the same overrides. Compile, CLI smoke, and QQ gateway smoke passed.
+- Risk: Low; startup argument parsing only. No real QQ outbound, OneBot payload shape, trust policy, memory body text, persona semantics, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-40-commit>`
+- Next: Continue with QQ config model extraction or final health checkpoint.

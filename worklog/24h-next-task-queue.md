@@ -20,6 +20,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Migrate group shadow runtime trace and projection state to `state_service.py`.
 - [x] Extract QQ Core Bridge HTTP client from `xinyu_qq_gateway.py`.
 - [x] Extract QQ message/action dataclass models from `xinyu_qq_gateway.py`.
+- [x] Extract QQ gateway CLI parser from `xinyu_qq_gateway.py`.
 
 ## Stop-Gap First
 
