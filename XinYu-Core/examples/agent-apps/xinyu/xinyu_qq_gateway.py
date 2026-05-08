@@ -431,9 +431,7 @@ class NativeQQGateway:
     async def _onebot_action_data(self, websocket: Any, action: str, params: dict[str, Any]) -> dict[str, Any]:
         return await xinyu_qq_attachment_resolver.onebot_action_data(self, websocket, action, params)
 
-    @staticmethod
-    def _path_from_file_uri(value: str) -> Path:
-        return xinyu_qq_attachment_resolver.path_from_file_uri(value)
+    _path_from_file_uri = staticmethod(xinyu_qq_attachment_resolver.path_from_file_uri)
 
     def _onebot_local_image_file(self, image_path: str) -> tuple[str, str]:
         return xinyu_qq_attachment_resolver.onebot_local_image_file(self, image_path)

@@ -67,6 +67,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract core bridge timestamp ISO helper into `xinyu_bridge_state_text.py`.
 - [x] Replace QQ trust command text wrappers with direct policy aliases.
 - [x] Replace QQ outbox delivery route wrapper with direct client alias.
+- [x] Replace QQ file URI path wrapper with direct attachment resolver alias.
 
 ## Stop-Gap First
 

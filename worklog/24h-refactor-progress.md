@@ -1858,3 +1858,23 @@ Workspace: D:\XinYu
 - Risk: Low; only shim ownership changed. Outbox route names, ack payload shape, sent-message spool behavior, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior were unchanged.
 - Rollback: `git revert <loop-84-commit>`
 - Next: Continue with another isolated QQ gateway shim or state governance slice.
+
+## Loop 85 - 13:46
+
+- Task: Replace QQ file URI path wrapper with direct attachment resolver alias.
+- Why: `_path_from_file_uri` was a one-line static wrapper around `xinyu_qq_attachment_resolver.path_from_file_uri`. Replacing it with a direct static alias removes another attachment shim from `xinyu_qq_gateway.py` while keeping the compatibility name.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_attachment_material_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_attachment_material_smoke.py xinyu_qq_attachment_resolver.py`
+  - `.\.venv\Scripts\python.exe qq_attachment_material_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: QQ gateway file URI path helper now directly aliases the attachment resolver helper, and the existing attachment material smoke verifies the gateway compatibility alias. Compile, attachment material smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only shim ownership changed. File URI parsing, attachment material payloads, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior were unchanged.
+- Rollback: `git revert <loop-85-commit>`
+- Next: Continue with another isolated QQ gateway shim or state governance slice.

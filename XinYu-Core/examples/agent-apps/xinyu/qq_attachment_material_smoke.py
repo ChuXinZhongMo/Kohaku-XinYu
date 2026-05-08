@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import xinyu_qq_attachment_resolver as attachment_resolver
 from xinyu_qq_gateway import NativeQQGateway
 
@@ -47,6 +49,8 @@ def main() -> int:
         failures.append("gateway learning material wrapper no longer delegates")
     if not NativeQQGateway._looks_like_file_path(r"D:\XinYu\a.txt"):
         failures.append("gateway file path wrapper no longer delegates")
+    if NativeQQGateway._path_from_file_uri("file:///D:/XinYu/a.txt") != Path("D:/XinYu/a.txt"):
+        failures.append("gateway file URI path alias no longer delegates")
 
     if failures:
         print("XinYu QQ attachment material smoke failed")
