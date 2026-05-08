@@ -299,21 +299,7 @@ class NativeQQGateway:
     async def _poll_pending_message_acks(self, connection_id: str) -> None:
         await xinyu_qq_outbox_client.poll_pending_message_acks(self, connection_id)
 
-    async def _ack_sent_visible_reply(
-        self,
-        prepared: PreparedMessage,
-        *,
-        reply: str,
-        core_response: dict[str, Any],
-        action_response: dict[str, Any] | None,
-    ) -> None:
-        await xinyu_qq_outbox_client.ack_sent_visible_reply(
-            self,
-            prepared,
-            reply=reply,
-            core_response=core_response,
-            action_response=action_response,
-        )
+    _ack_sent_visible_reply = xinyu_qq_outbox_client.ack_sent_visible_reply
 
     _record_sent_message_ack_payload = xinyu_qq_outbox_client.record_sent_message_ack_payload
 

@@ -152,6 +152,18 @@ def main() -> int:
     )
     if ack_payload.get("adapter_message_id") != "qq-msg-1" or ack_payload.get("visible_text") != "visible reply":
         failures.append("gateway sent-message ack payload alias no longer delegates")
+    if NativeQQGateway._ack_sent_visible_reply is not outbox_client.ack_sent_visible_reply:
+        failures.append("gateway sent visible reply ack helper is not a direct method alias")
+    asyncio.run(
+        gateway._ack_sent_visible_reply(
+            prepared,
+            reply="visible reply",
+            core_response=core_response,
+            action_response=ok_response,
+        )
+    )
+    if len(gateway.client.message_ack_payloads) != 1:
+        failures.append("gateway sent visible reply ack alias ignored disabled bridge token")
     if NativeQQGateway._flush_pending_message_acks is not outbox_client.flush_pending_message_acks:
         failures.append("gateway pending ack flush helper is not a direct method alias")
 

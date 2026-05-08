@@ -2852,3 +2852,24 @@ Workspace: D:\XinYu
 - Risk: Low; only sent-message ack send helper ownership changed. Successful ack send, acked spool marking, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-132-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 133 - 20:23
+
+- Task: Replace QQ sent visible reply ack wrapper with direct outbox client alias.
+- Why: `_ack_sent_visible_reply` in `xinyu_qq_gateway.py` only awaited `xinyu_qq_outbox_client.ack_sent_visible_reply` with the same gateway, prepared message, reply, core response, and action response. The signatures already match, so the gateway can use a direct async method alias.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_outbox_route_alias_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py qq_outbox_route_alias_smoke.py xinyu_qq_outbox_client.py`
+  - `D:\XinYu\Python312\python.exe qq_outbox_route_alias_smoke.py`
+  - `D:\XinYu\Python312\python.exe qq_outbox_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: Gateway `_ack_sent_visible_reply` now directly aliases `xinyu_qq_outbox_client.ack_sent_visible_reply`. Compile, focused outbox route alias smoke with disabled-token short circuit, QQ outbox smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only sent visible reply ack helper ownership changed. Disabled-token short circuit, sent-message ack creation, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-133-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.
