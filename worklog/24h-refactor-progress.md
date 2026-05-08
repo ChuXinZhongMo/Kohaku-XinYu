@@ -1038,3 +1038,24 @@ Workspace: D:\XinYu
 - Risk: Low; pure classifier relocation. No real QQ outbound, sticker import writes, learning policy, OneBot payload shape, persona semantics, memory body text, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-47-commit>`
 - Next: Continue with rich segment constants or another isolated QQ parsing helper.
+
+## Loop 48 - 11:33
+
+- Task: Extract QQ reply/forward id parsing.
+- Why: Reply message id discovery and forwarded-message id extraction are pure normalization helpers. They belong with forward context parsing, not inside the gateway transport class.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_forward_context.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_forward_context_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_forward_context.py xinyu_qq_gateway.py qq_forward_context_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_forward_context_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: Reply id extraction, forward id extraction from event/text/JSON, and compatibility gateway wrappers now delegate through `xinyu_qq_forward_context.py`. Compile, forward context smoke, QQ gateway smoke, and QQ review smoke passed.
+- Risk: Low-medium; richer forward/reply parsing moved, but payload keys and metadata fields are unchanged. No real QQ outbound, OneBot payload shape, trust policy, persona semantics, memory body text, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-48-commit>`
+- Next: Continue with another isolated QQ parsing helper or a long-run health checkpoint.

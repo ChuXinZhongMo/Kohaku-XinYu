@@ -14,7 +14,7 @@ from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import urlparse
 
 from state_service import append_jsonl, atomic_write_json
 from xinyu_gateway_ack_spool import SentAckSpool
@@ -718,112 +718,18 @@ class NativeQQGateway:
         return xinyu_qq_attachment_resolver.reply_file_learning_intent(None, text)
 
     def _extract_reply_message_id(self, event: dict[str, Any]) -> str:
-        for key in ("reply_message_id", "reply_id", "source_message_id", "quoted_message_id", "quote_message_id"):
-            value = _safe_str(event.get(key)).strip()
-            if value:
-                return value
-        reply = event.get("reply")
-        if isinstance(reply, dict):
-            for key in ("message_id", "id", "reply_id", "source_message_id"):
-                value = _safe_str(reply.get(key)).strip()
-                if value:
-                    return value
-
-        message = event.get("message")
-        if isinstance(message, list):
-            for segment in message:
-                if not isinstance(segment, dict):
-                    continue
-                if _safe_str(segment.get("type")).strip().lower() != "reply":
-                    continue
-                data = segment.get("data")
-                if not isinstance(data, dict):
-                    continue
-                for key in ("id", "message_id", "reply_id"):
-                    value = _safe_str(data.get(key)).strip()
-                    if value:
-                        return value
-
-        raw_message = _safe_str(event.get("raw_message") or message)
-        for segment in self._parse_cq_segments(raw_message):
-            if _safe_str(segment.get("type")).strip().lower() != "reply":
-                continue
-            params = self._segment_data(segment)
-            for key in ("id", "message_id", "reply_id"):
-                value = _safe_str(params.get(key)).strip()
-                if value:
-                    return value
-        return ""
+        return xinyu_qq_forward_context.extract_reply_message_id(event)
 
     def _extract_forward_message_ids(self, event: dict[str, Any]) -> list[str]:
-        ids: list[str] = []
-        for key in ("forward_message_id", "forward_id", "forward_msg_id", "resid", "res_id"):
-            ids.extend(_as_str_list(event.get(key)))
+        return xinyu_qq_forward_context.extract_forward_message_ids(event)
 
-        for segment in self._message_segments(event):
-            segment_type = _safe_str(segment.get("type")).strip().lower()
-            data = self._segment_data(segment)
-            if segment_type == "forward":
-                for key in ("id", "message_id", "forward_id", "forward_msg_id", "resid", "res_id"):
-                    ids.extend(_as_str_list(data.get(key)))
-                continue
-            if segment_type in {"json", "xml"}:
-                ids.extend(
-                    self._extract_forward_ids_from_text(
-                        _safe_str(data.get("data") or data.get("text") or data.get("content"))
-                    )
-                )
+    @staticmethod
+    def _extract_forward_ids_from_text(text: str) -> list[str]:
+        return xinyu_qq_forward_context.extract_forward_ids_from_text(text)
 
-        raw_message = _safe_str(event.get("raw_message") or event.get("message"))
-        ids.extend(self._extract_forward_ids_from_text(raw_message))
-        return list(dict.fromkeys(item.strip() for item in ids if item and item.strip()))
-
-    def _extract_forward_ids_from_text(self, text: str) -> list[str]:
-        if not text:
-            return []
-        candidates = []
-        current = text.strip()
-        for _ in range(2):
-            if current and current not in candidates:
-                candidates.append(current)
-            decoded = unquote(current)
-            if decoded == current:
-                break
-            current = decoded
-
-        ids: list[str] = []
-        for candidate in candidates:
-            lowered = candidate.lower()
-            if not any(marker in lowered for marker in ("multimsg", "forward", "resid", "m_resid")):
-                continue
-            try:
-                decoded_json = json.loads(candidate)
-            except json.JSONDecodeError:
-                decoded_json = None
-            ids.extend(self._forward_ids_from_json(decoded_json))
-            for match in re.finditer(
-                r"""(?ix)
-                ["']?(?:m_)?resid["']?\s*[:=]\s*["']?([^"',}\]\s]+)
-                |["']?forward(?:_msg)?_id["']?\s*[:=]\s*["']?([^"',}\]\s]+)
-                """,
-                candidate,
-            ):
-                ids.append(_safe_str(match.group(1) or match.group(2)).strip())
-        return list(dict.fromkeys(item for item in ids if item))
-
-    def _forward_ids_from_json(self, value: Any) -> list[str]:
-        ids: list[str] = []
-        if isinstance(value, dict):
-            for key, item in value.items():
-                lowered_key = _safe_str(key).lower()
-                if lowered_key in {"resid", "m_resid", "forward_id", "forward_msg_id"}:
-                    ids.extend(_as_str_list(item))
-                else:
-                    ids.extend(self._forward_ids_from_json(item))
-        elif isinstance(value, list):
-            for item in value:
-                ids.extend(self._forward_ids_from_json(item))
-        return ids
+    @staticmethod
+    def _forward_ids_from_json(value: Any) -> list[str]:
+        return xinyu_qq_forward_context.forward_ids_from_json(value)
 
     @staticmethod
     def _parse_cq_params(raw_params: str) -> dict[str, str]:

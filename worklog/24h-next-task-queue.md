@@ -28,6 +28,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract received-sticker mood semantics from `xinyu_qq_gateway.py`.
 - [x] Extract QQ forward-context raw item and de-duplication helpers from `xinyu_qq_gateway.py`.
 - [x] Move image-sticker detection into `xinyu_qq_sticker_semantics.py`.
+- [x] Extract QQ reply/forward id parsing into `xinyu_qq_forward_context.py`.
 
 ## Stop-Gap First
 
