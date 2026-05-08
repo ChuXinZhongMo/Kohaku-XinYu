@@ -1409,3 +1409,26 @@ Workspace: D:\XinYu
 - Risk: Low-medium; startup infrastructure ownership moved, but loop creation, cancellation, thread name, and close behavior are unchanged. No route payloads, prompt/persona semantics, long-term memory body text, QQ outbound, v1 traffic behavior, or state writes were touched.
 - Rollback: `git revert <loop-64-commit>`
 - Next: Continue with core bridge CLI parser extraction or another isolated helper boundary.
+
+## Loop 65 - 12:31
+
+- Task: Extract core bridge CLI parser.
+- Why: `xinyu_core_bridge.py` still owned the command-line parser for bridge startup. Moving it to `xinyu_bridge_cli.py` leaves the core entrypoint as composition code and gives parser env/default behavior focused coverage.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_cli.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_cli_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_cli.py bridge_cli_smoke.py xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe bridge_cli_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_auth_smoke.py`
+  - `.\.venv\Scripts\python.exe runtime_security_smoke.py`
+  - `git diff --check`
+- Result: Bridge CLI parser now lives in `xinyu_bridge_cli.py`; core bridge imports it as `_build_parser`. The focused smoke covers env defaults, explicit args, unknown-arg rejection, and compatibility aliasing. Compile, CLI smoke, bridge probe, bridge auth smoke, runtime security smoke, and diff check passed.
+- Risk: Low; parser ownership moved without changing defaults, env names, options, or startup behavior. No HTTP route semantics, prompt/persona semantics, long-term memory body text, state writes, QQ outbound, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-65-commit>`
+- Next: Re-observe remaining core/QQ boundaries and choose the next isolated slice.
