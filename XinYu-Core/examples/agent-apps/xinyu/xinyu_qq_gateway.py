@@ -37,6 +37,7 @@ from xinyu_qq_models import PendingAction, PreparedMessage, RecentStickerImportS
 import xinyu_qq_normalizer
 import xinyu_qq_outbox_client
 import xinyu_qq_outbox_dispatcher
+import xinyu_qq_rich_context
 import xinyu_qq_server
 import xinyu_qq_sender
 import xinyu_qq_sticker_semantics
@@ -57,8 +58,6 @@ QQ_STICKER_IMPORT_TRACE_REL = Path("runtime") / "qq_sticker_import_trace.jsonl"
 QQ_RECENT_STICKER_STATE_REL = Path("runtime") / "qq_recent_sticker_state.json"
 SUPPORTED_IMAGE_SUFFIXES = frozenset({".bmp", ".gif", ".jfif", ".jpeg", ".jpg", ".png", ".webp"})
 COMMAND_PREFIX_CHARS = "/!.！#"
-STICKER_SEGMENT_TYPES = frozenset({"face", "mface", "dice", "rps"})
-RICH_CONTEXT_SEGMENT_TYPES = frozenset({"reply", "forward", "face", "mface", "dice", "rps", "image", "json", "xml", "at"})
 def _quiet_websockets_handshake_noise() -> None:
     for logger_name in ("websockets.server", "websockets.protocol"):
         logging.getLogger(logger_name).setLevel(logging.CRITICAL)
@@ -2245,7 +2244,7 @@ class NativeQQGateway:
 
         for segment in self._message_segments(event):
             segment_type = _safe_str(segment.get("type")).strip().lower()
-            if segment_type not in RICH_CONTEXT_SEGMENT_TYPES:
+            if not xinyu_qq_rich_context.is_rich_context_segment(segment_type):
                 continue
             record = self._summarize_segment(segment_type, self._segment_data(segment))
             if not record:
@@ -2285,59 +2284,7 @@ class NativeQQGateway:
         }
 
     def _summarize_segment(self, segment_type: str, data: dict[str, Any]) -> dict[str, Any]:
-        if segment_type == "reply":
-            reply_id = (
-                _safe_str(data.get("id")).strip()
-                or _safe_str(data.get("message_id")).strip()
-                or _safe_str(data.get("reply_id")).strip()
-            )
-            return {"kind": "reply", "id": reply_id, "summary": reply_id}
-        if segment_type == "forward":
-            forward_id = (
-                _safe_str(data.get("id")).strip()
-                or _safe_str(data.get("message_id")).strip()
-                or _safe_str(data.get("forward_id")).strip()
-                or _safe_str(data.get("forward_msg_id")).strip()
-                or _safe_str(data.get("resid")).strip()
-                or _safe_str(data.get("res_id")).strip()
-            )
-            return {"kind": "forward", "id": forward_id, "summary": forward_id or "merged_forward"}
-        if segment_type in STICKER_SEGMENT_TYPES:
-            summary = (
-                _safe_str(data.get("summary")).strip()
-                or _safe_str(data.get("text")).strip()
-                or _safe_str(data.get("name")).strip()
-                or _safe_str(data.get("id")).strip()
-                or _safe_str(data.get("emoji_id")).strip()
-                or segment_type
-            )
-            semantic = self._infer_received_sticker_semantics(summary)
-            return {"kind": "sticker", "segment_type": segment_type, "summary": summary, **semantic}
-        if segment_type == "image":
-            if self._image_segment_looks_like_sticker(data):
-                summary = (
-                    _safe_str(data.get("summary")).strip()
-                    or _safe_str(data.get("name")).strip()
-                    or _safe_str(data.get("file")).strip()
-                    or "image_sticker"
-                )
-                semantic = self._infer_received_sticker_semantics(summary)
-                return {"kind": "sticker", "segment_type": "image", "summary": summary, **semantic}
-            name = (
-                _safe_str(data.get("summary")).strip()
-                or _safe_str(data.get("name")).strip()
-                or _safe_str(data.get("file")).strip()
-                or "image"
-            )
-            return {"kind": "image", "segment_type": "image", "name": name, "summary": name}
-        if segment_type in {"json", "xml"}:
-            text = _safe_str(data.get("data") or data.get("text") or data.get("content")).strip()
-            summary = text[:120] if text else segment_type
-            return {"kind": segment_type, "segment_type": segment_type, "summary": summary}
-        if segment_type == "at":
-            qq = _safe_str(data.get("qq")).strip()
-            return {"kind": "at", "segment_type": "at", "summary": qq}
-        return {}
+        return xinyu_qq_rich_context.summarize_segment(segment_type, data)
 
     @staticmethod
     def _infer_received_sticker_semantics(summary: str) -> dict[str, str]:
@@ -2391,7 +2338,7 @@ class NativeQQGateway:
         if segment_type == "image":
             if not self._image_segment_looks_like_sticker(data):
                 return None
-        elif segment_type not in STICKER_SEGMENT_TYPES:
+        elif not xinyu_qq_rich_context.is_sticker_segment(segment_type):
             return None
         return self._sticker_import_material_from_data(segment_type, data)
 

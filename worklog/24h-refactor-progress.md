@@ -1097,3 +1097,25 @@ Workspace: D:\XinYu
 - Risk: Low; diagnostic documentation only. No runtime trace cleanup, real QQ outbound, v1 traffic expansion, persona semantics, memory body text, or runtime/memory deletion was performed.
 - Rollback: `git revert <loop-50-commit>`
 - Next: Continue with another isolated QQ parsing helper.
+
+## Loop 51 - 11:40
+
+- Task: Extract QQ rich segment summary helpers.
+- Why: Rich context segment type filtering and single-segment summarization are pure parsing concerns. Moving them to `xinyu_qq_rich_context.py` trims the gateway and lets rich context parsing have its own focused smoke.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_rich_context.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_rich_context_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_rich_context.py xinyu_qq_gateway.py qq_rich_context_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_rich_context_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: Rich segment type checks and single-segment summaries now live in `xinyu_qq_rich_context.py`; gateway wrappers delegate to the new module. The first smoke run failed because the new smoke called an instance wrapper as a static method; the smoke was fixed and the compile, rich context smoke, QQ gateway smoke, and QQ review smoke then passed.
+- Risk: Low-medium; rich context parsing ownership moved, but segment record shape and metadata fields are unchanged. No real QQ outbound, OneBot payload shape, sticker import writes, learning policy, persona semantics, memory body text, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-51-commit>`
+- Next: Continue with another isolated QQ parsing helper or remove gateway-only dead constants after confirming compatibility.
