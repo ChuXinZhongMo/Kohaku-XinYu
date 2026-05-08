@@ -1477,3 +1477,26 @@ Workspace: D:\XinYu
 - Risk: Low; error type relocation only. Status/message attributes, string representation, route semantics, prompt/persona semantics, long-term memory body text, QQ outbound, v1 traffic, and state writes were unchanged.
 - Rollback: `git revert <loop-67-commit>`
 - Next: Re-observe remaining core bridge runtime class boundaries and choose the next isolated slice.
+
+## Loop 68 - 12:40
+
+- Task: Extract core bridge reply bubble helpers.
+- Why: `XinYuBridgeRuntime` owned three pure static helpers for numeric reply-bubble splitting and false single-bubble limitation detection. Moving them to `xinyu_bridge_reply_bubbles.py` trims the runtime class while preserving the existing `XinYuBridgeRuntime._...` static method compatibility surface.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_reply_bubbles.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_reply_bubbles_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_reply_bubbles.py bridge_reply_bubbles_smoke.py xinyu_core_bridge.py xinyu_reply_bubble_force_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_reply_bubbles_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_reply_bubble_force_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_speech_controller_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Reply bubble splitting helpers now live in `xinyu_bridge_reply_bubbles.py`; the runtime class exposes them as static methods with the previous names. Compile, new bubble smoke, existing reply bubble smoke, speech controller smoke, bridge probe, and diff check passed.
+- Risk: Low-medium; visible reply bubble helper ownership moved, but split markers, numeric parsing, false-limitation markers, and runtime static entrypoints are unchanged. No prompt/persona semantics, long-term memory body text, QQ outbound, v1 traffic behavior, route payload shape, or state writes were touched.
+- Rollback: `git revert <loop-68-commit>`
+- Next: Continue with another isolated static helper group inside `XinYuBridgeRuntime`.

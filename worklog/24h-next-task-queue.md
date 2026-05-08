@@ -50,6 +50,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract core bridge CLI parser into `xinyu_bridge_cli.py`.
 - [x] Extract core bridge null input adapter into `xinyu_bridge_null_input.py`.
 - [x] Extract core bridge request error type into `xinyu_bridge_errors.py`.
+- [x] Extract core bridge reply bubble helpers into `xinyu_bridge_reply_bubbles.py`.
 
 ## Stop-Gap First
 

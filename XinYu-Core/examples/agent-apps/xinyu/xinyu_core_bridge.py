@@ -43,6 +43,9 @@ from xinyu_bridge_desktop_actions import desktop_scrub_action_markers as _deskto
 from xinyu_bridge_memory_snapshot import memory_snapshot as _memory_snapshot
 from xinyu_bridge_proactive import acknowledge as proactive_ack_bridge, claim_or_preview as proactive_bridge
 from xinyu_bridge_reply_text import normalize_bridge_reply as _normalize_reply
+from xinyu_bridge_reply_bubbles import looks_like_false_single_bubble_limitation
+from xinyu_bridge_reply_bubbles import numeric_bubble_units_from_text
+from xinyu_bridge_reply_bubbles import owner_requested_reply_bubble_units
 from xinyu_bridge_renderer import BridgeRenderer
 from xinyu_bridge_session import AgentSession, session_key_from_payload, session_keys_to_expire
 from xinyu_bridge_state_text import parse_iso as _parse_iso
@@ -6152,99 +6155,9 @@ tags: [promise, followup, qq-outbox, continuity]
     def _reply_quality_flags(self, *, user_text: str, reply: str) -> list[str]:
         return self.speech_controller.reply_quality_flags(user_text=user_text, reply=reply)
 
-    @staticmethod
-    def _owner_requested_reply_bubble_units(
-        *,
-        user_text: str,
-        reply: str,
-        dialogue_tail: list[dict[str, str]],
-    ) -> list[str]:
-        compact = re.sub(r"\s+", "", _safe_str(user_text)).lower()
-        if not compact:
-            return []
-        split_markers = (
-            "每个数字单独发",
-            "每个数字单独发出来",
-            "每一个数字单独发",
-            "一个数字一条",
-            "每个数一条",
-            "每个字单独发",
-            "一个字一条",
-            "一条一条发",
-            "逐条发",
-            "分开发",
-            "拆开发",
-            "拆成十句",
-            "拆成十条",
-        )
-        if not any(marker in compact for marker in split_markers):
-            return []
-
-        ranged = re.search(r"从\s*(\d{1,3})\s*(?:数)?到\s*(\d{1,3})", _safe_str(user_text))
-        if ranged:
-            start = int(ranged.group(1))
-            end = int(ranged.group(2))
-            step = 1 if end >= start else -1
-            count = abs(end - start) + 1
-            if 2 <= count <= 20:
-                return [str(value) for value in range(start, end + step, step)]
-
-        for candidate in (_safe_str(reply), *(
-            _safe_str(item.get("content"))
-            for item in reversed(dialogue_tail[-12:])
-            if item.get("role") == "assistant"
-        )):
-            units = XinYuBridgeRuntime._numeric_bubble_units_from_text(candidate)
-            if units:
-                return units
-        return []
-
-    @staticmethod
-    def _numeric_bubble_units_from_text(text: str) -> list[str]:
-        clean = _safe_str(text).strip()
-        if not clean:
-            return []
-        numbers = re.findall(r"\d{1,3}", clean)
-        if not (2 <= len(numbers) <= 20):
-            return []
-        residue = re.sub(r"\d{1,3}", "", clean)
-        if re.sub(r"[\s,，、.。;；:：\-—]+", "", residue):
-            return []
-        values = [int(item) for item in numbers]
-        if values != list(range(values[0], values[0] + len(values))):
-            return []
-        return numbers
-
-    @staticmethod
-    def _looks_like_false_single_bubble_limitation(user_text: str, reply: str) -> bool:
-        user_compact = re.sub(r"\s+", "", _safe_str(user_text)).lower()
-        reply_compact = re.sub(r"\s+", "", _safe_str(reply)).lower()
-        if not user_compact or not reply_compact:
-            return False
-        wants_split = any(
-            marker in user_compact
-            for marker in (
-                "单独发",
-                "分开发",
-                "拆开发",
-                "一条一条发",
-                "逐条发",
-                "一个数字一条",
-                "每个数字",
-            )
-        )
-        if not wants_split:
-            return False
-        false_limits = (
-            "一次只能发一条",
-            "只能发一条",
-            "没法拆成",
-            "不能拆成",
-            "没办法拆成",
-            "发不了十句",
-            "发不了这么多",
-        )
-        return any(marker in reply_compact for marker in false_limits)
+    _owner_requested_reply_bubble_units = staticmethod(owner_requested_reply_bubble_units)
+    _numeric_bubble_units_from_text = staticmethod(numeric_bubble_units_from_text)
+    _looks_like_false_single_bubble_limitation = staticmethod(looks_like_false_single_bubble_limitation)
 
     def _empty_visible_reply_fallback(self, *, payload: dict[str, Any], user_text: str, delegate_note: str = "") -> str:
         return ""
