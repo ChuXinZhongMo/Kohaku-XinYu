@@ -1361,3 +1361,29 @@ Workspace: D:\XinYu
 - Risk: Low; pure utility relocation only. No OneBot payload shape, real QQ outbound, trust policy, command routing, attachment learning policy, persona semantics, memory body text, or v1 behavior was touched.
 - Rollback: `git revert <loop-62-commit>`
 - Next: Continue with another isolated core bridge or QQ gateway helper extraction.
+
+## Loop 63 - 12:25
+
+- Task: Extract shared bridge learning sidecar helpers.
+- Why: `xinyu_core_bridge.py` and `xinyu_bridge_learning.py` both carried the same learning study-chain and integer-result helpers, while core also owned the Codex-after-learning trigger marker check. Moving these to `xinyu_bridge_learning_sidecars.py` removes duplication and gives the sidecar behavior focused coverage.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_learning_sidecars.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_learning_sidecars_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_learning.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/codex_delegate_smoke.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_learning_sidecars.py bridge_learning_sidecars_smoke.py xinyu_core_bridge.py xinyu_bridge_learning.py`
+  - `.\.venv\Scripts\python.exe bridge_learning_sidecars_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_learning_ingest_smoke.py`
+  - `.\.venv\Scripts\python.exe codex_delegate_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_learning_sidecars.py bridge_learning_sidecars_smoke.py xinyu_core_bridge.py xinyu_bridge_learning.py codex_delegate_smoke.py`
+  - `git diff --check`
+- Result: Learning study-chain, integer-result, and Codex learning-trigger helpers now live in `xinyu_bridge_learning_sidecars.py`; core bridge and learning service import them under their previous private names. `codex_delegate_smoke.py` initially failed because its static marker still expected `codex_command_prefixes` in `xinyu_qq_gateway.py`; the smoke now checks `xinyu_qq_config.py`, where that config field lives after the earlier QQ config extraction. Compile, sidecar smoke, learning ingest smoke, Codex delegate smoke, bridge probe, and diff check passed.
+- Risk: Low-medium; learning sidecar ownership moved, but study-chain call modes and trigger markers are unchanged. The smoke fix only updates static marker ownership. No prompt/persona semantics, long-term memory body text, real QQ outbound, v1 traffic behavior, or route payload shape was touched.
+- Rollback: `git revert <loop-63-commit>`
+- Next: Continue with another isolated core bridge helper extraction.

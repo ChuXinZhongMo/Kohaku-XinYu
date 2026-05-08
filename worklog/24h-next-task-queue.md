@@ -44,6 +44,8 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract core bridge bootstrap env/path helpers into `xinyu_bridge_bootstrap.py`.
 - [x] Record 2026-05-08 12:17 long-run health checkpoint.
 - [x] Extract QQ gateway utility helpers into `xinyu_qq_gateway_utils.py`.
+- [x] Extract shared bridge learning sidecar helpers into `xinyu_bridge_learning_sidecars.py`.
+- [x] Update Codex delegate smoke static marker ownership after QQ config extraction.
 
 ## Stop-Gap First
 

@@ -340,7 +340,6 @@ def main() -> int:
 
     gateway_text = (ROOT / "xinyu_qq_gateway.py").read_text(encoding="utf-8-sig")
     gateway_required = (
-        "codex_command_prefixes",
         "qq_gateway_codex_execute_message",
         "codex_auxiliary_brain",
         "direct_cli_execution",
@@ -354,6 +353,9 @@ def main() -> int:
     for forbidden in ("subprocess.run", "shell=True", "--full-auto"):
         if forbidden in gateway_text:
             failures.append(f"xinyu_qq_gateway.py must not directly execute Codex CLI: {forbidden}")
+    qq_config_text = (ROOT / "xinyu_qq_config.py").read_text(encoding="utf-8-sig")
+    if "codex_command_prefixes" not in qq_config_text:
+        failures.append("xinyu_qq_config.py missing safe Codex route marker: codex_command_prefixes")
 
     core_text = (ROOT / "xinyu_core_bridge.py").read_text(encoding="utf-8-sig")
     for marker in ('payload["visible_window"] = True', 'payload["window_title"]'):

@@ -29,6 +29,9 @@ from xinyu_bridge_learning import (
     LearningBridgeError,
     stage_codex_report_material,
 )
+from xinyu_bridge_learning_sidecars import int_result as _int_result
+from xinyu_bridge_learning_sidecars import run_learning_study_chain as _run_learning_study_chain
+from xinyu_bridge_learning_sidecars import should_run_learning_after_codex as _should_run_learning_after_codex
 from xinyu_bridge_context import prompt_context_signature
 from xinyu_bridge_desktop_actions import desktop_action_pressure_label as _desktop_action_pressure_label
 from xinyu_bridge_desktop_actions import desktop_action_result_label as _desktop_action_result_label
@@ -646,49 +649,6 @@ class BridgeRequestError(RuntimeError):
         super().__init__(message)
         self.status = status
         self.message = message
-
-
-def _run_learning_study_chain(root: Path, mode: str) -> dict[str, object]:
-    custom_dir = Path(__file__).resolve().parent / "custom"
-    if str(custom_dir) not in sys.path:
-        sys.path.insert(0, str(custom_dir))
-
-    from learner_integration_engine import run_learner_integration
-    from learning_quality_engine import run_learning_quality
-    from source_integration_gate_engine import run_source_integration_gate
-
-    gate = run_source_integration_gate(root, mode=f"{mode}_source_gate")
-    learner = run_learner_integration(root, mode=f"{mode}_learner")
-    quality = run_learning_quality(root, mode=f"{mode}_quality")
-    return {
-        "source_integration_gate": gate,
-        "learner_integration": learner,
-        "learning_quality": quality,
-    }
-
-
-def _int_result(mapping: dict[str, object], key: str) -> int:
-    try:
-        return int(mapping.get(key, 0))
-    except (TypeError, ValueError):
-        return 0
-
-
-def _should_run_learning_after_codex(text: str) -> bool:
-    return any(
-        marker in text
-        for marker in (
-            "学习",
-            "学一下",
-            "读一下",
-            "阅读",
-            "消化",
-            "论文",
-            "资料",
-            "源码",
-            "仓库",
-        )
-    )
 
 
 class _NullInputModule:

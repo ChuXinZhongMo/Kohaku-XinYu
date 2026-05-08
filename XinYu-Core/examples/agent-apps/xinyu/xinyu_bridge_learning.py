@@ -28,6 +28,8 @@ from xinyu_local_scope import (
     resolve_read_only_scope_path,
 )
 from xinyu_bridge_memory_snapshot import memory_snapshot as _memory_snapshot
+from xinyu_bridge_learning_sidecars import int_result as _int_result
+from xinyu_bridge_learning_sidecars import run_learning_study_chain as _run_learning_study_chain
 from xinyu_memory_event_sourcing import record_learning_ingest_event
 
 
@@ -117,27 +119,6 @@ def clamp_max_bytes(value: Any, configured_max: int = DEFAULT_MAX_BYTES) -> int:
     if requested <= 0:
         raise LearningBridgeError(HTTPStatus.BAD_REQUEST, "max_bytes must be > 0")
     return min(requested, configured_max)
-
-
-def _run_learning_study_chain(root: Path, mode: str) -> dict[str, object]:
-    custom_dir = Path(__file__).resolve().parent / "custom"
-    import sys
-
-    if str(custom_dir) not in sys.path:
-        sys.path.insert(0, str(custom_dir))
-
-    from learner_integration_engine import run_learner_integration
-    from learning_quality_engine import run_learning_quality
-    from source_integration_gate_engine import run_source_integration_gate
-
-    gate = run_source_integration_gate(root, mode=f"{mode}_source_gate")
-    learner = run_learner_integration(root, mode=f"{mode}_learner")
-    quality = run_learning_quality(root, mode=f"{mode}_quality")
-    return {
-        "source_integration_gate": gate,
-        "learner_integration": learner,
-        "learning_quality": quality,
-    }
 
 
 def _resolve_report_path(root: Path, report_path: str) -> Path:
@@ -250,13 +231,6 @@ def stage_codex_report_material(
         "status": status,
         "notes": ["codex_report_material_staged"],
     }
-
-
-def _int_result(mapping: dict[str, object], key: str) -> int:
-    try:
-        return int(mapping.get(key, 0))
-    except (TypeError, ValueError):
-        return 0
 
 
 def _payload_metadata(payload: dict[str, Any]) -> dict[str, Any]:
