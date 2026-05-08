@@ -2486,3 +2486,24 @@ Workspace: D:\XinYu
 - Risk: Low; only OneBot action data helper ownership changed. OneBot payload filtering, action data shape, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-115-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 116 - 19:45
+
+- Task: Replace QQ first text field wrapper with direct resolver value alias.
+- Why: `_first_text_field` in `xinyu_qq_gateway.py` only adapted away an unused legacy gateway parameter from `xinyu_qq_attachment_resolver.first_text_field`. Adding a same-signature resolver value helper lets the gateway use a direct static alias while preserving the old resolver compatibility entrypoint.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_attachment_resolver.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_attachment_material_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_attachment_material_smoke.py xinyu_qq_attachment_resolver.py`
+  - `.\.venv\Scripts\python.exe qq_attachment_material_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_attachment_resolver.first_text_field_value` now owns the same-signature value helper and gateway `_first_text_field` directly aliases it. Compile, focused attachment material smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only first-text-field helper ownership changed. Text field fallback behavior, attachment resolution, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-116-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.

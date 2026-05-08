@@ -235,6 +235,10 @@ def onebot_local_file(gateway: Any, file_path: str, *, file_name: str = "") -> t
 
 
 def first_text_field(gateway: Any, data: dict[str, Any], keys: tuple[str, ...]) -> str:
+    return first_text_field_value(data, keys)
+
+
+def first_text_field_value(data: dict[str, Any], keys: tuple[str, ...]) -> str:
     return _first_text_field(data, keys)
 
 

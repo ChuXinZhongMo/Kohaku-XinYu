@@ -402,9 +402,7 @@ class NativeQQGateway:
 
     _onebot_local_file = xinyu_qq_attachment_resolver.onebot_local_file
 
-    @staticmethod
-    def _first_text_field(data: dict[str, Any], keys: tuple[str, ...]) -> str:
-        return xinyu_qq_attachment_resolver.first_text_field(None, data, keys)
+    _first_text_field = staticmethod(xinyu_qq_attachment_resolver.first_text_field_value)
 
     async def _upgrade_reply_file_learning(
         self,

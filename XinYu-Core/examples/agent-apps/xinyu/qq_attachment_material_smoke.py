@@ -16,6 +16,11 @@ def main() -> int:
         failures.append("file URI detection changed")
     if attachment_resolver.looks_like_file_path("not-a-path"):
         failures.append("plain file id should not look like a path")
+    if (
+        attachment_resolver.first_text_field_value({"url": "https://example.invalid/a"}, ("url",))
+        != "https://example.invalid/a"
+    ):
+        failures.append("first text field value helper changed")
 
     learning = attachment_resolver.learning_material_from_data(
         "file",
@@ -65,6 +70,13 @@ def main() -> int:
         failures.append("gateway file path wrapper no longer delegates")
     if NativeQQGateway._path_from_file_uri("file:///D:/XinYu/a.txt") != Path("D:/XinYu/a.txt"):
         failures.append("gateway file URI path alias no longer delegates")
+    if NativeQQGateway._first_text_field is not attachment_resolver.first_text_field_value:
+        failures.append("gateway first text field helper is not a direct static alias")
+    if (
+        NativeQQGateway._first_text_field({"url": "https://example.invalid/a"}, ("url",))
+        != "https://example.invalid/a"
+    ):
+        failures.append("gateway first text field alias no longer delegates")
     if NativeQQGateway._onebot_local_image_file is not attachment_resolver.onebot_local_image_file:
         failures.append("gateway local image helper is not a direct method alias")
     if NativeQQGateway._onebot_local_file is not attachment_resolver.onebot_local_file:
