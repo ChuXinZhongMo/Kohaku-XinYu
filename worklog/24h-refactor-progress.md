@@ -843,3 +843,25 @@ Workspace: D:\XinYu
 - Risk: Low-medium; Core Bridge HTTP error wrapping and headers were moved but kept behavior-compatible. No real QQ outbound, trust policy, OneBot payload shape, memory body text, persona semantics, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-38-commit>`
 - Next: Continue with QQ config model extraction or final health checkpoint.
+
+## Loop 39 - 11:05
+
+- Task: Extract QQ dataclass models.
+- Why: Reply targets, prepared messages, pending actions, and recent sticker import state are pure data models. Moving them to `xinyu_qq_models.py` reduces the gateway module while keeping old gateway imports compatible.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_models.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_models_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_models.py qq_models_smoke.py xinyu_qq_gateway.py`
+  - `.\.venv\Scripts\python.exe qq_models_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_gateway_ack_spool.py -q`
+  - `git diff --check`
+- Result: QQ dataclass models now live in `xinyu_qq_models.py`; `xinyu_qq_gateway.py` imports them so existing callers can keep importing from the gateway module. Compile, model smoke, QQ gateway smoke, and ack spool pytest passed.
+- Risk: Low; pure model relocation. No real QQ outbound, OneBot payload shape, trust policy, memory body text, persona semantics, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-39-commit>`
+- Next: Continue with QQ config model extraction or final health checkpoint.

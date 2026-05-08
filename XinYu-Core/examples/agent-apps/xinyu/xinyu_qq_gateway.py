@@ -12,7 +12,7 @@ import signal
 import sys
 import time
 import traceback
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -35,6 +35,7 @@ from xinyu_qq_config import (
     derive_sticker_import_url as _derive_sticker_import_url,
 )
 from xinyu_qq_core_client import BridgeError, CoreBridgeClient
+from xinyu_qq_models import PendingAction, PreparedMessage, RecentStickerImportState, ReplyTarget
 import xinyu_qq_normalizer
 import xinyu_qq_outbox_client
 import xinyu_qq_outbox_dispatcher
@@ -507,38 +508,6 @@ class GatewayConfig:
             owner_private_coalesce_seconds=self.owner_private_coalesce_seconds,
             owner_private_coalesce_max_fragments=self.owner_private_coalesce_max_fragments,
         )
-
-
-@dataclass(frozen=True)
-class ReplyTarget:
-    message_kind: str
-    user_id: str
-    group_id: str
-
-
-@dataclass(frozen=True)
-class PreparedMessage:
-    target: ReplyTarget
-    payload: dict[str, Any]
-    route: str = "chat"
-    local_reply: str = ""
-
-
-@dataclass
-class PendingAction:
-    connection_id: str
-    future: asyncio.Future[dict[str, Any]]
-
-
-@dataclass
-class RecentStickerImportState:
-    target: ReplyTarget
-    event: dict[str, Any]
-    payload: dict[str, Any]
-    response: dict[str, Any] = field(default_factory=dict)
-    status: str = "pending"
-    error: str = ""
-    updated_at: float = field(default_factory=time.time)
 
 
 class NativeQQGateway:
