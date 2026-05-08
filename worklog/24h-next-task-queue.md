@@ -18,6 +18,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Migrate QQ inbound/rich/sticker runtime trace appends to `state_service.py`.
 - [x] Migrate QQ recent sticker runtime state JSON to `state_service.py`.
 - [x] Migrate group shadow runtime trace and projection state to `state_service.py`.
+- [x] Extract QQ Core Bridge HTTP client from `xinyu_qq_gateway.py`.
 
 ## Stop-Gap First
 

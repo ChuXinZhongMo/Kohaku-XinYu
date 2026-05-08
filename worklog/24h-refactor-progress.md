@@ -821,3 +821,25 @@ Workspace: D:\XinYu
 - Risk: Low; state persistence only. The no-reply, stable-memory-blocked, and owner-relationship-blocked semantics are unchanged. No real QQ outbound, persona semantics, memory body text, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-37-commit>`
 - Next: Continue with QQ config model extraction or final health checkpoint.
+
+## Loop 38 - 11:02
+
+- Task: Extract QQ Core Bridge HTTP client.
+- Why: `xinyu_qq_gateway.py` still owned the HTTP client for Core Bridge routes. Moving it to `xinyu_qq_core_client.py` reduces gateway transport responsibilities while keeping existing `BridgeError` imports compatible.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_core_client.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_core_client_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_core_client.py qq_core_client_smoke.py xinyu_qq_gateway.py`
+  - `.\.venv\Scripts\python.exe qq_core_client_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_gateway_ack_spool.py -q`
+  - `git diff --check`
+- Result: `CoreBridgeClient` and `BridgeError` now live in `xinyu_qq_core_client.py`; `xinyu_qq_gateway.py` imports them for compatibility and passes `GATEWAY_VERSION` into the client. Compile, core client smoke, QQ gateway smoke, and ack spool pytest passed.
+- Risk: Low-medium; Core Bridge HTTP error wrapping and headers were moved but kept behavior-compatible. No real QQ outbound, trust policy, OneBot payload shape, memory body text, persona semantics, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-38-commit>`
+- Next: Continue with QQ config model extraction or final health checkpoint.

@@ -12,8 +12,6 @@ import signal
 import sys
 import time
 import traceback
-import urllib.error
-import urllib.request
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
@@ -36,6 +34,7 @@ from xinyu_qq_config import (
     derive_review_inbox_command_url as _derive_review_inbox_command_url,
     derive_sticker_import_url as _derive_sticker_import_url,
 )
+from xinyu_qq_core_client import BridgeError, CoreBridgeClient
 import xinyu_qq_normalizer
 import xinyu_qq_outbox_client
 import xinyu_qq_outbox_dispatcher
@@ -542,105 +541,6 @@ class RecentStickerImportState:
     updated_at: float = field(default_factory=time.time)
 
 
-class BridgeError(RuntimeError):
-    pass
-
-
-class CoreBridgeClient:
-    def __init__(
-        self,
-        *,
-        chat_url: str,
-        codex_execute_url: str,
-        learning_ingest_url: str,
-        sticker_import_url: str,
-        package_install_url: str,
-        review_inbox_command_url: str,
-        goldmark_mark_url: str,
-        qq_outbox_claim_url: str,
-        qq_outbox_ack_url: str,
-        message_ack_url: str,
-        token: str,
-        timeout_seconds: int,
-    ) -> None:
-        self.chat_url = chat_url.strip()
-        self.codex_execute_url = codex_execute_url.strip()
-        self.learning_ingest_url = learning_ingest_url.strip()
-        self.sticker_import_url = sticker_import_url.strip()
-        self.package_install_url = package_install_url.strip()
-        self.review_inbox_command_url = review_inbox_command_url.strip()
-        self.goldmark_mark_url = goldmark_mark_url.strip()
-        self.qq_outbox_claim_url = qq_outbox_claim_url.strip()
-        self.qq_outbox_ack_url = qq_outbox_ack_url.strip()
-        self.message_ack_url = message_ack_url.strip()
-        self.token = token.strip()
-        self.timeout_seconds = timeout_seconds
-
-    async def chat(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return await asyncio.to_thread(self._post_json, self.chat_url, payload)
-
-    async def codex_execute(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return await asyncio.to_thread(self._post_json, self.codex_execute_url, payload)
-
-    async def learning_ingest(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return await asyncio.to_thread(self._post_json, self.learning_ingest_url, payload)
-
-    async def sticker_import(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return await asyncio.to_thread(self._post_json, self.sticker_import_url, payload)
-
-    async def package_install(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return await asyncio.to_thread(self._post_json, self.package_install_url, payload)
-
-    async def review_inbox_command(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return await asyncio.to_thread(self._post_json, self.review_inbox_command_url, payload)
-
-    async def goldmark_mark_request(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return await asyncio.to_thread(self._post_json, self.goldmark_mark_url, payload)
-
-    async def qq_outbox_claim(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return await asyncio.to_thread(self._post_json, self.qq_outbox_claim_url, payload)
-
-    async def qq_outbox_ack(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return await asyncio.to_thread(self._post_json, self.qq_outbox_ack_url, payload)
-
-    async def message_ack(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return await asyncio.to_thread(self._post_json, self.message_ack_url, payload)
-
-    def _post_json(self, url: str, payload: dict[str, Any]) -> dict[str, Any]:
-        if not url:
-            raise BridgeError("core chat URL is empty")
-        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        headers = {
-            "Accept": "application/json",
-            "Content-Type": "application/json; charset=utf-8",
-            "User-Agent": f"XinYu-QQ-Gateway/{GATEWAY_VERSION}",
-        }
-        if self.token:
-            headers["Authorization"] = f"Bearer {self.token}"
-            headers["X-XinYu-Bridge-Token"] = self.token
-        request = urllib.request.Request(url, data=body, headers=headers, method="POST")
-        try:
-            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
-                status = getattr(response, "status", 200)
-                response_body = response.read().decode("utf-8", errors="replace")
-        except urllib.error.HTTPError as exc:
-            error_body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
-            raise BridgeError(f"core bridge HTTP {exc.code}: {error_body[:300]}") from exc
-        except urllib.error.URLError as exc:
-            raise BridgeError(f"core bridge connection failed: {exc.reason}") from exc
-        except TimeoutError as exc:
-            raise BridgeError("core bridge request timed out") from exc
-        if status < 200 or status >= 300:
-            raise BridgeError(f"core bridge HTTP {status}: {response_body[:300]}")
-        try:
-            data = json.loads(response_body)
-        except json.JSONDecodeError as exc:
-            raise BridgeError(f"core bridge returned invalid JSON: {response_body[:300]}") from exc
-        if not isinstance(data, dict):
-            raise BridgeError("core bridge returned non-object JSON")
-        return data
-
-
 class NativeQQGateway:
     def __init__(self, config: GatewayConfig, *, config_path: Path | None = None) -> None:
         self.config = config
@@ -660,6 +560,7 @@ class NativeQQGateway:
             message_ack_url=config.message_ack_url,
             token=config.bridge_token,
             timeout_seconds=config.timeout_seconds,
+            gateway_version=GATEWAY_VERSION,
         )
         self.ack_spool = SentAckSpool(Path(config.gateway_ack_spool_path))
         self._pending_actions: dict[str, PendingAction] = {}
