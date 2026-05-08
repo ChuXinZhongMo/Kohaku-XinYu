@@ -40,6 +40,8 @@ from xinyu_bridge_desktop_actions import desktop_action_pressure_label as _deskt
 from xinyu_bridge_desktop_actions import desktop_action_result_label as _desktop_action_result_label
 from xinyu_bridge_desktop_actions import desktop_action_theme_label as _desktop_action_theme_label
 from xinyu_bridge_desktop_actions import desktop_scrub_action_markers as _desktop_scrub_action_markers
+from xinyu_bridge_desktop_state_text import desktop_replace_frontmatter_field
+from xinyu_bridge_desktop_state_text import desktop_replace_list_field
 from xinyu_bridge_memory_snapshot import memory_snapshot as _memory_snapshot
 from xinyu_bridge_proactive import acknowledge as proactive_ack_bridge, claim_or_preview as proactive_bridge
 from xinyu_bridge_reply_text import normalize_bridge_reply as _normalize_reply
@@ -2880,31 +2882,8 @@ tags: [autonomy, maintenance, runtime]
         atomic_write_text(path, updated.rstrip())
         return self._desktop_proactive_item_from_state(include_final=True)
 
-    @staticmethod
-    def _desktop_replace_frontmatter_field(text: str, field: str, value: str) -> str:
-        replacement = f"{field}: {_safe_str(value).strip() or 'none'}"
-        updated, count = re.subn(
-            rf"(?m)^{re.escape(field)}:\s*.*$",
-            replacement,
-            text,
-            count=1,
-        )
-        if count:
-            return updated
-        return text.rstrip() + "\n" + replacement + "\n"
-
-    @staticmethod
-    def _desktop_replace_list_field(text: str, field: str, value: str) -> str:
-        replacement = f"- {field}: {_safe_str(value).strip() or 'none'}"
-        updated, count = re.subn(
-            rf"(?m)^-\s+{re.escape(field)}:\s*.*$",
-            replacement,
-            text,
-            count=1,
-        )
-        if count:
-            return updated
-        return text.rstrip() + "\n" + replacement + "\n"
+    _desktop_replace_frontmatter_field = staticmethod(desktop_replace_frontmatter_field)
+    _desktop_replace_list_field = staticmethod(desktop_replace_list_field)
 
     def _record_proactive_outbound_dialogue(self, ack_payload: dict[str, Any]) -> None:
         dispatch = _read_text_safe(self.xinyu_dir / "memory/context/proactive_qq_dispatch_state.md")

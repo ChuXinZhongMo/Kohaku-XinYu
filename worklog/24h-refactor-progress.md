@@ -1562,3 +1562,25 @@ Workspace: D:\XinYu
 - Risk: Low; diagnostic documentation only. No runtime trace cleanup, real QQ outbound, v1 traffic expansion, persona semantics, memory body text, or runtime/memory deletion was performed.
 - Rollback: `git revert <loop-71-commit>`
 - Next: Continue with another isolated runtime helper extraction.
+
+## Loop 72 - 12:51
+
+- Task: Extract desktop proactive state text field helpers.
+- Why: `XinYuBridgeRuntime` owned pure Markdown frontmatter/list field replacement helpers used when updating desktop proactive request state. Moving them to `xinyu_bridge_desktop_state_text.py` clarifies a small state-text boundary while preserving runtime static method names.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_desktop_state_text.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_desktop_state_text_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_desktop_state_text.py bridge_desktop_state_text_smoke.py xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe bridge_desktop_state_text_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_desktop_proactive_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Desktop state text replacement helpers now live in `xinyu_bridge_desktop_state_text.py`; runtime static entrypoints keep their previous names. Compile, focused desktop state text smoke, desktop proactive smoke, bridge probe, and diff check passed.
+- Risk: Low; pure state-text helper relocation only. Replacement format, default `none`, proactive state file path, write helper, route payloads, prompt/persona semantics, long-term memory body text, QQ outbound, and v1 traffic behavior were unchanged.
+- Rollback: `git revert <loop-72-commit>`
+- Next: Continue with another isolated desktop helper group or state governance slice.
