@@ -578,6 +578,7 @@ def main() -> int:
     assert NativeQQGateway._looks_like_structured_visible_reply is xinyu_qq_reply_bubbles.looks_like_structured_visible_reply
     assert NativeQQGateway._reply_sentence_units is xinyu_qq_reply_bubbles.reply_sentence_units
     assert NativeQQGateway._join_reply_fragments is xinyu_qq_reply_bubbles.join_reply_fragments
+    assert NativeQQGateway._hard_split_reply_text is xinyu_qq_reply_bubbles.hard_split_reply_text
 
     class OrderedInboundGateway(NativeQQGateway):
         def __init__(self):

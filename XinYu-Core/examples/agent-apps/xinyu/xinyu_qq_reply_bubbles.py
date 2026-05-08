@@ -51,3 +51,31 @@ def join_reply_fragments(left: str, right: str) -> str:
         return left
     separator = " " if re.search(r"[A-Za-z0-9]$", left) and re.match(r"[A-Za-z0-9]", right) else ""
     return f"{left}{separator}{right}".strip()
+
+
+def hard_split_reply_text(text: str, *, soft_max: int, max_bubbles: int) -> list[str]:
+    chunks: list[str] = []
+    rest = text.strip()
+    min_cut = max(30, soft_max // 2)
+    separators = ("\n", "\u3002", "\uff01", "\uff1f", "\uff1b", ";", ".", "!", "?", "\uff0c", ",", "\u3001", " ")
+    while len(rest) > soft_max and len(chunks) < max_bubbles - 1:
+        window = rest[: soft_max + 20]
+        cut = -1
+        for separator in separators:
+            position = rest[: soft_max + 1].rfind(separator)
+            candidate = position + len(separator)
+            if position >= 0 and len(rest) - candidate >= max(8, soft_max // 5):
+                cut = max(cut, candidate)
+        if cut < min_cut:
+            for separator in separators:
+                position = window.rfind(separator)
+                candidate = position + len(separator)
+                if position >= 0 and len(rest) - candidate >= max(8, soft_max // 5):
+                    cut = max(cut, candidate)
+        if cut < min_cut:
+            cut = soft_max
+        chunks.append(rest[:cut].strip())
+        rest = rest[cut:].strip()
+    if rest:
+        chunks.append(rest)
+    return chunks
