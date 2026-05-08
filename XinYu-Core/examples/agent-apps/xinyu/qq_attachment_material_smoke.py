@@ -77,6 +77,8 @@ def main() -> int:
     learning_payload = {"file_path": r"D:\XinYu\report.md", "metadata": {"segment_type": "file"}}
     if asyncio.run(gateway._resolve_learning_ingest_payload(None, learning_payload)) != learning_payload:
         failures.append("gateway learning ingest resolver alias no longer delegates")
+    if NativeQQGateway._resolve_onebot_media is not attachment_resolver.resolve_onebot_media:
+        failures.append("gateway OneBot media resolver is not a direct method alias")
 
     if failures:
         print("XinYu QQ attachment material smoke failed")
