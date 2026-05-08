@@ -43,6 +43,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract core bridge reply text normalization helper into `xinyu_bridge_reply_text.py`.
 - [x] Extract core bridge bootstrap env/path helpers into `xinyu_bridge_bootstrap.py`.
 - [x] Record 2026-05-08 12:17 long-run health checkpoint.
+- [x] Extract QQ gateway utility helpers into `xinyu_qq_gateway_utils.py`.
 
 ## Stop-Gap First
 

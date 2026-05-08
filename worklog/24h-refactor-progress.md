@@ -1338,3 +1338,26 @@ Workspace: D:\XinYu
 - Risk: Low; diagnostic documentation only. No runtime trace cleanup, real QQ outbound, v1 traffic expansion, persona semantics, memory body text, or runtime/memory deletion was performed.
 - Rollback: `git revert <loop-61-commit>`
 - Next: Continue with another isolated core bridge or QQ gateway helper extraction.
+
+## Loop 62 - 12:20
+
+- Task: Extract QQ gateway utility helpers.
+- Why: `xinyu_qq_gateway.py` still owned generic safe-string, hash, timestamp, numeric OneBot id, and websocket logger quieting helpers. Moving them to `xinyu_qq_gateway_utils.py` removes the last top-level utility definitions from the gateway while preserving private compatibility aliases.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway_utils.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_gateway_utils_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway_utils.py xinyu_qq_gateway.py qq_gateway_utils_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_gateway_utils_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_gateway_ack_spool.py -q`
+  - `git diff --check`
+- Result: QQ gateway utility helpers now live in `xinyu_qq_gateway_utils.py`; gateway imports them under the old private names. Compile, utility smoke, QQ gateway smoke, QQ review smoke, ack spool pytest, and diff check passed.
+- Risk: Low; pure utility relocation only. No OneBot payload shape, real QQ outbound, trust policy, command routing, attachment learning policy, persona semantics, memory body text, or v1 behavior was touched.
+- Rollback: `git revert <loop-62-commit>`
+- Next: Continue with another isolated core bridge or QQ gateway helper extraction.

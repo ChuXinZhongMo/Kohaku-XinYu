@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import hashlib
 import json
-import logging
 import re
 import signal
 import sys
@@ -35,6 +33,11 @@ from xinyu_qq_config import (
 from xinyu_qq_core_client import BridgeError, CoreBridgeClient
 import xinyu_qq_forward_context
 from xinyu_qq_models import PendingAction, PreparedMessage, RecentStickerImportState, ReplyTarget
+from xinyu_qq_gateway_utils import hash_id as _hash_id
+from xinyu_qq_gateway_utils import maybe_int as _maybe_int
+from xinyu_qq_gateway_utils import now_iso as _now_iso
+from xinyu_qq_gateway_utils import quiet_websockets_handshake_noise as _quiet_websockets_handshake_noise
+from xinyu_qq_gateway_utils import safe_str as _safe_str
 import xinyu_qq_normalizer
 import xinyu_qq_outbox_client
 import xinyu_qq_outbox_dispatcher
@@ -58,32 +61,6 @@ QQ_RICH_CONTEXT_TRACE_REL = Path("runtime") / "qq_rich_context_trace.jsonl"
 QQ_STICKER_IMPORT_TRACE_REL = Path("runtime") / "qq_sticker_import_trace.jsonl"
 QQ_RECENT_STICKER_STATE_REL = Path("runtime") / "qq_recent_sticker_state.json"
 SUPPORTED_IMAGE_SUFFIXES = xinyu_qq_attachment_resolver.SUPPORTED_IMAGE_SUFFIXES
-
-
-def _quiet_websockets_handshake_noise() -> None:
-    for logger_name in ("websockets.server", "websockets.protocol"):
-        logging.getLogger(logger_name).setLevel(logging.CRITICAL)
-
-
-def _safe_str(value: Any, default: str = "") -> str:
-    if value is None:
-        return default
-    return str(value)
-
-
-def _hash_id(value: Any, *, length: int = 16) -> str:
-    text = _safe_str(value).strip()
-    if not text:
-        return ""
-    return hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest()[:length]
-
-
-def _now_iso() -> str:
-    return datetime.now().astimezone().isoformat(timespec="seconds")
-
-
-def _maybe_int(value: str) -> int | str:
-    return int(value) if value.isdigit() else value
 
 
 class NativeQQGateway:
