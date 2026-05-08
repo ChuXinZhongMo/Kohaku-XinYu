@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from xinyu_bridge_renderer import critical_final_guard_flags
+from xinyu_bridge_renderer import BridgeRenderer, critical_final_guard_flags
 from xinyu_core_bridge import XinYuBridgeRuntime
 
 
@@ -26,6 +26,10 @@ def main() -> int:
         failures.append("critical final guard tuple filtering changed")
     if XinYuBridgeRuntime._critical_final_guard_flags(flags) != expected:
         failures.append("core bridge critical final guard alias no longer delegates")
+    if XinYuBridgeRuntime._normalize_renderer_mode("quality") != BridgeRenderer.normalize_renderer_mode("quality"):
+        failures.append("core bridge renderer mode alias no longer delegates")
+    if XinYuBridgeRuntime._normalize_renderer_mode("unknown") != "off":
+        failures.append("renderer mode fallback changed")
 
     if failures:
         print("XinYu bridge renderer guard flags smoke failed")

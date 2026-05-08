@@ -1919,3 +1919,24 @@ Workspace: D:\XinYu
 - Risk: Low; documentation and runtime diagnostic ledger observation only. No runtime/memory deletion, long-term memory body edit, prompt/persona semantic edit, real QQ outbound test, or v1 traffic expansion was performed.
 - Rollback: `git revert <loop-87-commit>`
 - Next: Continue with another isolated refactor slice.
+
+## Loop 88 - 18:35
+
+- Task: Replace core bridge renderer mode wrapper with direct renderer alias.
+- Why: `_normalize_renderer_mode` was a one-line wrapper around `BridgeRenderer.normalize_renderer_mode`. Replacing it with a direct static alias removes another runtime shim while preserving the compatibility entrypoint.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_renderer_guard_flags_smoke.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_renderer.py bridge_renderer_guard_flags_smoke.py xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe bridge_renderer_guard_flags_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_speech_controller_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: `_normalize_renderer_mode` now directly aliases `BridgeRenderer.normalize_renderer_mode`. Compile, focused renderer guard/mode smoke, speech controller smoke, bridge probe, and diff check passed.
+- Risk: Low; only a compatibility wrapper changed. Renderer mode normalization, fallback mode `off`, renderer guard behavior, prompt/persona semantics, long-term memory body text, QQ outbound behavior, and v1 traffic behavior were unchanged.
+- Rollback: `git revert <loop-88-commit>`
+- Next: Continue with another isolated core bridge or QQ gateway shim.

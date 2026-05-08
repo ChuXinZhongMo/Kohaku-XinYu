@@ -5902,8 +5902,7 @@ tags: [promise, followup, qq-outbox, continuity]
     def _renderer_reason(self, *, payload: dict[str, Any], user_text: str, draft_reply: str) -> str:
         return self.renderer.renderer_reason(payload=payload, user_text=user_text, draft_reply=draft_reply)
 
-    def _normalize_renderer_mode(self, value: str) -> str:
-        return BridgeRenderer.normalize_renderer_mode(value)
+    _normalize_renderer_mode = staticmethod(BridgeRenderer.normalize_renderer_mode)
 
     def _build_renderer_messages(
         self,
