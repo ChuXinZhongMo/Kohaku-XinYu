@@ -27,6 +27,7 @@ from xinyu_local_scope import (
     designated_read_roots,
     resolve_read_only_scope_path,
 )
+from xinyu_bridge_memory_snapshot import memory_snapshot as _memory_snapshot
 from xinyu_memory_event_sourcing import record_learning_ingest_event
 
 
@@ -69,21 +70,6 @@ def _as_int(value: Any, default: int) -> int:
         return int(str(value).strip())
     except (TypeError, ValueError):
         return default
-
-
-def _memory_snapshot(memory_root: Path) -> dict[str, tuple[int, int]]:
-    if not memory_root.exists():
-        return {}
-    snapshot: dict[str, tuple[int, int]] = {}
-    for path in memory_root.rglob("*"):
-        if not path.is_file():
-            continue
-        try:
-            stat = path.stat()
-        except OSError:
-            continue
-        snapshot[path.relative_to(memory_root).as_posix()] = (stat.st_mtime_ns, stat.st_size)
-    return snapshot
 
 
 def payload_path(value: str) -> Path:

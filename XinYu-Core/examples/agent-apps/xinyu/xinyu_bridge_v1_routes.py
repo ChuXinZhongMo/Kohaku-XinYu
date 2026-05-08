@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import time
-from pathlib import Path
 from typing import Any
 
 import v1_canary_gate
+from xinyu_bridge_memory_snapshot import memory_snapshot as _memory_snapshot
 from xinyu_runtime_presence import record_turn_finished
 from xinyu_sent_reply_index import visible_text_hash
 from xinyu_v1_canary_readiness import record_v1_shadow_observation
@@ -23,25 +23,6 @@ def _safe_str(value: Any, default: str = "") -> str:
         return str(value)
     except Exception:
         return default
-
-
-def _memory_snapshot(memory_root: Path) -> dict[str, tuple[int, int]]:
-    if not memory_root.exists():
-        return {}
-
-    snapshot: dict[str, tuple[int, int]] = {}
-    for path in memory_root.rglob("*"):
-        if not path.is_file():
-            continue
-        try:
-            stat = path.stat()
-        except OSError:
-            continue
-        snapshot[path.relative_to(memory_root).as_posix()] = (
-            stat.st_mtime_ns,
-            stat.st_size,
-        )
-    return snapshot
 
 
 def _command_id(payload: dict[str, Any]) -> str:

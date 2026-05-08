@@ -32,6 +32,7 @@ from xinyu_bridge_desktop_actions import desktop_action_pressure_label as _deskt
 from xinyu_bridge_desktop_actions import desktop_action_result_label as _desktop_action_result_label
 from xinyu_bridge_desktop_actions import desktop_action_theme_label as _desktop_action_theme_label
 from xinyu_bridge_desktop_actions import desktop_scrub_action_markers as _desktop_scrub_action_markers
+from xinyu_bridge_memory_snapshot import memory_snapshot as _memory_snapshot
 from xinyu_bridge_proactive import acknowledge as proactive_ack_bridge, claim_or_preview as proactive_bridge
 from xinyu_bridge_renderer import BridgeRenderer
 from xinyu_bridge_session import AgentSession, session_key_from_payload, session_keys_to_expire
@@ -665,25 +666,6 @@ def _ensure_repo_src(xinyu_dir: Path) -> Path:
     if str(src_root) not in sys.path:
         sys.path.insert(0, str(src_root))
     return src_root
-
-
-def _memory_snapshot(memory_root: Path) -> dict[str, tuple[int, int]]:
-    if not memory_root.exists():
-        return {}
-
-    snapshot: dict[str, tuple[int, int]] = {}
-    for path in memory_root.rglob("*"):
-        if not path.is_file():
-            continue
-        try:
-            stat = path.stat()
-        except OSError:
-            continue
-        snapshot[path.relative_to(memory_root).as_posix()] = (
-            stat.st_mtime_ns,
-            stat.st_size,
-        )
-    return snapshot
 
 
 def _payload_has_attachment_signal(payload: dict[str, Any]) -> bool:

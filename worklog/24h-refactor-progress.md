@@ -1223,3 +1223,35 @@ Workspace: D:\XinYu
 - Risk: Low; pure helper relocation. No HTTP routes, prompt text, persona semantics, long-term memory body text, state writes, QQ outbound, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-56-commit>`
 - Next: Continue with another isolated core bridge helper extraction.
+
+## Loop 57 - 12:06
+
+- Task: Extract shared bridge memory snapshot helper.
+- Why: `xinyu_core_bridge.py`, action routes, learning, proactive, and v1 routes each carried the same read-only memory file metadata snapshot helper. Moving the helper to `xinyu_bridge_memory_snapshot.py` removes duplication and gives the memory snapshot boundary a focused smoke.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_memory_snapshot.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_memory_snapshot_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_action_routes.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_learning.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_proactive.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_v1_routes.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_action_experience_digest_smoke.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_memory_snapshot.py bridge_memory_snapshot_smoke.py xinyu_core_bridge.py xinyu_bridge_action_routes.py xinyu_bridge_learning.py xinyu_bridge_proactive.py xinyu_bridge_v1_routes.py`
+  - `.\.venv\Scripts\python.exe bridge_memory_snapshot_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_learning_ingest_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_desktop_proactive_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_v1_canary_readiness.py tests\v1\test_bridge_compatibility.py tests\v1\test_hybrid_router.py -q`
+  - `.\.venv\Scripts\python.exe xinyu_action_experience_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_action_experience_digest_smoke.py`
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_memory_snapshot.py bridge_memory_snapshot_smoke.py xinyu_core_bridge.py xinyu_bridge_action_routes.py xinyu_bridge_learning.py xinyu_bridge_proactive.py xinyu_bridge_v1_routes.py xinyu_action_experience_digest_smoke.py`
+  - `git diff --check`
+- Result: Shared memory snapshot helper now owns the read-only file metadata traversal; bridge modules import it under the previous private name. `xinyu_action_experience_digest_smoke.py` initially failed because its fixed 2026-05-06 trace aged beyond the followup helper's default 24h freshness window on 2026-05-08; the smoke now passes an explicit 7-day test window without changing runtime behavior. Compile, focused smoke, bridge probe, learning ingest, desktop proactive, v1 pytest, action experience, action digest, and diff check passed.
+- Risk: Low-medium; multiple bridge modules now share the same read-only helper, but the snapshot shape is unchanged and no memory file body is read or written by the helper. The smoke fix only changes a test fixture window. No HTTP route semantics, prompt text, persona semantics, long-term memory body text, QQ outbound, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-57-commit>`
+- Next: Continue with another isolated core bridge or QQ gateway helper extraction.

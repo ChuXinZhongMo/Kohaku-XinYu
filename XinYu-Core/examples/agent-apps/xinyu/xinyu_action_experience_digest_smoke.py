@@ -91,11 +91,11 @@ def main() -> int:
         context = read_recent_action_digest_context(root)
         if "recent action digestion sidecar" not in context or "minecraft_server" not in context:
             failures.append("digest context should expose recent action digestion sidecar")
-        followup = compose_action_digest_followup(root, "刚才有进入梦和反思吗？")
+        followup = compose_action_digest_followup(root, "刚才有进入梦和反思吗？", max_age_seconds=7 * 24 * 3600)
         followup_reply = str((followup or {}).get("reply", ""))
         if not followup_reply or "梦种" not in followup_reply or "反思队列" not in followup_reply:
             failures.append("digest followup should answer dream/reflection routing")
-        residue_followup = compose_action_digest_followup(root, "刚才那次留下了什么残留？")
+        residue_followup = compose_action_digest_followup(root, "刚才那次留下了什么残留？", max_age_seconds=7 * 24 * 3600)
         residue_reply = str((residue_followup or {}).get("reply", ""))
         if "Java memory overflow" not in residue_reply and "memory overflow" not in residue_reply:
             failures.append("digest residue followup should answer from seed residue")
