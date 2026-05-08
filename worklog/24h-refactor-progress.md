@@ -1702,3 +1702,27 @@ Workspace: D:\XinYu
 - Risk: Low; only pure critical flag filtering ownership moved. Critical flag names, filtering order, final reply guard behavior, repair path, prompt/persona semantics, long-term memory body text, QQ outbound behavior, and v1 traffic behavior were unchanged.
 - Rollback: `git revert <loop-77-commit>`
 - Next: Continue with another isolated helper extraction or state governance slice.
+
+## Loop 78 - 13:18
+
+- Task: Extract trusted public search policy helper.
+- Why: `_trusted_public_search_task_allowed` still implemented the core bridge's trusted-user public-search policy directly on `XinYuBridgeRuntime`. Moving the filtering algorithm into `xinyu_bridge_trusted_search.py` reduces runtime policy logic while keeping marker constants and compatibility entrypoints unchanged.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_trusted_search.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_trusted_search_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_trusted_search.py bridge_trusted_search_smoke.py xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe bridge_trusted_search_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_dialogue_curiosity_bridge_injection.py::test_model_codex_delegate_allows_trusted_public_search_only -q`
+  - `.\.venv\Scripts\python.exe runtime_security_smoke.py`
+  - `.\.venv\Scripts\python.exe codex_delegate_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Trusted public-search filtering now lives in `xinyu_bridge_trusted_search.py`; core bridge still owns the existing marker constants and wraps the helper through `_trusted_public_search_task_allowed`. Compile, focused trusted-search smoke, trusted-public-search pytest, runtime security smoke, Codex delegate smoke, bridge probe, and diff check passed.
+- Risk: Low-medium; this is a security/policy gate, but only the existing algorithm moved. Public-search markers, local-path regex, local block markers, metadata shape, Codex delegate payloads, prompt/persona semantics, long-term memory body text, QQ outbound behavior, and v1 traffic behavior were unchanged.
+- Rollback: `git revert <loop-78-commit>`
+- Next: Continue with another isolated helper extraction or state governance slice.

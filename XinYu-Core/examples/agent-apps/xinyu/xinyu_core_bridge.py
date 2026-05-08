@@ -70,6 +70,7 @@ from xinyu_bridge_state_text import payload_path as _payload_path
 from xinyu_bridge_state_text import read_text_safe as _read_text_safe
 from xinyu_bridge_state_text import seconds_since_iso as _seconds_since_iso
 from xinyu_bridge_state_text import state_field as _state_field
+from xinyu_bridge_trusted_search import trusted_public_search_task_allowed
 from xinyu_bridge_values import as_bool as _as_bool
 from xinyu_bridge_values import as_int as _as_int
 from xinyu_bridge_values import as_str_set as _as_str_set
@@ -3285,16 +3286,13 @@ tags: [promise, followup, qq-outbox, continuity]
 
     @staticmethod
     def _trusted_public_search_task_allowed(task_text: str) -> bool:
-        compact = re.sub(r"\s+", "", _safe_str(task_text)).lower()
-        if not compact:
-            return False
-        if TRUSTED_CODEX_LOCAL_PATH_RE.search(_safe_str(task_text)):
-            return False
-        if any(marker.lower() in compact for marker in TRUSTED_CODEX_LOCAL_BLOCK_MARKERS):
-            return False
-        if any(marker in compact for marker in TRUSTED_CODEX_LOCAL_ENGLISH_BLOCK_MARKERS):
-            return False
-        return any(marker.lower() in compact for marker in TRUSTED_CODEX_PUBLIC_SEARCH_MARKERS)
+        return trusted_public_search_task_allowed(
+            task_text,
+            public_search_markers=TRUSTED_CODEX_PUBLIC_SEARCH_MARKERS,
+            local_block_markers=TRUSTED_CODEX_LOCAL_BLOCK_MARKERS,
+            local_path_pattern=TRUSTED_CODEX_LOCAL_PATH_RE,
+            local_english_block_markers=TRUSTED_CODEX_LOCAL_ENGLISH_BLOCK_MARKERS,
+        )
 
     def _proactive_thread_context(self, payload: dict[str, Any], current_text: str) -> str:
         if not self._owner_private_payload_matches(payload):
