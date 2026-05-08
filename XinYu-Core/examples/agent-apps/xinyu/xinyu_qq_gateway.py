@@ -266,8 +266,7 @@ class NativeQQGateway:
             gateway_name=GATEWAY_NAME,
         )
 
-    def _outbox_target(self, claim: dict[str, Any]) -> ReplyTarget | None:
-        return xinyu_qq_outbox_client.outbox_target(self, claim, ReplyTarget)
+    _outbox_target = xinyu_qq_outbox_client.gateway_outbox_target
 
     _onebot_action_result = xinyu_qq_outbox_client.onebot_action_result
 

@@ -28,6 +28,22 @@ def main() -> int:
     if gateway._onebot_action_result(ok_response) != outbox_client.onebot_action_result(gateway, ok_response):
         failures.append("gateway OneBot action result alias no longer delegates")
 
+    outbox_claim = {
+        "target": {
+            "message_kind": "private",
+            "user_id": "42",
+            "group_id": "",
+        },
+    }
+    if NativeQQGateway._outbox_target is not outbox_client.gateway_outbox_target:
+        failures.append("gateway outbox target helper is not a direct method alias")
+    target = gateway._outbox_target(outbox_claim)
+    if target != ReplyTarget(message_kind="private", user_id="42", group_id=""):
+        failures.append("gateway outbox target alias no longer delegates")
+    group_claim = {"target": {"message_kind": "group", "user_id": "42", "group_id": "7"}}
+    if gateway._outbox_target(group_claim) is not None:
+        failures.append("gateway outbox target alias started accepting non-private target")
+
     class _AckSpool:
         def __init__(self) -> None:
             self.pending_payloads: list[dict[str, str]] = []

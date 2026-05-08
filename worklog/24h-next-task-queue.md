@@ -110,6 +110,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace QQ trust-level wrapper with direct trust policy gateway alias.
 - [x] Replace QQ group-shadow allow-list wrapper with direct trust policy gateway alias.
 - [x] Replace QQ trust-command target wrapper with direct trust policy gateway alias.
+- [x] Replace QQ outbox target wrapper with direct outbox client gateway alias.
 
 ## Stop-Gap First
 

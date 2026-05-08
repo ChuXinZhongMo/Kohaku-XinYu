@@ -2746,3 +2746,25 @@ Workspace: D:\XinYu
 - Risk: Low; only trust-command target helper ownership changed. Reply-context target extraction, numeric text target extraction, owner skip behavior, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-127-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 128 - 20:15
+
+- Task: Replace QQ outbox target wrapper with direct outbox client gateway alias.
+- Why: `_outbox_target` in `xinyu_qq_gateway.py` only adapted an outbox claim into the shared `ReplyTarget` dataclass via `xinyu_qq_outbox_client.outbox_target`. Adding a gateway-level outbox client helper removes the gateway shim while keeping outbox target parsing in the outbox client module.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_outbox_client.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_outbox_route_alias_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py qq_outbox_route_alias_smoke.py xinyu_qq_outbox_client.py`
+  - `D:\XinYu\Python312\python.exe qq_outbox_route_alias_smoke.py`
+  - `D:\XinYu\Python312\python.exe qq_outbox_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_outbox_client.gateway_outbox_target` now owns the gateway-bound outbox target helper and gateway `_outbox_target` directly aliases it. Compile, focused outbox route alias smoke, QQ outbox smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only outbox target helper ownership changed. Private-target filtering, outbox queue persistence, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-128-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.

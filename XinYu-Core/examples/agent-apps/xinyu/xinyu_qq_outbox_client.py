@@ -4,6 +4,8 @@ import asyncio
 from datetime import datetime
 from typing import Any
 
+from xinyu_qq_models import ReplyTarget
+
 
 GATEWAY_NAME = "xinyu_native_qq_gateway"
 GATEWAY_VERSION_FALLBACK = "0.1.24"
@@ -38,6 +40,10 @@ def outbox_target(gateway: Any, claim: dict[str, Any], reply_target_type: type[A
     if message_kind != "private" or not user_id:
         return None
     return reply_target_type(message_kind="private", user_id=user_id, group_id=group_id)
+
+
+def gateway_outbox_target(gateway: Any, claim: dict[str, Any]) -> ReplyTarget | None:
+    return outbox_target(gateway, claim, ReplyTarget)
 
 
 def onebot_action_result(gateway: Any, response: dict[str, Any] | None) -> tuple[bool, str, str]:
