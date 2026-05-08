@@ -582,3 +582,27 @@ Workspace: D:\XinYu
 - Risk: Low; pure helper extraction with focused smoke and bridge/runtime security validation.
 - Rollback: `git revert <loop-26-commit>`
 - Next: Extract a bridge session/context helper or migrate another low-risk state writer.
+
+## Loop 27 - 10:32
+
+- Task: Route Desktop proactive request state writes through `state_service.py`.
+- Why: `memory/context/proactive_request_state.md` is a projection-style state file updated by Desktop ack and owner-reply flows; using the shared atomic helper reduces partial-write risk without changing fields or body semantics.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-STATE-WRITE-AUDIT.md`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `git status --short --branch`
+  - `rg -n "proactive_request_state|_desktop_update_proactive_request_state|_mark_proactive_owner_reply|atomic_write_text" ...`
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_core_bridge.py state_service.py`
+  - `.\.venv\Scripts\python.exe state_io_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_desktop_proactive_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_desktop_rest_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Both direct proactive request state writes in `xinyu_core_bridge.py` now call `atomic_write_text`; owner-reply write preserves the existing no-extra-newline behavior with `final_newline=False`. The focused Desktop proactive/rest gates and bridge probe passed.
+- Risk: Low; projection state persistence only. No persona semantics, long-term memory body text, QQ outbound behavior, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-27-commit>`
+- Next: After validation and commit, continue with a bridge session/context helper or QQ gateway boundary extraction.

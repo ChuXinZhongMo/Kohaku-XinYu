@@ -3165,8 +3165,7 @@ tags: [autonomy, maintenance, runtime]
             updated = self._desktop_replace_list_field(updated, "adapter_message_id", adapter_message_id)
         if adapter_error:
             updated = self._desktop_replace_list_field(updated, "adapter_error", adapter_error)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(updated.rstrip() + "\n", encoding="utf-8")
+        atomic_write_text(path, updated.rstrip())
         return self._desktop_proactive_item_from_state(include_final=True)
 
     @staticmethod
@@ -3811,7 +3810,7 @@ tags: [promise, followup, qq-outbox, continuity]
             f"- xinyu_reply_preview: {_safe_str(reply).strip()[:240] or 'none'}\n"
         )
         try:
-            request_path.write_text(updated.rstrip() + extra, encoding="utf-8")
+            atomic_write_text(request_path, updated.rstrip() + extra, final_newline=False)
         except OSError:
             return False
         return True

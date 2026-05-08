@@ -64,7 +64,7 @@ For Python code changes, also compile the changed Python files:
 | Learning service extraction | `python -m py_compile xinyu_core_bridge.py <new-module>`; `bridge_learning_ingest_smoke.py`; `python -m pytest tests\test_learning_closed_loop.py -q`; `bridge_probe_smoke.py` |
 | Chat service boundary | `python -m py_compile xinyu_core_bridge.py xinyu_chat_service.py chat_service_smoke.py`; `chat_service_smoke.py`; `bridge_probe_smoke.py`; focused chat/session pytest |
 | Service-boundary smoke | `python -m py_compile service_boundary_smoke.py xinyu_qq_sender.py xinyu_desktop_service.py xinyu_chat_service.py xinyu_codex_service.py xinyu_learning_service.py`; `service_boundary_smoke.py`; plus touched capability smoke |
-| State service helper | `python -m py_compile state_service.py`; `state_io_smoke.py`; `promise_followup_state_smoke.py`; any focused test added for the helper |
+| State service helper | `python -m py_compile state_service.py`; `state_io_smoke.py`; `promise_followup_state_smoke.py`; `xinyu_desktop_proactive_smoke.py` for proactive request state; any focused test added for the helper |
 | QQ trust/outbox extraction | `python -m py_compile xinyu_qq_gateway.py <new-module>`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py`; `qq_outbox_smoke.py`; sent-index lookup via `check_sent_index.py <adapter_msg_id>` or the focused pytest fallback |
 | QQ sender/command extraction | `python -m py_compile xinyu_qq_gateway.py <new-module>`; `xinyu_qq_gateway_smoke.py`; `xinyu_qq_review_smoke.py` |
 | v1 canary gate extraction | `python -m py_compile xinyu_v1_canary_readiness.py <new-module>`; `python -m pytest tests\test_v1_canary_readiness.py tests\v1\test_bridge_compatibility.py tests\v1\test_hybrid_router.py -q` |
@@ -72,7 +72,7 @@ For Python code changes, also compile the changed Python files:
 
 ## Missing Or Weak Gates
 
-- `state_io_smoke.py` covers the existing shared markdown helper, but not a future full `state_service.py` contract.
+- `state_io_smoke.py` covers the shared state helper contract; caller-specific projection migrations still need their feature smoke.
 - `service_boundary_smoke.py` covers the first extracted pure contracts, but future boundary modules still need their own focused tests as they are split.
 - Current live health can still report `recent_exceptions` as `warn` from real recent traces; the default 120-minute window avoids historical tail residue while `--recent-window-minutes 0` keeps a comparison path.
 

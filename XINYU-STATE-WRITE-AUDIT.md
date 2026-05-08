@@ -34,7 +34,7 @@ Scope: first-pass write-surface audit before introducing broader state governanc
 | --- | --- | --- | --- | --- |
 | Autonomous mind loop trace | `memory/context/autonomous_mind_loop_trace.log` | Log-like trace under memory | Append trace lives in `memory/context`, not `runtime/logs` | Audit only; do not move until readers are known. |
 | Autonomous mind loop state | `memory/context/autonomous_mind_loop_state.md` | Projection | Direct `write_text` from bridge | Candidate for atomic helper after tests cover the state shape. |
-| Desktop proactive request update | `memory/context/proactive_request_state.md` | Projection | Direct markdown field mutation in bridge | Candidate for `write_text_atomic`; do not change fields. |
+| Desktop proactive request update | `memory/context/proactive_request_state.md` | Projection | Migrated to `state_service.atomic_write_text` in Loop 27 | Keep field semantics and validate with `xinyu_desktop_proactive_smoke.py`. |
 | Promise follow-up state | `memory/context/promise_followup_state.md` | Projection | Migrated to `state_service.atomic_write_text` in Loop 13 | Keep body shape; validate with `promise_followup_state_smoke.py` and focused promise follow-up pytest. |
 | Debug live system prompt | `runtime/debug/last_live_system_prompt.txt` | Runtime diagnostic cache | Already tmp-and-replace | Leave as runtime diagnostic, maybe move helper later. |
 | Codex background traces | `memory/knowledge/codex_*_trace.log` | Log-like traces under memory | Append logs near knowledge material | Audit only; moving paths could break current review workflow. |
@@ -67,8 +67,8 @@ Scope: first-pass write-surface audit before introducing broader state governanc
    - `append_jsonl(path, row)`
    - `read_json(path, default)`
 2. Migrate only runtime/projection writes first:
-   - `xinyu_core_bridge.py` proactive request state update.
-   - `xinyu_core_bridge.py` promise follow-up state.
+   - `xinyu_core_bridge.py` proactive request state update. Done in Loop 27.
+   - `xinyu_core_bridge.py` promise follow-up state. Done in Loop 13.
    - QQ runtime trace appends after QQ trust/outbox extraction.
 3. Leave long-term memory body writes in existing modules until the owner approves a memory-body migration slice.
 
