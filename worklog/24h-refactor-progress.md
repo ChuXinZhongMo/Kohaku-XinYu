@@ -2977,3 +2977,23 @@ Workspace: D:\XinYu
 - Risk: Low; only helper ownership changed. Signal names, `NotImplementedError` handling, server startup, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-138-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 139 - 20:36
+
+- Task: Extract QQ structured visible reply detector into reply bubble helper module.
+- Why: `_looks_like_structured_visible_reply` is pure reply-bubble classification logic in `xinyu_qq_gateway.py`. Moving it into `xinyu_qq_reply_bubbles.py` starts a dedicated boundary for visible reply bubble helpers and leaves the gateway with a direct static alias.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_reply_bubbles.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py xinyu_qq_gateway_smoke.py xinyu_qq_reply_bubbles.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_reply_bubbles.looks_like_structured_visible_reply` now owns structured visible-reply detection and gateway `_looks_like_structured_visible_reply` directly aliases it. Compile, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only helper ownership changed. Structured reply detection markers, reply bubble splitting behavior, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-139-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.

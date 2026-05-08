@@ -121,6 +121,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace QQ outbox poll wrapper with direct dispatcher gateway alias.
 - [x] Record 2026-05-08 20:30 long-run health checkpoint.
 - [x] Replace QQ signal handler wrapper with direct server helper alias.
+- [x] Extract QQ structured visible reply detector into reply bubble helper module.
 
 ## Stop-Gap First
 

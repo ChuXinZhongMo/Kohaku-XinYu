@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from xinyu_image_context import _image_data_uri, build_image_context
+import xinyu_qq_reply_bubbles
 import xinyu_qq_server
 from xinyu_qq_gateway import GatewayConfig, NativeQQGateway, PreparedMessage, ReplyTarget
 
@@ -574,6 +575,7 @@ def main() -> int:
         assert forced_gateway.replies == forced_units
 
     asyncio.run(_reply_bubble_smoke())
+    assert NativeQQGateway._looks_like_structured_visible_reply is xinyu_qq_reply_bubbles.looks_like_structured_visible_reply
 
     class OrderedInboundGateway(NativeQQGateway):
         def __init__(self):

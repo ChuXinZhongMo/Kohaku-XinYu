@@ -40,6 +40,7 @@ from xinyu_qq_gateway_utils import safe_str as _safe_str
 import xinyu_qq_normalizer
 import xinyu_qq_outbox_client
 import xinyu_qq_outbox_dispatcher
+import xinyu_qq_reply_bubbles
 import xinyu_qq_rich_context
 import xinyu_qq_server
 import xinyu_qq_sender
@@ -2733,36 +2734,7 @@ class NativeQQGateway:
             return False
         return True
 
-    @staticmethod
-    def _looks_like_structured_visible_reply(text: str) -> bool:
-        lowered = text.lower()
-        structured_markers = (
-            "```",
-            "http://",
-            "https://",
-            "file://",
-            "traceback",
-            "exception",
-            "error:",
-            "exit code",
-            "powershell",
-            "pytest",
-            "codex",
-            "runtime/",
-            "runtime\\",
-            ".py",
-            ".ps1",
-            ".json",
-            ".md",
-            ".log",
-        )
-        if any(marker in lowered for marker in structured_markers):
-            return True
-        if any(marker in text for marker in ("\u62a5\u544a\u540d", "\u9000\u51fa\u7801", "\u9519\u8bef:")):
-            return True
-        if re.search(r"(?m)^\s*(?:[-*+]|\d+[.)])\s+\S", text):
-            return True
-        return text.count("|") >= 4 and "\n" in text
+    _looks_like_structured_visible_reply = staticmethod(xinyu_qq_reply_bubbles.looks_like_structured_visible_reply)
 
     def _split_visible_reply_bubbles(self, text: str) -> list[str]:
         max_bubbles = max(2, min(5, self.config.reply_bubble_max_bubbles))
