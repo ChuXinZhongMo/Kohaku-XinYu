@@ -8,7 +8,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Make recent-exception tail scans read actual file tails and ignore partial JSONL first lines.
 - [x] Prevent repeated GitHub learning `stage_error` traces for candidates already marked `failed:*`.
 - [x] Reduce the remaining 120-minute `recent_exceptions` hits from warn toward ok. 2026-05-08 10:41 health reports `hits=0`; overall status remains `warn` only because the user-provided plan file is intentionally untracked.
-- [ ] Start `xinyu_core_bridge.py` package boundary extraction with auth/context/session helpers. Auth and session helper boundaries done; context still pending.
+- [x] Start `xinyu_core_bridge.py` package boundary extraction with auth/context/session helpers. Auth, session, and prompt-context helper boundaries are now started.
 - [ ] Start `xinyu_qq_gateway.py` package boundary extraction with config/server/normalizer helpers. Config URL helper boundary started; server split still pending.
 - [x] Migrate another low-risk projection/runtime writer to `state_service.py`. Desktop proactive request state update now uses `atomic_write_text`.
 

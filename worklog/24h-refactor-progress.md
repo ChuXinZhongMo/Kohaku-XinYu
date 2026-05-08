@@ -669,3 +669,25 @@ Workspace: D:\XinYu
 - Risk: Low; read-only diagnostic observation and documentation only. No runtime traces were cleaned and no services, QQ outbound behavior, v1 traffic, memory body text, or persona semantics were changed.
 - Rollback: `git revert <loop-30-commit>`
 - Next: Continue with bridge context helper extraction or QQ server/config model split.
+
+## Loop 31 - 10:42
+
+- Task: Extract bridge prompt-context signature helper.
+- Why: Session restart decisions depend on a prompt/context file signature. Moving the pure stat-based signature calculation out of `xinyu_core_bridge.py` starts the bridge context boundary without changing prompt contents or memory semantics.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_context.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_context_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_context.py bridge_context_smoke.py xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe bridge_context_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_dialogue_curiosity_bridge_injection.py::test_session_prompt_signature_ignores_volatile_context_files tests\test_dialogue_curiosity_bridge_injection.py::test_session_prompt_signature_tracks_concept_seed_files -q`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: `_session_prompt_signature` now delegates to `xinyu_bridge_context.prompt_context_signature`; the watched file list and signature format are unchanged. Compile, context smoke, focused pytest, and bridge probe passed.
+- Risk: Low; pure helper extraction around file metadata. No prompt text, persona semantics, memory body content, QQ outbound behavior, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-31-commit>`
+- Next: Continue with QQ server/config model split or another state-service migration.

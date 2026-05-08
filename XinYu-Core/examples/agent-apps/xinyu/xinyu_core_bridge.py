@@ -28,6 +28,7 @@ from xinyu_bridge_learning import (
     LearningBridgeError,
     stage_codex_report_material,
 )
+from xinyu_bridge_context import prompt_context_signature
 from xinyu_bridge_proactive import acknowledge as proactive_ack_bridge, claim_or_preview as proactive_bridge
 from xinyu_bridge_renderer import BridgeRenderer
 from xinyu_bridge_session import AgentSession, session_key_from_payload, session_keys_to_expire
@@ -5684,16 +5685,7 @@ tags: [promise, followup, qq-outbox, continuity]
         return session
 
     def _session_prompt_signature(self) -> str:
-        parts: list[str] = []
-        for rel in PROMPT_CONTEXT_SIGNATURE_FILES:
-            path = self.xinyu_dir / rel
-            try:
-                stat = path.stat()
-            except OSError:
-                parts.append(f"{rel}:missing")
-                continue
-            parts.append(f"{rel}:{stat.st_mtime_ns}:{stat.st_size}")
-        return "|".join(parts)
+        return prompt_context_signature(self.xinyu_dir, PROMPT_CONTEXT_SIGNATURE_FILES)
 
     async def _cleanup_idle_sessions(self, *, preserve_keys: set[str] | None = None) -> dict[str, int]:
         preserve_keys = set(preserve_keys or set())
