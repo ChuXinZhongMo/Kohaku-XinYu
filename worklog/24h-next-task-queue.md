@@ -126,6 +126,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract QQ reply fragment join helper into reply bubble helper module.
 - [x] Extract QQ hard reply split helper into reply bubble helper module.
 - [x] Extract QQ tiny reply chunk merge helper into reply bubble helper module.
+- [x] Extract QQ forced reply bubble units helper into reply bubble helper module.
 
 ## Stop-Gap First
 

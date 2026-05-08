@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import re
+from typing import Any
+
+from xinyu_qq_gateway_utils import safe_str
 
 
 def looks_like_structured_visible_reply(text: str) -> bool:
@@ -32,6 +35,32 @@ def looks_like_structured_visible_reply(text: str) -> bool:
     if re.search(r"(?m)^\s*(?:[-*+]|\d+[.)])\s+\S", text):
         return True
     return text.count("|") >= 4 and "\n" in text
+
+
+def forced_reply_bubble_units(source: dict[str, Any], *, max_bubbles: int) -> list[str]:
+    raw_units = source.get("reply_bubble_force_units")
+    if not isinstance(raw_units, list):
+        return []
+    units: list[str] = []
+    for raw in raw_units:
+        text = safe_str(raw).strip()
+        if not text:
+            continue
+        if "\n" in text or "\r" in text:
+            return []
+        if len(text) > 80:
+            return []
+        units.append(text)
+        if len(units) >= max_bubbles:
+            break
+    return units if len(units) >= 2 else []
+
+
+def gateway_forced_reply_bubble_units(gateway: Any, source: dict[str, Any]) -> list[str]:
+    return forced_reply_bubble_units(
+        source,
+        max_bubbles=gateway.config.reply_bubble_force_max_bubbles,
+    )
 
 
 def reply_sentence_units(text: str) -> list[str]:

@@ -580,6 +580,7 @@ def main() -> int:
     assert NativeQQGateway._join_reply_fragments is xinyu_qq_reply_bubbles.join_reply_fragments
     assert NativeQQGateway._hard_split_reply_text is xinyu_qq_reply_bubbles.hard_split_reply_text
     assert NativeQQGateway._merge_tiny_reply_chunks is xinyu_qq_reply_bubbles.merge_tiny_reply_chunks
+    assert NativeQQGateway._forced_reply_bubble_units is xinyu_qq_reply_bubbles.gateway_forced_reply_bubble_units
 
     class OrderedInboundGateway(NativeQQGateway):
         def __init__(self):

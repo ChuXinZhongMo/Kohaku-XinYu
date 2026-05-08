@@ -3077,3 +3077,23 @@ Workspace: D:\XinYu
 - Risk: Low; only helper ownership changed. Edge chunk merge order, fragment joining behavior, reply bubble chunking behavior, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-143-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 144 - 20:46
+
+- Task: Extract QQ forced reply bubble units helper into reply bubble helper module.
+- Why: `_forced_reply_bubble_units` is reply-bubble control metadata parsing with only a gateway config limit dependency. Moving it into `xinyu_qq_reply_bubbles.py` continues the reply-bubble boundary while leaving the gateway with a direct bound alias.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_reply_bubbles.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py xinyu_qq_gateway_smoke.py xinyu_qq_reply_bubbles.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_reply_bubbles.gateway_forced_reply_bubble_units` now owns forced reply bubble unit parsing and gateway `_forced_reply_bubble_units` directly aliases it. Compile, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only helper ownership changed. Forced unit length/newline filtering, max bubble limit, reply bubble behavior, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-144-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.

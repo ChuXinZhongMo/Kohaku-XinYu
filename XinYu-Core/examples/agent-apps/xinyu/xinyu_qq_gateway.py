@@ -2687,23 +2687,7 @@ class NativeQQGateway:
         bubbles = self._split_visible_reply_bubbles(text)
         return bubbles if len(bubbles) > 1 else [text]
 
-    def _forced_reply_bubble_units(self, source: dict[str, Any]) -> list[str]:
-        raw_units = source.get("reply_bubble_force_units")
-        if not isinstance(raw_units, list):
-            return []
-        units: list[str] = []
-        for raw in raw_units:
-            text = _safe_str(raw).strip()
-            if not text:
-                continue
-            if "\n" in text or "\r" in text:
-                return []
-            if len(text) > 80:
-                return []
-            units.append(text)
-            if len(units) >= self.config.reply_bubble_force_max_bubbles:
-                break
-        return units if len(units) >= 2 else []
+    _forced_reply_bubble_units = xinyu_qq_reply_bubbles.gateway_forced_reply_bubble_units
 
     def _should_split_visible_reply(
         self,
