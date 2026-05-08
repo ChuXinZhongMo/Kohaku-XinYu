@@ -2021,3 +2021,23 @@ Workspace: D:\XinYu
 - Risk: Low; only same-signature compatibility wrappers changed. Sticker semantic inference, image-as-sticker detection, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-92-commit>`
 - Next: Continue with another isolated QQ gateway shim or core bridge helper slice.
+
+## Loop 93 - 18:46
+
+- Task: Replace QQ rich segment summary wrapper with direct helper alias.
+- Why: `_summarize_segment` only delegated to `xinyu_qq_rich_context.summarize_segment`. Replacing it with a direct static alias trims another gateway shim while preserving the compatibility method name used by rich context extraction.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_rich_context_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_rich_context_smoke.py xinyu_qq_rich_context.py`
+  - `.\.venv\Scripts\python.exe qq_rich_context_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `_summarize_segment` now directly aliases `xinyu_qq_rich_context.summarize_segment`. Compile, focused rich context smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only the rich segment summary compatibility wrapper changed. Rich segment classification, sticker/image/forward summaries, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-93-commit>`
+- Next: Continue with another isolated QQ gateway shim or core bridge helper slice.

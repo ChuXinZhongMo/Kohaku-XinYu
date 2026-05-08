@@ -2223,8 +2223,7 @@ class NativeQQGateway:
             "reply_message_id": reply_message_id,
         }
 
-    def _summarize_segment(self, segment_type: str, data: dict[str, Any]) -> dict[str, Any]:
-        return xinyu_qq_rich_context.summarize_segment(segment_type, data)
+    _summarize_segment = staticmethod(xinyu_qq_rich_context.summarize_segment)
 
     _infer_received_sticker_semantics = staticmethod(xinyu_qq_sticker_semantics.infer_received_sticker_semantics)
     _image_segment_looks_like_sticker = staticmethod(xinyu_qq_sticker_semantics.image_segment_looks_like_sticker)

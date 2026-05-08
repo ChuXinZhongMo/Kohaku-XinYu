@@ -27,8 +27,9 @@ def main() -> int:
     if forward != {"kind": "forward", "id": "forward-1", "summary": "forward-1"}:
         failures.append(f"forward segment summary changed: {forward!r}")
 
-    gateway = object.__new__(NativeQQGateway)
-    if NativeQQGateway._summarize_segment(gateway, "mface", {"summary": "哈哈"}).get("mood") != "laugh":
+    if NativeQQGateway._summarize_segment is not rich_context.summarize_segment:
+        failures.append("gateway rich context helper is not a direct alias")
+    if NativeQQGateway._summarize_segment("mface", {"summary": "哈哈"}).get("mood") != "laugh":
         failures.append("gateway rich context wrapper no longer delegates")
 
     if failures:
