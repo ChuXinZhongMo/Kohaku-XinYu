@@ -82,6 +82,10 @@ Health probes must avoid creating their own error noise. WebSocket endpoints sho
 | L3 State Risk | Memory/state write errors, growing outbox backlog, or v1 shadow errors appear | Pause migrations touching state; inspect before continuing. |
 | L4 Owner Confirmation Required | Real QQ outbound, memory body rewrite, persona semantic change, v1 traffic expansion, or unrecoverable bridge startup failure is needed | Stop and ask the owner. |
 
+## Recent Checkpoint Notes
+
+- 2026-05-08 10:41: `diagnostics\check_xinyu_health.py --json --workspace D:\XinYu` reported `recent_exceptions: ok` with `hits=0` and `v1_shadow_errors: ok`. Overall status remained `warn` because `git_state` saw the intentionally untracked user-provided `XINYU-24H-WORK-PLAN.md`.
+
 ## Checkpoint Template
 
 ```md

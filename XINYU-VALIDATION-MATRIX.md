@@ -75,7 +75,7 @@ For Python code changes, also compile the changed Python files:
 
 - `state_io_smoke.py` covers the shared state helper contract; caller-specific projection migrations still need their feature smoke.
 - `service_boundary_smoke.py` covers the first extracted pure contracts, but future boundary modules still need their own focused tests as they are split.
-- Current live health can still report `recent_exceptions` as `warn` from real recent traces; the default 120-minute window avoids historical tail residue while `--recent-window-minutes 0` keeps a comparison path.
+- Current live health can still report `warn` from expected workspace dirtiness such as the intentionally untracked user plan file; as of 2026-05-08 10:41, the default 120-minute `recent_exceptions` signal was `ok` with `hits=0`.
 
 ## Red Lines During Validation
 

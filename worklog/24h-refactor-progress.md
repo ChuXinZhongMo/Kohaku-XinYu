@@ -651,3 +651,21 @@ Workspace: D:\XinYu
 - Risk: Low; pure URL helper extraction. No real QQ outbound, v1 traffic, persona semantics, or memory body content was touched.
 - Rollback: `git revert <loop-29-commit>`
 - Next: Continue with QQ server/config model split or bridge context helper extraction.
+
+## Loop 30 - 10:41
+
+- Task: Re-check and close the remaining `recent_exceptions` health queue item.
+- Why: Loop 25 stopped repeat GitHub learning `stage_error` rows, but one historical row remained in the 120-minute window. The queue needed a fresh read-only health observation before marking the item complete.
+- Files changed:
+  - `XINYU-LONG-RUN-OPERATIONS.md`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `git status --short --branch`
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --workspace D:\XinYu`
+  - `git diff --check`
+- Result: Health reports `recent_exceptions: ok` with `hits=0`; overall health remains `warn` because `git_state` sees the intentionally untracked `XINYU-24H-WORK-PLAN.md`. Documentation diff validation passed.
+- Risk: Low; read-only diagnostic observation and documentation only. No runtime traces were cleaned and no services, QQ outbound behavior, v1 traffic, memory body text, or persona semantics were changed.
+- Rollback: `git revert <loop-30-commit>`
+- Next: Continue with bridge context helper extraction or QQ server/config model split.
