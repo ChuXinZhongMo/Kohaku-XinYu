@@ -1432,3 +1432,25 @@ Workspace: D:\XinYu
 - Risk: Low; parser ownership moved without changing defaults, env names, options, or startup behavior. No HTTP route semantics, prompt/persona semantics, long-term memory body text, state writes, QQ outbound, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-65-commit>`
 - Next: Re-observe remaining core/QQ boundaries and choose the next isolated slice.
+
+## Loop 66 - 12:33
+
+- Task: Extract core bridge null input adapter.
+- Why: `_NullInputModule` is a small runtime adapter used when constructing the internal Agent controller. Moving it to `xinyu_bridge_null_input.py` removes another top-level support class from `xinyu_core_bridge.py` without touching turn orchestration.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_null_input.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_null_input_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_null_input.py bridge_null_input_smoke.py xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe bridge_null_input_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_session_cleanup_smoke.py`
+  - `git diff --check`
+- Result: Null input adapter now lives in `xinyu_bridge_null_input.py`; core bridge imports it as `_NullInputModule`. Compile, null input smoke, bridge probe, session cleanup smoke, and diff check passed.
+- Risk: Low; adapter relocation only. No controller behavior, route payloads, prompt/persona semantics, long-term memory body text, QQ outbound, v1 traffic, or state writes were touched.
+- Rollback: `git revert <loop-66-commit>`
+- Next: Re-observe remaining core bridge entrypoint boundaries and choose the next isolated slice.

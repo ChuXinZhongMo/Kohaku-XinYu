@@ -33,6 +33,7 @@ from xinyu_bridge_learning_sidecars import int_result as _int_result
 from xinyu_bridge_learning_sidecars import run_learning_study_chain as _run_learning_study_chain
 from xinyu_bridge_learning_sidecars import should_run_learning_after_codex as _should_run_learning_after_codex
 from xinyu_bridge_loop_thread import start_loop_thread as _start_loop_thread
+from xinyu_bridge_null_input import NullInputModule as _NullInputModule
 from xinyu_bridge_context import prompt_context_signature
 from xinyu_bridge_desktop_actions import desktop_action_pressure_label as _desktop_action_pressure_label
 from xinyu_bridge_desktop_actions import desktop_action_result_label as _desktop_action_result_label
@@ -650,22 +651,6 @@ class BridgeRequestError(RuntimeError):
         super().__init__(message)
         self.status = status
         self.message = message
-
-
-class _NullInputModule:
-    async def start(self) -> None:
-        pass
-
-    async def stop(self) -> None:
-        pass
-
-    async def get_input(self) -> Any:
-        await asyncio.sleep(3600)
-        return None
-
-    def set_user_commands(self, commands: dict[str, Any], context: Any) -> None:
-        self._user_commands = commands
-        self._user_command_context = context
 
 
 class XinYuBridgeRuntime:
