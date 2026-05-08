@@ -86,6 +86,7 @@ Health probes must avoid creating their own error noise. WebSocket endpoints sho
 
 - 2026-05-08 10:41: `diagnostics\check_xinyu_health.py --json --workspace D:\XinYu` reported `recent_exceptions: ok` with `hits=0` and `v1_shadow_errors: ok`. Overall status remained `warn` because `git_state` saw the intentionally untracked user-provided `XINYU-24H-WORK-PLAN.md`.
 - 2026-05-08 11:10: QQ runtime trace smokes exposed that recent-exception JSONL filtering must honor `recorded_at` row timestamps, not only file mtime. The diagnostic was updated without cleaning runtime traces.
+- 2026-05-08 11:37: `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --workspace D:\XinYu` reported bridge, desktop WS, QQ gateway, NapCat, outbox backlog, recent exceptions, v1 shadow errors, and disk space as `ok`. Overall status was `warn` only because `git_state` saw the intentionally untracked user-provided `XINYU-24H-WORK-PLAN.md`.
 
 ## Checkpoint Template
 

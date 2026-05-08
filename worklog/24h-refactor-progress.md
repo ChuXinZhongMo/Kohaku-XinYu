@@ -1081,3 +1081,19 @@ Workspace: D:\XinYu
 - Risk: Low-medium; attachment material shaping moved, but field names and empty-result rules are unchanged. No real QQ outbound, attachment learning policy, sticker import writes, OneBot payload shape, persona semantics, memory body text, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-49-commit>`
 - Next: Continue with another isolated QQ parsing helper or run a health checkpoint.
+
+## Loop 50 - 11:37
+
+- Task: Record a long-run health checkpoint.
+- Why: After multiple QQ gateway extraction commits, the long-running local chain needed a read-only health snapshot covering bridge, desktop WS, QQ gateway, NapCat, outbox, recent exceptions, v1 shadow, disk, and git state.
+- Files changed:
+  - `XINYU-LONG-RUN-OPERATIONS.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\XinYu-Core\examples\agent-apps\xinyu\.venv\Scripts\python.exe diagnostics\check_xinyu_health.py --json --workspace D:\XinYu`
+  - `git diff --check`
+- Result: Health reported bridge, desktop WS, QQ gateway, NapCat, outbox backlog, recent exceptions, v1 shadow errors, and disk space as `ok`. Overall status was `warn` only because the intentionally untracked user-provided `XINYU-24H-WORK-PLAN.md` remains visible to `git_state`.
+- Risk: Low; diagnostic documentation only. No runtime trace cleanup, real QQ outbound, v1 traffic expansion, persona semantics, memory body text, or runtime/memory deletion was performed.
+- Rollback: `git revert <loop-50-commit>`
+- Next: Continue with another isolated QQ parsing helper.

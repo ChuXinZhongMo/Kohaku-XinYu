@@ -30,6 +30,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Move image-sticker detection into `xinyu_qq_sticker_semantics.py`.
 - [x] Extract QQ reply/forward id parsing into `xinyu_qq_forward_context.py`.
 - [x] Extract QQ attachment material builders into `xinyu_qq_attachment_resolver.py`.
+- [x] Record 2026-05-08 11:37 long-run health checkpoint.
 
 ## Stop-Gap First
 
