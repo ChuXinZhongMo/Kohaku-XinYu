@@ -3017,3 +3017,23 @@ Workspace: D:\XinYu
 - Risk: Low; only helper ownership changed. Sentence split regex, reply bubble chunking behavior, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-140-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Loop 141 - 20:40
+
+- Task: Extract QQ reply fragment join helper into reply bubble helper module.
+- Why: `_join_reply_fragments` is pure reply bubble text assembly logic. Moving it into `xinyu_qq_reply_bubbles.py` continues the reply-bubble boundary while leaving the gateway with a direct static alias.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_reply_bubbles.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py xinyu_qq_gateway_smoke.py xinyu_qq_reply_bubbles.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_reply_bubbles.join_reply_fragments` now owns reply fragment joining and gateway `_join_reply_fragments` directly aliases it. Compile, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only helper ownership changed. ASCII spacing between merged fragments, reply bubble chunking behavior, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-141-commit>`
+- Next: Continue with another isolated gateway/core bridge slice.

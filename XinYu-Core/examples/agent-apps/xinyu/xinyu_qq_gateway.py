@@ -2807,16 +2807,7 @@ class NativeQQGateway:
             merged[0] = self._join_reply_fragments(head, merged[0])
         return merged
 
-    @staticmethod
-    def _join_reply_fragments(left: str, right: str) -> str:
-        left = left.rstrip()
-        right = right.lstrip()
-        if not left:
-            return right
-        if not right:
-            return left
-        separator = " " if re.search(r"[A-Za-z0-9]$", left) and re.match(r"[A-Za-z0-9]", right) else ""
-        return f"{left}{separator}{right}".strip()
+    _join_reply_fragments = staticmethod(xinyu_qq_reply_bubbles.join_reply_fragments)
 
     def _combined_reply_action_response(self, responses: list[dict[str, Any] | None]) -> dict[str, Any] | None:
         if not responses:

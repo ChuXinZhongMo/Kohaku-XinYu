@@ -40,3 +40,14 @@ def reply_sentence_units(text: str) -> list[str]:
     )
     units = [match.group(0) for match in pattern.finditer(text.strip()) if match.group(0).strip()]
     return units or [text.strip()]
+
+
+def join_reply_fragments(left: str, right: str) -> str:
+    left = left.rstrip()
+    right = right.lstrip()
+    if not left:
+        return right
+    if not right:
+        return left
+    separator = " " if re.search(r"[A-Za-z0-9]$", left) and re.match(r"[A-Za-z0-9]", right) else ""
+    return f"{left}{separator}{right}".strip()
