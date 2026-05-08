@@ -71,6 +71,7 @@ from xinyu_bridge_state_text import parse_iso as _parse_iso
 from xinyu_bridge_state_text import payload_path as _payload_path
 from xinyu_bridge_state_text import read_text_safe as _read_text_safe
 from xinyu_bridge_state_text import seconds_since_iso as _seconds_since_iso
+from xinyu_bridge_state_text import iso_from_timestamp as _state_iso_from_timestamp
 from xinyu_bridge_state_text import state_field as _state_field
 from xinyu_bridge_trusted_search import trusted_public_search_task_allowed
 from xinyu_bridge_values import as_bool as _as_bool
@@ -2319,8 +2320,7 @@ tags: [autonomy, maintenance, runtime]
         except Exception:
             pass
 
-    def _iso_from_timestamp(self, value: float) -> str:
-        return datetime.fromtimestamp(value).astimezone().isoformat()
+    _iso_from_timestamp = staticmethod(_state_iso_from_timestamp)
 
     async def probe(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         """No-memory diagnostic endpoint.

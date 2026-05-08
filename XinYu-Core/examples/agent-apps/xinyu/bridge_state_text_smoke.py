@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import tempfile
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from xinyu_bridge_state_text import parse_iso, payload_path, read_text_safe, seconds_since_iso, state_field
+from xinyu_bridge_state_text import iso_from_timestamp, parse_iso, payload_path, read_text_safe, seconds_since_iso, state_field
 from xinyu_core_bridge import _payload_path, _read_text_safe, _seconds_since_iso, _state_field
+from xinyu_core_bridge import XinYuBridgeRuntime
 
 
 def main() -> int:
@@ -32,6 +34,11 @@ def main() -> int:
         failures.append("seconds since ISO should not be negative")
     if seconds_since_iso("bad", default=123.0) != 123.0 or _seconds_since_iso("bad", default=5.0) != 5.0:
         failures.append("seconds since ISO default changed")
+    sample_timestamp = time.time()
+    if parse_iso(iso_from_timestamp(sample_timestamp)) is None:
+        failures.append("timestamp ISO formatting changed")
+    if XinYuBridgeRuntime._iso_from_timestamp(sample_timestamp) != iso_from_timestamp(sample_timestamp):
+        failures.append("core bridge timestamp ISO alias no longer delegates")
     if payload_path(r"D:\XinYu\a.txt") != Path(r"D:\XinYu\a.txt"):
         failures.append("plain payload path parsing changed")
     if _payload_path(r"D:\XinYu\a.txt") != payload_path(r"D:\XinYu\a.txt"):

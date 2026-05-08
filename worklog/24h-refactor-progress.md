@@ -1791,3 +1791,26 @@ Workspace: D:\XinYu
 - Risk: Low-medium; privacy gate ownership moved, but owner/trusted metadata handling, private/group distinction, trusted `group_id` compatibility values, prompt/persona semantics, long-term memory body text, QQ outbound behavior, and v1 traffic behavior were unchanged.
 - Rollback: `git revert <loop-81-commit>`
 - Next: Continue with another isolated core bridge helper extraction or state governance slice.
+
+## Loop 82 - 13:33
+
+- Task: Extract timestamp ISO helper into state text helpers.
+- Why: `_iso_from_timestamp` was a pure timestamp formatting helper still implemented on `XinYuBridgeRuntime` and used by autonomous scheduler state. Moving it into `xinyu_bridge_state_text.py` keeps time/state text helpers together while preserving the runtime compatibility entrypoint.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_state_text.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_state_text_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_bridge_state_text.py bridge_state_text_smoke.py xinyu_core_bridge.py`
+  - `.\.venv\Scripts\python.exe bridge_state_text_smoke.py` (first run failed because the smoke used timestamp `0.0`, which hits a Windows `fromtimestamp(...).astimezone()` edge; smoke was corrected to use the current timestamp)
+  - `.\.venv\Scripts\python.exe bridge_state_text_smoke.py`
+  - `.\.venv\Scripts\python.exe autonomous_state_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: Timestamp ISO formatting now lives in `xinyu_bridge_state_text.py`; `XinYuBridgeRuntime._iso_from_timestamp` remains as a compatibility static alias. Compile, corrected state text smoke, autonomous state smoke, bridge probe, and diff check passed.
+- Risk: Low; only pure timestamp helper ownership moved. Autonomous next-run formatting, autonomous state write content, prompt/persona semantics, long-term memory body text, QQ outbound behavior, and v1 traffic behavior were unchanged.
+- Rollback: `git revert <loop-82-commit>`
+- Next: Continue with another isolated core bridge helper extraction or state governance slice.

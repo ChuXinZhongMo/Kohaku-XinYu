@@ -37,6 +37,10 @@ def seconds_since_iso(value: str, *, default: float = 999999.0) -> float:
     return max(0.0, (datetime.now().astimezone() - parsed).total_seconds())
 
 
+def iso_from_timestamp(value: float) -> str:
+    return datetime.fromtimestamp(value).astimezone().isoformat()
+
+
 def payload_path(value: str) -> Path:
     text = value.strip()
     if text.lower().startswith("file://"):
