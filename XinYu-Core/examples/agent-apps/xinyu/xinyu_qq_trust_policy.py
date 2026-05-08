@@ -89,6 +89,10 @@ def is_trusted_user_id(config: Any, user_id: str) -> bool:
     return user_id in config.trusted_user_ids or user_id in config.whitelist_user_ids
 
 
+def gateway_is_trusted_user_id(gateway: Any, user_id: str) -> bool:
+    return is_trusted_user_id(gateway.config, user_id)
+
+
 def trust_level_for_user_id(config: Any, user_id: str) -> str:
     user_id = safe_str(user_id).strip()
     if user_id in config.owner_user_ids:

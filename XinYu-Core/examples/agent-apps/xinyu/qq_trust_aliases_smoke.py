@@ -8,6 +8,7 @@ from xinyu_qq_trust_policy import (
     gateway_effective_whitelist_user_ids,
     gateway_is_blocked_group_id,
     gateway_is_blocked_user_id,
+    gateway_is_trusted_user_id,
     is_trust_grant_command,
     is_trust_revoke_command,
 )
@@ -55,6 +56,14 @@ def main() -> int:
         failures.append("gateway blocked-group alias stopped blocking configured group")
     if NativeQQGateway._is_blocked_group_id(gateway, "open"):
         failures.append("gateway blocked-group alias started blocking unrelated group")
+    if NativeQQGateway._is_trusted_user_id is not gateway_is_trusted_user_id:
+        failures.append("gateway trusted-user alias no longer uses trust policy helper")
+    if not NativeQQGateway._is_trusted_user_id(gateway, "friend"):
+        failures.append("gateway trusted-user alias stopped trusting configured friend")
+    if not NativeQQGateway._is_trusted_user_id(gateway, "trusted"):
+        failures.append("gateway trusted-user alias stopped trusting whitelisted user")
+    if NativeQQGateway._is_trusted_user_id(gateway, "owner"):
+        failures.append("gateway trusted-user alias started treating owner as trusted peer")
 
     if failures:
         print("XinYu QQ trust aliases smoke failed")
