@@ -8,6 +8,7 @@ from xinyu_qq_normalizer import (
     message_kind,
     parse_cq_params,
     parse_cq_segments,
+    parse_ws_message,
     sender_name,
     strip_cq_segments,
 )
@@ -53,6 +54,12 @@ def main() -> int:
         failures.append("gateway sender name helper is not a direct method alias")
     if gateway._sender_name(sender_event) != sender_name(gateway, sender_event):
         failures.append("gateway sender name alias no longer delegates")
+
+    raw_ws_message = b'{"post_type":"message","message_type":"private"}'
+    if NativeQQGateway._parse_ws_message is not parse_ws_message:
+        failures.append("gateway websocket parser helper is not a direct method alias")
+    if gateway._parse_ws_message(raw_ws_message) != parse_ws_message(gateway, raw_ws_message):
+        failures.append("gateway websocket parser alias no longer delegates")
 
     if failures:
         print("XinYu QQ normalizer aliases smoke failed")

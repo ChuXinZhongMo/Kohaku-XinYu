@@ -2161,3 +2161,23 @@ Workspace: D:\XinYu
 - Risk: Low; only sender-name compatibility ownership changed. Sender card/nickname/user-id fallback behavior, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-99-commit>`
 - Next: Continue with another isolated QQ gateway shim or core bridge helper slice.
+
+## Loop 100 - 19:00
+
+- Task: Replace QQ websocket parser normalizer wrapper with direct method alias.
+- Why: `_parse_ws_message` only delegated to `xinyu_qq_normalizer.parse_ws_message(self, raw_message)`. Assigning the normalizer function directly preserves instance binding and removes another gateway shim.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_normalizer_aliases_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_normalizer_aliases_smoke.py xinyu_qq_normalizer.py`
+  - `.\.venv\Scripts\python.exe qq_normalizer_aliases_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `_parse_ws_message` now directly aliases `xinyu_qq_normalizer.parse_ws_message` as a bound method. Compile, focused normalizer alias smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only websocket message parser compatibility ownership changed. JSON decode behavior, ignored non-json behavior, OneBot payloads, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-100-commit>`
+- Next: Continue with another isolated QQ gateway shim or core bridge helper slice.

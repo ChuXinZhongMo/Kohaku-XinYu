@@ -690,8 +690,7 @@ class NativeQQGateway:
     _parse_cq_segments = staticmethod(xinyu_qq_normalizer.parse_cq_segments)
     _strip_cq_segments = staticmethod(xinyu_qq_normalizer.strip_cq_segments)
 
-    def _parse_ws_message(self, raw_message: Any) -> dict[str, Any] | None:
-        return xinyu_qq_normalizer.parse_ws_message(self, raw_message)
+    _parse_ws_message = xinyu_qq_normalizer.parse_ws_message
 
     def _complete_action_response(self, event: dict[str, Any], connection_id: str) -> bool:
         echo = _safe_str(event.get("echo")).strip()
