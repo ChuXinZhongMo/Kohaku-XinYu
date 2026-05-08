@@ -776,3 +776,26 @@ Workspace: D:\XinYu
 - Risk: Low; runtime diagnostic trace append formatting may become compact JSONL, but row semantics and file paths are preserved. No real QQ outbound, OneBot payload shape, trust policy, memory body text, persona semantics, or v1 traffic behavior was touched.
 - Rollback: `git revert <loop-35-commit>`
 - Next: Continue with another QQ runtime state writer or deeper config model extraction.
+
+## Loop 36 - 10:59
+
+- Task: Route QQ recent sticker runtime state through `state_service.py`.
+- Why: `runtime/qq_recent_sticker_state.json` is a runtime projection written directly by `xinyu_qq_gateway.py`; atomic JSON replacement prevents partial state files while preserving the row fields.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_recent_sticker_state_smoke.py`
+  - `XINYU-STATE-WRITE-AUDIT.md`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py state_service.py qq_recent_sticker_state_smoke.py`
+  - `.\.venv\Scripts\python.exe state_io_smoke.py`
+  - `.\.venv\Scripts\python.exe qq_recent_sticker_state_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `_write_recent_sticker_state` now calls `atomic_write_json`; field names and path are unchanged. Compile, state IO smoke, recent sticker state smoke, QQ gateway smoke, and QQ review smoke passed.
+- Risk: Low; runtime JSON state persistence only. No real QQ outbound, OneBot payload shape, trust policy, memory body text, persona semantics, or v1 traffic behavior was touched.
+- Rollback: `git revert <loop-36-commit>`
+- Next: Continue with group shadow runtime JSONL append or QQ config model extraction.

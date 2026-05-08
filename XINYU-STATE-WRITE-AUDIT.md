@@ -46,6 +46,7 @@ Scope: first-pass write-surface audit before introducing broader state governanc
 | --- | --- | --- | --- | --- |
 | Trusted user config | `xinyu_qq_gateway.config.json` | Configuration | Runtime command can persist trust changes to config | Extract trust policy before changing persistence semantics. |
 | Inbound/rich/sticker traces | `runtime/qq_inbound_trace.jsonl`, `runtime/qq_rich_context_trace.jsonl`, `runtime/qq_sticker_import_trace.jsonl` | Runtime traces | Migrated to `state_service.append_jsonl` in Loop 35 | Keep row fields; validate with `qq_runtime_trace_smoke.py` and QQ gateway smoke. |
+| Recent sticker state | `runtime/qq_recent_sticker_state.json` | Runtime projection | Migrated to `state_service.atomic_write_json` in Loop 36 | Keep row fields; validate with `qq_recent_sticker_state_smoke.py`. |
 | Group shadow observations | `runtime/group_shadow/group_shadow_observations.jsonl` | Runtime traces | Direct append JSONL | Candidate for shared JSONL append helper. |
 | Review output | Local-Scope review markdown/jsonl via `xinyu_qq_review.py` | Owner review artifact | Tool-owned output | Keep separate from runtime state service. |
 | Gateway ack spool | `runtime/gateway_ack_spool.jsonl` | Runtime transport state | Already has dedicated tests | Do not rewrite without `tests/test_gateway_ack_spool.py`. |

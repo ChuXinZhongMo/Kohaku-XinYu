@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
-from state_service import append_jsonl
+from state_service import append_jsonl, atomic_write_json
 from xinyu_gateway_ack_spool import SentAckSpool
 from xinyu_group_shadow_observer import record_group_shadow_observation
 from xinyu_image_context import build_image_context, is_image_learning_payload
@@ -2126,8 +2126,7 @@ class NativeQQGateway:
         }
         try:
             path = Path(__file__).resolve().parent / QQ_RECENT_STICKER_STATE_REL
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps(row, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+            atomic_write_json(path, row)
         except OSError as exc:
             print(f"[xinyu_qq_gateway] recent sticker state write failed: {type(exc).__name__}: {exc}", flush=True)
 
