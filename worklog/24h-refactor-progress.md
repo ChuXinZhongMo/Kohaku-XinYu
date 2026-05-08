@@ -2307,3 +2307,23 @@ Workspace: D:\XinYu
 - Risk: Low; only local-image file helper ownership changed. Local file URI conversion, image send payload construction, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-106-commit>`
 - Next: Continue with another isolated QQ gateway shim or core bridge helper slice.
+
+## Loop 107 - 19:19
+
+- Task: Replace QQ local file wrapper with direct method alias.
+- Why: `_onebot_local_file` only delegated to `xinyu_qq_attachment_resolver.onebot_local_file(self, file_path, file_name=file_name)`. Assigning the attachment resolver function directly preserves instance binding and removes another gateway shim.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/qq_attachment_material_smoke.py`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_qq_gateway.py qq_attachment_material_smoke.py xinyu_qq_attachment_resolver.py`
+  - `.\.venv\Scripts\python.exe qq_attachment_material_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_gateway_smoke.py`
+  - `.\.venv\Scripts\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `_onebot_local_file` now directly aliases `xinyu_qq_attachment_resolver.onebot_local_file` as a bound method. Compile, focused attachment material smoke, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; only local-file helper ownership changed. Local file path/name normalization, upload payload construction, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
+- Rollback: `git revert <loop-107-commit>`
+- Next: Record a long-run health checkpoint, then continue with another isolated gateway/core bridge slice.

@@ -89,6 +89,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Replace QQ sent-message ack payload wrapper with direct method alias.
 - [x] Replace QQ pending ack flush wrapper with direct method alias.
 - [x] Replace QQ local image file wrapper with direct method alias.
+- [x] Replace QQ local file wrapper with direct method alias.
 
 ## Stop-Gap First
 

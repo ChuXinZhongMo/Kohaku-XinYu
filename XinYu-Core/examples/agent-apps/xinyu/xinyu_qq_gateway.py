@@ -417,8 +417,7 @@ class NativeQQGateway:
 
     _onebot_local_image_file = xinyu_qq_attachment_resolver.onebot_local_image_file
 
-    def _onebot_local_file(self, file_path: str, *, file_name: str = "") -> tuple[str, str, str]:
-        return xinyu_qq_attachment_resolver.onebot_local_file(self, file_path, file_name=file_name)
+    _onebot_local_file = xinyu_qq_attachment_resolver.onebot_local_file
 
     @staticmethod
     def _first_text_field(data: dict[str, Any], keys: tuple[str, ...]) -> str:
