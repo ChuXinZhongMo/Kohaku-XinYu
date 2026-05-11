@@ -1,4 +1,4 @@
-# XinYu
+# Kohaku-XinYu
 
 <p align="center">
   <img src="images/xinyu-repository-banner.jpg" alt="心玉の疗养室" width="100%">
