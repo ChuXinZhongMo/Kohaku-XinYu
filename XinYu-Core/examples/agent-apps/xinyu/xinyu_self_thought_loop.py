@@ -23,6 +23,7 @@ DEFAULT_MIN_INTERVAL_SECONDS = 1800
 DEFAULT_STALE_TURN_SECONDS = 300
 DEFAULT_PREVIEW_CHARS = 180
 REFLECTION_SHARE_FAMILY_COOLDOWN_SECONDS = 21600
+REFLECTION_SHARE_DISMISSAL_COOLDOWN_SECONDS = 14 * 86400
 LEARNING_LOOP_FOCUS_COOLDOWN_SECONDS = 21600
 RESEARCH_FOCUS_COOLDOWN_SECONDS = 21600
 
@@ -77,6 +78,37 @@ ABSTRACT_MARKERS = readable_markers(
     "\u7cfb\u7edf",
     "\u4eba\u683c\u662f\u5426",
     "\u60c5\u611f\u662f\u5426",
+)
+
+REFLECTION_DISMISSAL_MARKERS = readable_markers(
+    "drop it",
+    "let it go",
+    "stop thinking about it",
+    "stop bringing it up",
+    "do not bring it up",
+    "don't bring it up",
+    "do not ask again",
+    "don't ask again",
+    "annoying",
+    "too much",
+    "算了",
+    "别想了",
+    "别想着",
+    "别想着了",
+    "别惦记",
+    "不惦记",
+    "别提",
+    "别再提",
+    "不用再提",
+    "不用管",
+    "不要再问",
+    "别再问",
+    "别重复",
+    "一直惦记",
+    "有点问题",
+    "有问题",
+    "太烦",
+    "够了",
 )
 
 QUESTION_SUFFIXES = ("?", "\uff1f")
@@ -219,9 +251,9 @@ def _select_focus(snapshot: dict[str, Any], *, checked_at: str, notes: list[str]
         focus = _focus(
             "codex_followup",
             label,
-            "Codex timed out",
+            "background code task timed out",
             "diagnostic_decision",
-            "Codex timed out. Should I stage it for later review or retry with a smaller scope?",
+            "后台代码任务超时了。要我先留到本地复查，还是缩小范围再跑一次？",
             "owner_decision",
             "Stage the task for later review or retry with a narrower request.",
         )
@@ -231,9 +263,9 @@ def _select_focus(snapshot: dict[str, Any], *, checked_at: str, notes: list[str]
         focus = _focus(
             "codex_followup",
             report_label,
-            "Codex report finished",
+            "background code task finished",
             "report_completion",
-            f"Codex finished {report_label}. Do you want me to integrate the result or leave the report as is?",
+            f"后台代码任务跑完了：{report_label}。要我整合结果，还是只保留这份报告？",
             "owner_decision",
             "Integrate the result or keep it as a report-only completion.",
         )
@@ -424,6 +456,9 @@ def _select_reflection_focus(
     items = _extract_reflection_items(snapshot.get("reflection_queue", ""))
     if not items:
         return None
+    if _dismissed_reflection_share_exists(snapshot, checked_at=checked_at):
+        notes.append("reflection_share_owner_dismissed")
+        return None
     if _recent_reflection_share_exists(snapshot, checked_at=checked_at):
         notes.append("reflection_share_family_cooldown")
         return None
@@ -485,6 +520,32 @@ def _recent_reflection_share_exists(snapshot: dict[str, Any], *, checked_at: str
     created_at = _extract_value(state, "created_at", _extract_value(state, "updated_at", ""))
     age = _age_seconds(created_at, checked_at)
     return age >= 0 and age < REFLECTION_SHARE_FAMILY_COOLDOWN_SECONDS
+
+
+def _dismissed_reflection_share_exists(snapshot: dict[str, Any], *, checked_at: str) -> bool:
+    state = str(snapshot.get("proactive_request") or "")
+    if _extract_value(state, "kind", "none") != "reflection_share":
+        return False
+    if _clean_token(_extract_value(state, "status", "none")) != "answered":
+        return False
+    reply_text = " ".join(
+        _extract_value_raw(state, field, "")
+        for field in (
+            "owner_reply_preview",
+            "last_owner_reply_preview",
+            "feedback",
+        )
+    )
+    if not _owner_dismissed_reflection(reply_text):
+        return False
+    replied_at = _extract_value(state, "owner_replied_at", _extract_value(state, "created_at", ""))
+    age = _age_seconds(replied_at, checked_at)
+    return age < 0 or age < REFLECTION_SHARE_DISMISSAL_COOLDOWN_SECONDS
+
+
+def _owner_dismissed_reflection(text: str) -> bool:
+    lowered = (text or "").lower()
+    return any(marker.lower() in lowered for marker in REFLECTION_DISMISSAL_MARKERS)
 
 
 def _extract_reflection_items(text: str) -> list[dict[str, str]]:
@@ -553,7 +614,8 @@ def _reflection_owner_relevant(text: str) -> bool:
 
 
 def _reflection_codex_topic(text: str) -> bool:
-    return any(marker in text for marker in ("Codex", "codex", "学习任务", "超时", "no_url"))
+    lowered = text.lower()
+    return "codex" in lowered or "no_url" in lowered or ("学习任务" in text and "超时" in text)
 
 
 def _current_codex_status_supports_reflection(snapshot: dict[str, Any]) -> bool:
@@ -561,7 +623,7 @@ def _current_codex_status_supports_reflection(snapshot: dict[str, Any]) -> bool:
     runtime = str(snapshot.get("runtime_presence") or "")
     status = _clean_token(codex.get("status") or _extract_value(runtime, "codex_status", "unknown"))
     timed_out = _as_bool(codex.get("timed_out")) or _extract_value(runtime, "codex_timed_out", "false").lower() == "true"
-    return timed_out or status in {"timed_out", "failed", "finished"}
+    return timed_out or status in {"timed_out", "failed"}
 
 
 def _reflection_topic_key(topic: str) -> str:
@@ -604,7 +666,7 @@ def _reflection_architecture_defect_message(joined: str) -> str | None:
         )
     )
     if architecture_defect or (context_defect and voice_defect):
-        return "我还在想你指出的两件事：我有时接不上上下文，声音又会发硬。这个不该只靠我闭门想；要不要我让 Codex 对着代码和记录查一轮？"
+        return "我还在想你指出的两件事：我有时接不上上下文，声音又会发硬。这个不该只靠我闭门想；要不要我把它转成一次代码和聊天记录自查？"
     return None
 
 
@@ -646,8 +708,8 @@ def _reflection_share_message(item: dict[str, str]) -> str:
     architecture_message = _reflection_architecture_defect_message(joined)
     if architecture_message:
         return architecture_message
-    if any(marker in joined for marker in ("Codex", "学习任务", "超时", "no_url")):
-        return "那个 Codex 学习超时的事我还没当结束。我可以继续慢慢补，也可以先放后台；你想让我怎么处理？"
+    if _reflection_codex_topic(joined):
+        return "none"
     if any(marker in joined for marker in ("模板", "接待腔", "机械", "AI味", "不像人")):
         return "你说我模板味这件事还在我这边卡着。下次这种时候，我是不是该少解释，直接换一句人话？"
     if any(marker in joined for marker in ("被记住", "记住", "记忆留痕")):

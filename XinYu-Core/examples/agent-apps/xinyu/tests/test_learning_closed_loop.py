@@ -352,7 +352,7 @@ def test_self_thought_reflection_share_humanizes_internal_architecture_label(tmp
     assert "owner flagged" not in concrete_question
     assert "architecture defects" not in concrete_question
     assert "接不上上下文" in concrete_question
-    assert "Codex" in concrete_question
+    assert "自查" in concrete_question
 
 
 def test_self_thought_research_handoff_without_results_does_not_starve_dream(tmp_path: Path) -> None:

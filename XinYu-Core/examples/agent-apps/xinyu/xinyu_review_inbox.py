@@ -26,6 +26,15 @@ LEARNING_QUALITY_REL = Path("memory/knowledge/learning_quality_state.md")
 CURSOR_VERSION = 1
 DECISION_VERSION = 1
 DEFAULT_TTL_SECONDS = 24 * 3600
+VISIBLE_ENQUEUE_REASONS = {
+    "owner_review_request",
+    "owner_requested_review",
+    "manual_owner_review",
+    "command_without_cursor",
+    "expired_cursor",
+    "command_after_decision",
+    "command_stale_refresh",
+}
 
 
 def _now() -> str:
@@ -341,15 +350,23 @@ def _cursor_expired(cursor: dict[str, Any], *, now: str | None = None) -> bool:
 def _render_card(cursor: dict[str, Any]) -> str:
     items = [item for item in cursor.get("items", []) if isinstance(item, dict)]
     lines = [
-        f"[Review Inbox] {len(items)} item(s) need owner review. batch={_safe_str(cursor.get('batch_id'), 'unknown')}",
+        f"有 {len(items)} 条维护项需要你确认。",
     ]
     for item in items:
+        source = {
+            "voice": "表达习惯",
+            "learning": "学习质量",
+        }.get(_safe_str(item.get("source_kind")), _one_line(item.get("source_kind"), limit=32))
         lines.append(
-            f"{item.get('index')}. {_one_line(item.get('source_kind'), limit=32)}: "
+            f"{item.get('index')}. {source}: "
             f"{_one_line(item.get('title'), limit=80)} - {_one_line(item.get('summary'), limit=150)}"
         )
-    lines.append("Reply: !ok all | !rej 1 | !mod 2 <rewrite>")
+    lines.append("要处理时可以回：!ok all / !rej 1 / !mod 2 <改写>")
     return " ".join(lines)
+
+
+def _visible_enqueue_allowed(reason: str) -> bool:
+    return re.sub(r"[^a-z0-9_:-]+", "_", _safe_str(reason).strip().lower()).strip("_") in VISIBLE_ENQUEUE_REASONS
 
 
 def _write_state(
@@ -463,7 +480,8 @@ def _generate_locked(
 
     queued = {"queued": False, "message_id": "", "notes": ["enqueue_skipped"]}
     owner = _one_line(owner_user_id, limit=64, default="")
-    if enqueue and owner:
+    visible_enqueue = bool(enqueue and owner and _visible_enqueue_allowed(reason))
+    if visible_enqueue:
         queued = enqueue_qq_outbox_message(
             root,
             user_id=owner,
@@ -474,8 +492,11 @@ def _generate_locked(
                 "batch_id": cursor.get("batch_id"),
                 "batch_hash": cursor.get("batch_hash"),
                 "control_plane": True,
+                "visible_control_plane_allowed": True,
             },
         )
+    elif enqueue and owner:
+        queued = {"queued": False, "message_id": "", "notes": ["maintenance_enqueue_suppressed"]}
 
     _write_state(
         root,
@@ -515,7 +536,7 @@ def run_review_inbox_maintenance(
     owner_user_id: str = "",
     max_items: int = 3,
     ttl_seconds: int = DEFAULT_TTL_SECONDS,
-    enqueue: bool = True,
+    enqueue: bool = False,
     reason: str = "maintenance",
 ) -> dict[str, Any]:
     root = root.resolve()
@@ -758,4 +779,3 @@ def handle_review_inbox_command(root: Path, payload: dict[str, Any] | None = Non
             "refreshed": refreshed,
             "notes": ["review_command_processed"],
         }
-

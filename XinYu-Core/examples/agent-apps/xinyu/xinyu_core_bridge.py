@@ -2114,6 +2114,7 @@ class XinYuBridgeRuntime:
                 self.xinyu_dir,
                 owner_user_id=self._owner_private_user_id(),
                 max_items=3,
+                enqueue=False,
                 reason="autonomous_maintenance",
             )
             notes.append(

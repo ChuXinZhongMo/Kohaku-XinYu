@@ -23,6 +23,7 @@ DEFAULT_MAX_CHARS = 180
 DEFAULT_INITIAL_MESSAGE_BUDGET = 3
 DEFAULT_FOLLOWUP_BUDGET = 6
 DEFAULT_NO_REPLY_FOLLOWUP_BUDGET = 2
+REFLECTION_SHARE_DISMISSAL_COOLDOWN_SECONDS = 14 * 86400
 
 ALLOWED_SELF_THOUGHT_INTENTIONS = {
     "ask_owner",
@@ -80,6 +81,37 @@ ABSTRACT_MARKERS = readable_markers(
     "\u7cfb\u7edf",
     "\u4eba\u683c\u662f\u5426",
     "\u60c5\u611f\u662f\u5426",
+)
+
+REFLECTION_DISMISSAL_MARKERS = readable_markers(
+    "drop it",
+    "let it go",
+    "stop thinking about it",
+    "stop bringing it up",
+    "do not bring it up",
+    "don't bring it up",
+    "do not ask again",
+    "don't ask again",
+    "annoying",
+    "too much",
+    "算了",
+    "别想了",
+    "别想着",
+    "别想着了",
+    "别惦记",
+    "不惦记",
+    "别提",
+    "别再提",
+    "不用再提",
+    "不用管",
+    "不要再问",
+    "别再问",
+    "别重复",
+    "一直惦记",
+    "有点问题",
+    "有问题",
+    "太烦",
+    "够了",
 )
 
 _FIELD_RE = re.compile(r"(?m)^\s*-\s*([A-Za-z0-9_]+):\s*(.*?)\s*$")
@@ -148,6 +180,8 @@ def run_proactive_request_loop(
     status = _request_status(request, gates, delivery_level=delivery_level)
     if status == "blocked":
         notes.append("gate_blocked")
+        if gates.get("owner_not_dismissed_reflection") == "false":
+            notes.append("reflection_share_owner_dismissed")
     elif status == "none":
         notes.append("no_request_candidate")
     request["status"] = status
@@ -297,6 +331,10 @@ def _evaluate_gates(
     dream_share = request.get("focus_kind") == "dream_residue" and request.get("intention") == "share_dream"
     reflection_share = request.get("focus_kind") == "reflection_queue" and request.get("intention") == "share_reflection"
     dream_source_allowed = request.get("focus_kind") != "dream_residue" or dream_share
+    owner_dismissed_reflection = reflection_share and _owner_dismissed_reflection_share(
+        previous_state,
+        evaluated_at=evaluated_at,
+    )
     tool_artifact = visible_text_has_tool_artifact(
         " ".join(
             str(request.get(key) or "")
@@ -311,6 +349,7 @@ def _evaluate_gates(
         "source_allowed": _bool_text(source_allowed and dream_source_allowed),
         "not_generic_attention": _bool_text(dream_share or reflection_share or not _generic_attention_check(question)),
         "not_abstract": _bool_text(dream_share or reflection_share or not _abstract_request(question)),
+        "owner_not_dismissed_reflection": _bool_text(not owner_dismissed_reflection),
         "dream_framed_as_dream": _bool_text(not dream_share or _dream_share_boundary_check(question)),
         "not_tool_artifact": _bool_text(not tool_artifact),
         "not_duplicate": _bool_text(not duplicate),
@@ -338,6 +377,7 @@ def _request_status(request: dict[str, Any], gates: dict[str, str], *, delivery_
         "source_allowed",
         "not_generic_attention",
         "not_abstract",
+        "owner_not_dismissed_reflection",
         "dream_framed_as_dream",
         "not_tool_artifact",
         "cooldown_open",
@@ -364,6 +404,8 @@ def _preserved_previous_request(
         return None
     previous_status = _extract_value(previous_state, "status", "")
     if previous_status not in {"claimed", "sent", "answered"}:
+        return None
+    if _owner_dismissed_reflection_share(previous_state, evaluated_at=evaluated_at):
         return None
     if visible_text_has_tool_artifact(previous_state):
         return None
@@ -450,6 +492,7 @@ tags: [proactive, request, owner-private, boundary]
 - source_allowed: {gates.get('source_allowed', 'false')}
 - not_generic_attention: {gates.get('not_generic_attention', 'false')}
 - not_abstract: {gates.get('not_abstract', 'false')}
+- owner_not_dismissed_reflection: {gates.get('owner_not_dismissed_reflection', 'true')}
 - dream_framed_as_dream: {gates.get('dream_framed_as_dream', 'false')}
 - not_tool_artifact: {gates.get('not_tool_artifact', 'false')}
 - not_duplicate: {gates.get('not_duplicate', 'false')}
@@ -547,6 +590,31 @@ def _abstract_request(text: str) -> bool:
     if len(text) > DEFAULT_MAX_CHARS:
         return True
     return any(marker.lower() in lowered for marker in ABSTRACT_MARKERS)
+
+
+def _owner_dismissed_reflection_share(previous_state: str, *, evaluated_at: str) -> bool:
+    if _extract_value(previous_state, "kind", "none") != "reflection_share":
+        return False
+    if _extract_value(previous_state, "status", "none") != "answered":
+        return False
+    reply_text = " ".join(
+        _extract_value_raw(previous_state, field, "")
+        for field in (
+            "owner_reply_preview",
+            "last_owner_reply_preview",
+            "feedback",
+        )
+    )
+    if not _owner_dismissed_reflection(reply_text):
+        return False
+    replied_at = _extract_value(previous_state, "owner_replied_at", _extract_value(previous_state, "created_at", ""))
+    age = _age_seconds(replied_at, evaluated_at)
+    return age < REFLECTION_SHARE_DISMISSAL_COOLDOWN_SECONDS
+
+
+def _owner_dismissed_reflection(text: str) -> bool:
+    lowered = (text or "").lower()
+    return any(marker.lower() in lowered for marker in REFLECTION_DISMISSAL_MARKERS)
 
 
 def _dream_share_boundary_check(text: str) -> bool:

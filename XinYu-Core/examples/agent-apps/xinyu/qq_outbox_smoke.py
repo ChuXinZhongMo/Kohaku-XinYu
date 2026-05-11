@@ -269,6 +269,22 @@ def main() -> int:
         if "last_failed_at: none" in failed_state:
             failures.append("failed dispatch state did not record last_failed_at")
 
+        control_queued = enqueue_qq_outbox_message(
+            root,
+            user_id="42",
+            message="[Review Inbox] internal command card",
+            source="review_inbox",
+            dedupe_key="review-control-plane-suppressed",
+            metadata={"control_plane": True},
+        )
+        if not control_queued.get("queued"):
+            failures.append(f"control-plane suppression setup was not queued: {control_queued}")
+        control_claim = claim_next_qq_outbox_message(root, {"claim_id": "claim-control-plane", "adapter": "smoke"})
+        if control_claim.get("message_claimed"):
+            failures.append(f"control-plane message should not be claimed for visible QQ delivery: {control_claim}")
+        if "control_plane_suppressed:1" not in control_claim.get("notes", []):
+            failures.append(f"control-plane suppression note missing: {control_claim}")
+
         original_replace = outbox_module.os.replace
         attempts = {"count": 0}
         transient_path = root / "memory/context/transient-state.md"

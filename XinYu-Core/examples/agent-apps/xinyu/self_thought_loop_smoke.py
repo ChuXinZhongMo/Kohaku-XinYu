@@ -303,7 +303,7 @@ def main() -> int:
         )
         if "owner flagged" in concrete_question or "architecture defects" in concrete_question:
             failures.append(f"reflection share leaked internal label into visible question: {concrete_question}")
-        if "接不上上下文" not in concrete_question or "Codex" not in concrete_question:
+        if "接不上上下文" not in concrete_question or "自查" not in concrete_question:
             failures.append(f"reflection share did not humanize architecture defect question: {concrete_question}")
         for marker in (
             "focus_kind: reflection_queue",
@@ -431,6 +431,46 @@ def main() -> int:
             failures.append(f"recent reflection share should block another reflection share: {result}")
         if "reflection_share_family_cooldown" not in result["notes"]:
             failures.append(f"reflection family cooldown note missing: {result['notes']}")
+
+    with tempfile.TemporaryDirectory(prefix="xinyu-self-thought-reflection-dismissed-") as tmp:
+        root = Path(tmp)
+        _seed_clear_posture(root)
+        _write(
+            root / "memory/context/proactive_request_state.md",
+            """# Proactive Request State
+
+## Current Request
+- created_at: 2026-05-01T13:00:00+08:00
+- status: answered
+- kind: reflection_share
+
+## Last Owner Reply To Proactive
+- owner_replied_at: 2026-05-01T13:05:00+08:00
+- owner_reply_preview: 你这个一直惦记有点问题啊
+""",
+        )
+        _write(
+            root / "memory/reflection/reflection_queue.md",
+            """# Reflection Queue
+
+## item-2026-05-01-003
+- topic: owner flagged shallow context and mechanical voice as persistent architecture defects
+- source: memory/emotions/event_log.md
+- priority: high
+- boundary: use as calibration pressure
+
+## item-2026-05-01-001
+- topic: owner flagged shallow context and mechanical voice as persistent architecture defects
+- source: memory/emotions/event_log.md
+- priority: high
+- boundary: use as calibration pressure
+""",
+        )
+        result = run_self_thought_loop(root, checked_at="2026-05-02T13:20:00+08:00")
+        if result["candidate_enabled"] or result["focus_kind"] == "reflection_queue":
+            failures.append(f"dismissed reflection share should not be selected again: {result}")
+        if "reflection_share_owner_dismissed" not in result["notes"]:
+            failures.append(f"dismissed reflection note missing: {result['notes']}")
 
     with tempfile.TemporaryDirectory(prefix="xinyu-self-thought-research-") as tmp:
         root = Path(tmp)

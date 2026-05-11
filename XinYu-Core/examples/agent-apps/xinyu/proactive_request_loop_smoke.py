@@ -217,6 +217,40 @@ def main() -> int:
             if marker not in state:
                 failures.append(f"reflection share request missing marker: {marker}")
 
+    with tempfile.TemporaryDirectory(prefix="xinyu-proreq-reflection-dismissed-") as tmp:
+        root = Path(tmp)
+        _seed_clear_posture(root)
+        _write(
+            root / "memory/context/proactive_request_state.md",
+            """# Proactive Request State
+
+## Current Request
+- created_at: 2026-05-01T13:00:00+08:00
+- status: answered
+- kind: reflection_share
+
+## Last Owner Reply To Proactive
+- owner_replied_at: 2026-05-01T13:05:00+08:00
+- owner_reply_preview: 你这个一直惦记有点问题啊
+""",
+        )
+        _seed_self_thought(
+            root,
+            focus_kind="reflection_queue",
+            intention="share_reflection",
+            question="我还在想这件事：说话和连续性问题。要不要我继续顺着它查原因？",
+            requested_action="owner_response_optional",
+            evidence_label="reflection queue strong topic: owner flagged shallow context and mechanical voice",
+            evidence_hash="sha256:1234feed1234feed",
+        )
+        result = run_proactive_request_loop(root, evaluated_at="2026-05-02T13:10:00+08:00")
+        state = _read(root / "memory/context/proactive_request_state.md")
+        if result["status"] != "blocked":
+            failures.append(f"dismissed reflection share should be blocked: {result}")
+        for marker in ("owner_not_dismissed_reflection: false", "reflection_share_owner_dismissed"):
+            if marker not in state and marker not in result["notes"]:
+                failures.append(f"dismissed reflection request missing marker: {marker}")
+
     with tempfile.TemporaryDirectory(prefix="xinyu-proreq-action-sanitize-") as tmp:
         root = Path(tmp)
         _seed_clear_posture(root)

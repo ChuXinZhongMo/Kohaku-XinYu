@@ -73,13 +73,25 @@ def main() -> int:
 
         first = run_review_inbox_maintenance(root, owner_user_id="42", max_items=3)
         assert first["pending_count"] == 3
-        assert first["queued"] is True
+        assert first["queued"] is False
+        assert not (root / "memory/context/qq_outbox_queue.json").exists()
         cursor = _read_json(root / "memory/context/review_inbox_cursor.json")
         assert cursor["items"][0]["source_kind"] == "voice"
         assert cursor["items"][1]["source_kind"] == "learning"
         assert cursor["items"][2]["source_kind"] == "voice"
+
+        visible = run_review_inbox_maintenance(
+            root,
+            owner_user_id="42",
+            max_items=3,
+            enqueue=True,
+            reason="owner_review_request",
+        )
+        assert visible["queued"] is True
         queue = _read_json(root / "memory/context/qq_outbox_queue.json")
         assert queue["items"][0]["source"] == "review_inbox"
+        assert "[Review Inbox]" not in queue["items"][0]["message"]
+        assert "batch=" not in queue["items"][0]["message"]
         assert "!ok all" in queue["items"][0]["message"]
 
         mod_many = handle_review_inbox_command(
@@ -138,4 +150,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

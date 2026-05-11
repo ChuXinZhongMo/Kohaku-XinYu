@@ -454,6 +454,23 @@ def _seconds_since(value: str, default: float = 999999.0) -> float:
     return max(0.0, (datetime.now().astimezone() - parsed).total_seconds())
 
 
+def _metadata_bool(metadata: dict[str, Any], key: str) -> bool:
+    value = metadata.get(key)
+    if isinstance(value, bool):
+        return value
+    return _safe_str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _control_plane_visible_delivery_suppressed(item: dict[str, Any]) -> bool:
+    metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+    if not _metadata_bool(metadata, "control_plane"):
+        return False
+    return not (
+        _metadata_bool(metadata, "visible_control_plane_allowed")
+        or _metadata_bool(metadata, "qq_visible_control_plane_allowed")
+    )
+
+
 def claim_next_qq_outbox_message(root: Path, payload: dict[str, Any] | None = None) -> dict[str, Any]:
     payload = payload or {}
     claim_id = _one_line(payload.get("claim_id") or f"qq-gateway-{int(time.time())}", limit=120)
@@ -473,9 +490,16 @@ def claim_next_qq_outbox_message(root: Path, payload: dict[str, Any] | None = No
                 item["updated_at"] = _now()
 
         selected: dict[str, Any] | None = None
+        suppressed_count = 0
         for item in items:
             status = _safe_str(item.get("status"), "queued")
             attempts = int(item.get("attempts") or 0)
+            if status in {"queued", "failed"} and _control_plane_visible_delivery_suppressed(item):
+                item["status"] = "suppressed"
+                item["updated_at"] = _now()
+                item["adapter_error"] = "control_plane_visible_delivery_suppressed"
+                suppressed_count += 1
+                continue
             if status == "queued":
                 selected = item
                 break
@@ -486,8 +510,12 @@ def claim_next_qq_outbox_message(root: Path, payload: dict[str, Any] | None = No
         if selected is None:
             data["items"] = items
             _write_json(path, data)
-            _write_state(root, data, last_event="claim_empty")
-            return {"accepted": True, "message_claimed": False, "claim_id": claim_id, "notes": ["empty"]}
+            last_event = "suppress_control_plane" if suppressed_count else "claim_empty"
+            _write_state(root, data, last_event=last_event)
+            notes = ["empty"]
+            if suppressed_count:
+                notes.append(f"control_plane_suppressed:{suppressed_count}")
+            return {"accepted": True, "message_claimed": False, "claim_id": claim_id, "notes": notes}
 
         selected["status"] = "claimed"
         selected["attempts"] = int(selected.get("attempts") or 0) + 1
