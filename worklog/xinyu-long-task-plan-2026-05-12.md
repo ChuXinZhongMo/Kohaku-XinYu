@@ -105,7 +105,7 @@ Stop and report before continuing if any of these occur:
 ### P1 - Continue QQ Gateway Decomposition
 
 - [ ] Extract the next isolated QQ reply bubble/outbox helper if gateway still owns pure reply bubble logic.
-- [ ] Audit remaining `NativeQQGateway` pure methods and classify them into owner modules.
+- [x] Audit remaining `NativeQQGateway` pure methods and classify them into owner modules.
 - [ ] Extract one low-risk QQ runtime/outbox helper from `xinyu_qq_gateway.py` into the existing flat helper modules.
 - [ ] Add or extend one focused QQ smoke that pins the extracted helper alias.
 - [ ] Update `XINYU-VALIDATION-MATRIX.md` for any new QQ slice gate.

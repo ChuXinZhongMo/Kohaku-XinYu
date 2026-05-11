@@ -3137,3 +3137,20 @@ Workspace: D:\XinYu
 - Risk: Low; the moved logic preserves the existing thresholds, suppressed sources, structured-reply suppression, and outbox/private-message gating. No real QQ outbound behavior, prompt/persona semantics, long-term memory body text, or v1 traffic scope changed.
 - Rollback: `git revert <loop-145-commit>`
 - Next: Audit remaining pure `NativeQQGateway` helper methods and classify owner modules before selecting the next low-risk extraction.
+
+## Loop 146 - 2026-05-12
+
+- Task: Audit remaining `NativeQQGateway` helper methods after Loop 145.
+- Why: The gateway already has many direct helper aliases, but the next automatic slice should be chosen from evidence rather than another broad pass over the file.
+- Files changed:
+  - `worklog/qq-gateway-helper-audit-2026-05-12.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/xinyu-long-task-plan-2026-05-12.md`
+  - `worklog/24h-refactor-progress.md`
+- Commands:
+  - `rg -n "^    def _|^    _[A-Za-z0-9_]+\\s*=|staticmethod\\(|gateway_" XinYu-Core\\examples\\agent-apps\\xinyu\\xinyu_qq_gateway.py`
+  - `git diff --check`
+- Result: Remaining gateway helpers are classified into safe near-term candidates, conditional candidates, and keep-in-gateway methods. The next safe code slice is `_visible_reply_bubbles` and `_outbox_visible_reply_bubbles` into `xinyu_qq_reply_bubbles.py`.
+- Risk: Documentation-only audit. No runtime behavior changed.
+- Rollback: `git revert <loop-146-commit>`
+- Next: Extract QQ reply bubble orchestration helpers as a focused code slice.
