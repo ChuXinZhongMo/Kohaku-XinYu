@@ -7,11 +7,13 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from xinyu_runtime_security import bridge_source_version
+from xinyu_runtime_security import bridge_source_version, source_file_digest, source_files_digest
 
 
 HARD_CHECKS = {
     "core_bridge",
+    "core_bridge_runtime_source_digest",
+    "core_bridge_source_digest",
     "core_bridge_version",
     "xinyu_qq_gateway_6199",
     "napcat_webui_6099",
@@ -25,6 +27,7 @@ HARD_CHECKS = {
     "qq_gateway_whitelist",
     "qq_gateway_group_trigger",
     "proactive_gate_readable",
+    "runtime_text_utf8_health",
 }
 
 
@@ -95,6 +98,32 @@ def main() -> int:
     running_version = str(status.get("core", {}).get("version", "unknown"))
     if running_version != expected_version:
         failures.append(f"core version mismatch: running={running_version} source={expected_version}")
+    expected_source_digest = source_file_digest(root / "xinyu_core_bridge.py")
+    running_source_digest = str(status.get("core", {}).get("source_digest", "unknown"))
+    if running_source_digest != expected_source_digest:
+        failures.append(
+            "core source digest mismatch: "
+            f"running={running_source_digest} source={expected_source_digest}"
+        )
+    expected_runtime_source_digest = source_files_digest(
+        (
+            root / "xinyu_core_bridge.py",
+            root / "xinyu_bridge_turn_pipeline.py",
+            root / "xinyu_bridge_action_routes.py",
+            root / "xinyu_runtime_context.py",
+            root / "xinyu_memory_braid.py",
+            root / "xinyu_turn_coherence.py",
+            root / "xinyu_initiative_spine.py",
+            root / "xinyu_emotion_council.py",
+            root / "xinyu_speech_controller.py",
+        )
+    )
+    running_runtime_source_digest = str(status.get("core", {}).get("runtime_source_digest", "unknown"))
+    if running_runtime_source_digest != expected_runtime_source_digest:
+        failures.append(
+            "core runtime source digest mismatch: "
+            f"running={running_runtime_source_digest} source={expected_runtime_source_digest}"
+        )
 
     raw_path_hits = [
         text

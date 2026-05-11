@@ -208,7 +208,12 @@ from xinyu_runtime_presence import (
     read_runtime_presence_summary,
 )
 from xinyu_runtime_context import build_goldmark_auth_prompt_block
-from xinyu_runtime_security import enforce_bridge_token_guard, enforce_llm_http_guard
+from xinyu_runtime_security import (
+    enforce_bridge_token_guard,
+    enforce_llm_http_guard,
+    source_file_digest,
+    source_files_digest,
+)
 from xinyu_review_inbox import handle_review_inbox_command, run_review_inbox_maintenance
 from xinyu_self_code_approval import (
     consume_self_code_approval,
@@ -239,7 +244,22 @@ from xinyu_voice_trial_overlay import build_voice_trial_overlay_prompt_block, re
 from xinyu_watched_sources import run_watched_source_check
 
 
-BRIDGE_VERSION = "0.8.96"
+BRIDGE_VERSION = "0.8.99"
+BRIDGE_SOURCE_PATH = Path(__file__).resolve()
+BRIDGE_SOURCE_DIGEST = source_file_digest(BRIDGE_SOURCE_PATH)
+BRIDGE_RUNTIME_SOURCE_DIGEST = source_files_digest(
+    (
+        BRIDGE_SOURCE_PATH,
+        BRIDGE_SOURCE_PATH.with_name("xinyu_bridge_turn_pipeline.py"),
+        BRIDGE_SOURCE_PATH.with_name("xinyu_bridge_action_routes.py"),
+        BRIDGE_SOURCE_PATH.with_name("xinyu_runtime_context.py"),
+        BRIDGE_SOURCE_PATH.with_name("xinyu_memory_braid.py"),
+        BRIDGE_SOURCE_PATH.with_name("xinyu_turn_coherence.py"),
+        BRIDGE_SOURCE_PATH.with_name("xinyu_initiative_spine.py"),
+        BRIDGE_SOURCE_PATH.with_name("xinyu_emotion_council.py"),
+        BRIDGE_SOURCE_PATH.with_name("xinyu_speech_controller.py"),
+    )
+)
 CODEX_DEFAULT_TIMEOUT_SECONDS = 3600
 CODEX_VISIBLE_WINDOW_TITLE = "Xinyu codex"
 CODEX_GENERATED_IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".webp"})
@@ -818,6 +838,8 @@ class XinYuBridgeRuntime:
             "ok": True,
             "bridge": "xinyu_core_bridge",
             "version": BRIDGE_VERSION,
+            "source_digest": BRIDGE_SOURCE_DIGEST,
+            "runtime_source_digest": BRIDGE_RUNTIME_SOURCE_DIGEST,
             "xinyu_dir": str(self.xinyu_dir),
             "memory_root": str(self.memory_root),
             "sessions": len(self._sessions),

@@ -9,6 +9,9 @@ import urllib.request
 from pathlib import Path
 
 
+NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
 AUTONOMOUS_VOLATILE_MEMORY_PATTERNS = (
     "context/autonomous_mind_loop_",
     "context/desktop_thoughts_",
@@ -50,7 +53,7 @@ def request_json(url: str, *, payload: dict[str, str] | None = None, token: str 
         headers["Content-Type"] = "application/json; charset=utf-8"
         method = "POST"
     request = urllib.request.Request(url, data=data, headers=headers, method=method)
-    with urllib.request.urlopen(request, timeout=20) as response:
+    with NO_PROXY_OPENER.open(request, timeout=20) as response:
         return json.loads(response.read().decode("utf-8"))
 
 

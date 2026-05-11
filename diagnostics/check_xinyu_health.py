@@ -17,6 +17,7 @@ from typing import Any
 
 DEFAULT_APP_REL = Path("XinYu-Core/examples/agent-apps/xinyu")
 DEFAULT_RECENT_WINDOW_MINUTES = 120
+NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 EXCEPTION_RE = re.compile(r"(?i)(traceback|exception|error|failed)")
 NO_ERROR_VALUES = frozenset({"", "0", "false", "none", "null", "ok", "no_error"})
 BENIGN_TEXT_EXCEPTION_MARKERS = (
@@ -25,6 +26,9 @@ BENIGN_TEXT_EXCEPTION_MARKERS = (
     "EOFError: connection closed while reading HTTP request line",
     "EOFError: stream ends after 0 bytes, before end of line",
 )
+TEXT_LOG_ACTIVE_START_MARKERS = {
+    "xinyu_qq_gateway.out.log": "[xinyu_qq_gateway] listening on",
+}
 
 
 @dataclass
@@ -146,6 +150,14 @@ def _text_exception_hits(text: str) -> int:
     return hits
 
 
+def _active_text_log_tail(path: Path, text: str) -> str:
+    marker = TEXT_LOG_ACTIVE_START_MARKERS.get(path.name.lower())
+    if not marker:
+        return text
+    index = text.rfind(marker)
+    return text[index:] if index >= 0 else text
+
+
 def _extract_assignment(path: Path, name: str) -> str:
     text = _read_text(path)
     match = re.search(rf"(?m)^{re.escape(name)}\s*=\s*['\"]([^'\"]+)['\"]", text)
@@ -188,7 +200,7 @@ def _websocket_probe(host: str, port: int, path: str = "/", timeout: float = 0.7
 
 def _http_json(url: str, timeout: float = 2.0) -> tuple[bool, dict[str, Any] | str]:
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
+        with NO_PROXY_OPENER.open(url, timeout=timeout) as response:
             data = json.loads(response.read().decode("utf-8", errors="replace"))
             return True, data if isinstance(data, dict) else {"value": data}
     except urllib.error.HTTPError as exc:
@@ -269,7 +281,7 @@ def _recent_exception_count(app_root: Path, *, window_minutes: int = DEFAULT_REC
         if path.suffix.lower() == ".jsonl":
             path_hits = _jsonl_exception_hits(text, cutoff)
         else:
-            path_hits = _text_exception_hits(text[-64 * 1024 :])
+            path_hits = _text_exception_hits(_active_text_log_tail(path, text[-64 * 1024 :]))
         hits += path_hits
         if path_hits:
             try:

@@ -13,11 +13,44 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from xinyu_runtime_security import bridge_source_version
+from xinyu_runtime_security import bridge_source_version, source_file_digest, source_files_digest
+from xinyu_text_variants import legacy_mojibake_variants
 
 
 DEFAULT_CORE_URL = "http://127.0.0.1:8765"
 DEFAULT_QQ_GATEWAY_CONFIG = Path(__file__).resolve().with_name("xinyu_qq_gateway.config.json")
+NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+TEXT_HEALTH_FILES = (
+    "memory/context/proactive_presence_state.md",
+    "memory/context/proactive_request_state.md",
+    "memory/context/proactive_qq_dispatch_state.md",
+    "memory/context/memory_braid_state.md",
+    "memory/context/turn_coherence_state.md",
+    "memory/context/initiative_spine_state.md",
+    "memory/context/self_thought_state.md",
+    "memory/context/emotion_council_state.md",
+    "memory/context/impulse_soup_state.md",
+    "memory/self/learning_closed_loop_state.md",
+    "memory/people/owner.md",
+    "memory/relationships/index.md",
+)
+
+TEXT_HEALTH_MARKERS = (
+    "\u54e5",
+    "\u4e3b\u4eba",
+    "\u8bb0\u5fc6",
+    "\u53cd\u601d\u961f\u5217",
+    "\u5173\u4e8e\u88ab\u8bb0\u4f4f",
+    "\u8fd8\u6ca1\u653e\u4e0b",
+    "\u957f\u671f\u5173\u7cfb",
+    "\u5177\u4f53\u5bf9\u8bdd",
+    "\u8bb0\u5fc6\u7559\u75d5",
+    "\u5916\u90e8\u5b66\u4e60",
+    "\u4e3b\u52a8\u7ebf\u7a0b",
+    "\u60c5\u611f\u7cfb\u7edf",
+    "\u4e3b\u4eba\u683c",
+)
 
 
 @dataclass
@@ -31,6 +64,24 @@ def read_text(path: Path) -> str:
     if not path.exists():
         return ""
     return path.read_text(encoding="utf-8-sig", errors="replace")
+
+
+def runtime_text_health_issues(root: Path) -> list[str]:
+    issues: list[str] = []
+    for rel_path in TEXT_HEALTH_FILES:
+        path = root / rel_path
+        if not path.exists():
+            continue
+        text = read_text(path)
+        if "\ufffd" in text:
+            issues.append(f"{rel_path}:replacement_character")
+        marker_hits: list[str] = []
+        for marker in TEXT_HEALTH_MARKERS:
+            if any(variant in text for variant in legacy_mojibake_variants(marker)):
+                marker_hits.append(marker)
+        if marker_hits:
+            issues.append(f"{rel_path}:legacy_mojibake:{len(marker_hits)}")
+    return issues
 
 
 def extract_value(text: str, field: str, default: str = "unknown") -> str:
@@ -118,7 +169,7 @@ def extract_gateway_version(path: Path) -> str:
 
 def http_json(url: str, timeout: float = 3.0) -> tuple[bool, dict[str, Any] | str]:
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
+        with NO_PROXY_OPENER.open(url, timeout=timeout) as response:
             body = response.read().decode("utf-8", errors="replace")
             data = json.loads(body)
             return True, data if isinstance(data, dict) else {"value": data}
@@ -158,7 +209,12 @@ def has_established_local(port: int) -> bool:
     return any("ESTABLISHED" in line and "127.0.0.1" in line for line in netstat_lines(port))
 
 
-def check_core(core_url: str, expected_version: str) -> tuple[list[Check], dict[str, Any]]:
+def check_core(
+    core_url: str,
+    expected_version: str,
+    expected_source_digest: str,
+    expected_runtime_source_digest: str,
+) -> tuple[list[Check], dict[str, Any]]:
     ok, data = http_json(f"{core_url.rstrip('/')}/health")
     if not ok:
         return [Check("core_bridge", False, str(data))], {}
@@ -179,12 +235,24 @@ def check_core(core_url: str, expected_version: str) -> tuple[list[Check], dict[
         f"{auto_detail}"
     )
     running_version = str(data.get("version", "unknown"))
+    running_source_digest = str(data.get("source_digest", "unknown"))
+    running_runtime_source_digest = str(data.get("runtime_source_digest", "unknown"))
     return [
         Check("core_bridge", bool(data.get("ok")), detail),
         Check(
             "core_bridge_version",
             bool(running_version == expected_version),
             f"running={running_version} source={expected_version}",
+        ),
+        Check(
+            "core_bridge_source_digest",
+            bool(running_source_digest == expected_source_digest),
+            f"running={running_source_digest} source={expected_source_digest}",
+        ),
+        Check(
+            "core_bridge_runtime_source_digest",
+            bool(running_runtime_source_digest == expected_runtime_source_digest),
+            f"running={running_runtime_source_digest} source={expected_runtime_source_digest}",
         ),
     ], data
 
@@ -261,6 +329,7 @@ def status_fields(root: Path) -> dict[str, str]:
     gate = read_text(root / "memory/self/ai_self_iteration_state.md")
     capability = read_text(root / "memory/context/capability_zones_state.md")
     v1_canary = read_text(root / "memory/context/v1_canary_readiness_state.md")
+    initiative_spine = read_text(root / "memory/context/initiative_spine_state.md")
     return {
         "proactive_evaluated_at": extract_value(proactive, "evaluated_at", "missing"),
         "proactive_decision": extract_value(proactive, "proactive_decision", "missing"),
@@ -296,11 +365,16 @@ def status_fields(root: Path) -> dict[str, str]:
             "qq_priority_passive_learning_group",
             "missing",
         ),
+        "initiative_spine_status": extract_value(initiative_spine, "status", "missing"),
+        "initiative_spine_emergence": extract_value(initiative_spine, "emergence_level", "missing"),
+        "initiative_spine_action": extract_value(initiative_spine, "action_permission", "missing"),
+        "initiative_spine_next_step": extract_value(initiative_spine, "next_step", "missing"),
     }
 
 
 def check_state(root: Path) -> list[Check]:
     fields = status_fields(root)
+    text_health_issues = runtime_text_health_issues(root)
     return [
         Check(
             "proactive_gate_readable",
@@ -343,6 +417,20 @@ def check_state(root: Path) -> list[Check]:
                 f"passive_group={fields['capability_qq_priority_passive_group']}"
             ),
         ),
+        Check(
+            "initiative_spine_state",
+            True,
+            (
+                f"{fields['initiative_spine_status']} "
+                f"emergence={fields['initiative_spine_emergence']} "
+                f"action={fields['initiative_spine_action']}"
+            ),
+        ),
+        Check(
+            "runtime_text_utf8_health",
+            not text_health_issues,
+            "ok" if not text_health_issues else "; ".join(text_health_issues[:5]),
+        ),
     ]
 
 
@@ -373,7 +461,26 @@ def main() -> int:
     qq_config = args.qq_config.resolve()
 
     expected_core_version = bridge_source_version(root / "xinyu_core_bridge.py")
-    core_checks, core_data = check_core(args.core_url, expected_core_version)
+    expected_core_digest = source_file_digest(root / "xinyu_core_bridge.py")
+    expected_runtime_digest = source_files_digest(
+        (
+            root / "xinyu_core_bridge.py",
+            root / "xinyu_bridge_turn_pipeline.py",
+            root / "xinyu_bridge_action_routes.py",
+            root / "xinyu_runtime_context.py",
+            root / "xinyu_memory_braid.py",
+            root / "xinyu_turn_coherence.py",
+            root / "xinyu_initiative_spine.py",
+            root / "xinyu_emotion_council.py",
+            root / "xinyu_speech_controller.py",
+        )
+    )
+    core_checks, core_data = check_core(
+        args.core_url,
+        expected_core_version,
+        expected_core_digest,
+        expected_runtime_digest,
+    )
     port_checks = check_ports()
     qq_gateway_checks = check_qq_gateway_config(root, qq_config)
     state_checks = check_state(root)

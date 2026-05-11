@@ -7,6 +7,9 @@ import urllib.request
 from typing import Any
 
 
+NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
 class BridgeError(RuntimeError):
     pass
 
@@ -87,7 +90,7 @@ class CoreBridgeClient:
             headers["X-XinYu-Bridge-Token"] = self.token
         request = urllib.request.Request(url, data=body, headers=headers, method="POST")
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+            with NO_PROXY_OPENER.open(request, timeout=self.timeout_seconds) as response:
                 status = getattr(response, "status", 200)
                 response_body = response.read().decode("utf-8", errors="replace")
         except urllib.error.HTTPError as exc:

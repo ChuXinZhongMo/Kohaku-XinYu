@@ -16,6 +16,9 @@ from xinyu_action_experience_digest import digest_action_experience_residue
 from xinyu_desktop_events import DesktopEventBus
 
 
+NO_PROXY_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
 def _start_loop() -> tuple[asyncio.AbstractEventLoop, threading.Thread]:
     loop = asyncio.new_event_loop()
 
@@ -34,7 +37,7 @@ def _request_json(url: str, *, token: str | None = None) -> tuple[int, dict[str,
         headers["Authorization"] = f"Bearer {token}"
     request = urllib.request.Request(url, headers=headers, method="GET")
     try:
-        with urllib.request.urlopen(request, timeout=5) as response:
+        with NO_PROXY_OPENER.open(request, timeout=5) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         return exc.code, json.loads(exc.read().decode("utf-8"))
@@ -47,7 +50,7 @@ def _post_json(url: str, payload: dict[str, Any], *, token: str | None = None) -
     body = json.dumps(payload).encode("utf-8")
     request = urllib.request.Request(url, headers=headers, data=body, method="POST")
     try:
-        with urllib.request.urlopen(request, timeout=5) as response:
+        with NO_PROXY_OPENER.open(request, timeout=5) as response:
             return response.status, json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         return exc.code, json.loads(exc.read().decode("utf-8"))

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import hashlib
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -60,3 +61,26 @@ def bridge_source_version(path: Path) -> str:
         _name, _eq, value = stripped.partition("=")
         return value.strip().strip('"').strip("'")
     return "unknown"
+
+
+def source_file_digest(path: Path, *, length: int = 16) -> str:
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return "unknown"
+    digest = hashlib.sha256(data).hexdigest()
+    return digest[: max(8, length)]
+
+
+def source_files_digest(paths: list[Path] | tuple[Path, ...], *, length: int = 16) -> str:
+    digest = hashlib.sha256()
+    try:
+        sorted_paths = sorted((path.resolve() for path in paths), key=lambda item: str(item).lower())
+        for path in sorted_paths:
+            digest.update(path.name.encode("utf-8", errors="replace"))
+            digest.update(b"\0")
+            digest.update(path.read_bytes())
+            digest.update(b"\0")
+    except OSError:
+        return "unknown"
+    return digest.hexdigest()[: max(8, length)]
