@@ -236,12 +236,15 @@ class BasePlugin:
     applies_to: dict[str, list[str]] = {}
 
     def __init__(self) -> None:
+        self._model_pattern_res = self._compile_model_patterns()
+
+    def _compile_model_patterns(self) -> list[re.Pattern[str]]:
         # Pre-compile model_patterns once. Evaluated before every hook
         # call (see cluster 2.5 of the extension-point spec).
-        self._model_pattern_res: list[re.Pattern[str]] = []
+        compiled: list[re.Pattern[str]] = []
         for pattern in self.applies_to.get("model_patterns", []) or []:
             try:
-                self._model_pattern_res.append(re.compile(pattern))
+                compiled.append(re.compile(pattern))
             except re.error as exc:
                 logger.warning(
                     "Plugin model_patterns regex failed to compile; skipping",
@@ -249,6 +252,14 @@ class BasePlugin:
                     pattern=str(pattern),
                     error=str(exc),
                 )
+        return compiled
+
+    def _model_patterns(self) -> list[re.Pattern[str]]:
+        patterns = getattr(self, "_model_pattern_res", None)
+        if patterns is None:
+            patterns = self._compile_model_patterns()
+            self._model_pattern_res = patterns
+        return patterns
 
     # 鈹€鈹€ Gating 鈹€鈹€
 
@@ -264,9 +275,10 @@ class BasePlugin:
         names = applies_to.get("agent_names") or []
         if names and context.agent_name not in names:
             return False
-        if self._model_pattern_res:
+        model_patterns = self._model_patterns()
+        if model_patterns:
             model = context.model or ""
-            if not any(p.search(model) for p in self._model_pattern_res):
+            if not any(p.search(model) for p in model_patterns):
                 return False
         return True
 
