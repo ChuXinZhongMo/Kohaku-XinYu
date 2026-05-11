@@ -130,7 +130,7 @@ Date: 2026-05-07 / continued 2026-05-08
 
 ## 2026-05-12 Long Task Queue
 
-- [ ] Finish QQ visible reply bubble split extraction as Loop 145.
+- [x] Finish QQ visible reply bubble split extraction as Loop 145.
 - [ ] Audit remaining pure `NativeQQGateway` helper methods and classify their owner modules.
 - [ ] Extract one low-risk QQ runtime/outbox helper into an existing helper module.
 - [ ] Add or extend a focused QQ smoke for the extracted helper alias.

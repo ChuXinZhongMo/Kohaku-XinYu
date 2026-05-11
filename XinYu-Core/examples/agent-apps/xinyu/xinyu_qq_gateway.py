@@ -11,7 +11,6 @@ from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
 from state_service import append_jsonl, atomic_write_json
 from xinyu_gateway_ack_spool import SentAckSpool
@@ -22,7 +21,6 @@ import xinyu_qq_attachment_resolver
 import xinyu_qq_command_router
 from xinyu_qq_cli import build_gateway_parser
 from xinyu_qq_config import (
-    COMMAND_PREFIX_CHARS,
     GatewayConfig,
     as_bool as _as_bool,
     as_int as _as_int,
@@ -34,7 +32,6 @@ import xinyu_qq_forward_context
 from xinyu_qq_models import PendingAction, PreparedMessage, RecentStickerImportState, ReplyTarget
 from xinyu_qq_gateway_utils import hash_id as _hash_id
 from xinyu_qq_gateway_utils import maybe_int as _maybe_int
-from xinyu_qq_gateway_utils import now_iso as _now_iso
 from xinyu_qq_gateway_utils import quiet_websockets_handshake_noise as _quiet_websockets_handshake_noise
 from xinyu_qq_gateway_utils import safe_str as _safe_str
 import xinyu_qq_normalizer
@@ -2668,89 +2665,20 @@ class NativeQQGateway:
         forced = self._forced_reply_bubble_units({"reply_bubble_force_units": metadata.get("reply_bubble_force_units")})
         if forced:
             return forced
-        if not self.config.reply_bubble_split_enabled:
-            return [text]
-        if self.config.reply_bubble_private_only and target.message_kind != "private":
-            return [text]
-        if len(text) < self.config.reply_bubble_min_chars:
-            return [text]
-        if _as_bool(metadata.get("qq_reply_bubble_disable"), False):
-            return [text]
-        source = _safe_str(claim.get("source") or metadata.get("source")).strip()
-        if source in {
-            "qq_attachment_followup_after_learning_ingest",
-            "qq_sticker_context_reaction",
-        }:
-            return [text]
-        if self._looks_like_structured_visible_reply(text):
+        if not self._should_split_outbox_visible_reply(target, text, claim):
             return [text]
         bubbles = self._split_visible_reply_bubbles(text)
         return bubbles if len(bubbles) > 1 else [text]
 
     _forced_reply_bubble_units = xinyu_qq_reply_bubbles.gateway_forced_reply_bubble_units
 
-    def _should_split_visible_reply(
-        self,
-        prepared: PreparedMessage,
-        reply: str,
-        core_response: dict[str, Any],
-    ) -> bool:
-        if not self.config.reply_bubble_split_enabled:
-            return False
-        if prepared.route != "chat":
-            return False
-        if self.config.reply_bubble_private_only and prepared.target.message_kind != "private":
-            return False
-        if len(reply) < self.config.reply_bubble_min_chars:
-            return False
-        payload = prepared.payload if isinstance(prepared.payload, dict) else {}
-        metadata = payload.get("metadata")
-        metadata = metadata if isinstance(metadata, dict) else {}
-        if _as_bool(metadata.get("qq_reply_bubble_disable"), False):
-            return False
-        source = _safe_str(metadata.get("source")).strip()
-        if source in {
-            "qq_attachment_followup_after_learning_ingest",
-            "qq_sticker_context_reaction",
-        }:
-            return False
-        if self._looks_like_structured_visible_reply(reply):
-            return False
-        return True
+    _should_split_visible_reply = xinyu_qq_reply_bubbles.gateway_should_split_visible_reply
+
+    _should_split_outbox_visible_reply = xinyu_qq_reply_bubbles.gateway_should_split_outbox_visible_reply
 
     _looks_like_structured_visible_reply = staticmethod(xinyu_qq_reply_bubbles.looks_like_structured_visible_reply)
 
-    def _split_visible_reply_bubbles(self, text: str) -> list[str]:
-        max_bubbles = max(2, min(5, self.config.reply_bubble_max_bubbles))
-        soft_max = max(60, self.config.reply_bubble_soft_max_chars)
-        min_piece = max(12, soft_max // 4)
-        units = self._reply_sentence_units(text)
-        chunks: list[str] = []
-        current = ""
-        for unit in units:
-            if not unit.strip():
-                continue
-            candidate = current + unit if current else unit
-            if (
-                current.strip()
-                and len(candidate.strip()) > soft_max
-                and len(current.strip()) >= min_piece
-                and len(chunks) < max_bubbles - 1
-            ):
-                chunks.append(current.strip())
-                current = unit.lstrip()
-            else:
-                current = candidate
-        if current.strip():
-            chunks.append(current.strip())
-        if len(chunks) <= 1:
-            chunks = self._hard_split_reply_text(text, soft_max=soft_max, max_bubbles=max_bubbles)
-        chunks = self._merge_tiny_reply_chunks(chunks, min_piece=min_piece)
-        if len(chunks) <= 1:
-            return [text]
-        if any(not chunk.strip() for chunk in chunks):
-            return [text]
-        return chunks[:max_bubbles]
+    _split_visible_reply_bubbles = xinyu_qq_reply_bubbles.gateway_split_visible_reply_bubbles
 
     _reply_sentence_units = staticmethod(xinyu_qq_reply_bubbles.reply_sentence_units)
 

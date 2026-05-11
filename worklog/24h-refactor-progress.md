@@ -3116,3 +3116,24 @@ Workspace: D:\XinYu
 - Risk: diagnostics health exits 0 but reports `warn` because recent log scanning still sees the core restart window (`QQ outbox poll error` connection refused and benign client disconnect `WinError` lines) plus dirty git state. Active QQ gateway log tail does not show a new `core bridge HTTP 502`.
 - Left out of scope: uncommitted QQ reply bubble helper extraction remains in `xinyu_qq_gateway.py`, `xinyu_qq_gateway_smoke.py`, and `xinyu_qq_reply_bubbles.py`; untracked planning files remain `XINYU-24H-WORK-PLAN.md` and `worklog/integration-closeout-plan-2026-05-11.md`.
 - Next: decide whether to continue the QQ reply bubble extraction as its own Loop 145-style refactor, or park/revert it explicitly before the next integration batch.
+
+## Loop 145 - 2026-05-12
+
+- Task: Extract QQ visible reply bubble split helpers into reply bubble helper module.
+- Why: `_should_split_visible_reply`, outbox split gating, and `_split_visible_reply_bubbles` are reply-bubble policy/chunking logic. Moving them into `xinyu_qq_reply_bubbles.py` continues shrinking `xinyu_qq_gateway.py` while keeping gateway compatibility aliases.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_reply_bubbles.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway_smoke.py`
+  - `worklog/24h-refactor-progress.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/xinyu-long-task-plan-2026-05-12.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py xinyu_qq_gateway_smoke.py xinyu_qq_reply_bubbles.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_qq_reply_bubbles.py` now owns visible reply split gates and bubble chunking; gateway methods are direct aliases. Compile, QQ gateway smoke, QQ review smoke, and diff check passed.
+- Risk: Low; the moved logic preserves the existing thresholds, suppressed sources, structured-reply suppression, and outbox/private-message gating. No real QQ outbound behavior, prompt/persona semantics, long-term memory body text, or v1 traffic scope changed.
+- Rollback: `git revert <loop-145-commit>`
+- Next: Audit remaining pure `NativeQQGateway` helper methods and classify owner modules before selecting the next low-risk extraction.

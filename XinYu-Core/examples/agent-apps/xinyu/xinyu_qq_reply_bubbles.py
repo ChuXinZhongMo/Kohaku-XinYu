@@ -3,7 +3,14 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from xinyu_qq_config import as_bool
 from xinyu_qq_gateway_utils import safe_str
+
+
+_SUPPRESSED_REPLY_BUBBLE_SOURCES = {
+    "qq_attachment_followup_after_learning_ingest",
+    "qq_sticker_context_reaction",
+}
 
 
 def looks_like_structured_visible_reply(text: str) -> bool:
@@ -60,6 +67,109 @@ def gateway_forced_reply_bubble_units(gateway: Any, source: dict[str, Any]) -> l
     return forced_reply_bubble_units(
         source,
         max_bubbles=gateway.config.reply_bubble_force_max_bubbles,
+    )
+
+
+def should_split_visible_reply(config: Any, prepared: Any, reply: str, core_response: dict[str, Any]) -> bool:
+    if not config.reply_bubble_split_enabled:
+        return False
+    if prepared.route != "chat":
+        return False
+    if config.reply_bubble_private_only and prepared.target.message_kind != "private":
+        return False
+    if len(reply) < config.reply_bubble_min_chars:
+        return False
+    payload = prepared.payload if isinstance(prepared.payload, dict) else {}
+    metadata = payload.get("metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    if as_bool(metadata.get("qq_reply_bubble_disable"), False):
+        return False
+    source = safe_str(metadata.get("source")).strip()
+    if source in _SUPPRESSED_REPLY_BUBBLE_SOURCES:
+        return False
+    if looks_like_structured_visible_reply(reply):
+        return False
+    return True
+
+
+def should_split_outbox_visible_reply(config: Any, target: Any, reply: str, claim: dict[str, Any]) -> bool:
+    if not config.reply_bubble_split_enabled:
+        return False
+    if config.reply_bubble_private_only and target.message_kind != "private":
+        return False
+    if len(reply) < config.reply_bubble_min_chars:
+        return False
+    metadata = claim.get("metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    if as_bool(metadata.get("qq_reply_bubble_disable"), False):
+        return False
+    source = safe_str(claim.get("source") or metadata.get("source")).strip()
+    if source in _SUPPRESSED_REPLY_BUBBLE_SOURCES:
+        return False
+    if looks_like_structured_visible_reply(reply):
+        return False
+    return True
+
+
+def gateway_should_split_visible_reply(
+    gateway: Any,
+    prepared: Any,
+    reply: str,
+    core_response: dict[str, Any],
+) -> bool:
+    return should_split_visible_reply(gateway.config, prepared, reply, core_response)
+
+
+def gateway_should_split_outbox_visible_reply(
+    gateway: Any,
+    target: Any,
+    reply: str,
+    claim: dict[str, Any],
+) -> bool:
+    return should_split_outbox_visible_reply(gateway.config, target, reply, claim)
+
+
+def split_visible_reply_bubbles(text: str, *, max_bubbles: int, soft_max_chars: int) -> list[str]:
+    text = text.strip()
+    if not text:
+        return []
+    max_bubbles = max(2, min(5, max_bubbles))
+    soft_max = max(60, soft_max_chars)
+    min_piece = max(12, soft_max // 4)
+    units = reply_sentence_units(text)
+    chunks: list[str] = []
+    current = ""
+    for unit in units:
+        if not unit.strip():
+            continue
+        candidate = current + unit if current else unit
+        if (
+            current.strip()
+            and len(candidate.strip()) > soft_max
+            and len(current.strip()) >= min_piece
+            and len(chunks) < max_bubbles - 1
+        ):
+            chunks.append(current.strip())
+            current = unit.lstrip()
+        else:
+            current = candidate
+    if current.strip():
+        chunks.append(current.strip())
+    if len(chunks) <= 1:
+        chunks = hard_split_reply_text(text, soft_max=soft_max, max_bubbles=max_bubbles)
+    chunks = merge_tiny_reply_chunks(chunks, min_piece=min_piece)
+    if len(chunks) <= 1:
+        return [text]
+    if any(not chunk.strip() for chunk in chunks):
+        return [text]
+    return chunks[:max_bubbles]
+
+
+def gateway_split_visible_reply_bubbles(gateway: Any, text: str) -> list[str]:
+    return split_visible_reply_bubbles(
+        text,
+        max_bubbles=gateway.config.reply_bubble_max_bubbles,
+        soft_max_chars=gateway.config.reply_bubble_soft_max_chars,
     )
 
 

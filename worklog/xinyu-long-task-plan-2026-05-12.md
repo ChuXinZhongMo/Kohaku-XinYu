@@ -87,7 +87,7 @@ Stop and report before continuing if any of these occur:
 
 ### P0 - Close Current Dirty Slice
 
-- [ ] Loop 145: Finish QQ visible reply bubble split extraction.
+- [x] Loop 145: Finish QQ visible reply bubble split extraction.
   - Goal: Move split decision and visible bubble chunking ownership into `xinyu_qq_reply_bubbles.py`; keep gateway methods as compatibility aliases.
   - Files:
     - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
