@@ -3097,3 +3097,22 @@ Workspace: D:\XinYu
 - Risk: Low; only helper ownership changed. Forced unit length/newline filtering, max bubble limit, reply bubble behavior, real QQ outbound behavior, prompt/persona semantics, long-term memory body text, and v1 traffic behavior are intended to remain unchanged.
 - Rollback: `git revert <loop-144-commit>`
 - Next: Continue with another isolated gateway/core bridge slice.
+
+## Closeout - 2026-05-11
+
+- Task: Close interrupted post-Loop-144 integration batch without adding new product scope.
+- Slices committed:
+  - `a52541b refactor: gate stale runtime failure signals`
+  - `9eb0f6c feat: add live turn coherence sidecars`
+  - `8f5459f feat: add emotion council shadow guardrails`
+  - `6fbe6f8 refactor: connect proactive feedback state`
+  - `c3d64c9 fix: bypass proxy for local XinYu health checks`
+  - `a18567e fix: lazily initialize plugin model patterns`
+- Commands:
+  - Phase 5: `py_compile` for runtime security/status/deployment/core client/probes/core bridge/turn pipeline, `qq_core_client_smoke.py`, `xinyu_status.py --json`, `deployment_status_smoke.py`, `bridge_probe_smoke.py`, diagnostics compile and health JSON, `git diff --check`.
+  - Phase 6: `PYTHONPATH=D:\XinYu\XinYu-Core\src pytest tests\test_plugin_base.py -q`, `git diff --check`.
+  - Final: `xinyu_status.py --json`, `deployment_status_smoke.py`, `bridge_probe_smoke.py`, `xinyu_qq_gateway_smoke.py`, `xinyu_qq_review_smoke.py`, diagnostics health JSON, `git status --short --branch`.
+- Result: live core status is ok with source/runtime digests matched at bridge version `0.8.99`; deployment, bridge probe, QQ gateway smoke, QQ review smoke, and plugin tests passed. Core bridge was restarted once to load the digest-tracked source; QQ gateway and NapCat stayed live.
+- Risk: diagnostics health exits 0 but reports `warn` because recent log scanning still sees the core restart window (`QQ outbox poll error` connection refused and benign client disconnect `WinError` lines) plus dirty git state. Active QQ gateway log tail does not show a new `core bridge HTTP 502`.
+- Left out of scope: uncommitted QQ reply bubble helper extraction remains in `xinyu_qq_gateway.py`, `xinyu_qq_gateway_smoke.py`, and `xinyu_qq_reply_bubbles.py`; untracked planning files remain `XINYU-24H-WORK-PLAN.md` and `worklog/integration-closeout-plan-2026-05-11.md`.
+- Next: decide whether to continue the QQ reply bubble extraction as its own Loop 145-style refactor, or park/revert it explicitly before the next integration batch.
