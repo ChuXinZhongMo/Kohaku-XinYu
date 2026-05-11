@@ -7,6 +7,10 @@ from pathlib import Path
 import re
 from typing import Any
 
+from xinyu_initiative_spine import build_initiative_spine_prompt_block
+from xinyu_memory_braid import build_memory_braid_prompt_block
+from xinyu_turn_coherence import build_turn_coherence_prompt_block
+
 
 @dataclass(frozen=True, slots=True)
 class RuntimeContextFile:
@@ -241,8 +245,21 @@ def refresh_runtime_context(
 
 
 def build_renderer_memory_context(root: Path, *, user_text: str = "") -> str:
-    del user_text
     parts: list[str] = []
+    braid_block = build_memory_braid_prompt_block(root, user_text=user_text, max_chars=2200)
+    if braid_block:
+        parts.append("[memory/context/memory_braid]\n[layer: memory_orchestration]\n" + braid_block)
+    coherence_block = build_turn_coherence_prompt_block(
+        root,
+        user_text=user_text,
+        memory_braid_block=braid_block,
+        max_chars=2000,
+    )
+    if coherence_block:
+        parts.append("[memory/context/turn_coherence]\n[layer: turn_orchestration]\n" + coherence_block)
+    initiative_block = build_initiative_spine_prompt_block(root, trigger="renderer_memory_context", max_chars=1800)
+    if initiative_block:
+        parts.append("[memory/context/initiative_spine]\n[layer: initiative_orchestration]\n" + initiative_block)
     for spec in RENDERER_CONTEXT_FILES:
         text = read_limited(root, spec.rel_path, limit=spec.limit)
         if text:

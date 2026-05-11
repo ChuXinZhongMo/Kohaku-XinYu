@@ -142,6 +142,7 @@ from xinyu_goldmark import mark_goldmark_request as mark_goldmark_request_bridge
 from xinyu_goldmark_dehydrate import run_goldmark_dehydration_maintenance
 from xinyu_interaction_journal import record_interaction_turn
 from xinyu_impulse_soup import run_impulse_soup
+from xinyu_initiative_spine import build_initiative_spine_prompt_block, run_initiative_spine
 from xinyu_learning_closed_loop import (
     build_learning_closed_loop_prompt_block,
     record_learning_closed_loop_self_thought,
@@ -164,7 +165,9 @@ from xinyu_action_experience_digest import (
     read_recent_action_digest_snapshot,
 )
 from xinyu_memory_event_sourcing import record_action_experience_event, record_chat_event
+from xinyu_memory_braid import build_memory_braid_prompt_block
 from xinyu_memory_self_review import run_memory_self_review
+from xinyu_turn_coherence import build_turn_coherence_prompt_block, finish_turn_coherence
 from xinyu_metabolism_contract import (
     approve_ticket as approve_metabolism_ticket,
     cancel_ticket as cancel_metabolism_ticket,
@@ -2218,6 +2221,7 @@ class XinYuBridgeRuntime:
             notes.append(f"proactivity_shadow_error:{type(exc).__name__}")
             self._trace_autonomous(f"proactivity_shadow_error={exc!r}")
         self._append_impulse_soup_note(notes, checked_at=checked_at)
+        self._append_initiative_spine_note(notes, checked_at=checked_at)
 
     def _append_impulse_soup_note(self, notes: list[str], *, checked_at: str) -> None:
         try:
@@ -2232,6 +2236,39 @@ class XinYuBridgeRuntime:
         except Exception as exc:
             notes.append(f"impulse_soup_error:{type(exc).__name__}")
             self._trace_autonomous(f"impulse_soup_error={exc!r}")
+
+    def _append_initiative_spine_note(self, notes: list[str], *, checked_at: str) -> None:
+        try:
+            spine = run_initiative_spine(
+                self.xinyu_dir,
+                checked_at=checked_at,
+                trigger="autonomous_maintenance",
+            )
+            notes.append(
+                "initiative_spine:"
+                f"{_safe_str(spine.get('emergence_level'), 'unknown')}/"
+                f"{_safe_str(spine.get('action_permission'), 'unknown')}"
+            )
+        except Exception as exc:
+            notes.append(f"initiative_spine_error:{type(exc).__name__}")
+            self._trace_autonomous(f"initiative_spine_error={exc!r}")
+
+    def _refresh_initiative_spine_after_proactive_feedback(
+        self,
+        *,
+        trigger: str,
+        checked_at: str | None = None,
+    ) -> dict[str, Any]:
+        checked_at = checked_at or datetime.now().astimezone().isoformat()
+        try:
+            return run_initiative_spine(
+                self.xinyu_dir,
+                checked_at=checked_at,
+                trigger=trigger,
+            )
+        except Exception as exc:
+            print(f"[xinyu_core_bridge] initiative spine feedback refresh failed: {exc}", flush=True)
+            return {"accepted": False, "notes": [f"initiative_spine_feedback_error:{type(exc).__name__}"]}
 
     def _create_autonomous_maintenance_event(self) -> Any:
         self._load_runtime()
@@ -2809,6 +2846,15 @@ tags: [autonomy, maintenance, runtime]
         if adapter_error:
             updated = self._desktop_replace_list_field(updated, "adapter_error", adapter_error)
         atomic_write_text(path, updated.rstrip())
+        if status in {"answered", "dismissed", "read_locally"} or answer_state in {
+            "owner_replied",
+            "dismissed",
+            "read_locally",
+        }:
+            self._refresh_initiative_spine_after_proactive_feedback(
+                trigger=f"desktop_proactive_{answer_state or status}",
+                checked_at=updated_at,
+            )
         return self._desktop_proactive_item_from_state(include_final=True)
 
     _desktop_replace_frontmatter_field = staticmethod(desktop_replace_frontmatter_field)
@@ -3408,6 +3454,10 @@ tags: [promise, followup, qq-outbox, continuity]
             atomic_write_text(request_path, updated.rstrip() + extra, final_newline=False)
         except OSError:
             return False
+        self._refresh_initiative_spine_after_proactive_feedback(
+            trigger="owner_reply_to_proactive",
+            checked_at=answered_at,
+        )
         return True
 
     async def package_install(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -5057,6 +5107,49 @@ tags: [promise, followup, qq-outbox, continuity]
                 print(f"[xinyu_core_bridge] sticker reply enqueue failed: {exc}", flush=True)
                 sticker_reply = {"notes": [f"sticker_reply_error:{type(exc).__name__}"]}
             sticker_tail_recorded = self._append_sticker_delivery_tail(session, sticker_reply)
+            action_result = "none"
+            if self_code_task:
+                action_result = model_codex_delegate_note or "self_code_iteration_considered"
+            elif direct_codex_task:
+                action_result = model_codex_delegate_note or "owner_direct_codex_considered"
+            elif model_codex_task:
+                action_result = model_codex_delegate_note or "model_codex_delegate_considered"
+            elif wait_to_think_task:
+                action_result = "wait_to_think_scheduled"
+            elif promised_followup.get("scheduled"):
+                action_result = "promised_followup_scheduled"
+            elif sticker_tail_recorded:
+                action_result = "sticker_reply_enqueued"
+            turn_coherence: dict[str, Any] = {"notes": []}
+            try:
+                turn_coherence = finish_turn_coherence(
+                    self.xinyu_dir,
+                    turn_id=_safe_str(presence_start.get("turn_id")),
+                    payload=payload,
+                    user_text=text,
+                    reply=reply,
+                    action_result=action_result,
+                    memory_changed=before_memory != _memory_snapshot(self.memory_root),
+                    final_guard_flags=final_guard_flags,
+                    component_notes={
+                        "private_thought_outcome": private_thought_outcome,
+                        "private_thought_link": private_thought_link,
+                        "persona_sidecar": persona_sidecar,
+                        "memory_candidate": candidate_result,
+                        "memory_self_review": memory_self_review,
+                        "context_recall": recalled_context_notes,
+                        "continuity_handoff": continuity_handoff,
+                        "interaction_journal": interaction_journal,
+                        "learning_closed_loop": learning_closed_loop,
+                        "uncertainty_pause": uncertainty_pause,
+                        "promised_followup": promised_followup,
+                        "sticker_reply": sticker_reply,
+                    },
+                    checked_at=datetime.now().astimezone().isoformat(),
+                )
+            except Exception as exc:
+                print(f"[xinyu_core_bridge] turn coherence finish failed: {exc}", flush=True)
+                turn_coherence = {"notes": [f"turn_coherence_error:{type(exc).__name__}"]}
             after_memory = _memory_snapshot(self.memory_root)
             notes: list[str] = []
             if not reply:
@@ -5119,6 +5212,7 @@ tags: [promise, followup, qq-outbox, continuity]
             notes.extend(_safe_str(note) for note in uncertainty_pause.get("notes", [])[:3])
             notes.extend(_safe_str(note) for note in wait_to_think_sidecar.get("notes", [])[:3])
             notes.extend(_safe_str(note) for note in promised_followup.get("notes", [])[:3])
+            notes.extend(_safe_str(note) for note in turn_coherence.get("notes", [])[:3])
             if sticker_tail_recorded:
                 notes.append("sticker_delivery_tail_recorded")
             sticker_notes = [
@@ -5406,6 +5500,49 @@ tags: [promise, followup, qq-outbox, continuity]
         )
         tail_block = self._format_dialogue_tail(dialogue_tail or [])
         sidecar_lines: list[str] = []
+        recent_action_block = read_recent_action_context(self.xinyu_dir)
+        action_digest_block = read_recent_action_digest_context(self.xinyu_dir)
+        memory_braid_block = build_memory_braid_prompt_block(
+            self.xinyu_dir,
+            payload=payload,
+            user_text=text,
+            dialogue_tail=dialogue_tail or [],
+            recalled_context=recalled_context,
+            runtime_presence_context=runtime_presence_context,
+            continuity_context=continuity_context,
+            persona_context=persona_context,
+            curiosity_context=curiosity_context,
+            checked_at=datetime.now().astimezone().isoformat(),
+            write_state=True,
+            max_chars=2200,
+        )
+        if memory_braid_block:
+            sidecar_lines.extend([memory_braid_block])
+        turn_coherence_block = build_turn_coherence_prompt_block(
+            self.xinyu_dir,
+            payload=payload,
+            user_text=text,
+            turn_id=turn_id,
+            memory_braid_block=memory_braid_block,
+            recalled_context=recalled_context,
+            runtime_presence_context=runtime_presence_context,
+            continuity_context=continuity_context,
+            persona_context=persona_context,
+            recent_action_context=recent_action_block,
+            action_digest_context=action_digest_block,
+            checked_at=datetime.now().astimezone().isoformat(),
+            write_state=True,
+            max_chars=2200,
+        )
+        if turn_coherence_block:
+            sidecar_lines.extend([turn_coherence_block])
+        initiative_spine_block = build_initiative_spine_prompt_block(
+            self.xinyu_dir,
+            trigger="live_turn_prompt",
+            max_chars=1800,
+        )
+        if initiative_spine_block:
+            sidecar_lines.extend([initiative_spine_block])
         persona_block = _safe_str(persona_context).strip()
         if persona_block:
             sidecar_lines.extend(["persona sidecar:", persona_block[:1200]])
@@ -5415,10 +5552,8 @@ tags: [promise, followup, qq-outbox, continuity]
         life_reply_block = _safe_str(life_reply_context).strip()
         if life_reply_block:
             sidecar_lines.extend([life_reply_block])
-        recent_action_block = read_recent_action_context(self.xinyu_dir)
         if recent_action_block:
             sidecar_lines.extend([recent_action_block])
-        action_digest_block = read_recent_action_digest_context(self.xinyu_dir)
         if action_digest_block:
             sidecar_lines.extend([action_digest_block])
         recalled_block = _safe_str(recalled_context).strip()
