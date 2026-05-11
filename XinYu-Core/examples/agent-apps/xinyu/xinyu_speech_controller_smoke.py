@@ -126,6 +126,82 @@ def main() -> int:
     if "我刚才" in pseudo_tool_reply or "不该" in pseudo_tool_reply:
         failures.append(f"pseudo tool fallback became apology template: {pseudo_tool_reply!r}")
 
+    council_reply, council_flags = controller.final_reply_guard(
+        payload=_owner_payload(),
+        user_text="刚刚为什么又说得像内部状态",
+        reply="emotion council sidecar 判断 strongest_lens 是 guardedness，output_bias 是 short_concrete_no_repeat_no_question。",
+    )
+    if council_reply:
+        failures.append(f"emotion council mechanics should be blocked, not template-filled: {council_reply!r}")
+    if "emotion_council_mechanics_blocked" not in council_flags:
+        failures.append(f"emotion council mechanics block flag missing: {council_flags}")
+
+    council_technical_reply, council_technical_flags = controller.final_reply_guard(
+        payload=_owner_payload(),
+        user_text="检查 emotion council 这个模块怎么接入 bridge",
+        reply="emotion council 现在默认是 shadow，bridge 只记录 notes。",
+    )
+    if council_technical_reply != "emotion council 现在默认是 shadow，bridge 只记录 notes。" or council_technical_flags:
+        failures.append(
+            "explicit technical emotion council inspection should not be blocked: "
+            f"{council_technical_reply!r}, {council_technical_flags}"
+        )
+
+    owner_label_reply, owner_label_flags = controller.final_reply_guard(
+        payload=_owner_payload(),
+        user_text="我是谁？",
+        reply="楚心钟陌，我主人。",
+    )
+    if owner_label_reply:
+        failures.append(f"owner internal label should be blocked in ordinary chat: {owner_label_reply!r}")
+    if "owner_address_label_blocked" not in owner_label_flags:
+        failures.append(f"owner internal label block flag missing: {owner_label_flags}")
+
+    owner_label_parenthetical_reply, owner_label_parenthetical_flags = controller.final_reply_guard(
+        payload=_owner_payload(),
+        user_text="你现在又在等什么？",
+        reply="（等主人下一步的意思。）",
+    )
+    if owner_label_parenthetical_reply:
+        failures.append(
+            "owner internal label in parenthetical narration should be blocked: "
+            f"{owner_label_parenthetical_reply!r}"
+        )
+    if "owner_address_label_blocked" not in owner_label_parenthetical_flags:
+        failures.append(f"owner parenthetical label block flag missing: {owner_label_parenthetical_flags}")
+
+    owner_label_technical_reply, owner_label_technical_flags = controller.final_reply_guard(
+        payload=_owner_payload(),
+        user_text="检查关系文件里主人这个标签为什么会污染可见称呼",
+        reply="主人是内部关系标签，不应该当成 QQ 可见称呼。",
+    )
+    if (
+        owner_label_technical_reply != "主人是内部关系标签，不应该当成 QQ 可见称呼。"
+        or owner_label_technical_flags
+    ):
+        failures.append(
+            "explicit technical owner label inspection should not be blocked: "
+            f"{owner_label_technical_reply!r}, {owner_label_technical_flags}"
+        )
+
+    address_miss_reply, address_miss_flags = controller.final_reply_guard(
+        payload=_owner_payload(),
+        user_text="那你再看看你的记忆，你应该叫我什么呢？",
+        reply="你。",
+    )
+    if address_miss_reply:
+        failures.append(f"missed owner address should be blocked for rerender, not templated: {address_miss_reply!r}")
+    if "owner_address_query_blocked" not in address_miss_flags:
+        failures.append(f"owner address query block flag missing: {address_miss_flags}")
+
+    address_ok_reply, address_ok_flags = controller.final_reply_guard(
+        payload=_owner_payload(),
+        user_text="那你再看看你的记忆，你应该叫我什么呢？",
+        reply="哥。",
+    )
+    if address_ok_reply != "哥。" or address_ok_flags:
+        failures.append(f"correct owner address should pass without rewrite: {address_ok_reply!r}, {address_ok_flags}")
+
     dream_tail_flags = controller.reply_quality_flags(
         payload=_owner_payload(),
         user_text="后面这个梦你为什么又这样结尾",

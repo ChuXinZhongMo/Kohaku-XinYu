@@ -611,6 +611,56 @@ PSEUDO_TOOL_LEAK_WORDS = readable_markers(
     "tool_call",
 )
 
+EMOTION_COUNCIL_LEAK_WORDS = readable_markers(
+    "emotion council",
+    "emotion_council",
+    "情感议会",
+    "情緒議會",
+    "lens",
+    "strongest_lens",
+    "active_lens",
+    "active_lenses",
+    "output_bias",
+    "internal voting",
+    "内部投票",
+    "子Agent",
+    "sub agent",
+    "sub-agent",
+)
+
+OWNER_INTERNAL_LABEL_WORDS = readable_markers(
+    "主人",
+    "我主人",
+    "等主人",
+    "主人下一步",
+)
+
+OWNER_LABEL_TECHNICAL_ALLOW_WORDS = readable_markers(
+    "内部标签",
+    "关系标签",
+    "系统标签",
+    "文件",
+    "代码",
+    "实现",
+    "检查",
+    "调试",
+    "设计",
+    "owner",
+    "主人这个标签",
+)
+
+OWNER_ADDRESS_QUERY_WORDS = readable_markers(
+    "应该叫我什么",
+    "你该叫我什么",
+    "你应该叫我",
+    "叫我什么",
+    "称呼我",
+    "怎么称呼我",
+    "我是谁",
+)
+
+OWNER_VISIBLE_ADDRESS_WORDS = readable_markers("哥")
+
 FALSE_CODEX_UNAVAILABLE_COMPACT_MARKERS = (
     "codex作为skill走不通",
     "codex作為skill走不通",
@@ -800,7 +850,7 @@ class XinyuSpeechController:
         )
         flags = list(quality_flags or [])
         relationship = (
-            "owner; highest special relation node; use closeness as context, not a forced performance"
+            "owner; highest special relation node; visible address is 哥; do not call owner 主人 in ordinary QQ chat"
             if scene.is_owner
             else "external contact; do not assume owner intimacy"
         )
@@ -917,6 +967,10 @@ class XinyuSpeechController:
 
         if _contains_any(text, DREAM_DISCLAIMER_PATTERNS):
             flags.append("dream disclaimer repeated")
+        if self._should_block_owner_internal_label(user_text, text, payload=payload or {}):
+            flags.append("owner internal label used as visible address")
+        if self._should_block_owner_address_query_miss(user_text, text, payload=payload or {}):
+            flags.append("owner address query missed visible address")
 
         max_chars = persona_state.max_chars if persona_state is not None else 0
         if max_chars > 0 and len(text) > max_chars * 2:
@@ -947,6 +1001,9 @@ class XinyuSpeechController:
         if _contains_any(text, PSEUDO_TOOL_LEAK_WORDS):
             text = self._naturalize_pseudo_tool_reply(user_text, text)
             flags.append("pseudo_tool_call_naturalized")
+        if self._should_hide_emotion_council_mechanics(user_text, text, payload=payload or {}):
+            text = ""
+            flags.append("emotion_council_mechanics_blocked")
         if self._should_hide_machine_introspection(user_text, text, payload=payload or {}):
             text = self._naturalize_machine_introspection_reply(user_text, text)
             flags.append("machine_introspection_naturalized")
@@ -966,10 +1023,26 @@ class XinyuSpeechController:
         if self._should_block_false_codex_unavailable_claim(user_text, text, payload=payload or {}):
             text = ""
             flags.append("false_codex_unavailable_claim_blocked")
+        if self._should_block_owner_internal_label(user_text, text, payload=payload or {}):
+            text = ""
+            flags.append("owner_address_label_blocked")
+        if self._should_block_owner_address_query_miss(user_text, text, payload=payload or {}):
+            text = ""
+            flags.append("owner_address_query_blocked")
         return text, flags
 
     def _naturalize_pseudo_tool_reply(self, user_text: str, reply: str) -> str:
         return ""
+
+    def _should_hide_emotion_council_mechanics(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> bool:
+        if not _contains_any(reply, EMOTION_COUNCIL_LEAK_WORDS):
+            return False
+        scene = self.classify(payload=payload, user_text=user_text)
+        if not scene.is_owner:
+            return True
+        if scene.technical_request and _contains_any(user_text, EMOTION_COUNCIL_LEAK_WORDS):
+            return False
+        return True
 
     def _should_hide_machine_introspection(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> bool:
         if not _contains_any(reply, MACHINE_INTROSPECTION_WORDS):
@@ -1053,6 +1126,24 @@ class XinyuSpeechController:
         if "/codex" in compact and any(marker in compact for marker in ("手动", "手動", "只能", "才可以", "才能")):
             return True
         return False
+
+    def _should_block_owner_internal_label(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> bool:
+        if not reply or not _contains_any(reply, OWNER_INTERNAL_LABEL_WORDS):
+            return False
+        scene = self.classify(payload=payload, user_text=user_text)
+        if not scene.is_owner:
+            return False
+        if scene.technical_request and _contains_any(user_text, OWNER_LABEL_TECHNICAL_ALLOW_WORDS):
+            return False
+        return True
+
+    def _should_block_owner_address_query_miss(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> bool:
+        if not _contains_any(user_text, OWNER_ADDRESS_QUERY_WORDS):
+            return False
+        scene = self.classify(payload=payload, user_text=user_text)
+        if not scene.is_owner or scene.technical_request:
+            return False
+        return not _contains_any(reply, OWNER_VISIBLE_ADDRESS_WORDS)
 
     def strip_wrappers(self, text: str) -> str:
         stripped = text.strip()

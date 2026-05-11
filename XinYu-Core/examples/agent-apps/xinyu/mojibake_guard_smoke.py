@@ -21,9 +21,19 @@ CRITICAL_FILES = (
     "memory/context/current_life_month_context.md",
     "memory/context/persona_life_anchors.md",
     "memory/context/recent_context.md",
+    "memory/context/proactive_presence_state.md",
+    "memory/context/proactive_request_state.md",
+    "memory/context/proactive_qq_dispatch_state.md",
+    "memory/context/memory_braid_state.md",
+    "memory/context/turn_coherence_state.md",
+    "memory/context/initiative_spine_state.md",
+    "memory/context/self_thought_state.md",
+    "memory/context/emotion_council_state.md",
+    "memory/context/impulse_soup_state.md",
     "memory/self/system_prompt_memory.md",
     "memory/self/personality_profile.md",
     "memory/self/narrative.md",
+    "memory/self/learning_closed_loop_state.md",
     "memory/emotions/current_state.md",
     "memory/relationships/index.md",
     "memory/people/owner.md",
@@ -75,8 +85,17 @@ DIRECT_VARIANT_PHRASES = (
     "\u4e2d\u6587\u4e92\u8054\u7f51",
     "\u6ca1\u4ec0\u4e48\u53d8\u5316",
     "\u6ca1\u843d\u5230\u8bf4\u8bdd\u91cc",
+    "\u5173\u4e8e\u88ab\u8bb0\u4f4f",
+    "\u8fd8\u6ca1\u653e\u4e0b",
+    "\u957f\u671f\u5173\u7cfb",
+    "\u5177\u4f53\u5bf9\u8bdd",
+    "\u53cd\u601d\u961f\u5217",
+    "\u8bb0\u5fc6\u7559\u75d5",
+    "\u5916\u90e8\u5b66\u4e60",
+    "\u4e3b\u52a8\u7ebf\u7a0b",
     "\u611f\u60c5\u7cfb\u7edf",
     "\u8bb0\u5fc6\u7cfb\u7edf",
+    "\u4e3b\u4eba\u683c",
     "\u67b6\u6784",
     "\u7cfb\u7edf",
 )
@@ -133,6 +152,23 @@ def _direct_variant_hits(text: str) -> list[str]:
     return hits
 
 
+def _synthetic_guard_failures() -> list[str]:
+    failures: list[str] = []
+    for phrase in (
+        "\u5173\u4e8e\u88ab\u8bb0\u4f4f",
+        "\u53cd\u601d\u961f\u5217",
+        "\u8bb0\u5fc6\u7559\u75d5",
+        "\u957f\u671f\u5173\u7cfb",
+    ):
+        variants = legacy_mojibake_variants(phrase)
+        if not variants:
+            failures.append(f"synthetic guard has no legacy variants for {phrase!r}")
+            continue
+        if not any(_direct_variant_hits(variant) for variant in variants):
+            failures.append(f"synthetic guard misses legacy variants for {phrase!r}")
+    return failures
+
+
 def _iter_guard_files() -> list[Path]:
     files: dict[str, Path] = {}
     for rel in CRITICAL_FILES:
@@ -151,7 +187,7 @@ def _iter_guard_files() -> list[Path]:
 
 
 def main() -> int:
-    failures: list[str] = []
+    failures: list[str] = _synthetic_guard_failures()
     checked = 0
     for path in _iter_guard_files():
         rel = str(path.relative_to(ROOT))

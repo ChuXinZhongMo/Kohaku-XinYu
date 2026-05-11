@@ -39,8 +39,11 @@ CRITICAL_FINAL_GUARD_FLAGS = frozenset(
         "pseudo_tool_call_naturalized",
         "machine_introspection_naturalized",
         "visible_memory_mechanics_naturalized",
+        "emotion_council_mechanics_blocked",
         "false_codex_unavailable_claim_blocked",
         "layered_voice_self_analysis_blocked",
+        "owner_address_label_blocked",
+        "owner_address_query_blocked",
     }
 )
 

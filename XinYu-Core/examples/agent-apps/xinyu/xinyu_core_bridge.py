@@ -129,6 +129,7 @@ from xinyu_desktop_service import (
     desktop_services as desktop_service_services,
 )
 from xinyu_environment_sensor import sample_environment
+from xinyu_emotion_council import build_emotion_council_prompt_block, run_emotion_council_shadow
 from xinyu_life_kernel import build_entropy_state, evaluate_life_kernel
 from xinyu_life_reply_policy import (
     apply_life_reply_policy,
@@ -717,6 +718,10 @@ class XinYuBridgeRuntime:
         self.v1_enabled = _as_bool(os.environ.get("XINYU_V1_ENABLED"), default=False)
         self.v1_shadow_mode = _as_bool(os.environ.get("XINYU_V1_SHADOW_MODE"), default=False)
         self.v1_shadow_timeout_seconds = max(1, _as_int(os.environ.get("XINYU_V1_SHADOW_TIMEOUT_SECONDS"), 3))
+        self.emotion_council_prompt_enabled = _as_bool(
+            os.environ.get("XINYU_EMOTION_COUNCIL_PROMPT_ENABLED"),
+            default=False,
+        )
         self.v1_owner_simple_canary = _as_bool(os.environ.get(V1_OWNER_SIMPLE_CANARY_ENV), default=False)
         self.v1_canary_timeout_seconds = max(
             1,
@@ -2208,6 +2213,7 @@ class XinYuBridgeRuntime:
         return notes
 
     def _append_proactivity_shadow_note(self, notes: list[str], *, checked_at: str) -> None:
+        self._append_emotion_council_note(notes, checked_at=checked_at)
         try:
             shadow = run_proactivity_scorer_shadow(self.xinyu_dir, checked_at=checked_at)
             notes.append(
@@ -2222,6 +2228,23 @@ class XinYuBridgeRuntime:
             self._trace_autonomous(f"proactivity_shadow_error={exc!r}")
         self._append_impulse_soup_note(notes, checked_at=checked_at)
         self._append_initiative_spine_note(notes, checked_at=checked_at)
+
+    def _append_emotion_council_note(self, notes: list[str], *, checked_at: str) -> None:
+        try:
+            council = run_emotion_council_shadow(
+                self.xinyu_dir,
+                checked_at=checked_at,
+                trigger="autonomous_maintenance",
+            )
+            notes.append(
+                "emotion_council:"
+                f"{_safe_str(council.get('status'), 'unknown')}/"
+                f"{_safe_str(council.get('strongest_lens'), 'none')}/"
+                f"{_safe_str(council.get('active_lens_count'), '0')}"
+            )
+        except Exception as exc:
+            notes.append(f"emotion_council_error:{type(exc).__name__}")
+            self._trace_autonomous(f"emotion_council_error={exc!r}")
 
     def _append_impulse_soup_note(self, notes: list[str], *, checked_at: str) -> None:
         try:
@@ -4529,6 +4552,18 @@ tags: [promise, followup, qq-outbox, continuity]
             v1_shadow = pre_model_routes.v1_shadow
             if pre_model_routes.response is not None:
                 return pre_model_routes.response
+            emotion_council: dict[str, Any] = {"notes": ["emotion_council_not_run"]}
+            try:
+                emotion_council = run_emotion_council_shadow(
+                    self.xinyu_dir,
+                    text=text,
+                    payload=payload,
+                    checked_at=datetime.now().astimezone().isoformat(),
+                    trigger="live_turn",
+                )
+            except Exception as exc:
+                print(f"[xinyu_core_bridge] emotion council shadow failed: {exc}", flush=True)
+                emotion_council = {"notes": [f"emotion_council_error:{type(exc).__name__}"]}
             session = await self._get_session(session_key)
             proactive_tail_synced = self._sync_recent_proactive_to_dialogue_tail(session, payload)
             persona_sidecar: dict[str, Any] = {"notes": ["persona_state_not_run"], "prompt_block": ""}
@@ -4587,6 +4622,9 @@ tags: [promise, followup, qq-outbox, continuity]
                 continuity_handoff = {"notes": [f"continuity_handoff_error:{type(exc).__name__}"]}
             runtime_presence_context = build_runtime_presence_prompt_block(self.xinyu_dir, limit=2200)
             life_reply_policy = await self._build_life_reply_policy(user_text=text)
+            emotion_council_context = ""
+            if self.emotion_council_prompt_enabled:
+                emotion_council_context = build_emotion_council_prompt_block(self.xinyu_dir)
             try:
                 self._inject_live_turn_context(
                     session.agent,
@@ -4602,6 +4640,7 @@ tags: [promise, followup, qq-outbox, continuity]
                     continuity_context=build_continuity_handoff_prompt_block(self.xinyu_dir, user_text=text),
                     uncertainty_pause_context=build_uncertainty_pause_prompt_block(self.xinyu_dir),
                     life_reply_context=build_life_reply_prompt_block(life_reply_policy),
+                    emotion_council_context=emotion_council_context,
                 )
                 await asyncio.wait_for(
                     session.agent.inject_event(event),
@@ -5134,6 +5173,7 @@ tags: [promise, followup, qq-outbox, continuity]
                     component_notes={
                         "private_thought_outcome": private_thought_outcome,
                         "private_thought_link": private_thought_link,
+                        "emotion_council": emotion_council,
                         "persona_sidecar": persona_sidecar,
                         "memory_candidate": candidate_result,
                         "memory_self_review": memory_self_review,
@@ -5202,6 +5242,7 @@ tags: [promise, followup, qq-outbox, continuity]
             notes.extend(_safe_str(note) for note in persona_sidecar.get("notes", [])[:4])
             notes.extend(_safe_str(note) for note in event_sidecar.get("notes", [])[:4])
             notes.extend(_safe_str(note) for note in v1_shadow.get("notes", [])[:4])
+            notes.extend(_safe_str(note) for note in emotion_council.get("notes", [])[:4])
             notes.extend(_safe_str(note) for note in recalled_context_notes[:4])
             notes.extend(_safe_str(note) for note in archive_result.get("notes", [])[:3])
             notes.extend(_safe_str(note) for note in candidate_result.get("notes", [])[:3])
@@ -5462,6 +5503,7 @@ tags: [promise, followup, qq-outbox, continuity]
         continuity_context: str = "",
         uncertainty_pause_context: str = "",
         life_reply_context: str = "",
+        emotion_council_context: str = "",
     ) -> None:
         controller = getattr(agent, "controller", None)
         pending = getattr(controller, "_pending_injections", None)
@@ -5512,6 +5554,7 @@ tags: [promise, followup, qq-outbox, continuity]
             continuity_context=continuity_context,
             persona_context=persona_context,
             curiosity_context=curiosity_context,
+            emotion_council_context=emotion_council_context,
             checked_at=datetime.now().astimezone().isoformat(),
             write_state=True,
             max_chars=2200,
@@ -5528,6 +5571,7 @@ tags: [promise, followup, qq-outbox, continuity]
             runtime_presence_context=runtime_presence_context,
             continuity_context=continuity_context,
             persona_context=persona_context,
+            emotion_council_context=emotion_council_context,
             recent_action_context=recent_action_block,
             action_digest_context=action_digest_block,
             checked_at=datetime.now().astimezone().isoformat(),
@@ -5543,12 +5587,27 @@ tags: [promise, followup, qq-outbox, continuity]
         )
         if initiative_spine_block:
             sidecar_lines.extend([initiative_spine_block])
+        if is_owner:
+            sidecar_lines.extend(
+                [
+                    "owner address sidecar:",
+                    (
+                        "owner_visible_address: 哥. In ordinary QQ private chat, do not call owner 主人; "
+                        "主人 is only an internal relationship label. If owner asks what XinYu should call "
+                        "him, use the address fact naturally in the current sentence without a repair template "
+                        "or mechanics report. Treat 你哥我 as owner's self-reference, not a phrase to mirror as 你哥你."
+                    ),
+                ]
+            )
         persona_block = _safe_str(persona_context).strip()
         if persona_block:
             sidecar_lines.extend(["persona sidecar:", persona_block[:1200]])
         curiosity_block = _safe_str(curiosity_context).strip()
         if curiosity_block:
             sidecar_lines.extend(["curiosity sidecar:", curiosity_block[:1200]])
+        emotion_council_block = _safe_str(emotion_council_context).strip()
+        if emotion_council_block:
+            sidecar_lines.extend([emotion_council_block[:1200]])
         life_reply_block = _safe_str(life_reply_context).strip()
         if life_reply_block:
             sidecar_lines.extend([life_reply_block])
