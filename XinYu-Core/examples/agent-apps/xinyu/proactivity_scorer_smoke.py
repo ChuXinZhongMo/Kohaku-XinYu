@@ -55,6 +55,17 @@ def _seed_task_failed(root: Path) -> None:
     )
 
 
+def _seed_stale_task_failed(root: Path) -> None:
+    _write(
+        root / "memory/context/runtime_program_awareness.md",
+        """# Runtime Program Awareness
+
+## Subsystems
+- codex_delegate: status=failed timed_out=false updated_at=2026-05-06T23:00:00+08:00 job_id=job-stale report_label=report.md
+""",
+    )
+
+
 def _seed_task_done(root: Path) -> None:
     _write(
         root / "memory/context/runtime_program_awareness.md",
@@ -62,6 +73,43 @@ def _seed_task_done(root: Path) -> None:
 
 ## Subsystems
 - codex_delegate: status=finished timed_out=false job_id=job-smoke report_label=report.md
+""",
+    )
+
+
+def _seed_qq_outbox_dead(root: Path, *, last_dead_at: str, recent_dead_count: int = 0) -> None:
+    _write(
+        root / "memory/context/runtime_program_awareness.md",
+        f"""# Runtime Program Awareness
+
+## Subsystems
+- qq_outbox: last_event=claim_empty queue_items=80 queued_count=0 claimed_count=0 sent_count=79 failed_count=0 dead_count=1 recent_failed_count=0 recent_dead_count={recent_dead_count} last_failed_at=none last_dead_at={last_dead_at}
+""",
+    )
+    _write(
+        root / "memory/context/qq_outbox_dispatch_state.md",
+        f"""# QQ Outbox Dispatch State
+
+## Queue
+- last_event: claim_empty
+- queued_count: 0
+- claimed_count: 0
+- sent_count: 79
+- failed_count: 0
+- dead_count: 1
+- last_failed_at: none
+- last_dead_at: {last_dead_at}
+""",
+    )
+
+
+def _seed_watched_source_error(root: Path) -> None:
+    _write(
+        root / "memory/context/runtime_program_awareness.md",
+        """# Runtime Program Awareness
+
+## Subsystems
+- watched_source: status=error updated_at=2026-05-07T08:50:00+08:00 source_id=linux-do-latest read_only=true scanned_items=0 matched_items=0
 """,
     )
 
@@ -131,6 +179,38 @@ def main() -> int:
             failures.append(f"task_failed should shadow-recommend send_now: {result}")
         if result["preferred_channel"] != "qq" or result["shadow_only"] is not True:
             failures.append(f"task_failed should stay qq-preferred but shadow_only: {result}")
+        _assert_no_dispatch(root, failures)
+
+    with tempfile.TemporaryDirectory(prefix="xinyu-proscore-stale-task-failed-") as tmp:
+        root = Path(tmp)
+        _seed_stale_task_failed(root)
+        result = run_proactivity_scorer_shadow(root, checked_at=CHECKED_AT)
+        if result["status"] != "no_candidates":
+            failures.append(f"stale codex_delegate failure should not trigger task_failed: {result}")
+        _assert_no_dispatch(root, failures)
+
+    with tempfile.TemporaryDirectory(prefix="xinyu-proscore-stale-qq-dead-") as tmp:
+        root = Path(tmp)
+        _seed_qq_outbox_dead(root, last_dead_at="2026-05-06T23:00:00+08:00")
+        result = run_proactivity_scorer_shadow(root, checked_at=CHECKED_AT)
+        if result["status"] != "no_candidates":
+            failures.append(f"stale dead-only QQ outbox should not trigger diagnostics: {result}")
+        _assert_no_dispatch(root, failures)
+
+    with tempfile.TemporaryDirectory(prefix="xinyu-proscore-recent-qq-dead-") as tmp:
+        root = Path(tmp)
+        _seed_qq_outbox_dead(root, last_dead_at="2026-05-07T08:30:00+08:00", recent_dead_count=1)
+        result = run_proactivity_scorer_shadow(root, checked_at=CHECKED_AT)
+        if result["source_type"] != "task_failed" or result["intent_type"] != "dispatch_failure":
+            failures.append(f"recent dead-only QQ outbox should still trigger dispatch diagnosis: {result}")
+        _assert_no_dispatch(root, failures)
+
+    with tempfile.TemporaryDirectory(prefix="xinyu-proscore-watched-source-error-") as tmp:
+        root = Path(tmp)
+        _seed_watched_source_error(root)
+        result = run_proactivity_scorer_shadow(root, checked_at=CHECKED_AT)
+        if result["status"] != "no_candidates":
+            failures.append(f"read-only watched_source error should not trigger proactive send: {result}")
         _assert_no_dispatch(root, failures)
 
     with tempfile.TemporaryDirectory(prefix="xinyu-proscore-screen-locked-") as tmp:

@@ -337,3 +337,44 @@ def test_stale_codex_running_presence_reports_timed_out(tmp_path: Path) -> None:
     assert summary["codex_status"] == "timed_out"
     assert summary["program_awareness"]["subsystems"]["codex_delegate"]["status"] == "timed_out"
     assert summary["program_awareness"]["subsystems"]["codex_delegate"]["timed_out"] == "true"
+    assert summary["program_awareness"]["subsystems"]["codex_delegate"]["updated_at"] == "2026-01-01T00:00:00+08:00"
+
+
+def test_qq_outbox_stale_dead_count_is_not_known_error(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "memory/context/qq_outbox_dispatch_state.md",
+        """
+        - last_event: claim_empty
+        - queued_count: 0
+        - claimed_count: 0
+        - sent_count: 1
+        - failed_count: 0
+        - dead_count: 1
+        - last_failed_at: none
+        - last_dead_at: 2000-01-01T00:00:00+08:00
+        """,
+    )
+    queue_path = tmp_path / "memory/context/qq_outbox_queue.json"
+    queue_path.parent.mkdir(parents=True, exist_ok=True)
+    queue_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "updated_at": "2026-05-02T00:11:00+08:00",
+                "items": [
+                    {"status": "sent", "updated_at": "2026-05-02T00:10:00+08:00"},
+                    {"status": "dead", "updated_at": "2000-01-01T00:00:00+08:00"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    summary = read_runtime_presence_summary(tmp_path)
+    qq_outbox = summary["program_awareness"]["subsystems"]["qq_outbox"]
+
+    assert qq_outbox["dead_count"] == "1"
+    assert qq_outbox["recent_dead_count"] == "0"
+    assert qq_outbox["last_dead_at"] == "2000-01-01T00:00:00+08:00"
+    assert "qq_outbox.dead_count=1" not in summary["program_awareness"]["known_errors"]
+    assert "qq_outbox.recent_dead_count=1" not in summary["program_awareness"]["known_errors"]

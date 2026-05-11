@@ -11,6 +11,12 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from xinyu_runtime_failure_freshness import (
+    codex_delegate_failure_active as _codex_delegate_failure_active,
+    parse_inline_fields as _parse_inline_fields,
+    runtime_failure_counts_active as _runtime_failure_counts_active,
+)
+
 
 TRACE_REL = Path("memory/context/proactive_decision_trace.jsonl")
 STATE_REL = Path("memory/context/proactive_decision_state.md")
@@ -522,6 +528,9 @@ def _candidates_from_runtime_program_awareness(root: Path, *, checked_at: str) -
                     )
                 )
             elif "status=failed" in lowered or "timed_out=true" in lowered or "timed_out" in lowered:
+                inline_fields = _parse_inline_fields(detail)
+                if not _codex_delegate_failure_active(inline_fields, checked_at=checked_at):
+                    continue
                 candidates.append(
                     _make_candidate(
                         source_type="task_failed",
@@ -559,6 +568,8 @@ def _candidates_from_runtime_program_awareness(root: Path, *, checked_at: str) -
         elif "status=error" in lowered or "last_error=" in lowered or "adapter_error=" in lowered:
             if "last_error=none" in lowered or "adapter_error=none" in lowered:
                 continue
+            if label == "watched_source" and "read_only=true" in lowered:
+                continue
             candidates.append(
                 _make_candidate(
                     source_type="runtime_error",
@@ -575,7 +586,10 @@ def _candidates_from_runtime_program_awareness(root: Path, *, checked_at: str) -
                     checked_at=checked_at,
                 )
             )
-        elif re.search(r"\b(?:failed_count|dead_count|failure_count)=[1-9]", lowered):
+        elif re.search(r"\b(?:failure_count|failed_count|dead_count|recent_failed_count|recent_dead_count)=[1-9]", lowered):
+            inline_fields = _parse_inline_fields(detail)
+            if not _runtime_failure_counts_active(inline_fields, checked_at=checked_at):
+                continue
             candidates.append(
                 _make_candidate(
                     source_type="runtime_error",
@@ -696,6 +710,8 @@ def _candidate_from_qq_outbox_dispatch(root: Path, *, checked_at: str) -> Proact
     failed = _safe_int(fields.get("failed_count"), 0)
     dead = _safe_int(fields.get("dead_count"), 0)
     if failed + dead <= 0:
+        return None
+    if not _runtime_failure_counts_active(fields, checked_at=checked_at):
         return None
     return _make_candidate(
         source_type="task_failed",

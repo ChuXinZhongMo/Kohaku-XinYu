@@ -229,9 +229,45 @@ def main() -> int:
             failures.append("owner file sent ack was not recorded")
 
         state = (root / "memory/context/qq_outbox_dispatch_state.md").read_text(encoding="utf-8")
-        for marker in ("sent_count: 5", "QQ Outbox Dispatch State", "Gateway must ack", "Image dispatch may carry", "File dispatch may carry"):
+        for marker in (
+            "sent_count: 5",
+            "recent_failed_count: 0",
+            "recent_dead_count: 0",
+            "last_failed_at: none",
+            "last_dead_at: none",
+            "QQ Outbox Dispatch State",
+            "Gateway must ack",
+            "Image dispatch may carry",
+            "File dispatch may carry",
+        ):
             if marker not in state:
                 failures.append(f"dispatch state missing marker: {marker}")
+
+        failed_queued = enqueue_qq_outbox_message(
+            root,
+            user_id="42",
+            message="will fail once",
+            source="smoke_failure",
+            dedupe_key="fail-once",
+        )
+        failed_claim = claim_next_qq_outbox_message(root, {"claim_id": "claim-failed", "adapter": "smoke"})
+        failed_ack = ack_qq_outbox_message(
+            root,
+            {
+                "message_id": failed_claim.get("message_id") or failed_queued.get("message_id"),
+                "claim_id": failed_claim.get("claim_id"),
+                "ack_status": "failed",
+                "adapter_error": "simulated failure",
+            },
+        )
+        if not failed_ack.get("ack_recorded") or failed_ack.get("ack_status") != "failed":
+            failures.append("failed ack was not recorded")
+        failed_state = (root / "memory/context/qq_outbox_dispatch_state.md").read_text(encoding="utf-8")
+        for marker in ("failed_count: 1", "recent_failed_count: 1"):
+            if marker not in failed_state:
+                failures.append(f"failed dispatch state missing marker: {marker}")
+        if "last_failed_at: none" in failed_state:
+            failures.append("failed dispatch state did not record last_failed_at")
 
         original_replace = outbox_module.os.replace
         attempts = {"count": 0}

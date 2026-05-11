@@ -11,6 +11,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
+from xinyu_qq_outbox_state import parse_outbox_time as _parse_time
+from xinyu_qq_outbox_state import summarize_outbox_items
+
 
 QUEUE_VERSION = 1
 MAX_MESSAGE_CHARS = 1200
@@ -224,18 +227,9 @@ def _message_id(source: str, dedupe_key: str) -> str:
     return f"{safe_source}-{stamp}-{suffix}"
 
 
-def _counts(items: list[dict[str, Any]]) -> dict[str, int]:
-    result = {"queued": 0, "claimed": 0, "sent": 0, "failed": 0, "dead": 0}
-    for item in items:
-        status = _safe_str(item.get("status"), "queued")
-        if status in result:
-            result[status] += 1
-    return result
-
-
 def _write_state(root: Path, data: dict[str, Any], *, last_event: str, last_message_id: str = "") -> None:
     items = [item for item in data.get("items", []) if isinstance(item, dict)]
-    counts = _counts(items)
+    summary = summarize_outbox_items(items)
     now = _safe_str(data.get("updated_at"), _now())
     text = f"""---
 title: QQ Outbox Dispatch State
@@ -258,11 +252,15 @@ tags: [qq, outbox, dispatch, codex, adapter]
 ## Queue
 - last_event: {last_event}
 - last_message_id: {last_message_id or "none"}
-- queued_count: {counts["queued"]}
-- claimed_count: {counts["claimed"]}
-- sent_count: {counts["sent"]}
-- failed_count: {counts["failed"]}
-- dead_count: {counts["dead"]}
+- queued_count: {summary["queued_count"]}
+- claimed_count: {summary["claimed_count"]}
+- sent_count: {summary["sent_count"]}
+- failed_count: {summary["failed_count"]}
+- dead_count: {summary["dead_count"]}
+- recent_failed_count: {summary["recent_failed_count"]}
+- recent_dead_count: {summary["recent_dead_count"]}
+- last_failed_at: {summary["last_failed_at"]}
+- last_dead_at: {summary["last_dead_at"]}
 
 ## Boundaries
 - Core may enqueue owner-private completion summaries.
@@ -447,13 +445,6 @@ def enqueue_owner_qq_outbox_file(
         dedupe_key=dedupe_key,
         metadata=metadata,
     )
-
-
-def _parse_time(value: str) -> datetime | None:
-    try:
-        return datetime.fromisoformat(value)
-    except Exception:
-        return None
 
 
 def _seconds_since(value: str, default: float = 999999.0) -> float:

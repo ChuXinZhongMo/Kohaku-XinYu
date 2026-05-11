@@ -11,6 +11,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from xinyu_runtime_failure_freshness import (
+    codex_delegate_failure_active as _codex_delegate_failure_active,
+    runtime_failure_detail_active as _runtime_failure_detail_active,
+)
+
 
 STATE_JSON_REL = Path("memory/context/impulse_soup_state.json")
 STATE_MD_REL = Path("memory/context/impulse_soup_state.md")
@@ -29,6 +34,7 @@ SPAWN_INTERVAL_SECONDS = 21600
 DEFAULT_TTL_SECONDS = 7 * 86400
 
 DESIRE_TTL_SECONDS = {
+    "unresolved_reflection": 12 * 3600,
     "expression_repair_habit": 24 * 3600,
     "self_repair_reflex": 36 * 3600,
     "runtime_diagnostic_reflex": 36 * 3600,
@@ -36,6 +42,7 @@ DESIRE_TTL_SECONDS = {
 }
 
 DESIRE_ENERGY_CAPS = {
+    "unresolved_reflection": 46,
     "expression_repair_habit": 58,
     "self_repair_reflex": 80,
     "runtime_diagnostic_reflex": 78,
@@ -49,12 +56,14 @@ SEED_LIMITS_BY_DESIRE = {
 }
 
 ACTIVE_LIMITS_BY_DESIRE = {
+    "unresolved_reflection": 2,
     "expression_repair_habit": 4,
     "self_repair_reflex": 2,
     "runtime_diagnostic_reflex": 1,
 }
 
 NO_SPAWN_DESIRES = {
+    "unresolved_reflection",
     "expression_repair_habit",
 }
 
@@ -153,6 +162,7 @@ def run_impulse_soup(
     checked_at = checked_at or _now_iso()
     state = _load_state(root)
     seeds = collect_impulse_seeds(root, checked_at=checked_at)[: max(1, int(max_new))]
+    active_seed_signatures = {seed.source_signature for seed in seeds}
 
     thoughtlets = [_thoughtlet_from_dict(item) for item in state.get("thoughtlets", []) if isinstance(item, dict)]
     by_signature = {item.source_signature: item for item in thoughtlets if item.source_signature}
@@ -163,6 +173,10 @@ def run_impulse_soup(
 
     for item in thoughtlets:
         _decay_thoughtlet(item, checked_at=checked_at)
+        if _cool_stale_transient_failure(item, active_seed_signatures=active_seed_signatures):
+            notes.append(f"cooled_stale_transient_failure:{item.thoughtlet_id}")
+        if _cool_stale_unresolved_reflection(item, active_seed_signatures=active_seed_signatures):
+            notes.append(f"cooled_stale_unresolved_reflection:{item.thoughtlet_id}")
 
     for seed in seeds:
         existing = by_signature.get(seed.source_signature)
@@ -279,6 +293,8 @@ def _seeds_from_proactive_trace(root: Path, *, checked_at: str) -> list[ImpulseS
             row.get("content_preview"),
             candidate.get("content_preview") if isinstance(candidate, dict) else "",
         )
+        if not _proactive_trace_seed_allowed(row, source_kind=source_kind, candidate=candidate, checked_at=checked_at):
+            continue
         initial_energy = _energy_from_proactive_row(row, score)
         seeds.append(
             _make_seed(
@@ -353,12 +369,15 @@ def _seeds_from_runtime_awareness(root: Path, *, checked_at: str) -> list[Impuls
         if not stripped.startswith("- ") or ":" not in stripped:
             continue
         name, detail = stripped[2:].split(":", 1)
+        name = _clean_token(name)
         lowered = detail.lower()
-        if "status=error" in lowered or re.search(r"\b(?:failure_count|failed_count|dead_count)=[1-9]", lowered):
+        if name == "watched_source" and "read_only=true" in lowered:
+            continue
+        if "status=error" in lowered or _runtime_failure_detail_active(detail, checked_at=checked_at):
             seeds.append(
                 _make_seed(
                     source_kind="runtime_error",
-                    source_ref=f"runtime_awareness:{_clean_token(name)}",
+                    source_ref=f"runtime_awareness:{name}",
                     desire_shape="runtime_diagnostic_reflex",
                     evidence_preview=detail,
                     initial_energy=72,
@@ -490,6 +509,45 @@ def _decay_thoughtlet(thoughtlet: Thoughtlet, *, checked_at: str) -> None:
         decay += 1
     thoughtlet.energy = _cap_energy(thoughtlet.desire_shape, thoughtlet.energy - decay)
     thoughtlet.updated_at = checked_at
+
+
+def _cool_stale_transient_failure(thoughtlet: Thoughtlet, *, active_seed_signatures: set[str]) -> bool:
+    if thoughtlet.source_signature in active_seed_signatures:
+        return False
+    if thoughtlet.desire_shape not in {"runtime_diagnostic_reflex", "self_repair_reflex"}:
+        return False
+    preview = _one_line(thoughtlet.evidence_preview).lower()
+    if not any(
+        marker in preview
+        for marker in (
+            "runtime queue has failures",
+            "runtime subsystem reported an error",
+            "queued outbound message failed to dispatch",
+        )
+    ):
+        return False
+    thoughtlet.energy = min(thoughtlet.energy, 18)
+    thoughtlet.usefulness_score = min(thoughtlet.usefulness_score, 30)
+    return True
+
+
+def _cool_stale_unresolved_reflection(thoughtlet: Thoughtlet, *, active_seed_signatures: set[str]) -> bool:
+    if thoughtlet.desire_shape != "unresolved_reflection":
+        return False
+    if _inner_cycle_only_reflection_text(
+        thoughtlet.source_ref,
+        thoughtlet.evidence_preview,
+        thoughtlet.source_kind,
+        thoughtlet.proposed_next_action,
+    ):
+        thoughtlet.energy = min(thoughtlet.energy, 12)
+        thoughtlet.usefulness_score = min(thoughtlet.usefulness_score, 20)
+        return True
+    if thoughtlet.source_signature in active_seed_signatures:
+        return False
+    thoughtlet.energy = min(thoughtlet.energy, 18)
+    thoughtlet.usefulness_score = min(thoughtlet.usefulness_score, 28)
+    return True
 
 
 def _maybe_spawn_child(thoughtlet: Thoughtlet, thoughtlets: list[Thoughtlet], *, checked_at: str) -> Thoughtlet | None:
@@ -795,6 +853,55 @@ def _parse_fields(text: str) -> dict[str, str]:
         for match in regex.finditer(text or ""):
             fields[match.group(1).strip()] = _clip(match.group(2), 300)
     return fields
+
+
+def _proactive_trace_seed_allowed(
+    row: dict[str, Any],
+    *,
+    source_kind: str,
+    candidate: dict[str, Any],
+    checked_at: str,
+) -> bool:
+    source_ref = _one_line(candidate.get("source_ref"))
+    preview = _first_meaningful(
+        candidate.get("content_preview"),
+        row.get("content_preview"),
+        candidate.get("owner_visible_text"),
+    )
+    combined_fields = [
+        source_ref,
+        row.get("source_ref"),
+        row.get("candidate_signature"),
+        row.get("candidate_id"),
+        row.get("content_preview"),
+        row.get("intent_type"),
+        row.get("recommendation"),
+        candidate.get("source_ref"),
+        candidate.get("content_preview"),
+        candidate.get("owner_visible_text"),
+        candidate.get("utility_hint"),
+        candidate.get("intent_type"),
+        candidate.get("source_type"),
+        candidate.get("novelty_hint"),
+        preview,
+    ]
+    combined = " ".join(_one_line(value) for value in combined_fields).lower()
+    if source_kind == "reflection_question" and _inner_cycle_only_reflection_text(*combined_fields):
+        return False
+    if source_kind == "runtime_error" and "runtime_program_awareness:watched_source" in combined and "read_only=true" in combined:
+        return False
+    if source_kind == "task_failed" and "qq_outbox_dispatch_state" in combined:
+        return _runtime_failure_detail_active(preview, checked_at=checked_at)
+    if source_kind == "task_failed" and "runtime_program_awareness:codex_delegate" in combined:
+        return _codex_delegate_failure_active(preview, checked_at=checked_at)
+    return True
+
+
+def _inner_cycle_only_reflection_text(*values: Any) -> bool:
+    text = " ".join(_one_line(value).lower() for value in values if _one_line(value))
+    if "reflection residue should stay in the inner cycle for now" in text:
+        return True
+    return "reflection residue" in text and "inner cycle" in text and "stay" in text
 
 
 def _read_text(path: Path) -> str:

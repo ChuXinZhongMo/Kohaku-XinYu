@@ -10,6 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterator
 
+from xinyu_qq_outbox_state import summarize_outbox_items
+
 
 PRESENCE_MD_REL = Path("memory/context/runtime_self_presence.md")
 PROGRAM_AWARENESS_MD_REL = Path("memory/context/runtime_program_awareness.md")
@@ -101,7 +103,18 @@ _PROGRAM_STATE_FILES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     (
         "qq_outbox",
         "memory/context/qq_outbox_dispatch_state.md",
-        ("last_event", "queued_count", "claimed_count", "sent_count", "failed_count", "dead_count"),
+        (
+            "last_event",
+            "queued_count",
+            "claimed_count",
+            "sent_count",
+            "failed_count",
+            "dead_count",
+            "recent_failed_count",
+            "recent_dead_count",
+            "last_failed_at",
+            "last_dead_at",
+        ),
     ),
     (
         "v1_canary_readiness",
@@ -566,6 +579,7 @@ def record_codex_presence(
         fields["bridge_process"] = fields.get("bridge_process") or "running"
         fields["codex_status"] = clean_status
         fields["codex_job_id"] = clean_job_id
+        fields["codex_updated_at"] = observed_at
         fields["visible_window_title"] = clean_title
         fields["codex_request_label"] = request_label
         fields["codex_report_label"] = report_label
@@ -784,6 +798,7 @@ def _load_codex_fields(root: Path) -> dict[str, str]:
         timed_out = True
     return {
         "updated_at": updated_at,
+        "codex_updated_at": updated_at,
         "codex_status": codex_status,
         "codex_job_id": _scrub_field(data.get("job_id")),
         "visible_window_title": _scrub_field(data.get("visible_window_title") or DEFAULT_VISIBLE_WINDOW_TITLE),
@@ -817,6 +832,7 @@ def _collect_program_awareness(root: Path, *, presence_fields: dict[str, str] | 
         "codex_delegate": {
             "observed": "true" if (root / CODEX_STATE_REL).exists() or fields.get("codex_status") else "false",
             "status": _scrub_field(fields.get("codex_status") or "unknown"),
+            "updated_at": _scrub_field(fields.get("codex_updated_at")),
             "job_id": _scrub_field(fields.get("codex_job_id")),
             "report_label": _scrub_field(fields.get("codex_report_label")),
             "exit_code": _scrub_field(fields.get("codex_exit_code")),
@@ -1134,21 +1150,20 @@ def _load_qq_queue_counts(root: Path) -> dict[str, str]:
     items = data.get("items")
     if not isinstance(items, list):
         items = []
-    counts = {"queued": 0, "claimed": 0, "sent": 0, "failed": 0, "dead": 0}
-    for item in items:
-        if not isinstance(item, dict):
-            continue
-        status = _safe_str(item.get("status"), "queued").lower()
-        if status in counts:
-            counts[status] += 1
+    items = [item for item in items if isinstance(item, dict)]
+    summary = summarize_outbox_items(items)
     return {
         "queue_file_exists": "true",
-        "queue_items": str(sum(counts.values())),
-        "queued_count": str(counts["queued"]),
-        "claimed_count": str(counts["claimed"]),
-        "sent_count": str(counts["sent"]),
-        "failed_count": str(counts["failed"]),
-        "dead_count": str(counts["dead"]),
+        "queue_items": str(summary["queue_items"]),
+        "queued_count": str(summary["queued_count"]),
+        "claimed_count": str(summary["claimed_count"]),
+        "sent_count": str(summary["sent_count"]),
+        "failed_count": str(summary["failed_count"]),
+        "dead_count": str(summary["dead_count"]),
+        "recent_failed_count": str(summary["recent_failed_count"]),
+        "recent_dead_count": str(summary["recent_dead_count"]),
+        "last_failed_at": summary["last_failed_at"],
+        "last_dead_at": summary["last_dead_at"],
         "queue_updated_at": _scrub_field(data.get("updated_at")),
     }
 
@@ -1201,7 +1216,12 @@ def _collect_known_program_errors(subsystems: dict[str, dict[str, str]]) -> list
             value = data.get(key)
             if _is_meaningful_error_value(value):
                 errors.append(f"{name}.{key}={_clip_preview(value, limit=120)}")
-        for key in ("failure_count", "failed_count", "dead_count"):
+        count_keys = ["failure_count"]
+        if "recent_failed_count" in data or "recent_dead_count" in data:
+            count_keys.extend(("recent_failed_count", "recent_dead_count"))
+        else:
+            count_keys.extend(("failed_count", "dead_count"))
+        for key in count_keys:
             value = data.get(key)
             if _safe_int(value, 0) > 0:
                 errors.append(f"{name}.{key}={_safe_int(value, 0)}")
@@ -1268,6 +1288,10 @@ def _format_subsystem_line(data: dict[str, Any]) -> str:
         "sent_count",
         "failed_count",
         "dead_count",
+        "recent_failed_count",
+        "recent_dead_count",
+        "last_failed_at",
+        "last_dead_at",
         "readiness_decision",
         "switch_permission",
         "auto_full_switch",
@@ -1323,7 +1347,7 @@ def _format_subsystem_line(data: dict[str, Any]) -> str:
         if key == "observed" and text == "true":
             continue
         parts.append(f"{key}={text}")
-        if len(parts) >= 9:
+        if len(parts) >= 12:
             break
     return " ".join(parts)
 
