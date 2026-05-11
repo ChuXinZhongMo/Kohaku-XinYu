@@ -128,6 +128,32 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Extract QQ tiny reply chunk merge helper into reply bubble helper module.
 - [x] Extract QQ forced reply bubble units helper into reply bubble helper module.
 
+## 2026-05-12 Long Task Queue
+
+- [ ] Finish QQ visible reply bubble split extraction as Loop 145.
+- [ ] Audit remaining pure `NativeQQGateway` helper methods and classify their owner modules.
+- [ ] Extract one low-risk QQ runtime/outbox helper into an existing helper module.
+- [ ] Add or extend a focused QQ smoke for the extracted helper alias.
+- [ ] Audit remaining pure `xinyu_core_bridge.py` helper/static wrapper methods.
+- [ ] Extract one low-risk core bridge helper into an existing `xinyu_bridge_*` module.
+- [ ] Add or extend a focused bridge smoke for the extracted helper alias.
+- [ ] Audit direct runtime/projection writes that still bypass `state_service.py`.
+- [ ] Migrate one low-risk runtime/projection writer to `state_service.py`.
+- [ ] Add a focused state-service caller smoke if missing.
+- [ ] Update `XINYU-STATE-WRITE-AUDIT.md` and `XINYU-VALIDATION-MATRIX.md` for any new state slice.
+- [ ] Run a long-run health checkpoint after 4-6 successful loops.
+- [ ] Run final local gates after all safe queue items complete.
+
+Deferred without explicit owner approval:
+
+- [ ] Full long-term memory body migration.
+- [ ] Full event/projection conversion.
+- [ ] Full chat pipeline rewrite.
+- [ ] Desktop UI large refactor.
+- [ ] v1 real traffic expansion.
+- [ ] Real QQ outbound tests.
+- [ ] Productized deployment or installer work.
+
 ## Stop-Gap First
 
 - [x] Triage `diagnostics\check_xinyu_health.py --json` critical `recent_exceptions`. Diagnostic no longer counts its own ledger, v1 shadow trace, benign malformed WebSocket probe tracebacks, or JSONL `error=none` field names; current signal is `warn`.
