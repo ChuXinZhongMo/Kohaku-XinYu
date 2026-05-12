@@ -18,10 +18,11 @@ This plan continues after the 2026-05-11 integration closeout. It does not add b
   - `c3d64c9 fix: bypass proxy for local XinYu health checks`
   - `a18567e fix: lazily initialize plugin model patterns`
 - Current uncommitted code slice:
-  - Continue QQ reply bubble helper extraction in:
-    - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
-    - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway_smoke.py`
-    - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_reply_bubbles.py`
+  - Continue state governance migration in:
+    - `XinYu-Core/examples/agent-apps/xinyu/xinyu_recent_attachment_context.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/recent_attachment_context_smoke.py`
+    - `XINYU-STATE-WRITE-AUDIT.md`
+    - `XINYU-VALIDATION-MATRIX.md`
 - Current untracked plan files:
   - `XINYU-24H-WORK-PLAN.md`
   - `worklog/integration-closeout-plan-2026-05-11.md`
@@ -104,11 +105,11 @@ Stop and report before continuing if any of these occur:
 
 ### P1 - Continue QQ Gateway Decomposition
 
-- [ ] Extract the next isolated QQ reply bubble/outbox helper if gateway still owns pure reply bubble logic.
+- [x] Extract the next isolated QQ reply bubble/outbox helper if gateway still owns pure reply bubble logic.
 - [x] Audit remaining `NativeQQGateway` pure methods and classify them into owner modules.
 - [x] Extract one low-risk QQ runtime/outbox helper from `xinyu_qq_gateway.py` into the existing flat helper modules.
 - [x] Add or extend one focused QQ smoke that pins the extracted helper alias.
-- [ ] Update `XINYU-VALIDATION-MATRIX.md` for any new QQ slice gate.
+- [x] Update `XINYU-VALIDATION-MATRIX.md` for any new QQ slice gate.
 
 ### P1 - Continue Core Bridge Decomposition
 
@@ -116,21 +117,21 @@ Stop and report before continuing if any of these occur:
 - [x] Extract one low-risk core bridge helper into an existing `xinyu_bridge_*` module.
 - [x] Replace one compatibility wrapper with a direct alias where behavior is already covered.
 - [x] Add or extend one focused bridge smoke for the boundary.
-- [ ] Update `XINYU-VALIDATION-MATRIX.md` for any new bridge slice gate.
+- [x] Update `XINYU-VALIDATION-MATRIX.md` for any new bridge slice gate.
 
 ### P1 - State Governance
 
-- [ ] Audit direct runtime/projection writes that still bypass `state_service.py`.
-- [ ] Pick one low-risk runtime/projection writer and migrate it to `state_service.py`.
-- [ ] Add a focused smoke for the migrated caller if none exists.
-- [ ] Update `XINYU-STATE-WRITE-AUDIT.md`.
-- [ ] Update `XINYU-VALIDATION-MATRIX.md`.
+- [x] Audit direct runtime/projection writes that still bypass `state_service.py`.
+- [x] Pick one low-risk runtime/projection writer and migrate it to `state_service.py`.
+- [x] Add a focused smoke for the migrated caller if none exists.
+- [x] Update `XINYU-STATE-WRITE-AUDIT.md`.
+- [x] Update `XINYU-VALIDATION-MATRIX.md`.
 
 ### P2 - Validation And Operations
 
 - [ ] Run a long-run health checkpoint after every 4-6 successful loops.
 - [ ] Keep `recent_exceptions` from regressing due to stale log windows.
-- [ ] Add a validation inventory entry for any smoke added during this plan.
+- [x] Add a validation inventory entry for any smoke added during this plan.
 - [ ] Re-run final local gates after all safe P0/P1/P2 items complete:
   - `xinyu_status.py --json`
   - `deployment_status_smoke.py`

@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from state_service import atomic_write_json
 from xinyu_text_variants import readable_markers
 
 
@@ -157,8 +158,7 @@ def _load_context(path: Path) -> dict[str, Any]:
 
 def _write_context(path: Path, data: dict[str, Any]) -> bool:
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        atomic_write_json(path, data, sort_keys=True)
     except OSError:
         return False
     return True

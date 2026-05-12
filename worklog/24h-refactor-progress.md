@@ -3198,3 +3198,26 @@ Workspace: D:\XinYu
 - Risk: Low; behavior remains best-effort and exception-swallowing, with no route, payload, prompt/persona, memory body, real QQ outbound, or v1 traffic change.
 - Rollback: `git revert <loop-148-commit>`
 - Next: Audit remaining direct runtime/projection writes that still bypass `state_service.py`.
+
+## Loop 149 - 2026-05-12
+
+- Task: Route recent attachment context writes through `state_service.py`.
+- Why: `runtime/recent_attachment_context/<session>.json` is a runtime/session projection written after owner-supplied attachment learning. Moving the write to the shared atomic JSON helper reduces partial-write risk while preserving the existing per-session JSON shape.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_recent_attachment_context.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/recent_attachment_context_smoke.py`
+  - `XINYU-STATE-WRITE-AUDIT.md`
+  - `XINYU-VALIDATION-MATRIX.md`
+  - `worklog/24h-refactor-progress.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/xinyu-long-task-plan-2026-05-12.md`
+- Commands:
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_recent_attachment_context.py recent_attachment_context_smoke.py state_service.py state_io_smoke.py`
+  - `.\.venv\Scripts\python.exe recent_attachment_context_smoke.py`
+  - `.\.venv\Scripts\python.exe state_io_smoke.py`
+  - `.\.venv\Scripts\python.exe -m pytest tests\test_dialogue_curiosity_bridge_injection.py -q`
+  - `git diff --check`
+- Result: Recent attachment context writes now use `state_service.atomic_write_json(sort_keys=True)`. The focused smoke verifies preserved JSON fields, prompt-context loading, and no leftover temp files. Compile, recent attachment smoke, state IO smoke, focused dialogue injection pytest, and diff check passed.
+- Risk: Low; runtime/session projection persistence only. Attachment prompt context semantics, long-term memory body text, persona semantics, real QQ outbound behavior, and v1 traffic scope were not changed.
+- Rollback: `git revert <loop-149-commit>`
+- Next: Run the planned long-run health checkpoint after five successful loops, then final local gates.

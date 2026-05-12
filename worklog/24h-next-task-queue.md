@@ -137,10 +137,10 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Audit remaining pure `xinyu_core_bridge.py` helper/static wrapper methods.
 - [x] Extract one low-risk core bridge helper into an existing `xinyu_bridge_*` module.
 - [x] Add or extend a focused bridge smoke for the extracted helper alias.
-- [ ] Audit direct runtime/projection writes that still bypass `state_service.py`.
-- [ ] Migrate one low-risk runtime/projection writer to `state_service.py`.
-- [ ] Add a focused state-service caller smoke if missing.
-- [ ] Update `XINYU-STATE-WRITE-AUDIT.md` and `XINYU-VALIDATION-MATRIX.md` for any new state slice.
+- [x] Audit direct runtime/projection writes that still bypass `state_service.py`.
+- [x] Migrate one low-risk runtime/projection writer to `state_service.py`.
+- [x] Add a focused state-service caller smoke if missing.
+- [x] Update `XINYU-STATE-WRITE-AUDIT.md` and `XINYU-VALIDATION-MATRIX.md` for any new state slice.
 - [ ] Run a long-run health checkpoint after 4-6 successful loops.
 - [ ] Run final local gates after all safe queue items complete.
 
