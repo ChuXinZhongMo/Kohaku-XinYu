@@ -173,6 +173,44 @@ def gateway_split_visible_reply_bubbles(gateway: Any, text: str) -> list[str]:
     )
 
 
+def gateway_visible_reply_bubbles(
+    gateway: Any,
+    prepared: Any,
+    reply: str,
+    core_response: dict[str, Any] | None = None,
+) -> list[str]:
+    text = reply.strip()
+    if not text:
+        return []
+    forced = gateway._forced_reply_bubble_units(core_response or {})
+    if forced:
+        return forced
+    if not gateway._should_split_visible_reply(prepared, text, core_response or {}):
+        return [text]
+    bubbles = gateway._split_visible_reply_bubbles(text)
+    return bubbles if len(bubbles) > 1 else [text]
+
+
+def gateway_outbox_visible_reply_bubbles(
+    gateway: Any,
+    target: Any,
+    reply: str,
+    claim: dict[str, Any],
+) -> list[str]:
+    text = reply.strip()
+    if not text:
+        return []
+    metadata = claim.get("metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    forced = gateway._forced_reply_bubble_units({"reply_bubble_force_units": metadata.get("reply_bubble_force_units")})
+    if forced:
+        return forced
+    if not gateway._should_split_outbox_visible_reply(target, text, claim):
+        return [text]
+    bubbles = gateway._split_visible_reply_bubbles(text)
+    return bubbles if len(bubbles) > 1 else [text]
+
+
 def reply_sentence_units(text: str) -> list[str]:
     pattern = re.compile(
         r"\S[\s\S]*?(?:[\u3002\uff01\uff1f\uff1b]+[\)\]\}\"'\u201d\u2019]*|[.!?;]+[\)\]\}\"'\u201d\u2019]*(?:\s+|$)|\n+|$)"

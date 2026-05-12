@@ -132,8 +132,8 @@ Date: 2026-05-07 / continued 2026-05-08
 
 - [x] Finish QQ visible reply bubble split extraction as Loop 145.
 - [x] Audit remaining pure `NativeQQGateway` helper methods and classify their owner modules.
-- [ ] Extract one low-risk QQ runtime/outbox helper into an existing helper module.
-- [ ] Add or extend a focused QQ smoke for the extracted helper alias.
+- [x] Extract one low-risk QQ runtime/outbox helper into an existing helper module.
+- [x] Add or extend a focused QQ smoke for the extracted helper alias.
 - [ ] Audit remaining pure `xinyu_core_bridge.py` helper/static wrapper methods.
 - [ ] Extract one low-risk core bridge helper into an existing `xinyu_bridge_*` module.
 - [ ] Add or extend a focused bridge smoke for the extracted helper alias.

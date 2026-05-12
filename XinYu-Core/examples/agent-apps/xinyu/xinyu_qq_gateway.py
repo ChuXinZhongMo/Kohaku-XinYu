@@ -2634,41 +2634,9 @@ class NativeQQGateway:
             responses.append(await self.send_reply(websocket, prepared.target, bubble))
         return self._combined_reply_action_response(responses)
 
-    def _visible_reply_bubbles(
-        self,
-        prepared: PreparedMessage,
-        reply: str,
-        core_response: dict[str, Any] | None = None,
-    ) -> list[str]:
-        text = reply.strip()
-        if not text:
-            return []
-        forced = self._forced_reply_bubble_units(core_response or {})
-        if forced:
-            return forced
-        if not self._should_split_visible_reply(prepared, text, core_response or {}):
-            return [text]
-        bubbles = self._split_visible_reply_bubbles(text)
-        return bubbles if len(bubbles) > 1 else [text]
+    _visible_reply_bubbles = xinyu_qq_reply_bubbles.gateway_visible_reply_bubbles
 
-    def _outbox_visible_reply_bubbles(
-        self,
-        target: ReplyTarget,
-        reply: str,
-        claim: dict[str, Any],
-    ) -> list[str]:
-        text = reply.strip()
-        if not text:
-            return []
-        metadata = claim.get("metadata")
-        metadata = metadata if isinstance(metadata, dict) else {}
-        forced = self._forced_reply_bubble_units({"reply_bubble_force_units": metadata.get("reply_bubble_force_units")})
-        if forced:
-            return forced
-        if not self._should_split_outbox_visible_reply(target, text, claim):
-            return [text]
-        bubbles = self._split_visible_reply_bubbles(text)
-        return bubbles if len(bubbles) > 1 else [text]
+    _outbox_visible_reply_bubbles = xinyu_qq_reply_bubbles.gateway_outbox_visible_reply_bubbles
 
     _forced_reply_bubble_units = xinyu_qq_reply_bubbles.gateway_forced_reply_bubble_units
 

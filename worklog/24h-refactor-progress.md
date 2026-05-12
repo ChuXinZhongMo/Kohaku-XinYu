@@ -3154,3 +3154,24 @@ Workspace: D:\XinYu
 - Risk: Documentation-only audit. No runtime behavior changed.
 - Rollback: `git revert <loop-146-commit>`
 - Next: Extract QQ reply bubble orchestration helpers as a focused code slice.
+
+## Loop 147 - 2026-05-12
+
+- Task: Extract QQ reply bubble orchestration helpers into reply bubble helper module.
+- Why: `_visible_reply_bubbles` and `_outbox_visible_reply_bubbles` are thin orchestration over forced units, split gates, and chunking. Moving them into `xinyu_qq_reply_bubbles.py` finishes the current reply-bubble helper boundary while keeping gateway compatibility aliases.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_reply_bubbles.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway_smoke.py`
+  - `worklog/24h-refactor-progress.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/xinyu-long-task-plan-2026-05-12.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_qq_gateway.py xinyu_qq_gateway_smoke.py xinyu_qq_reply_bubbles.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `git diff --check`
+- Result: Gateway visible/outbox bubble orchestration now aliases `xinyu_qq_reply_bubbles.gateway_visible_reply_bubbles` and `gateway_outbox_visible_reply_bubbles`. Existing reply-bubble smoke behavior still passes and the smoke now pins both aliases.
+- Risk: Low; the helper move preserves empty reply handling, forced units, split gating, and chunk fallback behavior. No real QQ outbound behavior, prompt/persona semantics, long-term memory body text, or v1 traffic scope changed.
+- Rollback: `git revert <loop-147-commit>`
+- Next: Continue with the next safe QQ or core bridge helper extraction after checking the current dirty state.
