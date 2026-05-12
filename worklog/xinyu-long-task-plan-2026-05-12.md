@@ -129,8 +129,8 @@ Stop and report before continuing if any of these occur:
 
 ### P2 - Validation And Operations
 
-- [ ] Run a long-run health checkpoint after every 4-6 successful loops.
-- [ ] Keep `recent_exceptions` from regressing due to stale log windows.
+- [x] Run a long-run health checkpoint after every 4-6 successful loops.
+- [x] Keep `recent_exceptions` from regressing due to stale log windows.
 - [x] Add a validation inventory entry for any smoke added during this plan.
 - [ ] Re-run final local gates after all safe P0/P1/P2 items complete:
   - `xinyu_status.py --json`

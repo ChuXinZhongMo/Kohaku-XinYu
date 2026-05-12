@@ -141,7 +141,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Migrate one low-risk runtime/projection writer to `state_service.py`.
 - [x] Add a focused state-service caller smoke if missing.
 - [x] Update `XINYU-STATE-WRITE-AUDIT.md` and `XINYU-VALIDATION-MATRIX.md` for any new state slice.
-- [ ] Run a long-run health checkpoint after 4-6 successful loops.
+- [x] Run a long-run health checkpoint after 4-6 successful loops.
 - [ ] Run final local gates after all safe queue items complete.
 
 Deferred without explicit owner approval:

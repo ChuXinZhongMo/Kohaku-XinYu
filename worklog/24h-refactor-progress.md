@@ -3221,3 +3221,14 @@ Workspace: D:\XinYu
 - Risk: Low; runtime/session projection persistence only. Attachment prompt context semantics, long-term memory body text, persona semantics, real QQ outbound behavior, and v1 traffic scope were not changed.
 - Rollback: `git revert <loop-149-commit>`
 - Next: Run the planned long-run health checkpoint after five successful loops, then final local gates.
+
+## Health Checkpoint - 2026-05-12 16:16
+
+- Task: Record the planned long-run health checkpoint after Loops 145-149.
+- Commands:
+  - `D:\XinYu\Python312\python.exe diagnostics\check_xinyu_health.py --json --workspace D:\XinYu`
+  - `D:\XinYu\Python312\python.exe diagnostics\check_xinyu_health.py --json --write-ledger --workspace D:\XinYu`
+  - `.\.venv\Scripts\python.exe long_run_status.py`
+- Result: Bridge, Desktop WS, QQ gateway, NapCat, outbox backlog, recent exceptions, v1 shadow errors, and disk space were `ok`. Bridge reported `sessions=2`; outbox was `pending=0 total=85`; recent exceptions were `hits=0 scanned_files=21 window_minutes=120`; v1 shadow errors were `errors=0 window=200`; disk free space was `646.3 GB`. Health ledger writing succeeded.
+- Risk: Overall health was `warn` only because `git_state` saw the two known untracked plan files. `long_run_status.py` reported deployment gate `ok`, no missing docs/validations, and `learning_quality_grade: review_needed`.
+- Next: Run final local gates and record closeout.
