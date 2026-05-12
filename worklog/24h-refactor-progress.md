@@ -3175,3 +3175,26 @@ Workspace: D:\XinYu
 - Risk: Low; the helper move preserves empty reply handling, forced units, split gating, and chunk fallback behavior. No real QQ outbound behavior, prompt/persona semantics, long-term memory body text, or v1 traffic scope changed.
 - Rollback: `git revert <loop-147-commit>`
 - Next: Continue with the next safe QQ or core bridge helper extraction after checking the current dirty state.
+
+## Loop 148 - 2026-05-12
+
+- Task: Extract core bridge assistant-message replacement helper into renderer module.
+- Why: `_replace_last_assistant_message` is a pure renderer/conversation helper. Moving it to `xinyu_bridge_renderer.py` reduces `xinyu_core_bridge.py` surface while keeping a runtime alias for compatibility.
+- Files changed:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_renderer.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/bridge_renderer_guard_flags_smoke.py`
+  - `worklog/24h-refactor-progress.md`
+  - `worklog/24h-next-task-queue.md`
+  - `worklog/xinyu-long-task-plan-2026-05-12.md`
+- Commands:
+  - `D:\XinYu\Python312\python.exe -m py_compile xinyu_core_bridge.py xinyu_bridge_renderer.py bridge_renderer_guard_flags_smoke.py`
+  - `D:\XinYu\Python312\python.exe bridge_renderer_guard_flags_smoke.py` failed: root interpreter lacked `pydantic`.
+  - `.\.venv\Scripts\python.exe -m py_compile xinyu_core_bridge.py xinyu_bridge_renderer.py bridge_renderer_guard_flags_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_renderer_guard_flags_smoke.py`
+  - `.\.venv\Scripts\python.exe bridge_probe_smoke.py`
+  - `git diff --check`
+- Result: `xinyu_bridge_renderer.replace_last_assistant_message` now owns the helper; `XinYuBridgeRuntime._replace_last_assistant_message` is a static alias. Focused renderer smoke now verifies direct helper behavior and runtime alias behavior. Venv compile, renderer smoke, bridge probe, and diff check passed.
+- Risk: Low; behavior remains best-effort and exception-swallowing, with no route, payload, prompt/persona, memory body, real QQ outbound, or v1 traffic change.
+- Rollback: `git revert <loop-148-commit>`
+- Next: Audit remaining direct runtime/projection writes that still bypass `state_service.py`.

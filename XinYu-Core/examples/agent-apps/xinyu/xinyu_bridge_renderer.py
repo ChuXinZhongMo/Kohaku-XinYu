@@ -52,6 +52,24 @@ def critical_final_guard_flags(flags: list[str] | tuple[str, ...]) -> list[str]:
     return [flag for flag in flags if flag in CRITICAL_FINAL_GUARD_FLAGS]
 
 
+def replace_last_assistant_message(agent: Any, rendered_reply: str) -> None:
+    controller = getattr(agent, "controller", None)
+    conversation = getattr(controller, "conversation", None)
+    if conversation is None or not hasattr(conversation, "get_last_assistant_message"):
+        return
+    try:
+        message = conversation.get_last_assistant_message()
+    except Exception:
+        return
+    if message is None:
+        return
+    try:
+        message.content = rendered_reply
+        message.tool_calls = None
+    except Exception:
+        pass
+
+
 class BridgeRenderer:
     def __init__(
         self,

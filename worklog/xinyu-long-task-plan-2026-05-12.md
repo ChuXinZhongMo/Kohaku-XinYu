@@ -112,10 +112,10 @@ Stop and report before continuing if any of these occur:
 
 ### P1 - Continue Core Bridge Decomposition
 
-- [ ] Audit remaining pure helper/static wrapper methods in `xinyu_core_bridge.py`.
-- [ ] Extract one low-risk core bridge helper into an existing `xinyu_bridge_*` module.
-- [ ] Replace one compatibility wrapper with a direct alias where behavior is already covered.
-- [ ] Add or extend one focused bridge smoke for the boundary.
+- [x] Audit remaining pure helper/static wrapper methods in `xinyu_core_bridge.py`.
+- [x] Extract one low-risk core bridge helper into an existing `xinyu_bridge_*` module.
+- [x] Replace one compatibility wrapper with a direct alias where behavior is already covered.
+- [x] Add or extend one focused bridge smoke for the boundary.
 - [ ] Update `XINYU-VALIDATION-MATRIX.md` for any new bridge slice gate.
 
 ### P1 - State Governance

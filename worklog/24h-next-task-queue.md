@@ -134,9 +134,9 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Audit remaining pure `NativeQQGateway` helper methods and classify their owner modules.
 - [x] Extract one low-risk QQ runtime/outbox helper into an existing helper module.
 - [x] Add or extend a focused QQ smoke for the extracted helper alias.
-- [ ] Audit remaining pure `xinyu_core_bridge.py` helper/static wrapper methods.
-- [ ] Extract one low-risk core bridge helper into an existing `xinyu_bridge_*` module.
-- [ ] Add or extend a focused bridge smoke for the extracted helper alias.
+- [x] Audit remaining pure `xinyu_core_bridge.py` helper/static wrapper methods.
+- [x] Extract one low-risk core bridge helper into an existing `xinyu_bridge_*` module.
+- [x] Add or extend a focused bridge smoke for the extracted helper alias.
 - [ ] Audit direct runtime/projection writes that still bypass `state_service.py`.
 - [ ] Migrate one low-risk runtime/projection writer to `state_service.py`.
 - [ ] Add a focused state-service caller smoke if missing.

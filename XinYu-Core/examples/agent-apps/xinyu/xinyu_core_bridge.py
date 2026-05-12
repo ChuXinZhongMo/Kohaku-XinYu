@@ -65,7 +65,7 @@ from xinyu_bridge_promises import compact_promise_text
 from xinyu_bridge_recent_sticker_reply import current_sticker_question_reply
 from xinyu_bridge_recent_sticker_reply import is_recent_sticker_question
 from xinyu_bridge_recent_sticker_reply import recent_sticker_question_reply
-from xinyu_bridge_renderer import BridgeRenderer, critical_final_guard_flags
+from xinyu_bridge_renderer import BridgeRenderer, critical_final_guard_flags, replace_last_assistant_message
 from xinyu_bridge_session import AgentSession, session_key_from_payload, session_keys_to_expire
 from xinyu_bridge_state_text import parse_iso as _parse_iso
 from xinyu_bridge_state_text import payload_path as _payload_path
@@ -6170,22 +6170,7 @@ tags: [promise, followup, qq-outbox, continuity]
     def _conversation_tail(self, agent: Any, *, max_messages: int) -> str:
         return self.renderer.conversation_tail(agent, max_messages=max_messages)
 
-    def _replace_last_assistant_message(self, agent: Any, rendered_reply: str) -> None:
-        controller = getattr(agent, "controller", None)
-        conversation = getattr(controller, "conversation", None)
-        if conversation is None or not hasattr(conversation, "get_last_assistant_message"):
-            return
-        try:
-            message = conversation.get_last_assistant_message()
-        except Exception:
-            return
-        if message is None:
-            return
-        try:
-            message.content = rendered_reply
-            message.tool_calls = None
-        except Exception:
-            pass
+    _replace_last_assistant_message = staticmethod(replace_last_assistant_message)
 
     def _strip_renderer_wrappers(self, text: str) -> str:
         return self.renderer.strip_renderer_wrappers(text)
