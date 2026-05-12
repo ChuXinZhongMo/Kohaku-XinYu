@@ -142,7 +142,7 @@ Date: 2026-05-07 / continued 2026-05-08
 - [x] Add a focused state-service caller smoke if missing.
 - [x] Update `XINYU-STATE-WRITE-AUDIT.md` and `XINYU-VALIDATION-MATRIX.md` for any new state slice.
 - [x] Run a long-run health checkpoint after 4-6 successful loops.
-- [ ] Run final local gates after all safe queue items complete.
+- [x] Run final local gates after all safe queue items complete.
 
 Deferred without explicit owner approval:
 

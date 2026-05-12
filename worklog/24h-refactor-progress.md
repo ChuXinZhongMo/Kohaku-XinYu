@@ -3232,3 +3232,24 @@ Workspace: D:\XinYu
 - Result: Bridge, Desktop WS, QQ gateway, NapCat, outbox backlog, recent exceptions, v1 shadow errors, and disk space were `ok`. Bridge reported `sessions=2`; outbox was `pending=0 total=85`; recent exceptions were `hits=0 scanned_files=21 window_minutes=120`; v1 shadow errors were `errors=0 window=200`; disk free space was `646.3 GB`. Health ledger writing succeeded.
 - Risk: Overall health was `warn` only because `git_state` saw the two known untracked plan files. `long_run_status.py` reported deployment gate `ok`, no missing docs/validations, and `learning_quality_grade: review_needed`.
 - Next: Run final local gates and record closeout.
+
+## Closeout - 2026-05-12
+
+- Task: Re-run final local gates and close the safe long-task queue.
+- Commands:
+  - `D:\XinYu\Python312\python.exe xinyu_status.py --json`
+  - `D:\XinYu\Python312\python.exe deployment_status_smoke.py`
+  - `D:\XinYu\Python312\python.exe bridge_probe_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_gateway_smoke.py`
+  - `D:\XinYu\Python312\python.exe xinyu_qq_review_smoke.py`
+  - `D:\XinYu\Python312\python.exe diagnostics\check_xinyu_health.py --json --workspace D:\XinYu`
+  - `git diff --check`
+  - `git status --short --branch`
+- Result: Bridge probe smoke, QQ gateway smoke, QQ review smoke, diagnostics health JSON, and diff check passed. Initial `xinyu_status.py` and `deployment_status_smoke.py` failed because the live core bridge was still running older source digests; a forced core bridge restart loaded the current source and fixed both digest checks.
+- Remaining live-adapter gap: `xinyu_status.py` and `deployment_status_smoke.py` still report `napcat_to_xinyu_qq_gateway_ws` failed because NapCat is not logged in. WebUI auth reported `isLogin=false`, no quick-login account, and an expired QR code. The owner then confirmed the E drive had dropped and this machine currently has no usable QQ, so the QQ live adapter gate is environment-blocked and not a code failure. No real QQ outbound test was run.
+- Non-blocking status: Code-level and offline gates for this plan passed. Diagnostics health is `warn` only because of known untracked plan files and, after the owner environment note, unavailable QQ/NapCat login. Bridge, Desktop WS, QQ gateway listener, outbox backlog, recent exceptions, v1 shadow errors, and disk space were ok during closeout verification.
+- Final runtime state after owner note: NapCat/QQ and the QQ gateway were left stopped because this machine currently has no usable QQ. Core bridge was restored and `bridge_probe_smoke.py` passed; diagnostics health then reported bridge and Desktop WS ok, with expected warns for QQ gateway/NapCat availability plus dirty git state while closeout docs were still unstaged.
+- Commits:
+  - `e92a8cb refactor: route recent attachment context through state service`
+  - `97342bf docs: record long task health checkpoint`
+- Deferred queue remains untouched: no persona semantic edits, no long-term memory body edits, no v1 real traffic expansion, and no real QQ outbound tests.
