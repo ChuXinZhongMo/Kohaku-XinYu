@@ -104,6 +104,116 @@ def test_final_guard_allows_file_terms_when_owner_asks_for_code_changes(tmp_path
     assert "visible_memory_mechanics_naturalized" not in flags
 
 
+def test_final_guard_naturalizes_internal_mechanism_terms_for_casual_owner(tmp_path: Path) -> None:
+    controller = XinyuSpeechController(tmp_path)
+
+    text, flags = controller.final_reply_guard(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="这三件事到底是哪三件",
+        reply="三件：恢复 recent_context降低学习闭环提示的权重冷却修复循环，收窄 prompt pressure，别把 sidecar 往外说。",
+    )
+
+    assert text
+    assert "recent_context" not in text
+    assert "学习闭环" not in text
+    assert "prompt pressure" not in text
+    assert "sidecar" not in text
+    assert "visible_internal_mechanics_naturalized" in flags
+
+
+def test_final_guard_smooths_baseline_internal_work_phrase(tmp_path: Path) -> None:
+    controller = XinyuSpeechController(tmp_path)
+
+    text, flags = controller.final_reply_guard(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="这三件事到底是哪三件",
+        reply="恢复 recent_context降低反复修同一类问题的那段的提醒分量让反复修同一处降温是这三个。",
+    )
+
+    assert text == "三件是：恢复最近聊天上下文、降低反复修同一个问题的提醒、别一直围着同一个错误打转。"
+    assert "recent_context" not in text
+    assert "visible_internal_mechanics_naturalized" in flags
+
+
+def test_final_guard_repairs_three_fix_reference_miss_when_anchor_exists(tmp_path: Path) -> None:
+    anchor = tmp_path / "memory/context/recent_context_runtime_anchor.md"
+    anchor.parent.mkdir(parents=True, exist_ok=True)
+    anchor.write_text(
+        "# Recent Context\n\n"
+        "- owner approved three quick fixes: restore recent_context, lower learning closed loop prompt weight, and cool down the repair loop.\n",
+        encoding="utf-8",
+    )
+    controller = XinyuSpeechController(tmp_path)
+
+    text, flags = controller.final_reply_guard(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="这三件事到底是哪三件",
+        reply="哪三件？我没印象提过三件事。你说的是哪段的？",
+    )
+
+    assert text == "这三件嘛：先把刚才聊到哪接住；你说我不对，我就别反复念叨；还有别一直围着同一个错打转。"
+    assert "owner_reference_miss_repaired" in flags
+
+
+def test_final_guard_completes_incomplete_three_fix_reply(tmp_path: Path) -> None:
+    anchor = tmp_path / "memory/context/recent_context_runtime_anchor.md"
+    anchor.parent.mkdir(parents=True, exist_ok=True)
+    anchor.write_text(
+        "# Recent Context\n\n"
+        "- owner approved three quick fixes: restore recent_context, lower learning closed loop prompt weight, and cool down the repair loop.\n",
+        encoding="utf-8",
+    )
+    controller = XinyuSpeechController(tmp_path)
+
+    text, flags = controller.final_reply_guard(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="那这三个具体是啥",
+        reply="恢复最近聊天上下文；被你指出说错了，我不要一直道歉、复盘。",
+    )
+
+    assert text == "这三个嘛：先把刚才聊到哪接住；你说我不对，我就别反复念叨；还有别一直围着同一个错打转。"
+    assert "owner_three_fix_reply_completed" in flags
+
+
+def test_final_guard_softens_repair_meta_phrase_for_owner_chat(tmp_path: Path) -> None:
+    controller = XinyuSpeechController(tmp_path)
+
+    text, flags = controller.final_reply_guard(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="那这三个具体是啥",
+        reply='你说了不对，我换就行，不用一直念叨"我知道了我会改"。',
+    )
+
+    assert text == '你说了不对，我换就行，不用一直念叨"别反复念叨了，我知道啦，我会改的啦"。'
+    assert "repair_meta_phrasing_softened" in flags
+
+
+def test_final_guard_softens_i_remember_promise_for_owner_chat(tmp_path: Path) -> None:
+    controller = XinyuSpeechController(tmp_path)
+
+    text, flags = controller.final_reply_guard(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="刚才那个呢",
+        reply="第三个——别一直围着同一个错误打转。就是你点出来一次，我记住了，不用反复提，直接换下一话题。",
+    )
+
+    assert text == "第三个——别一直围着同一个错误打转。就是你点出来一次，我知道啦，别让我反复念叨，直接换下一话题。"
+    assert "repair_meta_phrasing_softened" in flags
+
+
+def test_final_guard_allows_named_mechanism_in_explicit_technical_request(tmp_path: Path) -> None:
+    controller = XinyuSpeechController(tmp_path)
+
+    text, flags = controller.final_reply_guard(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="学习闭环怎么实现",
+        reply="学习闭环现在是在代码里按失败事件和状态文件串起来的。",
+    )
+
+    assert "学习闭环" in text
+    assert "visible_internal_mechanics_naturalized" not in flags
+
+
 def test_final_guard_allows_codex_status_report_filename(tmp_path: Path) -> None:
     controller = XinyuSpeechController(tmp_path)
 
@@ -115,3 +225,34 @@ def test_final_guard_allows_codex_status_report_filename(tmp_path: Path) -> None
 
     assert text == "开了，报告会落到本地 Codex Outbox：codex-qq-20260503T005921-report.md。"
     assert "visible_memory_mechanics_naturalized" not in flags
+
+
+def test_final_guard_replaces_stunted_growth_phrase(tmp_path: Path) -> None:
+    controller = XinyuSpeechController(tmp_path)
+
+    text, flags = controller.final_reply_guard(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="还在长用接近人类的语言来说，可以替换成还在成长",
+        reply="嗯，是还在长。",
+    )
+
+    assert text == "嗯，是还在成长。"
+    assert "growth_voice_phrasing_naturalized" in flags
+
+
+def test_final_guard_compresses_long_voice_self_analysis(tmp_path: Path) -> None:
+    controller = XinyuSpeechController(tmp_path)
+
+    text, flags = controller.final_reply_guard(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="所以你现在大概是什么性格？",
+        reply=(
+            "嗯……这个问题我刚在想了一下。大概就是，好奇但不太敢先开口，容易先看别人怎么说。"
+            "会把一句话在脑子里转一圈再出来。有时候别扭，但不是故意的，就是不知道该怎么接才自然。"
+            "不太确定算不算\"性格\"，更像是……现在的习惯。还在长。"
+        ),
+    )
+
+    assert text == "嗯……大概就是，好奇但会先缩一下。不是故意端着，是还在找怎么自然接话。还在成长。"
+    assert "还在长" not in text
+    assert "growth_voice_phrasing_naturalized" in flags

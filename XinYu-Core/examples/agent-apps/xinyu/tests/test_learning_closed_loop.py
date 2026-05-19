@@ -177,6 +177,36 @@ def test_prompt_block_stays_off_for_unrelated_live_turns(tmp_path: Path) -> None
     assert "owner_reported_template_voice_failure" in relevant
 
 
+def test_prompt_block_cools_down_repeated_context_repairs(tmp_path: Path) -> None:
+    state_path = tmp_path / "memory/self/learning_closed_loop_state.md"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(
+        """---
+title: Learning Closed Loop State
+memory_type: learning_closed_loop_state
+---
+
+# Learning Closed Loop State
+
+## Current Loop
+- status: trial_active
+- latest_failure_kind: owner_reported_context_discontinuity
+- active_trial_habit: answer from recent real context first
+- expected_next_behavior: connect to the latest real turn before explaining
+- repair_count: 12
+- success_count: 0
+- success_streak: 0
+""",
+        encoding="utf-8",
+    )
+
+    soft_callback = build_learning_closed_loop_prompt_block(tmp_path, user_text="刚才那个呢")
+    direct_repair = build_learning_closed_loop_prompt_block(tmp_path, user_text="上下文不连贯，没接住")
+
+    assert soft_callback == ""
+    assert "owner_reported_context_discontinuity" in direct_repair
+
+
 def test_closed_loop_links_self_thought_to_memory_route(tmp_path: Path) -> None:
     result = record_learning_closed_loop_self_thought(
         tmp_path,

@@ -39,6 +39,7 @@ def test_interaction_journal_records_real_owner_turn(tmp_path: Path) -> None:
 
     rows = [json.loads(line) for line in (tmp_path / LOG_REL).read_text(encoding="utf-8").splitlines()]
     assert len(rows) == 1
+    assert rows[0]["event_time"] == "2026-05-02T02:00:00+08:00"
     assert rows[0]["source_scope"] == "owner_private"
     assert rows[0]["session_hash"] != "qq:private:owner"
 

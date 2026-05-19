@@ -1,0 +1,3 @@
+{"session_id":"fixture-session","turn_id":"fixture-turn-1","role":"user","text":"Why does this depend on the previous conversation?","seed_kind":"clear_context","expected_retrieval_pressure":"high","expected_evidence_sufficiency":"none","expected_answer_discipline":"answer_current_only_acknowledge_missing_evidence"}
+{"session_id":"fixture-session","turn_id":"fixture-turn-2","role":"assistant","text":"Skipped assistant fixture row."}
+{"session_id":"fixture-session","turn_id":"fixture-turn-3","role":"user","text":"hello","seed_kind":"clear_context","expected_retrieval_pressure":"none","expected_evidence_sufficiency":"usable","expected_answer_discipline":"answer_normally_current_message_first"}

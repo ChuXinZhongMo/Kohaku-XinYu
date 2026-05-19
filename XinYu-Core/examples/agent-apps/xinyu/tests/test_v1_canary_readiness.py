@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 from xinyu_v1_canary_readiness import record_v1_shadow_observation
@@ -20,6 +21,31 @@ def _queue_items(root: Path) -> list[dict[str, object]]:
     data = json.loads(path.read_text(encoding="utf-8-sig"))
     items = data.get("items", [])
     return items if isinstance(items, list) else []
+
+
+def _frontmatter_value(text: str, field: str) -> str:
+    for line in text.splitlines():
+        if line.startswith(f"{field}: "):
+            return line.split(": ", 1)[1].strip()
+    raise AssertionError(f"missing frontmatter field: {field}")
+
+
+def test_v1_canary_invalid_observed_at_does_not_write_invalid_timestamp(tmp_path: Path) -> None:
+    record_v1_shadow_observation(
+        tmp_path,
+        accepted=True,
+        route="fast_path",
+        trace_id="tr-invalid-time",
+        observed_at="not-a-time",
+    )
+
+    state = (tmp_path / "memory/context/v1_canary_readiness_state.md").read_text(encoding="utf-8")
+    trace_row = json.loads((tmp_path / "runtime/v1_shadow_trace.jsonl").read_text(encoding="utf-8").splitlines()[0])
+
+    datetime.fromisoformat(_frontmatter_value(state, "updated_at"))
+    datetime.fromisoformat(str(trace_row["observed_at"]))
+    assert "not-a-time" not in state
+    assert trace_row["observed_at"] != "not-a-time"
 
 
 def test_v1_canary_collects_before_threshold(tmp_path: Path, monkeypatch) -> None:

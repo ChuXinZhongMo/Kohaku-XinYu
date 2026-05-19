@@ -1,0 +1,47 @@
+{
+  "features": [],
+  "rows": [
+    {
+      "row_idx": 0,
+      "row": {
+        "id": "hf-row-1",
+        "dataset": "hf-public",
+        "messages": [
+          {
+            "role": "user",
+            "content": "\u73b0\u5728\u8fd0\u884c\u72b6\u6001\u548c\u6307\u6807\u600e\u4e48\u6837"
+          },
+          {
+            "role": "assistant",
+            "content": "ok"
+          }
+        ],
+        "expected_scene": "runtime_status"
+      },
+      "truncated_cells": []
+    }
+    ,
+    {
+      "row_idx": 1,
+      "row": {
+        "id": "hf-turn-1",
+        "dataset": "hf-turns",
+        "role": "user",
+        "content": "\u7ee7\u7eed\u5b9e\u73b0\u8fd9\u4e2a\u6a21\u5757\u548c\u6d4b\u8bd5",
+        "expected_scene": "project_work"
+      },
+      "truncated_cells": []
+    },
+    {
+      "row_idx": 2,
+      "row": {
+        "id": "hf-raw-dialogue-1",
+        "dataset": "hf-raw-dialogue",
+        "raw_dialogue": "\u5c0f\u660e\uff1a\u4f60\u597d\uff0c\u6211\u4eca\u5929\u6709\u70b9\u96be\u53d7\u3002\nLucy\uff1a\u6211\u5728\u3002",
+        "expected_scene": "emotional_relation"
+      },
+      "truncated_cells": []
+    }
+  ],
+  "num_rows_total": 3
+}

@@ -73,7 +73,9 @@ def test_private_thought_event_writes_state_log_and_self_model(tmp_path: Path) -
     assert snapshot.event_id.startswith("private-thought-")
     assert snapshot.dominant_drive == "recent_surface_residue"
     assert "Private Thought State" in (tmp_path / "memory/self/private_thought_state.md").read_text(encoding="utf-8")
-    assert snapshot.event_id in (tmp_path / "memory/self/private_thought_log.md").read_text(encoding="utf-8")
+    log_text = (tmp_path / "memory/self/private_thought_log.md").read_text(encoding="utf-8")
+    assert snapshot.event_id in log_text
+    assert "updated_at: 2026-04-30T10:00:00+08:00" in log_text
     assert "Self Model State" in (tmp_path / "memory/self/self_model_state.md").read_text(encoding="utf-8")
     assert "private_thought_event_state" in material
     assert "hidden chain-of-thought" in material

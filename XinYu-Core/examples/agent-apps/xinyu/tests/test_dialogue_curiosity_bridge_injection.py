@@ -107,7 +107,35 @@ def test_bridge_uses_restored_live_turn_context_with_session_tail(tmp_path) -> N
     assert "previous_prediction_error" in content
 
 
-def test_live_turn_injects_goldmark_runtime_auth_sidecar(tmp_path) -> None:
+def test_live_turn_injects_owner_continuity_hint_for_three_fix_reference(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    (runtime.xinyu_dir / "memory/context/recent_context_runtime_anchor.md").write_text(
+        "# Recent Context\n\n"
+        "- owner approved three quick fixes: restore recent_context, lower learning closed loop prompt weight, and cool down the repair loop.\n",
+        encoding="utf-8",
+    )
+    agent = FakeAgent()
+
+    runtime._inject_live_turn_context(
+        agent,
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        text="这三件事到底是哪三件",
+        dialogue_tail=[
+            {"role": "user", "content": "先跑真实聊天回归基线"},
+            {"role": "assistant", "content": "好，先跑基线。"},
+        ],
+    )
+
+    content = agent.controller._pending_injections[0]["content"]
+    assert "owner-visible continuity hint" in content
+    assert "恢复最近聊天上下文" in content
+    assert "Latest session tail" in content
+    assert "restore recent_context" not in content
+    assert "learning closed loop prompt weight" not in content
+    assert "repair loop" not in content
+
+
+def test_live_turn_defers_goldmark_runtime_auth_sidecar_in_ordinary_owner_chat(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     overlay = runtime.xinyu_dir / "memory/self/goldmark_positive_overlay.json"
     overlay.write_text(
@@ -138,9 +166,11 @@ def test_live_turn_injects_goldmark_runtime_auth_sidecar(tmp_path) -> None:
     )
 
     content = agent.controller._pending_injections[0]["content"]
-    assert "Goldmark Auth" in content
-    assert "warm, concise" in content
-    assert "one-line-shift-without-report-prefix" in content
+    assert "Goldmark Auth" not in content
+    report = json.loads(
+        (runtime.xinyu_dir / "runtime/prompt_pressure/last_live_prompt_pressure.json").read_text(encoding="utf-8")
+    )
+    assert any(item["name"] == "goldmark_auth" for item in report["blocked_sidecars"])
     assert "owner secret note" not in content
     assert "raw secret sentence" not in content
 
@@ -192,8 +222,11 @@ def test_owner_private_debug_prompt_dump_is_env_gated_and_overwritten(tmp_path, 
     content = dump_path.read_text(encoding="utf-8")
     assert "BASE_SYSTEM_PROMPT" in content
     assert "Live turn context, restored continuity version." in content
-    assert "Goldmark Auth" in content
-    assert "debug-goldmark-pattern" in content
+    assert "Goldmark Auth" not in content
+    report = json.loads(
+        (runtime.xinyu_dir / "runtime/prompt_pressure/last_live_prompt_pressure.json").read_text(encoding="utf-8")
+    )
+    assert any(item["name"] == "goldmark_auth" for item in report["blocked_sidecars"])
     assert "session_id: qq:private:owner" in content
     assert "turn_id: turn-debug-2" in content
     assert "turn_id: turn-debug-1" not in content
@@ -1094,6 +1127,34 @@ def test_promised_followup_status_check_queues_completion(tmp_path) -> None:
     assert candidate["dedupe_key"].startswith("promise_followup:")
 
 
+def test_promised_followup_report_instruction_queues_completion(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    payload = {
+        "platform": "qq",
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "metadata": {"is_owner_user": True},
+    }
+
+    candidate = runtime._promised_followup_candidate(
+        payload,
+        user_text="\u665a\u4e0a\u56de\u6765\u6211\u8981\u770b\u5230\u4f60\u7684\u6c47\u62a5",
+        reply="\u597d\uff0c\u6211\u4f1a\u6574\u7406\u597d\u7ed9\u4f60\u6c47\u62a5\u3002",
+        session_key="qq:private:owner",
+    )
+    result = runtime._run_promised_followup_review(candidate)
+
+    queue = json.loads((runtime.xinyu_dir / "memory/context/qq_outbox_queue.json").read_text(encoding="utf-8"))
+    state = (runtime.xinyu_dir / "memory/context/promise_followup_state.md").read_text(encoding="utf-8")
+
+    assert candidate["dedupe_key"].startswith("promise_followup:")
+    assert result["queued"] is True
+    assert queue["items"][0]["source"] == "promise_followup"
+    assert "\u6c47\u62a5\u4efb\u52a1" in queue["items"][0]["message"]
+    assert "\u665a\u4e0a\u56de\u6765\u6211\u8981\u770b\u5230\u4f60\u7684\u6c47\u62a5" in state
+
+
 def test_false_codex_manual_only_claim_is_critical_guard_flag(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
 
@@ -1161,13 +1222,37 @@ def test_empty_visible_reply_fallback_is_disabled(tmp_path) -> None:
     assert reply == ""
 
 
-def test_style_pressure_empty_fallback_stays_empty(tmp_path) -> None:
+def test_style_pressure_empty_fallback_is_disabled(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     payload = {"message_type": "private_text", "metadata": {"is_owner_user": True}}
 
     reply = runtime._empty_visible_reply_fallback(
         payload=payload,
         user_text="丫头，你觉得自己最近的客服化，模板化下降了吗",
+    )
+
+    assert reply == ""
+
+
+def test_empty_visible_reply_fallback_does_not_template_short_fatigue(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    payload = {"message_type": "private_text", "metadata": {"is_owner_user": True}}
+
+    reply = runtime._empty_visible_reply_fallback(
+        payload=payload,
+        user_text="我有点累",
+    )
+
+    assert reply == ""
+
+
+def test_empty_visible_reply_fallback_handles_explicit_fatigue_boundary(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    payload = {"message_type": "private_text", "metadata": {"is_owner_user": True}}
+
+    reply = runtime._empty_visible_reply_fallback(
+        payload=payload,
+        user_text="我有点累，先别追问，也别安慰一大段。",
     )
 
     assert reply == ""
@@ -1219,15 +1304,89 @@ def test_autonomous_maintenance_runs_self_thought_and_proactive_sidecars(tmp_pat
             "delivery_level": "queue_owner_private",
         }
 
+    def fake_goal_ecology(root, *, checked_at, trigger):
+        calls["goal_ecology"] = {
+            "root": root,
+            "checked_at": checked_at,
+            "trigger": trigger,
+        }
+        return {
+            "selected_goal_id": "continue_bounded_work",
+            "selected_score": 0.58,
+        }
+
+    def fake_action_gateway(root, *, checked_at, trigger):
+        calls["self_action_gateway"] = {
+            "root": root,
+            "checked_at": checked_at,
+            "trigger": trigger,
+        }
+        return {
+            "status": "completed",
+            "selected_goal_id": "continue_bounded_work",
+            "executed_action_count": 1,
+            "queued_approval_count": 1,
+            "notes": [
+                "self_action:goal/continue_bounded_work",
+                "self_action:executed/continue_bounded_work/success",
+                "self_action:approval_queued/continue_bounded_work/self_code_patch_request",
+            ],
+        }
+
+    def fake_patch_executor(root, *, checked_at, execution_level, allow_codex):
+        calls["self_action_patch_executor"] = {
+            "root": root,
+            "checked_at": checked_at,
+            "execution_level": execution_level,
+            "allow_codex": allow_codex,
+        }
+        return {
+            "status": "prepared",
+            "task_id": "selfaction-patch-test",
+            "codex": {"status": "not_requested"},
+            "notes": ["patch_task_prepared"],
+        }
+
+    def fake_outcome_observer(root, *, checked_at, trigger, maintenance_notes):
+        calls["goal_outcome"] = {
+            "root": root,
+            "checked_at": checked_at,
+            "trigger": trigger,
+            "maintenance_notes": list(maintenance_notes),
+        }
+        return {
+            "status": "recorded",
+            "goal_id": "continue_bounded_work",
+            "outcome": "useful",
+        }
+
     monkeypatch.setattr("xinyu_core_bridge.run_self_thought_loop", fake_self_thought)
     monkeypatch.setattr("xinyu_core_bridge.run_proactive_request_loop", fake_proactive_request)
+    monkeypatch.setattr("xinyu_core_bridge.run_self_chosen_goal_ecology", fake_goal_ecology)
+    monkeypatch.setattr("xinyu_core_bridge.run_self_action_gateway", fake_action_gateway)
+    monkeypatch.setattr("xinyu_core_bridge.run_self_action_patch_executor", fake_patch_executor)
+    monkeypatch.setattr("xinyu_core_bridge.run_goal_outcome_observer", fake_outcome_observer)
 
     notes = runtime._run_autonomous_self_thought_sidecars(checked_at="2026-05-01T23:00:00+08:00")
 
+    assert calls["goal_ecology"]["trigger"] == "autonomous_maintenance"
+    assert calls["goal_ecology"]["checked_at"] == "2026-05-01T23:00:00+08:00"
+    assert calls["self_action_gateway"]["trigger"] == "autonomous_maintenance"
+    assert calls["self_action_gateway"]["checked_at"] == "2026-05-01T23:00:00+08:00"
+    assert calls["self_action_patch_executor"]["execution_level"] == "prepare"
+    assert calls["self_action_patch_executor"]["allow_codex"] is False
     assert calls["self_thought"]["trigger"] == "autonomous_maintenance"
     assert calls["self_thought"]["min_interval_seconds"] == runtime.autonomous_maintenance_interval_seconds
     assert calls["proactive_request"]["evaluated_at"] == "2026-05-01T23:00:00+08:00"
     assert calls["proactive_request"]["delivery_level"] == "queue_owner_private"
+    assert calls["goal_outcome"]["trigger"] == "autonomous_maintenance"
+    assert calls["goal_outcome"]["checked_at"] == "2026-05-01T23:00:00+08:00"
+    assert "self_action:executed/continue_bounded_work/success" in calls["goal_outcome"]["maintenance_notes"]
+    assert "goal_ecology:continue_bounded_work/0.58" in notes
+    assert "self_action_gateway:completed/continue_bounded_work/1/1" in notes
+    assert "self_action_patch_executor:prepared/selfaction-patch-test/not_requested" in notes
+    assert "self_action:approval_queued/continue_bounded_work/self_code_patch_request" in notes
+    assert "goal_outcome:recorded/continue_bounded_work/useful" in notes
     assert "self_thought:candidate/request_candidate/dream_residue/share_dream" in notes
     assert "proactive_request:ready/dream_share/queue_owner_private" in notes
 
@@ -1251,11 +1410,44 @@ def test_autonomous_maintenance_does_not_build_proactive_request_without_candida
         calls["proactive_request"] = True
         return {}
 
+    def fake_action_gateway(root, *, checked_at, trigger):
+        calls["self_action_gateway"] = True
+        return {
+            "status": "completed",
+            "selected_goal_id": "quiet_presence",
+            "executed_action_count": 1,
+            "queued_approval_count": 0,
+            "notes": ["self_action:executed/quiet_presence/success"],
+        }
+
+    def fake_patch_executor(root, *, checked_at, execution_level, allow_codex):
+        calls["self_action_patch_executor"] = True
+        return {
+            "status": "blocked",
+            "task_id": "",
+            "codex": {"status": "blocked"},
+            "notes": ["patch_executor_blocked:no_self_action_handoff"],
+        }
+
+    def fake_outcome_observer(root, *, checked_at, trigger, maintenance_notes):
+        calls["goal_outcome"] = True
+        return {
+            "status": "skipped",
+            "reason": "no_concrete_signal",
+        }
+
     monkeypatch.setattr("xinyu_core_bridge.run_self_thought_loop", fake_self_thought)
     monkeypatch.setattr("xinyu_core_bridge.run_proactive_request_loop", fake_proactive_request)
+    monkeypatch.setattr("xinyu_core_bridge.run_self_action_gateway", fake_action_gateway)
+    monkeypatch.setattr("xinyu_core_bridge.run_self_action_patch_executor", fake_patch_executor)
+    monkeypatch.setattr("xinyu_core_bridge.run_goal_outcome_observer", fake_outcome_observer)
 
     notes = runtime._run_autonomous_self_thought_sidecars(checked_at="2026-05-01T23:00:00+08:00")
 
     assert calls["proactive_request"] is False
+    assert calls["self_action_gateway"] is True
+    assert calls["self_action_patch_executor"] is True
+    assert calls["goal_outcome"] is True
     assert "self_thought:held/research_handoff/research_collection_gap/collect_sources" in notes
     assert "self_thought_research:source_search_provider" in notes
+    assert "goal_outcome:skipped/no_concrete_signal/no_concrete_signal" in notes

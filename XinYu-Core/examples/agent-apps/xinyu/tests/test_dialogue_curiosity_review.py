@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from dialogue_curiosity_review import build_review
+from ops.diagnostics.dialogue_curiosity_review import build_review
 
 
 def append_jsonl(path: Path, row: dict[str, object]) -> None:
@@ -66,4 +66,3 @@ def test_dialogue_curiosity_review_summarizes_high_error_cases(tmp_path) -> None
     assert "previous_reply: 早。" in report
     assert "next_user: 还是很接待腔。" in report
     assert "style:接待腔" in report
-

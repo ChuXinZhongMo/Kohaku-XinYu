@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 from xinyu_runtime_presence import (
+    _render_presence_markdown,
+    _render_program_awareness_markdown,
     build_runtime_presence_prompt_block,
     read_runtime_presence_summary,
     record_bridge_heartbeat,
@@ -16,10 +19,31 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text.strip() + "\n", encoding="utf-8")
 
 
+def _frontmatter_value(text: str, field: str) -> str:
+    for line in text.splitlines():
+        if line.startswith(f"{field}: "):
+            return line.split(": ", 1)[1].strip()
+    raise AssertionError(f"missing frontmatter field: {field}")
+
+
+def test_runtime_presence_writers_default_invalid_frontmatter_time_to_iso(tmp_path: Path) -> None:
+    presence = _render_presence_markdown({"updated_at": "unknown"})
+    program = _render_program_awareness_markdown(tmp_path, {"updated_at": "not-a-time"})
+
+    datetime.fromisoformat(_frontmatter_value(presence, "updated_at"))
+    datetime.fromisoformat(_frontmatter_value(program, "updated_at"))
+    assert "updated_at: unknown" not in presence
+    assert "updated_at: not-a-time" not in program
+
+
 def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> None:
     _write(tmp_path / "xinyu_core_bridge.py", 'BRIDGE_VERSION = "test"')
     _write(tmp_path / "xinyu_qq_gateway.py", "GATEWAY = True")
     _write(tmp_path / "xinyu_runtime_presence.py", "PRESENCE = True")
+    _write(tmp_path / "xinyu_self_chosen_goal_ecology.py", "GOAL_ECOLOGY = True")
+    _write(tmp_path / "xinyu_goal_outcome_observer.py", "GOAL_OUTCOME = True")
+    _write(tmp_path / "xinyu_self_action_gateway.py", "SELF_ACTION = True")
+    _write(tmp_path / "xinyu_self_action_patch_executor.py", "PATCH_EXECUTOR = True")
     _write(tmp_path / "custom/learning_quality_engine.py", "QUALITY = True")
     _write(tmp_path / "xinyu_v1/app.py", "APP = True")
     _write(tmp_path / "tests/test_runtime_program_awareness.py", "def test_marker(): pass")
@@ -47,6 +71,47 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
         - focus_kind: dream_residue
         - candidate_enabled: true
         - research_needed: false
+        """,
+    )
+    _write(
+        tmp_path / "memory/context/self_chosen_goal_ecology_state.md",
+        """
+        - selected_goal_id: continue_bounded_work
+        - selected_label: continue bounded technical work
+        - selected_score: 0.58
+        - action_policy: state_only_no_outward_action
+        - next_safe_action: continue the next safe local verification step
+        - boundary: state_only; no outward action
+        - last_observed_goal_id: continue_bounded_work
+        - last_outcome: useful
+        - last_reason_code: local_maintenance_completed
+        - observations_24h: 1
+        - goal_switch_count_24h: 0
+        - cooled_goal_ids: continue_bounded_work
+        """,
+    )
+    _write(
+        tmp_path / "memory/context/self_action_gateway_state.md",
+        """
+        - checked_at: 2026-05-16T10:01:00+08:00
+        - selected_goal_id: continue_bounded_work
+        - candidate_count: 2
+        - executed_action_count: 1
+        - queued_approval_count: 1
+        - pending_approval_count: 1
+        """,
+    )
+    _write(
+        tmp_path / "memory/context/self_action_patch_executor_state.md",
+        """
+        - checked_at: 2026-05-16T10:03:00+08:00
+        - status: prepared
+        - execution_level: prepare
+        - queue_id: selfaction-approval-test
+        - approval_id: selfaction-decision-test
+        - task_id: selfaction-patch-test
+        - codex_status: not_requested
+        - report_path: none
         """,
     )
     _write(
@@ -204,6 +269,21 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
         """,
     )
     _write(
+        tmp_path / "memory/context/code_change_awareness_state.md",
+        """
+        - status: changed
+        - source_changed: true
+        - changed_count: 1
+        - bridge_restart_required: false
+        - runtime_restart_required: true
+        - gateway_restart_may_be_needed: false
+        - current_project_digest: code-digest-test
+        - current_bridge_digest: bridge-digest-current
+        - running_bridge_digest: bridge-digest-current
+        - last_changed_files: modified:xinyu_speech_controller.py
+        """,
+    )
+    _write(
         tmp_path / "memory/context/runtime_bridge_state.md",
         """
         - evaluated_at: 2026-05-02T00:08:00+08:00
@@ -212,6 +292,144 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
         - autonomous_search_permission: provider_allowed
         - learning_quality_grade: review_needed
         """,
+    )
+    _write(
+        tmp_path / "memory/context/contextual_self_loop_state.md",
+        """
+        - evaluated_at: 2026-05-13T03:00:00+08:00
+        - last_trigger: renderer_memory_context
+        - current_scene: memory_review
+        - working_context_budget: short_memory_window
+        - forgetting_posture: keep_indices_suppress_raw_history
+        - retrieval_intents: memory_policy,context_horizon,recent_owner_correction,relevant_feedback_bias
+        - admitted_context_count: 3
+        - suppressed_context_count: 3
+        - working_self: careful_context_architect
+        - initiative_posture: hold_unless_owner_asks
+        - next_action_bias: explain_then_ground
+        - short_context_first: true
+        - retrieval_before_expansion: true
+        - hidden_orchestration_only: true
+        """,
+    )
+    _write(
+        tmp_path / "runtime/contextual_self_loop_trace.jsonl",
+        json.dumps(
+            {
+                "ts": "2026-05-13T03:00:00+08:00",
+                "stage": "contextual_self_loop",
+                "status": "evaluated",
+                "current_scene": "memory_review",
+            }
+        ),
+    )
+    _write(
+        tmp_path / "memory/context/contextual_recall_state.md",
+        """
+        - evaluated_at: 2026-05-13T03:00:00+08:00
+        - current_scene: memory_review
+        - retrieval_intents: memory_policy,context_horizon,recent_owner_correction,relevant_feedback_bias
+        - admitted_recall_count: 2
+        - suppressed_recall_count: 1
+        - source_count: 3
+        - short_previews_only: true
+        - raw_history_dump: blocked
+        - visible_source_labels: blocked
+        """,
+    )
+    _write(
+        tmp_path / "runtime/contextual_recall_trace.jsonl",
+        json.dumps(
+            {
+                "ts": "2026-05-13T03:00:00+08:00",
+                "stage": "contextual_recall",
+                "status": "evaluated",
+                "current_scene": "memory_review",
+                "admitted_recall_count": 2,
+            }
+        ),
+    )
+    _write(
+        tmp_path / "memory/context/contextual_self_observatory_state.md",
+        """
+        - updated_at: 2026-05-13T03:10:00+08:00
+        - window_hours: 24
+        - self_loop_event_count_24h: 3
+        - recall_event_count_24h: 2
+        - initiative_decision_count_24h: 2
+        - initiative_feedback_count_24h: 1
+        - latest_scene: initiative_feedback
+        - latest_working_self: restrained_initiative_operator
+        - latest_initiative_posture: feedback_shaped
+        - recall_admitted_count_24h: 4
+        - recall_suppressed_count_24h: 1
+        - latest_recall_admitted_count: 2
+        - initiative_held_by_context_count_24h: 1
+        - initiative_allowed_by_context_count_24h: 1
+        - quiet_default_hold_count_24h: 1
+        - feedback_after_context_allowed_count_24h: 1
+        - posture: balanced_or_insufficient_data
+        - observatory_only: true
+        - behavior_change: blocked
+        - raw_history_dump: blocked
+        """,
+    )
+    _write(
+        tmp_path / "memory/context/initiative_lifecycle_state.md",
+        """
+        - checked_at: 2026-05-13T02:00:00+08:00
+        - last_trigger: autonomous_maintenance
+        - candidate_count: 2
+        - decision_count: 2
+        - selected_candidate_id: procand-test
+        - selected_source: reflection_question
+        - selected_intent: ask_owner
+        - selected_decision: desktop_inbox
+        - selected_score: 120
+        - blocked_count: 0
+        - held_count: 1
+        - delivery_level: desktop_inbox
+        - pending_feedback_count: 1
+        - interruption_posture: owner_visible_local
+        - next_step: wait for owner ack before changing future initiative bias
+        """,
+    )
+    _write(
+        tmp_path / "memory/context/initiative_feedback_state.md",
+        """
+        - last_feedback_at: 2026-05-13T02:02:00+08:00
+        - candidate_id: procand-test
+        - candidate_signature: prosig-test
+        - action: dismissed
+        - source_type: reflection_question
+        - intent_type: ask_owner
+        - future_effect: lower similar future initiative priority
+        - stable_memory_write: blocked
+        - personality_promotion: blocked
+        - scoring_bias_only: true
+        """,
+    )
+    _write(
+        tmp_path / "runtime/initiative_metrics.json",
+        json.dumps(
+            {
+                "updated_at": "2026-05-13T02:02:00+08:00",
+                "window_hours": 24,
+                "event_count_24h": 3,
+                "decision_event_count_24h": 2,
+                "candidate_seen_count_24h": 4,
+                "selected_count_24h": 2,
+                "desktop_shown_count_24h": 1,
+                "held_private_count_24h": 1,
+                "blocked_count_24h": 0,
+                "feedback_count_24h": 1,
+                "dismiss_count_24h": 1,
+                "reply_count_24h": 0,
+                "approved_qq_count_24h": 0,
+                "failed_count_24h": 0,
+                "pending_feedback_count": 0,
+            }
+        ),
     )
     queue_path = tmp_path / "memory/context/qq_outbox_queue.json"
     queue_path.parent.mkdir(parents=True, exist_ok=True)
@@ -247,7 +465,7 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
         visible_window_title="Xinyu codex",
     )
 
-    block = build_runtime_presence_prompt_block(tmp_path, limit=6000)
+    block = build_runtime_presence_prompt_block(tmp_path, limit=11000)
     summary = read_runtime_presence_summary(tmp_path)
 
     assert "program_awareness:" in block
@@ -259,6 +477,14 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
     assert "autonomous_loop:" in block
     assert "self_thought:" in block
     assert "candidate_enabled=true" in block
+    assert "self_chosen_goal_ecology:" in block
+    assert "selected_goal_id=continue_bounded_work" in block
+    assert "last_outcome=useful" in block
+    assert "self_action_gateway:" in block
+    assert "executed_action_count=1" in block
+    assert "queued_approval_count=1" in block
+    assert "self_action_patch_executor:" in block
+    assert "task_id=selfaction-patch-test" in block
     assert "proactive_request:" in block
     assert "qq_outbox:" in block
     assert "queue_items=2" in block
@@ -285,13 +511,28 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
     assert "latest_failure_kind=owner_reported_template_voice_failure" in block
     assert "self_code_watchdog:" in block
     assert "snapshot_id=watchdog-test" in block
+    assert "code_awareness:" in block
+    assert "runtime_restart_required=true" in block
     assert "runtime_bridge:" in block
+    assert "contextual_self_loop:" in block
+    assert "current_scene=memory_review" in block
+    assert "contextual_recall:" in block
+    assert "admitted_recall_count=2" in block
+    assert "contextual_self_observatory:" in block
+    assert "initiative_held_by_context_count_24h=1" in block
+    assert "initiative_lifecycle:" in block
+    assert "selected_decision=desktop_inbox" in block
+    assert "initiative_metrics:" in block
+    assert "desktop_shown_count_24h=1" in block
+    assert "feedback_count_24h=1" in block
+    assert "initiative_feedback:" in block
+    assert "future_effect=lower similar future initiative priority" in block
     assert "[local-path]" not in block
 
     awareness = summary["program_awareness"]
     code_surface = awareness["code_surface"]
-    assert code_surface["python_files"] == "6"
-    assert code_surface["root_modules"] == "3"
+    assert code_surface["python_files"] == "10"
+    assert code_surface["root_modules"] == "7"
     assert code_surface["custom_modules"] == "1"
     assert code_surface["v1_modules"] == "1"
     assert code_surface["test_files"] == "1"
@@ -299,6 +540,12 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
     assert "xinyu_core_bridge.py" in code_surface["major_entrypoints"]
     assert awareness["observed_subsystem_count"] >= 8
     assert awareness["subsystems"]["self_thought"]["status"] == "candidate"
+    assert awareness["subsystems"]["self_chosen_goal_ecology"]["selected_goal_id"] == "continue_bounded_work"
+    assert awareness["subsystems"]["self_chosen_goal_ecology"]["last_outcome"] == "useful"
+    assert awareness["subsystems"]["self_action_gateway"]["executed_action_count"] == "1"
+    assert awareness["subsystems"]["self_action_gateway"]["queued_approval_count"] == "1"
+    assert awareness["subsystems"]["self_action_patch_executor"]["task_id"] == "selfaction-patch-test"
+    assert awareness["subsystems"]["self_action_patch_executor"]["codex_status"] == "not_requested"
     assert awareness["subsystems"]["interaction_journal"]["last_source"] == "owner_private"
     assert awareness["subsystems"]["personality_self_review"]["autonomy_level"] == "self_can_continue_trial"
     assert awareness["subsystems"]["persona_feedback"]["promotion_signal"] == "false"
@@ -307,10 +554,26 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
     assert awareness["subsystems"]["qq_outbox"]["queued_count"] == "1"
     assert awareness["subsystems"]["codex_delegate"]["status"] == "running"
     assert awareness["subsystems"]["self_code_watchdog"]["snapshot_id"] == "watchdog-test"
+    assert awareness["subsystems"]["code_awareness"]["runtime_restart_required"] == "true"
     assert awareness["subsystems"]["watched_source"]["source_id"] == "linux-do-latest"
     assert awareness["subsystems"]["watched_source"]["filter_topic"] == "ai_related"
     assert awareness["subsystems"]["memory_self_review"]["owner_review_required"] == "1"
     assert awareness["subsystems"]["memory_self_review"]["stable_memory_write"] == "blocked"
+    assert awareness["subsystems"]["contextual_self_loop"]["current_scene"] == "memory_review"
+    assert awareness["subsystems"]["contextual_self_loop"]["working_self"] == "careful_context_architect"
+    assert awareness["subsystems"]["contextual_recall"]["admitted_recall_count"] == "2"
+    assert awareness["subsystems"]["contextual_recall"]["raw_history_dump"] == "blocked"
+    assert awareness["subsystems"]["contextual_self_observatory"]["latest_scene"] == "initiative_feedback"
+    assert awareness["subsystems"]["contextual_self_observatory"]["observatory_only"] == "true"
+    assert awareness["subsystems"]["initiative_lifecycle"]["selected_decision"] == "desktop_inbox"
+    assert awareness["subsystems"]["initiative_metrics"]["desktop_shown_count_24h"] == "1"
+    assert awareness["subsystems"]["initiative_metrics"]["feedback_count_24h"] == "1"
+    assert awareness["subsystems"]["initiative_feedback"]["scoring_bias_only"] == "true"
+    assert summary["initiative_lifecycle"]["pending_feedback_count"] == "1"
+    assert summary["contextual_self_loop"]["initiative_posture"] == "hold_unless_owner_asks"
+    assert summary["contextual_recall"]["admitted_recall_count"] == "2"
+    assert summary["contextual_self_observatory"]["initiative_allowed_by_context_count_24h"] == "1"
+    assert summary["initiative_metrics"]["pending_feedback_count"] == "0"
     assert (tmp_path / "memory/context/runtime_program_awareness.md").exists()
 
 
