@@ -47,6 +47,8 @@ XinYu_Desktop/logs/
 XinYu_Desktop/*.log
 
 # Core local runtime and private state
+XinYu-Core/memory/
+XinYu-Core/runtime/
 XinYu-Core/examples/agent-apps/xinyu/.venv/
 XinYu-Core/src/xinyu_runtime/web_dist/
 XinYu-Core/examples/agent-apps/xinyu/xinyu.local.env

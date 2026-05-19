@@ -80,6 +80,8 @@ src/kohakuterrarium/web_dist/
 kt-biome/
 
 # XinYu local/private runtime
+memory/
+runtime/
 examples/agent-apps/xinyu/xinyu.local.env
 examples/agent-apps/xinyu/xinyu_qq_gateway.config.json
 examples/agent-apps/xinyu/logs/
