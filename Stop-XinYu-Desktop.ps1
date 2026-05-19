@@ -1,5 +1,6 @@
 param(
-    [switch]$KeepNapCat
+    [switch]$KeepNapCat,
+    [switch]$KeepTinyKernel
 )
 
 $ErrorActionPreference = "Stop"
@@ -8,6 +9,7 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $DesktopDir = Join-Path $Root "XinYu_Desktop"
 $NapCatDir = Join-Path $Root "NapCatQQ\NapCat.44498.Shell"
+$TinyKernelStop = Join-Path $Root "Stop-XinYu-TinyKernel.ps1"
 
 function Stop-MatchingProcesses {
     param(
@@ -59,6 +61,10 @@ if (-not $KeepNapCat) {
             $cmd -match "NapCatWinBootMain\.exe" -or
             $cmd -match "napcat\.bat"
     }
+}
+
+if (-not $KeepTinyKernel -and (Test-Path -LiteralPath $TinyKernelStop)) {
+    & $TinyKernelStop | Out-Null
 }
 
 Write-Host "Done."

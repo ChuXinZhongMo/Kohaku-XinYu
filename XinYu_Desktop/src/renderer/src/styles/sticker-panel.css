@@ -5,7 +5,7 @@
   gap: 9px;
   border-top: 1px solid rgba(39, 87, 82, 0.1);
   padding: 13px 14px;
-  overflow: auto;
+  overflow: visible;
 }
 
 .sticker-library-panel .section-head {

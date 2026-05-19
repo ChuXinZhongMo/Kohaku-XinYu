@@ -1,4 +1,4 @@
-import type { AppState, CommandState, DesktopEvent, ImpulseSoupState, ImpulseThoughtlet, ImpulseTraceEvent, JsonRecord, ProactiveAction, ProactiveIntent, QQEnvironmentStatus, QQRuntimeConfig, ServiceProbe, Snapshot, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
+import type { ApiConfigCurrent, ApiConfigProfile, ApiConfigStatus, AppState, CommandState, DesktopEvent, ExternalPluginControl, ExternalPluginInstallState, ExternalPluginsStatus, ImpulseSoupState, ImpulseThoughtlet, ImpulseTraceEvent, JsonRecord, ProactiveAction, ProactiveIntent, QQEnvironmentStatus, QQRuntimeConfig, ServiceProbe, Snapshot, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
 
 export const themeOptions: { id: ThemeName; label: string }[] = [
   { id: 'pastel', label: '粉紫' },
@@ -38,7 +38,7 @@ export const stickerCorrectionMoods = Object.entries(stickerMoodLabels)
 
 export function stickerClipLabel(item: StickerRecord): string {
   const score = item.clipConfidence > 0 ? item.clipConfidence.toFixed(2) : '--'
-  return `CLIP ${item.clipMoodLabel || stickerMoodLabel(item.clipMood)} ${score}`
+  return `图像识别 ${item.clipMoodLabel || stickerMoodLabel(item.clipMood)} ${score}`
 }
 
 const finalProactiveStatuses = new Set([
@@ -55,7 +55,9 @@ const finalProactiveStatuses = new Set([
 ])
 
 export function applyProactiveInbox(current: AppState, value: unknown): AppState {
-  const proactiveInbox = Array.isArray(value) ? value : []
+  const payload = asRecord(value)
+  const proactiveInbox = Array.isArray(value) ? value : Array.isArray(payload.items) ? payload.items : []
+  const proactiveHistory = Array.isArray(payload.history) ? payload.history : current.proactiveHistory
   const activeCandidateIds = new Set(proactiveInbox.map((item) => String(asRecord(item).candidateId || '')).filter(Boolean))
   const proactiveActions = Object.fromEntries(
     Object.entries(current.proactiveActions).filter(([candidateId]) => activeCandidateIds.has(candidateId))
@@ -64,13 +66,15 @@ export function applyProactiveInbox(current: AppState, value: unknown): AppState
   return {
     ...current,
     proactiveActions,
-    proactiveInbox
+    proactiveInbox,
+    proactiveHistory
   }
 }
 
 export function applySnapshot(current: AppState, value: unknown): AppState {
   const snapshot = asRecord(value) as Snapshot
   const proactiveInbox = Array.isArray(snapshot.proactiveInbox) ? snapshot.proactiveInbox : []
+  const proactiveHistory = Array.isArray(snapshot.proactiveHistory) ? snapshot.proactiveHistory : current.proactiveHistory
   const activeCandidateIds = new Set(proactiveInbox.map((item) => String(asRecord(item).candidateId || '')).filter(Boolean))
   const proactiveActions = Object.fromEntries(
     Object.entries(current.proactiveActions).filter(([candidateId]) => activeCandidateIds.has(candidateId))
@@ -81,6 +85,7 @@ export function applySnapshot(current: AppState, value: unknown): AppState {
     snapshot,
     proactiveActions,
     proactiveInbox,
+    proactiveHistory,
     recentTurns: Array.isArray(snapshot.recentTurns) ? snapshot.recentTurns : [],
     recentMemoryEvents: Array.isArray(snapshot.recentMemoryEvents) ? snapshot.recentMemoryEvents : []
   }
@@ -122,6 +127,7 @@ export function applyEvent(current: AppState, value: unknown): AppState {
       next.proactiveActions = rest
     }
     if (finalProactiveStatuses.has(status)) {
+      next.proactiveHistory = appendLimited(current.proactiveHistory, payload, 'candidateId')
       next.proactiveInbox = current.proactiveInbox.filter((item) => String(asRecord(item).candidateId || '') !== candidateId)
     } else {
       next.proactiveInbox = upsertByKey(current.proactiveInbox, payload, 'candidateId')
@@ -181,6 +187,38 @@ export function deriveXinYuState(state: AppState): XinYuState {
   const moodLabel = String(backendState.mood_tag || fallbackMood)
   const physicalSensation = compact(String(backendState.physical_sensation || '体感未校准'), 64)
   const actionResidueLabel = compact(String(backendState.action_residue_label || '暂无行动沉淀'), 64)
+  const creativeProject = String(backendState.creative_writing_project || '')
+  const creativeToday = numberValue(backendState.creative_writing_today_chapters, 0)
+  const creativeTarget = numberValue(backendState.creative_writing_daily_target, 0)
+  const creativeTotal = numberValue(backendState.creative_writing_total_chapters, 0)
+  const creativePublishReady = numberValue(backendState.creative_writing_publish_ready_chapters, 0)
+  const creativeMinPlatformChars = numberValue(backendState.creative_writing_min_platform_chars, 0)
+  const creativeStatus = String(backendState.creative_writing_status || '')
+  const creativeMode = String(backendState.creative_writing_mode || 'novel_mode')
+  const creativeReferenceStatus = String(backendState.creative_writing_reference_status || '')
+  const creativeReferenceSources = numberValue(backendState.creative_writing_reference_sources, 0)
+  const creativeReferenceDownloads = numberValue(backendState.creative_writing_reference_downloads, 0)
+  const creativeReferenceLocalFiles = numberValue(backendState.creative_writing_reference_local_files, 0)
+  const creativeModeLabel = creativeMode === 'creative_engineering_mode' ? '创作工程' : '小说模式'
+  const creativeStatusLabel =
+    creativeStatus === 'complete' ? '今日完成' : creativeStatus === 'planning' ? '规划中' : '写作中'
+  const creativeReferenceLabel =
+    creativeReferenceStatus === 'collected' ? '资料已采集' : creativeReferenceStatus === 'no_sources' ? '暂无资料源' : ''
+  const creativeLine =
+    creativeTarget > 0
+      ? compact(
+          `${creativeModeLabel} · ${creativeProject || '小说写作'} ${creativeToday}/${creativeTarget} 章 · ${
+            creativeStatusLabel
+          } · 发布稿 ${creativePublishReady}/${creativeTotal} · ${creativeMinPlatformChars || 3200}+ 字`,
+          72
+        )
+      : ''
+  const creativeReferenceLine = creativeReferenceLabel
+    ? compact(
+        `参考层 ${creativeReferenceLabel} · ${creativeReferenceSources} 源 · 本地 ${creativeReferenceLocalFiles} 本 · 下载 ${creativeReferenceDownloads} · 仅安全摘要`,
+        72
+      )
+    : ''
 
   const moodScore = connection === 'offline' ? 18 : connection === 'connecting' ? 42 : activeCommand ? 72 : hasIntent ? 84 : 62
   const attentionFocus = compact(
@@ -224,6 +262,8 @@ export function deriveXinYuState(state: AppState): XinYuState {
     connection === 'online' ? '核心连接正常' : connection === 'connecting' ? '正在重连核心' : '桌面端暂未接上核心',
     physicalSensation,
     actionResidueLabel,
+    ...(creativeLine ? [creativeLine] : []),
+    ...(creativeReferenceLine ? [creativeReferenceLine] : []),
     `${state.recentMemoryEvents.length} 次记忆回声`,
     lastEvent ? eventLabel(lastEvent.type) : '暂无事件流'
   ]
@@ -265,9 +305,11 @@ export function buildProactiveIntents(items: unknown[]): ProactiveIntent[] {
         status: String(row.status || ''),
         requestFamily: String(row.requestFamily || ''),
         requestedAction: String(row.requestedAction || ''),
+        desktopAction: String(row.desktopAction || ''),
         evidenceHash: String(row.evidenceHash || ''),
         createdAt: String(row.createdAt || ''),
-        expiresAt: String(row.expiresAt || '')
+        expiresAt: String(row.expiresAt || ''),
+        updatedAt: String(row.updatedAt || row.handledAt || '')
       }
     })
 }
@@ -336,6 +378,92 @@ export function normalizeStickerLibrary(value: unknown): StickerLibrary {
     corrections: Number(data.corrections || 0),
     referenceItems: Number(data.referenceItems || 0),
     items
+  }
+}
+
+export function normalizeExternalPluginsStatus(value: unknown): ExternalPluginsStatus {
+  const data = asRecord(value)
+  const plugins = Array.isArray(data.plugins) ? data.plugins.map(normalizeExternalPluginControl) : []
+  return {
+    ok: Boolean(data.ok ?? true),
+    protocol: String(data.protocol || 'xinyu.external.v1'),
+    configPath: String(data.configPath || data.config_path || ''),
+    plugins,
+    notes: stringArray(data.notes)
+  }
+}
+
+function normalizeExternalPluginControl(value: unknown): ExternalPluginControl {
+  const row = asRecord(value)
+  const install = normalizeExternalPluginInstall(row.install)
+  const config = asRecord(row.config)
+  return {
+    pluginId: String(row.pluginId || row.plugin_id || ''),
+    title: String(row.title || row.pluginId || row.plugin_id || ''),
+    kind: String(row.kind || ''),
+    transport: String(row.transport || ''),
+    enabled: Boolean(row.enabled),
+    proactiveEnabled: Boolean(row.proactiveEnabled ?? row.proactive_enabled),
+    installed: Boolean(row.installed ?? install.installed),
+    installable: Boolean(row.installable ?? install.installable),
+    available: Boolean(row.available ?? (Boolean(row.enabled) && Boolean(row.installed))),
+    config,
+    install,
+    notes: stringArray(row.notes)
+  }
+}
+
+function normalizeExternalPluginInstall(value: unknown): ExternalPluginInstallState {
+  const row = asRecord(value)
+  return {
+    installed: Boolean(row.installed),
+    installable: Boolean(row.installable),
+    path: String(row.path || row.installPath || ''),
+    installer: String(row.installer || ''),
+    missingReason: String(row.missingReason || row.missing_reason || '')
+  }
+}
+
+export function normalizeApiConfigStatus(value: unknown): ApiConfigStatus {
+  const data = asRecord(value)
+  const currentRaw = asRecord(data.current)
+  const current: ApiConfigCurrent = {
+    configPath: String(currentRaw.configPath || data.configPath || ''),
+    provider: String(currentRaw.provider || 'ciallo'),
+    model: String(currentRaw.model || 'mimo-v2.5-pro'),
+    baseUrl: String(currentRaw.baseUrl || ''),
+    allowInsecureHttp: Boolean(currentRaw.allowInsecureHttp),
+    disableStreaming: currentRaw.disableStreaming !== false,
+    hasApiKey: Boolean(currentRaw.hasApiKey),
+    apiKeyPreview: String(currentRaw.apiKeyPreview || '')
+  }
+  const profiles = Array.isArray(data.profiles) ? data.profiles.map(normalizeApiConfigProfile) : []
+  return {
+    ok: Boolean(data.ok ?? true),
+    loadedAt: String(data.loadedAt || ''),
+    configPath: String(data.configPath || current.configPath || ''),
+    profilesPath: String(data.profilesPath || ''),
+    activeProfileId: String(data.activeProfileId || ''),
+    current,
+    profiles,
+    notes: stringArray(data.notes)
+  }
+}
+
+function normalizeApiConfigProfile(value: unknown): ApiConfigProfile {
+  const row = asRecord(value)
+  return {
+    id: String(row.id || ''),
+    label: String(row.label || '本地 API'),
+    provider: String(row.provider || 'ciallo'),
+    model: String(row.model || 'mimo-v2.5-pro'),
+    baseUrl: String(row.baseUrl || ''),
+    allowInsecureHttp: Boolean(row.allowInsecureHttp),
+    disableStreaming: row.disableStreaming !== false,
+    updatedAt: String(row.updatedAt || ''),
+    active: Boolean(row.active),
+    hasApiKey: Boolean(row.hasApiKey),
+    apiKeyPreview: String(row.apiKeyPreview || '')
   }
 }
 
@@ -533,8 +661,8 @@ export function serviceProbeKey(value: string): ServiceProbe['key'] {
 export function defaultQQServiceLabel(key: ServiceProbe['key']): string {
   if (key === 'coreBridge') return '核心桥'
   if (key === 'qqGateway') return 'QQ 网关'
-  if (key === 'napcatWebui') return 'NapCat WebUI'
-  return 'NapCat WS'
+  if (key === 'napcatWebui') return 'NapCat 网页端'
+  return 'NapCat 反向连接'
 }
 
 export function defaultQQServiceEndpoint(key: ServiceProbe['key']): string {
@@ -576,7 +704,7 @@ export function qqDiagnosisLabel(value: string, tokenAvailable: boolean): string
   if (value === 'core_offline') return '核心未启动'
   if (value === 'gateway_offline') return 'QQ 网关未启动'
   if (value === 'napcat_offline') return 'NapCat 未启动'
-  if (value === 'napcat_login_required') return tokenAvailable ? '需要 WebUI 登录或确认 QQ 在线' : '需要登录 NapCat'
+  if (value === 'napcat_login_required') return tokenAvailable ? '需要网页端登录或确认 QQ 在线' : '需要登录 NapCat 网页端'
   if (value === 'napcat_ws_waiting') return '等待 NapCat 连接网关'
   if (value === 'partial') return '链路部分可用'
   return '正在读取 QQ 状态'
@@ -586,15 +714,15 @@ export function qqActionResultLabel(message: string, accepted: boolean, error?: 
   const errorText = error ? `：${compact(String(error), 58)}` : ''
   if (!accepted) {
     if (message === 'start_script_missing') return `启动脚本缺失${errorText}`
-    if (message === 'webui_open_failed') return `WebUI 打开失败${errorText}`
-    if (message === 'webui_token_missing') return '未找到 WebUI token'
+    if (message === 'webui_open_failed') return `网页端打开失败${errorText}`
+    if (message === 'webui_token_missing') return '未找到网页端口令'
     if (message === 'start_failed') return `启动失败${errorText}`
     return `操作失败${errorText}`
   }
   if (message === 'start_requested') return '已打开 QQ 启动窗口'
-  if (message === 'webui_opened') return '已在桌面窗口打开 NapCat WebUI'
-  if (message === 'webui_token_copied') return 'WebUI token 已复制'
-  if (message === 'webui_token_missing') return '未找到 WebUI token'
+  if (message === 'webui_opened') return '已在桌面窗口打开 NapCat 网页端'
+  if (message === 'webui_token_copied') return '网页端口令已复制'
+  if (message === 'webui_token_missing') return '未找到网页端口令'
   return message || '操作已提交'
 }
 
@@ -612,11 +740,92 @@ export function qqRuntimeResultLabel(message: string, accepted: boolean, error?:
   return message || '设置已更新'
 }
 
+export function apiConfigActionLabel(message: string, accepted: boolean, error?: unknown): string {
+  if (message === 'api_test_non_json_response') return 'API returned non-JSON response'
+  if (message === 'api_test_empty_reply') return 'API returned empty chat content'
+  const errorText = error ? `：${compact(String(error), 58)}` : ''
+  if (accepted) {
+    if (message === 'api_profile_saved') return 'API 资料已保存'
+    if (message === 'api_profile_created') return 'API 资料已创建'
+    if (message === 'api_test_ok') return 'API 测试通过'
+    if (message === 'api_test_timeout') return 'API 测试超时'
+    if (message === 'api_profile_deleted') return 'API 资料已删除'
+    if (message === 'api_profile_applied') return 'API 资料已应用'
+    if (message === 'api_profile_applied_core_restarted') return 'API 资料已应用，核心已重启'
+    if (message === 'core_bridge_restarted') return '核心桥接已重启'
+    return message || 'API 资料已更新'
+  }
+  if (message === 'missing_api_profile_id') return '缺少 API 资料 ID'
+  if (message === 'missing_base_url') return '缺少基础地址'
+  if (message === 'missing_model') return '缺少模型名称'
+  if (message === 'api_test_failed') return `API 测试失败${errorText}`
+  if (message === 'api_profile_not_found') return `未找到 API 资料${errorText}`
+  if (message.startsWith('api_profile_not_found:')) return `未找到 API 资料：${compact(message.slice('api_profile_not_found:'.length), 36)}${errorText}`
+  if (message === 'core_bridge_start_script_not_found') return `未找到核心重启脚本${errorText}`
+  if (message.startsWith('core_bridge_start_script_not_found:')) {
+    return `未找到核心重启脚本：${compact(message.slice('core_bridge_start_script_not_found:'.length), 72)}${errorText}`
+  }
+  return message ? `API 操作失败：${compact(message, 72)}${errorText}` : `API 操作失败${errorText}`
+}
+
+export function externalPluginInstallStateLabel(value: string): string {
+  if (!value) return ''
+  if (value === 'builtin') return '内置'
+  if (value === 'npm_missing') return '缺少 npm'
+  if (value === 'codex_cli_missing') return '缺少 Codex 命令'
+  if (value === 'install_source_missing') return '缺少安装源'
+  if (value === 'kohaku_missing') return '未找到 Kohaku Terrarium'
+  if (value === 'unknown_plugin') return '未知插件'
+  return value
+}
+
+export function externalPluginNoteLabel(value: string): string {
+  if (!value) return ''
+  if (value === 'external_plugin_status') return '外部插件状态已更新'
+  if (value === 'already_installed') return '已经安装'
+  if (value === 'codex_installer_missing') return '未找到 Codex 安装器'
+  if (value === 'codex_install_command_finished') return 'Codex 安装命令已完成'
+  if (value === 'kohaku_install_source_required') return 'Kohaku 需要安装源'
+  if (value === 'kohaku_installed') return 'Kohaku 已安装'
+  if (value === 'plugin_has_no_installer') return '该插件没有可用安装器'
+  return externalPluginInstallStateLabel(value)
+}
+
+export function externalPluginActionLabel(message: string, accepted: boolean, error?: unknown): string {
+  const errorText = error ? `：${compact(String(error), 58)}` : ''
+  if (accepted) {
+    if (message === 'external_plugin_config_saved') return '插件配置已保存'
+    if (message === 'external_plugin_installed') return '插件已安装'
+    if (message === 'external_plugin_install_failed') return `插件安装失败${errorText}`
+    if (message === 'already_installed') return '已经安装'
+    if (message === 'kohaku_installed') return 'Kohaku 已安装'
+    return message || '插件状态已更新'
+  }
+  if (message === 'missing_plugin_id') return '缺少插件 ID'
+  if (message === 'npm_missing') return '缺少 npm'
+  if (message === 'codex_cli_missing') return '缺少 Codex 命令'
+  if (message === 'install_source_missing') return '缺少安装源'
+  if (message === 'kohaku_missing') return '未找到 Kohaku Terrarium'
+  if (message === 'unknown_plugin') return '未知插件'
+  if (message === 'no_installer') return '该插件没有可用安装器'
+  return message ? `插件操作失败：${compact(message, 72)}${errorText}` : `插件操作失败${errorText}`
+}
+
+export function chatErrorLabel(value: string): string {
+  if (!value) return ''
+  if (value === 'chat_request_failed') return '发送失败'
+  if (value === 'empty_text') return '内容不能为空'
+  if (value === 'missing_command_id') return '缺少命令 ID'
+  if (value === 'missing_candidate_id') return '缺少候选 ID'
+  if (value === 'invalid_action') return '无效操作'
+  return compact(value, 72)
+}
+
 export function errorLabel(error: unknown): string {
   if (error instanceof Error) {
     return error.message
   }
-  return String(error || 'unknown_error')
+  return String(error || '未知错误')
 }
 
 export function initialTheme(): ThemeName {
@@ -662,7 +871,12 @@ export function formatLatency(turn: JsonRecord): string {
 
 export function memorySummary(memory: JsonRecord): string {
   const itemCount = Number(memory.itemCount || 0)
+  const route = asRecord(memory.route)
+  const experts = stringArray(memory.selectedExperts || route.selectedExperts)
   if (itemCount > 0) {
+    if (experts.length > 0) {
+      return `${itemCount} 条 / ${experts.slice(0, 3).join(' + ')}`
+    }
     return `${itemCount} 条被召回`
   }
   return String(memory.eventId || memory.turnId || '暂无记忆回声')

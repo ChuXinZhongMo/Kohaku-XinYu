@@ -1,9 +1,9 @@
 import React from 'react'
-import { Activity, Bell, Brain, ChevronDown, ChevronRight, Clock3, Compass, Clipboard, Eye, ExternalLink, Heart, History, MessageCircle, Play, Radio, RefreshCw, Save, Send, ShieldAlert, Sparkles, Terminal, TimerReset, Plus, Trash2, Wifi, X } from 'lucide-react'
+import { Activity, Bell, Brain, Check, ChevronDown, ChevronRight, Clock3, Compass, Clipboard, Download, Eye, ExternalLink, Heart, History, MessageCircle, Play, Puzzle, Radio, RefreshCw, Save, Send, ShieldAlert, Sparkles, Terminal, TimerReset, Plus, Trash2, Wifi, X } from 'lucide-react'
 import { EnvironmentValve } from './EnvironmentValve'
 import { SurfacePart } from './AffectiveSurfaceProvider'
-import type { CommandState, DesktopEvent, GatewayStatus, ImpulseSoupState, JsonRecord, ProactiveAction, ProactiveIntent, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, Snapshot, StickerActionState, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
-import { actionLabel, asRecord, buildStats, commandStatusLabel, compact, defaultQQRuntimeConfig, defaultQQServices, digestPressureLabel, digestResidueLabel, digestResultLabel, digestThemeLabel, eventLabel, formatLatency, formatTime, formatTurnMeta, isCommandRenderedByTurn, memorySummary, platformLabel, qqDetailLabel, qqDiagnosisLabel, qqServiceLabel, riskLabel, runtimeLabel, sourceLabel, statusLabel, stickerClipLabel, stickerCorrectionMoods, stickerMoodLabel, themeOptions } from './desktopModel'
+import type { ApiConfigActionState, ApiConfigProfile, ApiConfigProfilePatch, ApiConfigStatus, CommandState, DesktopEvent, ExternalPluginActionState, ExternalPluginConfigPatch, ExternalPluginControl, ExternalPluginInstallRequest, ExternalPluginsStatus, GatewayStatus, ImpulseSoupState, JsonRecord, ProactiveAction, ProactiveIntent, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, SelfActionSnapshot, Snapshot, StickerActionState, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
+import { actionLabel, asRecord, buildStats, commandStatusLabel, compact, defaultQQRuntimeConfig, defaultQQServices, digestPressureLabel, digestResidueLabel, digestResultLabel, digestThemeLabel, eventLabel, externalPluginInstallStateLabel, externalPluginNoteLabel, formatLatency, formatTime, formatTurnMeta, isCommandRenderedByTurn, memorySummary, platformLabel, qqDetailLabel, qqDiagnosisLabel, qqServiceLabel, riskLabel, runtimeLabel, sourceLabel, statusLabel, stickerClipLabel, stickerCorrectionMoods, stickerMoodLabel, themeOptions } from './desktopModel'
 
 const avatarSrc = './xinyu-avatar.png'
 const characterSrc = './xinyu-character.png'
@@ -115,6 +115,55 @@ function riskFlagsLabel(flags: string[]): string {
   return flags.length ? flags.map((flag) => impulseLabel(flag)).join(' / ') : '无风险标记'
 }
 
+function selfActionKindLabel(value: string): string {
+  if (!value) return '暂无动作'
+  if (value === 'self_code_patch_request') return '代码补丁请求'
+  if (value === 'stable_memory_change_request') return '稳定记忆变更请求'
+  if (value === 'replay_material_probe') return '回放材料探测'
+  if (value === 'learning_repair_probe') return '学习修复探测'
+  return compact(value, 34)
+}
+
+function selfActionStatusLabel(value: string): string {
+  if (!value) return '未观察'
+  if (value === 'prepared') return '已准备'
+  if (value === 'codex_scheduled') return '已授权执行'
+  if (value === 'codex_completed') return '已完成'
+  if (value === 'codex_timed_out') return '执行超时'
+  if (value === 'codex_failed') return '执行失败'
+  if (value === 'blocked') return '已阻断'
+  if (value === 'executed') return '已执行'
+  if (value === 'failed') return '失败'
+  return compact(value, 24)
+}
+
+function selfActionCodexLabel(value: string): string {
+  if (!value) return '未请求'
+  if (value === 'not_requested') return '未请求执行'
+  if (value === 'scheduled') return '已授权排队'
+  if (value === 'finished') return '已完成'
+  if (value === 'timed_out') return '执行超时'
+  if (value === 'blocked') return '已阻断'
+  if (value === 'running') return '执行中'
+  if (value === 'completed') return '已完成'
+  if (value === 'failed') return '失败'
+  return compact(value, 28)
+}
+
+function selfActionFactValue(value: unknown, fallback = '暂无'): string {
+  const text = String(value || '').trim()
+  if (!text || text === 'none') return fallback
+  return text
+}
+
+function selfActionFirstValue(values: unknown[], fallback = '暂无'): string {
+  for (const value of values) {
+    const text = String(value || '').trim()
+    if (text && text !== 'none') return text
+  }
+  return fallback
+}
+
 export function StatusBadge(props: { connected: boolean; connecting: boolean }): JSX.Element {
   const label = props.connected ? '在线' : props.connecting ? '连接中' : '离线'
   return (
@@ -147,6 +196,12 @@ export function MindStatePanel(props: {
   stats: ReturnType<typeof buildStats>
   gateway: GatewayStatus | null
   snapshot: Snapshot | null
+  selfActionApprovalBusy: string
+  onDecideSelfActionApproval: (
+    queueId: string,
+    decision: 'approved' | 'denied',
+    options?: { authorizeExisting?: boolean }
+  ) => void
 }): JSX.Element {
   return (
     <aside className="mind-panel">
@@ -165,6 +220,11 @@ export function MindStatePanel(props: {
       </section>
 
       <EnvironmentValve snapshot={props.snapshot} />
+      <SelfActionPanel
+        selfAction={props.snapshot?.selfAction}
+        busy={props.selfActionApprovalBusy}
+        onDecide={props.onDecideSelfActionApproval}
+      />
 
       <section className="vital-strip" aria-label="当前数据">
         <Vital icon={<MessageCircle size={14} />} value={props.stats.turns} label="对话" />
@@ -200,6 +260,135 @@ export function MindStatePanel(props: {
         <span>{props.gateway?.httpUrl || 'http://127.0.0.1:8765'}</span>
       </footer>
     </aside>
+  )
+}
+
+function SelfActionPanel(props: {
+  selfAction?: SelfActionSnapshot
+  busy: string
+  onDecide: (queueId: string, decision: 'approved' | 'denied', options?: { authorizeExisting?: boolean }) => void
+}): JSX.Element {
+  const selfAction = props.selfAction
+  const queue = asRecord(selfAction?.approvalQueue)
+  const handoff = asRecord(selfAction?.handoff)
+  const patch = asRecord(selfAction?.patchExecutor)
+  const latestEvent = asRecord(selfAction?.latestApprovalEvent)
+  const pendingValue = Number(selfAction?.pendingApprovalCount ?? queue.pendingCount ?? 0)
+  const pendingCount = Number.isFinite(pendingValue) ? Math.max(0, pendingValue) : 0
+  const observed = Boolean(selfAction?.observed)
+  const patchStatus = selfActionFactValue(patch.status, '')
+  const codexStatus = selfActionFactValue(patch.codexStatus, '')
+  const taskId = selfActionFirstValue([patch.taskId], '')
+  const currentGoal = selfActionFirstValue([selfAction?.selectedGoalId, patch.goalId, handoff.goalId], '暂无目标')
+  const patchGoal = selfActionFirstValue([patch.goalId, handoff.goalId], '')
+  const selectedGoal = taskId ? selfActionFirstValue([patchGoal, currentGoal], '暂无目标') : currentGoal
+  const currentActionKind = selfActionFirstValue([selfAction?.selectedActionKind, patch.actionKind, handoff.actionKind, latestEvent.actionKind], '')
+  const patchActionKind = selfActionFirstValue([patch.actionKind, handoff.actionKind, latestEvent.actionKind], '')
+  const actionKind = taskId ? selfActionFirstValue([patchActionKind, currentActionKind], '') : currentActionKind
+  const queueId = selfActionFirstValue([queue.latestPendingQueueId, queue.latestExecutedQueueId, handoff.queueId, latestEvent.queueId], '')
+  const pendingQueueId = selfActionFirstValue([queue.latestPendingQueueId, selfAction?.latestPendingQueueId], '')
+  const preparedQueueId = selfActionFirstValue([patch.queueId, handoff.queueId, queue.latestApprovedQueueId, queue.latestExecutedQueueId, latestEvent.queueId], '')
+  const updatedAt = selfActionFirstValue([selfAction?.updatedAt, patch.updatedAt], '')
+  const pendingQueueAvailable = pendingCount > 0 && Boolean(pendingQueueId)
+  const preparedAuthorizationAvailable =
+    !pendingQueueAvailable &&
+    actionKind === 'self_code_patch_request' &&
+    patchStatus === 'prepared' &&
+    codexStatus === 'not_requested' &&
+    Boolean(preparedQueueId)
+  const approvalTargetId = pendingQueueAvailable ? pendingQueueId : preparedQueueId
+  const busy = Boolean(props.busy)
+  const tone = !observed
+    ? 'idle'
+    : pendingCount > 0
+      ? 'warn'
+      : patchStatus === 'blocked' || codexStatus === 'blocked'
+        ? 'blocked'
+        : patchStatus === 'prepared'
+          ? 'prepared'
+          : 'active'
+  const headline = !observed ? '未观察' : pendingCount > 0 ? `${pendingCount} 待批准` : selfActionStatusLabel(patchStatus)
+  const codexLine = codexStatus === 'not_requested'
+    ? '已生成本地补丁任务，但还没有请求 Codex 真正执行。'
+    : codexStatus === 'scheduled'
+      ? '已授权 Codex 一次性处理这项补丁请求。'
+    : observed
+      ? `Codex：${selfActionCodexLabel(codexStatus)}`
+      : '等待后端自行动作状态。'
+
+  return (
+    <section className={`self-action-panel ${tone}`} aria-label="自行动作状态">
+      <div className="self-action-head">
+        <span>
+          <Terminal size={15} />
+          <span>自行动作</span>
+        </span>
+        <strong>{headline}</strong>
+      </div>
+
+      <div className="self-action-summary">
+        <Clipboard size={14} />
+        <span>
+          <small>目标 / 动作</small>
+          <strong>{compact(`${selectedGoal} / ${selfActionKindLabel(actionKind)}`, 58)}</strong>
+        </span>
+      </div>
+
+      <div className="self-action-grid">
+        <SelfActionFact label="队列" value={pendingCount > 0 ? `${pendingCount} 待批准` : compact(queueId || '无待批准', 30)} />
+        <SelfActionFact label="交接" value={Boolean(handoff.exists) ? compact(String(handoff.queueId || '已生成'), 30) : '未生成'} />
+        <SelfActionFact label="补丁任务" value={taskId ? compact(taskId, 30) : '暂无'} />
+        <SelfActionFact label="Codex" value={selfActionCodexLabel(codexStatus)} />
+      </div>
+
+      <p className="self-action-note">{codexLine}</p>
+      {pendingQueueAvailable || preparedAuthorizationAvailable ? (
+        <div className="self-action-actions">
+          <button
+            type="button"
+            className="approve"
+            disabled={busy}
+            onClick={() =>
+              props.onDecide(approvalTargetId, 'approved', {
+                authorizeExisting: preparedAuthorizationAvailable
+              })
+            }
+            title="批准并授权 Codex 执行这一项"
+            aria-label="批准并执行自行动作"
+          >
+            <Check size={13} />
+            <span>{props.busy === 'approved' ? '处理中' : preparedAuthorizationAvailable ? '授权执行' : '批准执行'}</span>
+          </button>
+          {pendingQueueAvailable ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => props.onDecide(pendingQueueId, 'denied')}
+              title="拒绝这次自行动作"
+              aria-label="拒绝自行动作"
+            >
+              <X size={13} />
+              <span>{props.busy === 'denied' ? '处理中' : '拒绝'}</span>
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      {updatedAt ? (
+        <small className="self-action-updated">
+          <Clock3 size={12} />
+          {formatTime(updatedAt)}
+        </small>
+      ) : null}
+    </section>
+  )
+}
+
+function SelfActionFact(props: { label: string; value: string }): JSX.Element {
+  return (
+    <span className="self-action-fact" title={props.value}>
+      <small>{props.label}</small>
+      <strong>{props.value}</strong>
+    </span>
   )
 }
 
@@ -283,8 +472,8 @@ function seedConversationTracks(qqRuntimeConfig: QQRuntimeConfig | null): Conver
     {
       key: 'desktop:private:owner',
       label: '桌面主人',
-      detail: '桌面 owner / 本机私有频道',
-      accountLabel: '桌面 owner',
+      detail: '桌面主人 / 本机私有频道',
+      accountLabel: '桌面主人',
       avatarUrl: '',
       groupKey: 'desktop',
       groupLabel: '桌面频道',
@@ -453,7 +642,7 @@ function fallbackAccountLabel(input: {
   userHash: string
   groupHash: string
 }): string {
-  if (input.canCompose) return '桌面 owner'
+  if (input.canCompose) return '桌面主人'
   if (input.messageType.startsWith('group') || input.sessionKind === 'qq_group') {
     const group = input.groupDisplayId || `#${input.groupHash || 'unknown'}`
     const user = input.userDisplayId || `#${input.userHash || 'unknown'}`
@@ -755,8 +944,8 @@ function ChatInput(props: {
         className={`composer-mode-button ${props.codexMode ? 'active' : ''}`}
         onClick={() => props.onCodexModeChange(!props.codexMode)}
         disabled={disabled}
-        title="Codex"
-        aria-label="Codex"
+        title="Codex 模式"
+        aria-label="Codex 模式"
         aria-pressed={props.codexMode}
       >
         {props.codexMode ? <Terminal size={16} /> : <MessageCircle size={16} />}
@@ -775,7 +964,7 @@ function ChatInput(props: {
       <input
         value={props.value}
         onChange={(event) => props.onChange(event.currentTarget.value)}
-        placeholder={props.disabled ? props.disabledReason || '当前窗口只读' : props.codexMode ? 'Codex task' : '今晚想让心玉接住什么？'}
+        placeholder={props.disabled ? props.disabledReason || '当前窗口只读' : props.codexMode ? 'Codex 任务' : '今晚想让心玉接住什么？'}
         disabled={disabled}
       />
       <button type="submit" disabled={disabled || !props.value.trim()} title="发送">
@@ -787,10 +976,15 @@ function ChatInput(props: {
 
 export function IntentQueuePanel(props: {
   intents: ProactiveIntent[]
+  history: ProactiveIntent[]
   pending: Record<string, ProactiveAction>
   actionDigest?: unknown
   recentMemoryEvents: unknown[]
   lastEvent?: DesktopEvent
+  apiConfig: ApiConfigStatus | null
+  apiConfigAction: ApiConfigActionState
+  externalPlugins: ExternalPluginsStatus | null
+  externalPluginAction: ExternalPluginActionState
   qqEnvironment: QQEnvironmentStatus | null
   qqAction: QQActionState
   qqRuntimeConfig: QQRuntimeConfig | null
@@ -799,6 +993,15 @@ export function IntentQueuePanel(props: {
   stickerAction: StickerActionState
   onAck: (candidateId: string, action: ProactiveAction) => void
   onOpenDetail: (candidateId: string) => void
+  onRefreshApiConfig: () => void
+  onSaveApiConfigProfile: (profile: ApiConfigProfilePatch) => void
+  onTestApiConfigProfile: (profile: ApiConfigProfilePatch) => void
+  onDeleteApiConfigProfile: (profileId: string) => void
+  onApplyApiConfigProfile: (profileId: string) => void
+  onRestartCoreBridge: () => void
+  onRefreshExternalPlugins: () => void
+  onSetExternalPluginConfig: (request: ExternalPluginConfigPatch) => void
+  onInstallExternalPlugin: (request: ExternalPluginInstallRequest) => void
   onRefreshQQ: () => void
   onStartQQ: () => void
   onOpenNapCat: () => void
@@ -821,7 +1024,8 @@ export function IntentQueuePanel(props: {
       </header>
 
       <section className="intent-list">
-        {!props.intents.length ? (
+        <div className="intent-active-list">
+          {!props.intents.length ? (
           <div className="empty-intents">
             <Bell size={18} />
             <strong>暂无候选</strong>
@@ -829,7 +1033,7 @@ export function IntentQueuePanel(props: {
           </div>
         ) : null}
 
-        {props.intents.map((intent) => (
+          {props.intents.map((intent) => (
           <IntentRow
             key={intent.id}
             intent={intent}
@@ -837,8 +1041,104 @@ export function IntentQueuePanel(props: {
             onAck={props.onAck}
             onOpenDetail={props.onOpenDetail}
           />
-        ))}
+          ))}
+
+        </div>
+
+        {props.history.length ? (
+          <div className="intent-history">
+            <div className="intent-history-head">
+              <History size={14} />
+              <span>最近处理</span>
+            </div>
+            {props.history.slice(0, 4).map((intent) => (
+              <HandledIntentRow key={intent.id} intent={intent} onOpenDetail={props.onOpenDetail} />
+            ))}
+          </div>
+        ) : null}
+
+        <section className="intent-review-rail" aria-label="主动提醒回看栏">
+          <div className="intent-review-head">
+            <span>
+              <History size={14} />
+              <span>回看栏</span>
+            </span>
+            <strong>{props.history.length}</strong>
+          </div>
+          <div className="intent-review-list">
+            {!props.history.length ? <div className="empty-review">暂无已处理提醒</div> : null}
+            {props.history.slice(0, 5).map((intent) => (
+              <HandledIntentRow key={intent.id} intent={intent} onOpenDetail={props.onOpenDetail} />
+            ))}
+          </div>
+        </section>
       </section>
+
+    </aside>
+  )
+}
+
+export function SystemControlPanel(props: {
+  apiConfig: ApiConfigStatus | null
+  apiConfigAction: ApiConfigActionState
+  externalPlugins: ExternalPluginsStatus | null
+  externalPluginAction: ExternalPluginActionState
+  qqEnvironment: QQEnvironmentStatus | null
+  qqAction: QQActionState
+  qqRuntimeConfig: QQRuntimeConfig | null
+  qqRuntimeAction: QQRuntimeActionState
+  stickerLibrary: StickerLibrary | null
+  stickerAction: StickerActionState
+  actionDigest?: unknown
+  recentMemoryEvents: unknown[]
+  lastEvent?: DesktopEvent
+  onRefreshApiConfig: () => void
+  onSaveApiConfigProfile: (profile: ApiConfigProfilePatch) => void
+  onTestApiConfigProfile: (profile: ApiConfigProfilePatch) => void
+  onDeleteApiConfigProfile: (profileId: string) => void
+  onApplyApiConfigProfile: (profileId: string) => void
+  onRestartCoreBridge: () => void
+  onRefreshExternalPlugins: () => void
+  onSetExternalPluginConfig: (request: ExternalPluginConfigPatch) => void
+  onInstallExternalPlugin: (request: ExternalPluginInstallRequest) => void
+  onRefreshQQ: () => void
+  onStartQQ: () => void
+  onOpenNapCat: () => void
+  onCopyNapCatToken: () => void
+  onSetQQRuntimeConfig: (patch: QQRuntimeConfigPatch) => void
+  onRestartQQGateway: () => void
+  onRefreshStickerLibrary: () => void
+  onRunStickerMaintenance: (action: 'import-pending' | 'rebuild-index') => void
+  onMoveStickerToMood: (file: string, mood: string) => void
+  onOpenStickerAssetDir: () => void
+}): JSX.Element {
+  return (
+    <aside className="system-panel">
+      <header className="system-head">
+        <div>
+          <p className="label">系统控制</p>
+          <h2>API / 插件 / QQ / 表情</h2>
+        </div>
+      </header>
+
+      <ApiConfigPanel
+        status={props.apiConfig}
+        action={props.apiConfigAction}
+        onRefresh={props.onRefreshApiConfig}
+        onSaveProfile={props.onSaveApiConfigProfile}
+        onTestProfile={props.onTestApiConfigProfile}
+        onDeleteProfile={props.onDeleteApiConfigProfile}
+        onApplyProfile={props.onApplyApiConfigProfile}
+        onRestartCore={props.onRestartCoreBridge}
+      />
+
+      <ExternalPluginControlPanel
+        status={props.externalPlugins}
+        action={props.externalPluginAction}
+        onRefresh={props.onRefreshExternalPlugins}
+        onSetConfig={props.onSetExternalPluginConfig}
+        onInstall={props.onInstallExternalPlugin}
+      />
 
       <QQBridgePanel
         status={props.qqEnvironment}
@@ -1068,23 +1368,23 @@ function StickerLibraryPanel(props: {
       <div className="section-head">
         <Sparkles size={15} />
         <span>表情库</span>
-        <button type="button" onClick={props.onRefresh} disabled={busy} title="Refresh sticker index" aria-label="Refresh sticker index">
+        <button type="button" onClick={props.onRefresh} disabled={busy} title="刷新表情索引" aria-label="刷新表情索引">
           <RefreshCw size={14} className={busy ? 'spin' : ''} />
         </button>
-        <button type="button" onClick={() => props.onRunMaintenance('import-pending')} disabled={busy} title="Import pending stickers" aria-label="Import pending stickers">
+        <button type="button" onClick={() => props.onRunMaintenance('import-pending')} disabled={busy} title="导入待分类表情" aria-label="导入待分类表情">
           <Play size={14} />
         </button>
-        <button type="button" onClick={() => props.onRunMaintenance('rebuild-index')} disabled={busy} title="Rebuild sticker index" aria-label="Rebuild sticker index">
+        <button type="button" onClick={() => props.onRunMaintenance('rebuild-index')} disabled={busy} title="重建表情索引" aria-label="重建表情索引">
           <Clipboard size={14} />
         </button>
-        <button type="button" onClick={props.onOpenAssetDir} disabled={busy} title="Open sticker folder" aria-label="Open sticker folder">
+        <button type="button" onClick={props.onOpenAssetDir} disabled={busy} title="打开表情目录" aria-label="打开表情目录">
           <ExternalLink size={14} />
         </button>
       </div>
 
       <div className="sticker-metrics">
         <Metric label="总数" value={library?.total || 0} />
-        <Metric label="OCR" value={library?.ocr || 0} />
+        <Metric label="文字识别" value={library?.ocr || 0} />
         <Metric label="确认" value={library?.confirmed || 0} />
         <Metric label="待看" value={library?.unclear || 0} />
       </div>
@@ -1197,6 +1497,549 @@ function Metric(props: { label: string; value: number }): JSX.Element {
   )
 }
 
+type ApiConfigDraft = {
+  label: string
+  provider: string
+  model: string
+  baseUrl: string
+  apiKey: string
+  allowInsecureHttp: boolean
+  disableStreaming: boolean
+}
+
+function ApiConfigPanel(props: {
+  status: ApiConfigStatus | null
+  action: ApiConfigActionState
+  onRefresh: () => void
+  onSaveProfile: (profile: ApiConfigProfilePatch) => void
+  onTestProfile: (profile: ApiConfigProfilePatch) => void
+  onDeleteProfile: (profileId: string) => void
+  onApplyProfile: (profileId: string) => void
+  onRestartCore: () => void
+}): JSX.Element {
+  const profiles = props.status?.profiles || []
+  const activeProfileId = props.status?.activeProfileId || ''
+  const [selectedId, setSelectedId] = React.useState(() => activeProfileId || profiles[0]?.id || '__new__')
+  const selected = profiles.find((profile) => profile.id === selectedId) || null
+  const [draft, setDraft] = React.useState<ApiConfigDraft>(() => apiDraftFromStatus(props.status))
+  const [draftDirty, setDraftDirty] = React.useState(false)
+  const [draftSourceId, setDraftSourceId] = React.useState('__new__')
+  const didInitSelection = React.useRef(Boolean(props.status))
+  const busy = props.action.kind !== 'idle'
+  const current = props.status?.current
+  const sourceId = selected?.id || '__new__'
+
+  React.useEffect(() => {
+    if (!props.status) {
+      return
+    }
+    if (!didInitSelection.current) {
+      didInitSelection.current = true
+      setSelectedId(activeProfileId || profiles[0]?.id || '__new__')
+      return
+    }
+    if (selectedId === '__new__' || profiles.some((profile) => profile.id === selectedId)) {
+      return
+    }
+    setSelectedId(activeProfileId || profiles[0]?.id || '__new__')
+  }, [activeProfileId, profiles, props.status, selectedId])
+
+  React.useEffect(() => {
+    if (draftDirty && draftSourceId === sourceId) {
+      return
+    }
+    setDraft(selected ? apiDraftFromProfile(selected) : apiBlankDraft())
+    setDraftSourceId(sourceId)
+    setDraftDirty(false)
+  }, [draftDirty, draftSourceId, props.status, selected, sourceId])
+
+  function updateDraft(patch: Partial<ApiConfigDraft>): void {
+    setDraftDirty(true)
+    setDraft((currentDraft) => ({ ...currentDraft, ...patch }))
+  }
+
+  function draftToPatch(): ApiConfigProfilePatch {
+    return {
+      id: selected?.id,
+      label: draft.label,
+      provider: draft.provider,
+      model: draft.model,
+      baseUrl: draft.baseUrl,
+      apiKey: draft.apiKey.trim() || undefined,
+      allowInsecureHttp: draft.allowInsecureHttp,
+      disableStreaming: draft.disableStreaming
+    }
+  }
+
+  function saveProfile(): void {
+    setDraftDirty(false)
+    props.onSaveProfile(draftToPatch())
+  }
+
+  function testProfile(): void {
+    props.onTestProfile(draftToPatch())
+  }
+
+  function selectProfile(nextId: string): void {
+    setSelectedId(nextId)
+    const nextProfile = profiles.find((profile) => profile.id === nextId)
+    setDraft(nextProfile ? apiDraftFromProfile(nextProfile) : apiBlankDraft())
+    setDraftSourceId(nextProfile?.id || '__new__')
+    setDraftDirty(false)
+  }
+
+  const currentText = current ? `${current.provider} / ${current.model}` : '未加载'
+  const keyText = selected?.apiKeyPreview || current?.apiKeyPreview || '暂无密钥'
+
+  return (
+    <section className={`api-config-panel ${activeProfileId ? 'ready' : 'warn'}`}>
+      <div className="section-head api-config-head">
+        <span>
+          <Terminal size={15} />
+          <span>API 快捷配置</span>
+        </span>
+        <strong>{profiles.length}</strong>
+      </div>
+
+      <div className="api-current-line">
+        <span>{compact(currentText, 42)}</span>
+        <small>{current?.hasApiKey ? current.apiKeyPreview : '暂无密钥'}</small>
+      </div>
+
+      <div className="api-profile-select">
+        <select value={selectedId} disabled={busy} onChange={(event) => selectProfile(event.currentTarget.value)}>
+          <option value="__new__">新资料</option>
+          {profiles.map((profile) => (
+            <option value={profile.id} key={profile.id}>
+              {profile.active ? '* ' : ''}
+              {profile.label}
+            </option>
+          ))}
+        </select>
+        <button type="button" onClick={props.onRefresh} disabled={busy} title="刷新 API 资料" aria-label="刷新 API 资料">
+          <RefreshCw size={14} className={props.action.kind === 'loading' ? 'spin' : ''} />
+        </button>
+      </div>
+
+      <div className="api-config-grid">
+        <label>
+          <span>名称</span>
+          <input value={draft.label} disabled={busy} onChange={(event) => updateDraft({ label: event.currentTarget.value })} />
+        </label>
+        <label>
+          <span>提供方</span>
+          <input value={draft.provider} disabled={busy} onChange={(event) => updateDraft({ provider: event.currentTarget.value })} />
+        </label>
+        <label>
+          <span>模型</span>
+          <input value={draft.model} disabled={busy} onChange={(event) => updateDraft({ model: event.currentTarget.value })} />
+        </label>
+        <label>
+          <span>基础地址</span>
+          <input value={draft.baseUrl} disabled={busy} onChange={(event) => updateDraft({ baseUrl: event.currentTarget.value })} />
+        </label>
+        <label className="api-key-field">
+          <span>密钥</span>
+          <input
+            value={draft.apiKey}
+            disabled={busy}
+            type="password"
+            placeholder={selected?.hasApiKey || current?.hasApiKey ? `${keyText} · 留空则保留` : '粘贴 API 密钥'}
+            onChange={(event) => updateDraft({ apiKey: event.currentTarget.value })}
+          />
+          <small>{draft.apiKey.trim() ? '新密钥会覆盖已保存密钥' : selected?.hasApiKey ? '留空则保留已保存密钥' : '留空则在创建时使用当前环境密钥'}</small>
+        </label>
+      </div>
+
+      <div className="api-runtime-flags">
+        <RuntimeSwitch
+          label="连接方式"
+          checked={draft.allowInsecureHttp}
+          detail={draft.allowInsecureHttp ? '明文连接' : '安全连接'}
+          danger={draft.allowInsecureHttp}
+          disabled={busy}
+          onToggle={() => updateDraft({ allowInsecureHttp: !draft.allowInsecureHttp })}
+        />
+        <RuntimeSwitch
+          label="流式"
+          checked={!draft.disableStreaming}
+          detail={draft.disableStreaming ? '关闭' : '开启'}
+          disabled={busy}
+          onToggle={() => updateDraft({ disableStreaming: !draft.disableStreaming })}
+        />
+      </div>
+
+      <div className="api-config-actions">
+        <button type="button" onClick={saveProfile} disabled={busy || !draft.label.trim()} title="保存 API 资料" aria-label="保存 API 资料">
+          <Save size={14} />
+          <span>保存</span>
+        </button>
+        <button
+          type="button"
+          onClick={testProfile}
+          disabled={busy || !draft.baseUrl.trim() || !draft.model.trim()}
+          title="测试 API 资料"
+          aria-label="测试 API 资料"
+        >
+          <Radio size={14} className={props.action.kind === 'testing' ? 'spin' : ''} />
+          <span>测试</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => selected && props.onApplyProfile(selected.id)}
+          disabled={busy || !selected}
+          title="应用资料并重启核心"
+          aria-label="应用资料并重启核心"
+        >
+          <Play size={14} />
+          <span>应用</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => selected && props.onDeleteProfile(selected.id)}
+          disabled={busy || !selected}
+          title="删除 API 资料"
+          aria-label="删除 API 资料"
+        >
+          <Trash2 size={14} />
+          <span>删除</span>
+        </button>
+        <button type="button" onClick={props.onRestartCore} disabled={busy} title="重启核心桥接" aria-label="重启核心桥接">
+          <TimerReset size={14} className={props.action.kind === 'restarting' ? 'spin' : ''} />
+          <span>重启</span>
+        </button>
+      </div>
+
+      {props.action.message ? <small className="api-action-note">{props.action.message}</small> : null}
+    </section>
+  )
+}
+
+type ExternalPluginDraft = {
+  baseUrl: string
+  sessionId: string
+  creatureId: string
+  installPath: string
+  installSourcePath: string
+  downloadUrl: string
+}
+
+function ExternalPluginControlPanel(props: {
+  status: ExternalPluginsStatus | null
+  action: ExternalPluginActionState
+  onRefresh: () => void
+  onSetConfig: (request: ExternalPluginConfigPatch) => void
+  onInstall: (request: ExternalPluginInstallRequest) => void
+}): JSX.Element {
+  const plugins = React.useMemo(() => {
+    const order = new Map([
+      ['codex', 0],
+      ['kohaku_terrarium', 1],
+      ['mcp_gateway', 2]
+    ])
+    return (props.status?.plugins || []).slice().sort((a, b) => (order.get(a.pluginId) ?? 99) - (order.get(b.pluginId) ?? 99))
+  }, [props.status?.plugins])
+  const installedCount = plugins.filter((plugin) => plugin.installed).length
+  const enabledCount = plugins.filter((plugin) => plugin.enabled).length
+  const busy = props.action.kind !== 'idle'
+
+  return (
+    <section className={`external-plugin-panel ${plugins.length && installedCount === plugins.length ? 'ready' : 'warn'}`}>
+      <div className="section-head external-plugin-head">
+        <span>
+          <Puzzle size={15} />
+          <span>插件总控制集</span>
+        </span>
+        <strong>{plugins.length}</strong>
+      </div>
+
+      <div className="external-plugin-summary">
+        <span>
+          启用 <strong>{enabledCount}</strong> / 安装 <strong>{installedCount}</strong>
+        </span>
+        <small>{props.status?.protocol || 'xinyu.external.v1'}</small>
+      </div>
+
+      <div className="external-plugin-list">
+        {!plugins.length ? <p className="external-plugin-empty">暂无外部插件状态</p> : null}
+        {plugins.map((plugin) => (
+          <ExternalPluginRow
+            key={plugin.pluginId}
+            plugin={plugin}
+            busy={busy}
+            actionPluginId={props.action.pluginId}
+            onRefresh={props.onRefresh}
+            onSetConfig={props.onSetConfig}
+            onInstall={props.onInstall}
+          />
+        ))}
+      </div>
+
+      {props.status?.notes?.length ? <small className="external-plugin-note">{compact(props.status.notes.map(externalPluginNoteLabel).join(' · '), 120)}</small> : null}
+      {props.action.message ? <small className="external-plugin-note">{props.action.message}</small> : null}
+    </section>
+  )
+}
+
+function ExternalPluginRow(props: {
+  plugin: ExternalPluginControl
+  busy: boolean
+  actionPluginId?: string
+  onRefresh: () => void
+  onSetConfig: (request: ExternalPluginConfigPatch) => void
+  onInstall: (request: ExternalPluginInstallRequest) => void
+}): JSX.Element {
+  const [draft, setDraft] = React.useState<ExternalPluginDraft>(() => externalPluginDraftFromControl(props.plugin))
+  const [dirty, setDirty] = React.useState(false)
+  const installBusy = props.busy && props.actionPluginId === props.plugin.pluginId
+  const canEditConfig = props.plugin.pluginId === 'kohaku_terrarium'
+
+  React.useEffect(() => {
+    if (dirty) {
+      return
+    }
+    setDraft(externalPluginDraftFromControl(props.plugin))
+  }, [dirty, props.plugin])
+
+  function updateDraft(patch: Partial<ExternalPluginDraft>): void {
+    setDirty(true)
+    setDraft((current) => ({ ...current, ...patch }))
+  }
+
+  async function savePluginConfig(patch: Partial<Pick<ExternalPluginConfigPatch, 'enabled' | 'proactiveEnabled'>> = {}): Promise<void> {
+    const configPatch = externalPluginConfigPatchFromDraft(props.plugin, draft)
+    await Promise.resolve(
+      props.onSetConfig({
+        pluginId: props.plugin.pluginId,
+        enabled: patch.enabled ?? props.plugin.enabled,
+        proactiveEnabled: patch.proactiveEnabled ?? props.plugin.proactiveEnabled,
+        config: configPatch
+      })
+    )
+    setDirty(false)
+  }
+
+  async function saveCurrentDraft(): Promise<void> {
+    await savePluginConfig()
+  }
+
+  async function toggleEnabled(): Promise<void> {
+    await savePluginConfig({ enabled: !props.plugin.enabled })
+  }
+
+  async function toggleProactive(): Promise<void> {
+    await savePluginConfig({ proactiveEnabled: !props.plugin.proactiveEnabled })
+  }
+
+  async function installPlugin(): Promise<void> {
+    if (canEditConfig) {
+      await saveCurrentDraft()
+    }
+    await Promise.resolve(
+      props.onInstall({
+        pluginId: props.plugin.pluginId,
+        options: externalPluginInstallOptionsFromDraft(props.plugin, draft)
+      })
+    )
+  }
+
+  const pluginState = props.plugin.installed ? '已安装' : externalPluginInstallStateLabel(props.plugin.install.missingReason) || '未安装'
+  const runtimeState = props.plugin.available ? '可调用' : props.plugin.enabled ? '等待安装' : '已关闭'
+  const installLabel = props.plugin.installed ? '已安装' : '安装'
+  const installReady = canEditConfig
+    ? Boolean(draft.installSourcePath.trim() || draft.downloadUrl.trim() || props.plugin.installed)
+    : Boolean(props.plugin.installable || props.plugin.installed)
+  const installHint = canEditConfig
+    ? draft.installSourcePath.trim() || draft.downloadUrl.trim()
+      ? '可直接安装插件'
+      : '请填写源路径或下载地址'
+    : props.plugin.installed
+      ? '已经安装'
+      : externalPluginInstallStateLabel(props.plugin.install.missingReason) || '安装插件'
+
+  return (
+    <article className={`external-plugin-row ${props.plugin.available ? 'ready' : 'warn'}`}>
+      <div className="external-plugin-row-head">
+        <div className="external-plugin-title">
+          <strong>{props.plugin.title}</strong>
+          <small>{`${props.plugin.kind} / ${props.plugin.transport}`}</small>
+        </div>
+        <div className="external-plugin-badges">
+          <span className={`external-plugin-pill ${props.plugin.enabled ? 'on' : 'off'}`}>{props.plugin.enabled ? '启用' : '关闭'}</span>
+          <span className={`external-plugin-pill ${props.plugin.installed ? 'ok' : 'warn'}`}>{pluginState}</span>
+        </div>
+      </div>
+
+      <div className="external-plugin-summary-line">
+        <span>{runtimeState}</span>
+        <small>{compact(props.plugin.install.path || props.plugin.install.installer || '未配置安装路径', 72)}</small>
+      </div>
+
+      <div className="external-plugin-switches">
+        <RuntimeSwitch
+          label="启用"
+          checked={props.plugin.enabled}
+          detail={props.plugin.installed ? '可运行' : '待安装'}
+          disabled={props.busy}
+          onToggle={() => {
+            void toggleEnabled()
+          }}
+        />
+        <RuntimeSwitch
+          label="主动"
+          checked={props.plugin.proactiveEnabled}
+          detail={props.plugin.proactiveEnabled ? '可主动调用' : '手动触发'}
+          disabled={props.busy}
+          onToggle={() => {
+            void toggleProactive()
+          }}
+        />
+      </div>
+
+      <div className="external-plugin-config">
+        {canEditConfig ? (
+          <>
+            <label>
+              <span>基础地址</span>
+              <input value={draft.baseUrl} disabled={props.busy} onChange={(event) => updateDraft({ baseUrl: event.currentTarget.value })} />
+            </label>
+            <label>
+              <span>会话</span>
+              <input value={draft.sessionId} disabled={props.busy} onChange={(event) => updateDraft({ sessionId: event.currentTarget.value })} />
+            </label>
+            <label>
+              <span>个体</span>
+              <input value={draft.creatureId} disabled={props.busy} onChange={(event) => updateDraft({ creatureId: event.currentTarget.value })} />
+            </label>
+            <label>
+              <span>安装路径</span>
+              <input value={draft.installPath} disabled={props.busy} onChange={(event) => updateDraft({ installPath: event.currentTarget.value })} />
+            </label>
+            <label className="external-plugin-wide">
+              <span>源路径</span>
+              <input value={draft.installSourcePath} disabled={props.busy} onChange={(event) => updateDraft({ installSourcePath: event.currentTarget.value })} />
+            </label>
+            <label className="external-plugin-wide">
+              <span>下载地址</span>
+              <input value={draft.downloadUrl} disabled={props.busy} onChange={(event) => updateDraft({ downloadUrl: event.currentTarget.value })} />
+            </label>
+          </>
+        ) : (
+          <div className="external-plugin-readonly">
+            <span>
+              <strong>安装器</strong>
+              <em>{compact(props.plugin.install.installer || '内置', 48)}</em>
+            </span>
+            <span>
+              <strong>路径</strong>
+              <em>{compact(props.plugin.install.path || '未安装', 48)}</em>
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="external-plugin-actions">
+        {canEditConfig ? (
+          <button type="button" onClick={() => void saveCurrentDraft()} disabled={props.busy || !dirty} title="保存插件配置" aria-label="保存插件配置">
+            <Save size={14} />
+            <span>保存</span>
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => void installPlugin()}
+          disabled={props.busy || !installReady}
+          title={installHint}
+          aria-label={installHint}
+        >
+          <Download size={14} className={installBusy && !props.plugin.installed ? 'spin' : ''} />
+          <span>{installLabel}</span>
+        </button>
+        <button type="button" onClick={props.onRefresh} disabled={props.busy} title="刷新插件状态" aria-label="刷新插件状态">
+          <RefreshCw size={14} className={props.busy ? 'spin' : ''} />
+          <span>刷新</span>
+        </button>
+      </div>
+
+      {props.plugin.notes.length ? <small className="external-plugin-note">{compact(props.plugin.notes.map(externalPluginNoteLabel).join(' · '), 96)}</small> : null}
+    </article>
+  )
+}
+
+function externalPluginDraftFromControl(plugin: ExternalPluginControl): ExternalPluginDraft {
+  const config = plugin.config || {}
+  return {
+    baseUrl: String(config.base_url || config.baseUrl || ''),
+    sessionId: String(config.session_id || config.sessionId || ''),
+    creatureId: String(config.creature_id || config.creatureId || ''),
+    installPath: String(config.install_path || config.installPath || plugin.install.path || ''),
+    installSourcePath: String(config.install_source_path || config.installSourcePath || ''),
+    downloadUrl: String(config.download_url || config.downloadUrl || '')
+  }
+}
+
+function externalPluginConfigPatchFromDraft(plugin: ExternalPluginControl, draft: ExternalPluginDraft): JsonRecord {
+  if (plugin.pluginId === 'kohaku_terrarium') {
+    return {
+      base_url: draft.baseUrl.trim(),
+      session_id: draft.sessionId.trim(),
+      creature_id: draft.creatureId.trim(),
+      install_path: draft.installPath.trim(),
+      install_source_path: draft.installSourcePath.trim(),
+      download_url: draft.downloadUrl.trim()
+    }
+  }
+  return {}
+}
+
+function externalPluginInstallOptionsFromDraft(plugin: ExternalPluginControl, draft: ExternalPluginDraft): JsonRecord {
+  if (plugin.pluginId === 'kohaku_terrarium') {
+    return {
+      install_path: draft.installPath.trim(),
+      source_path: draft.installSourcePath.trim(),
+      download_url: draft.downloadUrl.trim()
+    }
+  }
+  return {}
+}
+
+function apiDraftFromStatus(status: ApiConfigStatus | null): ApiConfigDraft {
+  const current = status?.current
+  return {
+    label: current?.provider ? `${current.provider} ${current.model}`.trim() : '本地 API',
+    provider: current?.provider || 'ciallo',
+    model: current?.model || 'mimo-v2.5-pro',
+    baseUrl: current?.baseUrl || '',
+    apiKey: '',
+    allowInsecureHttp: Boolean(current?.allowInsecureHttp),
+    disableStreaming: current?.disableStreaming !== false
+  }
+}
+
+function apiBlankDraft(): ApiConfigDraft {
+  return {
+    label: '',
+    provider: 'openai',
+    model: '',
+    baseUrl: '',
+    apiKey: '',
+    allowInsecureHttp: false,
+    disableStreaming: true
+  }
+}
+
+function apiDraftFromProfile(profile: ApiConfigProfile): ApiConfigDraft {
+  return {
+    label: profile.label,
+    provider: profile.provider,
+    model: profile.model,
+    baseUrl: profile.baseUrl,
+    apiKey: '',
+    allowInsecureHttp: profile.allowInsecureHttp,
+    disableStreaming: profile.disableStreaming
+  }
+}
+
 function QQBridgePanel(props: {
   status: QQEnvironmentStatus | null
   action: QQActionState
@@ -1234,7 +2077,7 @@ function QQBridgePanel(props: {
       </div>
       <div className={`qq-login-hint ${allReady ? 'ready' : ''}`}>
         <span>{diagnosis}</span>
-        <small>{tokenAvailable ? 'token 可复制' : '未找到 token'}</small>
+        <small>{tokenAvailable ? '网页端口令可复制' : '未找到网页端口令'}</small>
       </div>
 
       <div className="qq-service-list">
@@ -1265,8 +2108,8 @@ function QQBridgePanel(props: {
           type="button"
           onClick={props.onCopyToken}
           disabled={busy || !tokenAvailable}
-          title="复制 WebUI token"
-          aria-label="复制 WebUI token"
+          title="复制网页端口令"
+          aria-label="复制网页端口令"
         >
           <Clipboard size={15} />
         </button>
@@ -1274,8 +2117,8 @@ function QQBridgePanel(props: {
           type="button"
           onClick={props.onOpenWebUI}
           disabled={busy}
-          title="打开 NapCat WebUI"
-          aria-label="打开 NapCat WebUI"
+          title="打开 NapCat 网页端"
+          aria-label="打开 NapCat 网页端"
         >
           <ExternalLink size={15} />
         </button>
@@ -1332,7 +2175,7 @@ function QQRuntimeControls(props: {
         <RuntimeSwitch
           label="群聊观察"
           checked={config.groupShadowEnabled}
-          detail={config.groupShadowEnabled ? 'shadow' : '关闭'}
+          detail={config.groupShadowEnabled ? '观察' : '关闭'}
           disabled={busy || !props.config}
           onToggle={() => props.onSetRuntimeConfig({ groupShadowEnabled: !config.groupShadowEnabled })}
         />
@@ -1352,7 +2195,7 @@ function QQRuntimeControls(props: {
           <em>{groupScope}</em>
         </span>
         <span>
-          <strong>shadow</strong>
+          <strong>观察</strong>
           <em>{shadowScope}</em>
         </span>
       </div>
@@ -1549,6 +2392,78 @@ function IntentRow(props: {
   )
 }
 
+function HandledIntentRow(props: { intent: ProactiveIntent; onOpenDetail: (candidateId: string) => void }): JSX.Element {
+  return (
+    <article
+      className={`intent-row intent-row-handled risk-${props.intent.risk}`}
+      role="button"
+      tabIndex={0}
+      onClick={() => props.onOpenDetail(props.intent.id)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          props.onOpenDetail(props.intent.id)
+        }
+      }}
+    >
+      <div className="intent-meta">
+        <span>{handledIntentLabel(props.intent)}</span>
+        <strong>{props.intent.trigger}</strong>
+      </div>
+      <p>{props.intent.plannedText}</p>
+      <div className="intent-foot">
+        <span>{formatTime(props.intent.updatedAt || props.intent.createdAt)}</span>
+        <span>{props.intent.delivery}</span>
+      </div>
+    </article>
+  )
+}
+
+function handledIntentLabel(intent: ProactiveIntent): string {
+  if (intent.desktopAction === 'read_locally') return '本地已读'
+  if (intent.desktopAction === 'dismiss') return '已忽略'
+  if (intent.desktopAction === 'reply') return '已回复'
+  if (intent.desktopAction === 'approve_qq') return '已排队 QQ'
+  if (intent.status === 'answered' || intent.status === 'replied') return '已回复'
+  if (intent.status === 'dismissed') return '已忽略'
+  if (intent.status === 'read_locally') return '本地已读'
+  if (intent.status === 'queued_qq') return '已排队 QQ'
+  return intent.status || '已处理'
+}
+
+function intentStatusLabel(value: string): string {
+  if (!value || value === 'pending') return '待处理'
+  if (value === 'sent') return '已发送'
+  if (value === 'answered' || value === 'replied') return '已回复'
+  if (value === 'failed') return '已失败'
+  if (value === 'expired') return '已过期'
+  if (value === 'blocked') return '已阻止'
+  if (value === 'read_locally') return '本地已读'
+  if (value === 'dismissed') return '已忽略'
+  if (value === 'queued_qq') return '已排队 QQ'
+  if (value === 'none') return '未处理'
+  return compact(value, 40)
+}
+
+function intentRequestedActionLabel(value: string): string {
+  if (!value || value === 'owner_ack' || value === 'claim_ack') return '确认后发送'
+  if (value === 'read_locally') return '只在本地读过'
+  if (value === 'approve_qq') return '同意发送到 QQ'
+  if (value === 'state_only') return '仅状态'
+  if (value === 'preview_only') return '仅预览'
+  if (value === 'none' || value === 'local') return '本地'
+  return compact(value, 40)
+}
+
+function isHandledIntent(intent: ProactiveIntent): boolean {
+  return (
+    Boolean(intent.desktopAction) ||
+    ['sent', 'answered', 'failed', 'expired', 'blocked', 'none', 'read_locally', 'replied', 'dismissed', 'queued_qq'].includes(
+      intent.status
+    )
+  )
+}
+
 export function IntentDetailDialog(props: {
   intent: ProactiveIntent
   pendingAction?: ProactiveAction
@@ -1556,7 +2471,8 @@ export function IntentDetailDialog(props: {
   onAck: (candidateId: string, action: ProactiveAction) => void
   onReply: (intent: ProactiveIntent, text: string) => void
 }): JSX.Element {
-  const disabled = Boolean(props.pendingAction)
+  const handled = isHandledIntent(props.intent)
+  const disabled = Boolean(props.pendingAction) || handled
   const text = props.intent.fullText || props.intent.plannedText
   const [replyText, setReplyText] = React.useState('')
 
@@ -1574,7 +2490,7 @@ export function IntentDetailDialog(props: {
             <p className="label">主动预览</p>
             <h3 id="intent-dialog-title">{props.intent.trigger}</h3>
           </div>
-          <button type="button" onClick={props.onClose} title="Close">
+          <button type="button" onClick={props.onClose} title="关闭">
             <X size={16} />
           </button>
         </header>
@@ -1592,11 +2508,11 @@ export function IntentDetailDialog(props: {
             </div>
             <div>
               <dt>状态</dt>
-              <dd>{props.intent.status || 'pending'}</dd>
+              <dd>{intentStatusLabel(props.intent.status)}</dd>
             </div>
             <div>
               <dt>动作</dt>
-              <dd>{props.intent.requestedAction || 'owner_ack'}</dd>
+              <dd>{intentRequestedActionLabel(props.intent.requestedAction)}</dd>
             </div>
             <div>
               <dt>创建</dt>
@@ -1716,6 +2632,9 @@ function ActionDigestPanel(props: { digest?: unknown }): JSX.Element {
 
 function ContinuityPanel(props: { recentMemoryEvents: unknown[]; lastEvent?: DesktopEvent }): JSX.Element {
   const latestMemory = asRecord(props.recentMemoryEvents[props.recentMemoryEvents.length - 1])
+  const route = asRecord(latestMemory.route)
+  const selectedExperts = memoryRouteList(latestMemory.selectedExperts || route.selectedExperts)
+  const currentTurnFacts = memoryRouteList(latestMemory.currentTurnFacts || route.currentTurnFacts)
   return (
     <section className="continuity-panel">
       <div className="section-head">
@@ -1734,6 +2653,21 @@ function ContinuityPanel(props: { recentMemoryEvents: unknown[]; lastEvent?: Des
         <small>详情</small>
         <strong>{props.recentMemoryEvents.length ? '已有可见回声' : '等待下一次写回'}</strong>
       </div>
+      <div className="continuity-row">
+        <small>记忆专家</small>
+        <strong>{selectedExperts.length ? selectedExperts.slice(0, 4).join(' + ') : '等待路由'}</strong>
+      </div>
+      <div className="continuity-row">
+        <small>当前事实</small>
+        <strong>{currentTurnFacts.length ? currentTurnFacts.slice(0, 3).join(' / ') : '当前消息优先'}</strong>
+      </div>
     </section>
   )
+}
+
+function memoryRouteList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value.map((item) => String(item || '').trim()).filter(Boolean)
 }

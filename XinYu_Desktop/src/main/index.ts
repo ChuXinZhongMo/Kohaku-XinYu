@@ -12,6 +12,14 @@ import {
   setQQRuntimeConfig,
   startQQEnvironment
 } from './qq_environment'
+import {
+  applyApiConfigProfile,
+  deleteApiConfigProfile,
+  getApiConfigStatus,
+  restartCoreBridge,
+  saveApiConfigProfile,
+  testApiConfigProfile
+} from './api_config'
 import { XinyuGateway, type GatewayStatus, type XinYuDesktopEvent } from './xinyu_gateway'
 
 let mainWindow: BrowserWindow | null = null
@@ -21,10 +29,10 @@ const execFileAsync = promisify(execFile)
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1180,
-    height: 780,
-    minWidth: 900,
-    minHeight: 620,
+    width: 1560,
+    height: 860,
+    minWidth: 1480,
+    minHeight: 720,
     autoHideMenuBar: true,
     backgroundColor: '#080b10',
     title: '心玉',
@@ -154,7 +162,7 @@ async function runStickerMaintenance(action: unknown): Promise<Record<string, un
   const python = resolveCorePython()
   const script = join(coreDir, 'xinyu_sticker_import.py')
   if (!existsSync(script)) {
-    throw new Error(`Sticker importer not found: ${script}`)
+    throw new Error(`未找到表情导入脚本：${script}`)
   }
   const args =
     mode === 'import-pending'
@@ -163,7 +171,7 @@ async function runStickerMaintenance(action: unknown): Promise<Record<string, un
         ? [script, '--write-semantics', '--apply', '--json']
         : []
   if (!args.length) {
-    throw new Error(`Unsupported sticker maintenance action: ${mode}`)
+    throw new Error(`不支持的表情维护动作：${mode}`)
   }
   const startedAt = new Date().toISOString()
   const { stdout, stderr } = await execFileAsync(python, args, {
@@ -218,17 +226,17 @@ function assertInside(base: string, target: string): void {
   const targetResolved = resolve(target)
   const rel = relative(baseResolved, targetResolved)
   if (rel.startsWith('..') || resolve(rel) === rel) {
-    throw new Error('Sticker path is outside asset directory')
+    throw new Error('表情路径超出资源目录')
   }
 }
 
 function safeStickerRelativePath(value: unknown): string {
   const relPath = String(value || '').replace(/\\/g, '/').trim()
   if (!relPath || relPath.includes('\0') || relPath.startsWith('/') || /^[a-zA-Z]:/.test(relPath)) {
-    throw new Error('Invalid sticker file path')
+    throw new Error('表情文件路径无效')
   }
   if (relPath.split('/').some((part) => !part || part === '.' || part === '..')) {
-    throw new Error('Invalid sticker file path')
+    throw new Error('表情文件路径无效')
   }
   return relPath
 }
@@ -246,7 +254,7 @@ function dedupeStickerDestination(path: string): string {
       return candidate
     }
   }
-  throw new Error('Could not allocate sticker destination')
+  throw new Error('无法分配表情目标路径')
 }
 
 async function moveStickerToMood(request: unknown): Promise<Record<string, unknown>> {
@@ -255,17 +263,17 @@ async function moveStickerToMood(request: unknown): Promise<Record<string, unkno
   const targetMood = String(payload.mood || '').trim()
   const targetLabel = STICKER_MOOD_LABELS[targetMood]
   if (!targetLabel) {
-    throw new Error(`Unsupported sticker mood: ${targetMood}`)
+    throw new Error(`不支持的表情分组：${targetMood}`)
   }
 
   const assetDir = resolveStickerAssetDir()
   const source = resolve(assetDir, relFile)
   assertInside(assetDir, source)
   if (!existsSync(source)) {
-    throw new Error(`Sticker file not found: ${relFile}`)
+    throw new Error(`未找到表情文件：${relFile}`)
   }
   if (!STICKER_IMAGE_SUFFIXES.has(extname(source).toLowerCase())) {
-    throw new Error('Unsupported sticker image type')
+    throw new Error('不支持的表情图片类型')
   }
 
   const targetDir = resolve(assetDir, targetLabel)
@@ -403,6 +411,50 @@ app.whenReady().then(() => {
   ipcMain.handle('xinyu:get-gateway-status', () => {
     return gateway?.getStatus() || lastStatus
   })
+  ipcMain.handle('xinyu:get-external-plugins', async () => {
+    return await gateway?.getExternalPlugins()
+  })
+  ipcMain.handle('xinyu:set-external-plugin-config', async (_event, request: unknown) => {
+    const payload =
+      request && typeof request === 'object'
+        ? (request as { pluginId?: unknown; enabled?: unknown; proactiveEnabled?: unknown; config?: unknown })
+        : {}
+    return await gateway?.setExternalPluginConfig({
+      pluginId: String(payload.pluginId || ''),
+      enabled: typeof payload.enabled === 'boolean' ? payload.enabled : undefined,
+      proactiveEnabled: typeof payload.proactiveEnabled === 'boolean' ? payload.proactiveEnabled : undefined,
+      config: payload.config && typeof payload.config === 'object' ? (payload.config as Record<string, unknown>) : {}
+    })
+  })
+  ipcMain.handle('xinyu:install-external-plugin', async (_event, request: unknown) => {
+    const payload =
+      request && typeof request === 'object' ? (request as { pluginId?: unknown; options?: unknown }) : {}
+    return await gateway?.installExternalPlugin({
+      pluginId: String(payload.pluginId || ''),
+      options: payload.options && typeof payload.options === 'object' ? (payload.options as Record<string, unknown>) : {}
+    })
+  })
+  ipcMain.handle('xinyu:get-api-config-status', () => {
+    return getApiConfigStatus(resolveXinYuCoreDir())
+  })
+  ipcMain.handle('xinyu:save-api-config-profile', (_event, profile: unknown) => {
+    return saveApiConfigProfile(resolveXinYuCoreDir(), profile && typeof profile === 'object' ? profile : {})
+  })
+  ipcMain.handle('xinyu:test-api-config-profile', async (_event, profile: unknown) => {
+    return await testApiConfigProfile(resolveXinYuCoreDir(), profile && typeof profile === 'object' ? profile : {})
+  })
+  ipcMain.handle('xinyu:delete-api-config-profile', (_event, profileId: unknown) => {
+    return deleteApiConfigProfile(resolveXinYuCoreDir(), profileId)
+  })
+  ipcMain.handle('xinyu:apply-api-config-profile', async (_event, request: unknown) => {
+    const payload =
+      request && typeof request === 'object' ? (request as { profileId?: unknown; restartCore?: unknown }) : {}
+    return await applyApiConfigProfile(resolveXinYuWorkspace(), resolveXinYuCoreDir(), payload.profileId, payload.restartCore)
+  })
+  ipcMain.handle('xinyu:restart-core-bridge', async () => {
+    const status = getApiConfigStatus(resolveXinYuCoreDir())
+    return await restartCoreBridge(resolveXinYuWorkspace(), resolveXinYuCoreDir(), status.current.allowInsecureHttp)
+  })
   ipcMain.handle('xinyu:get-sticker-library', () => {
     return readStickerLibrarySummary()
   })
@@ -415,7 +467,7 @@ app.whenReady().then(() => {
   ipcMain.handle('xinyu:open-sticker-asset-dir', async () => {
     const assetDir = String(readStickerLibrarySummary().assetDir || '')
     if (!assetDir || !existsSync(assetDir)) {
-      throw new Error('Sticker asset directory not found')
+      throw new Error('未找到表情资源目录')
     }
     const error = await shell.openPath(assetDir)
     return { ok: !error, assetDir, error }
@@ -468,6 +520,28 @@ app.whenReady().then(() => {
     return await gateway?.ackProactive({
       candidateId: String(payload.candidateId || ''),
       action: String(payload.action || '') as 'read_locally' | 'approve_qq' | 'dismiss' | 'reply'
+    })
+  })
+  ipcMain.handle('xinyu:decide-self-action-approval', async (_event, request: unknown) => {
+    const payload =
+      request && typeof request === 'object'
+        ? (request as {
+            queueId?: unknown
+            decision?: unknown
+            reason?: unknown
+            execute?: unknown
+            authorizeCodex?: unknown
+            authorizeExisting?: unknown
+          })
+        : {}
+    const decision = String(payload.decision || '') === 'denied' ? 'denied' : 'approved'
+    return await gateway?.decideSelfActionApproval({
+      queueId: String(payload.queueId || 'latest'),
+      decision,
+      reason: String(payload.reason || ''),
+      execute: payload.execute !== false,
+      authorizeCodex: Boolean(payload.authorizeCodex),
+      authorizeExisting: Boolean(payload.authorizeExisting)
     })
   })
   ipcMain.handle('xinyu:list-metabolism-tickets', async (_event, statuses: unknown) => {

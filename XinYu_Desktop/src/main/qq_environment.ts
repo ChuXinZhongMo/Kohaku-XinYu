@@ -210,9 +210,9 @@ export async function restartQQGateway(): Promise<QQRuntimeConfigActionResult> {
 
 export async function getQQEnvironmentStatus(): Promise<QQEnvironmentStatus> {
   const [coreBridge, qqGateway, napcatWebui, napcatReverseWs] = await Promise.all([
-    tcpProbe('coreBridge', 'Core 8765', '127.0.0.1', 8765),
-    tcpProbe('qqGateway', 'QQ Gateway 6199', '127.0.0.1', 6199),
-    tcpProbe('napcatWebui', 'NapCat WebUI 6099', '127.0.0.1', 6099),
+    tcpProbe('coreBridge', '核心 8765', '127.0.0.1', 8765),
+    tcpProbe('qqGateway', 'QQ 网关 6199', '127.0.0.1', 6199),
+    tcpProbe('napcatWebui', 'NapCat 网页端 6099', '127.0.0.1', 6099),
     establishedProbe()
   ])
   const services = [coreBridge, qqGateway, napcatWebui, napcatReverseWs]
@@ -231,7 +231,7 @@ export async function getQQEnvironmentStatus(): Promise<QQEnvironmentStatus> {
 
 function readQQGatewayConfig(): Record<string, unknown> {
   if (!existsSync(QQ_GATEWAY_CONFIG_PATH)) {
-    throw new Error(`QQ gateway config not found: ${QQ_GATEWAY_CONFIG_PATH}`)
+    throw new Error(`QQ 网关配置未找到：${QQ_GATEWAY_CONFIG_PATH}`)
   }
   return JSON.parse(readFileSync(QQ_GATEWAY_CONFIG_PATH, 'utf-8')) as Record<string, unknown>
 }
@@ -391,7 +391,7 @@ function getNapCatWebUIWindow(): BrowserWindow {
     minHeight: 560,
     autoHideMenuBar: true,
     backgroundColor: '#f8f8fb',
-    title: 'NapCat WebUI',
+    title: 'NapCat 网页端',
     show: false,
     webPreferences: {
       nodeIntegration: false,
@@ -515,7 +515,7 @@ async function establishedProbe(): Promise<ServiceProbe> {
     }
     return {
       key: 'napcatReverseWs',
-      label: 'NapCat -> Gateway',
+      label: 'NapCat → 网关',
       endpoint,
       ok,
       detail: ok ? 'ws_established' : 'ws_not_connected'
@@ -523,7 +523,7 @@ async function establishedProbe(): Promise<ServiceProbe> {
   } catch (error) {
     return {
       key: 'napcatReverseWs',
-      label: 'NapCat -> Gateway',
+      label: 'NapCat → 网关',
       endpoint,
       ok: false,
       detail: errorLabel(error)

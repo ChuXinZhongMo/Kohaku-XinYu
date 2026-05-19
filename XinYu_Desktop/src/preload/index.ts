@@ -5,6 +5,40 @@ const api = {
   getProactiveInbox: () => ipcRenderer.invoke('xinyu:get-proactive-inbox'),
   getImpulseSoupState: () => ipcRenderer.invoke('xinyu:get-impulse-soup-state'),
   getGatewayStatus: () => ipcRenderer.invoke('xinyu:get-gateway-status'),
+  getExternalPlugins: () => ipcRenderer.invoke('xinyu:get-external-plugins'),
+  setExternalPluginConfig: (request: {
+    pluginId: string
+    enabled?: boolean
+    proactiveEnabled?: boolean
+    config?: Record<string, unknown>
+  }) => ipcRenderer.invoke('xinyu:set-external-plugin-config', request),
+  installExternalPlugin: (request: { pluginId: string; options?: Record<string, unknown> }) =>
+    ipcRenderer.invoke('xinyu:install-external-plugin', request),
+  getApiConfigStatus: () => ipcRenderer.invoke('xinyu:get-api-config-status'),
+  saveApiConfigProfile: (profile: {
+    id?: string
+    label?: string
+    provider?: string
+    model?: string
+    baseUrl?: string
+    apiKey?: string
+    allowInsecureHttp?: boolean
+    disableStreaming?: boolean
+  }) => ipcRenderer.invoke('xinyu:save-api-config-profile', profile),
+  testApiConfigProfile: (profile: {
+    id?: string
+    label?: string
+    provider?: string
+    model?: string
+    baseUrl?: string
+    apiKey?: string
+    allowInsecureHttp?: boolean
+    disableStreaming?: boolean
+  }) => ipcRenderer.invoke('xinyu:test-api-config-profile', profile),
+  deleteApiConfigProfile: (profileId: string) => ipcRenderer.invoke('xinyu:delete-api-config-profile', profileId),
+  applyApiConfigProfile: (request: { profileId: string; restartCore?: boolean }) =>
+    ipcRenderer.invoke('xinyu:apply-api-config-profile', request),
+  restartCoreBridge: () => ipcRenderer.invoke('xinyu:restart-core-bridge'),
   getStickerLibrary: () => ipcRenderer.invoke('xinyu:get-sticker-library'),
   runStickerMaintenance: (action: 'import-pending' | 'rebuild-index') =>
     ipcRenderer.invoke('xinyu:run-sticker-maintenance', action),
@@ -36,6 +70,14 @@ const api = {
   }) => ipcRenderer.invoke('xinyu:send-chat', request),
   ackProactive: (request: { candidateId: string; action: 'read_locally' | 'approve_qq' | 'dismiss' | 'reply' }) =>
     ipcRenderer.invoke('xinyu:ack-proactive', request),
+  decideSelfActionApproval: (request: {
+    queueId: string
+    decision: 'approved' | 'denied'
+    reason?: string
+    execute?: boolean
+    authorizeCodex?: boolean
+    authorizeExisting?: boolean
+  }) => ipcRenderer.invoke('xinyu:decide-self-action-approval', request),
   listMetabolismTickets: (statuses?: string) => ipcRenderer.invoke('xinyu:list-metabolism-tickets', statuses),
   yieldCompute: (request: { ticketId: string; seconds?: number; note?: string }) =>
     ipcRenderer.invoke('xinyu:yield-compute', request),

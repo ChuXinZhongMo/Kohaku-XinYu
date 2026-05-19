@@ -83,14 +83,14 @@ function deriveStatus(input: {
     return {
       title: `代谢 ${input.metabolismStatus}`,
       detail: '代谢票据',
-      reason: `原因：activeDesire 带有代谢票据，状态为 ${input.metabolismStatus}。`
+      reason: `原因：活跃意图带有代谢票据，状态为 ${input.metabolismStatus}。`
     }
   }
   if (input.chosenAction === 'request_metabolism_window') {
     return {
       title: '请求代谢',
       detail: '生命内核',
-      reason: '原因：activeDesires 判断当前需要代谢窗口。'
+      reason: '原因：活跃意图判断当前需要代谢窗口。'
     }
   }
   if (input.waiting) {
@@ -101,21 +101,21 @@ function deriveStatus(input: {
     return {
       title: '噪声偏高',
       detail: '熵值偏高',
-      reason: `原因：entropyState=${input.entropyBand || 'high'}，熵值 ${Math.round(input.entropyLevel * 100)}。`
+      reason: `原因：熵状态=${input.entropyBand || 'high'}，熵值 ${Math.round(input.entropyLevel * 100)}。`
     }
   }
   if (input.fatigue >= 0.62) {
     return {
       title: '负载偏高',
       detail: '疲劳偏高',
-      reason: `原因：SelfChoice fatigue=${input.fatigueBand || 'high'}。`
+      reason: `原因：自选疲劳=${input.fatigueBand || 'high'}。`
     }
   }
   if (input.physicalPressure === 'high') {
     return {
       title: '压力偏高',
       detail: '体感压力',
-      reason: '原因：xinyuState.physical_pressure=high。'
+      reason: '原因：体感压力=high。'
     }
   }
   if (input.memoryEchoes > 0) {

@@ -25,8 +25,10 @@ export type XinYuSnapshot = {
   xinyuState?: Record<string, unknown>
   eventBus?: Record<string, unknown>
   proactiveInbox?: unknown[]
+  proactiveHistory?: unknown[]
   recentTurns?: unknown[]
   recentMemoryEvents?: unknown[]
+  selfAction?: Record<string, unknown>
   notes?: string[]
 }
 
@@ -82,6 +84,26 @@ export type ProactiveAckResponse = {
   error?: string
 }
 
+export type SelfActionApprovalRequest = {
+  queueId: string
+  decision: 'approved' | 'denied'
+  reason?: string
+  execute?: boolean
+  authorizeCodex?: boolean
+  authorizeExisting?: boolean
+}
+
+export type SelfActionApprovalResponse = {
+  accepted: boolean
+  queueId: string
+  decision: string
+  approvalId?: string
+  reply?: string
+  selfAction?: Record<string, unknown>
+  notes?: unknown[]
+  error?: string
+}
+
 export type MetabolismTicket = Record<string, unknown> & {
   ticket_id?: string
   status?: string
@@ -105,6 +127,18 @@ export type MetabolismDecisionResponse = {
   ticket?: MetabolismTicket
   notes?: unknown[]
   error?: string
+}
+
+export type ExternalPluginConfigPatch = {
+  pluginId: string
+  enabled?: boolean
+  proactiveEnabled?: boolean
+  config?: Record<string, unknown>
+}
+
+export type ExternalPluginInstallRequest = {
+  pluginId: string
+  options?: Record<string, unknown>
 }
 
 const DEFAULT_HTTP_URL = 'http://127.0.0.1:8765'
@@ -168,7 +202,7 @@ export class XinyuGateway {
     return await this.hydrate()
   }
 
-  async getProactiveInbox(): Promise<unknown[]> {
+  async getProactiveInbox(): Promise<unknown> {
     try {
       const response = await fetch(`${this.httpUrl}/desktop/proactive/inbox`, {
         headers: this.authHeaders()
@@ -178,16 +212,20 @@ export class XinyuGateway {
         throw new Error(String(body.error || body.message || `proactive_inbox_http_${response.status}`))
       }
       const items = Array.isArray(body.items) ? body.items : []
+      const history = Array.isArray(body.history) ? body.history : []
       if (this.snapshot) {
-        this.snapshot = { ...this.snapshot, proactiveInbox: items }
+        this.snapshot = { ...this.snapshot, proactiveInbox: items, proactiveHistory: history }
       }
       this.status.lastError = ''
       this.emitStatus()
-      return items
+      return { items, history }
     } catch (error) {
       this.status.lastError = errorLabel(error)
       this.emitStatus()
-      return Array.isArray(this.snapshot?.proactiveInbox) ? this.snapshot.proactiveInbox : []
+      return {
+        items: Array.isArray(this.snapshot?.proactiveInbox) ? this.snapshot.proactiveInbox : [],
+        history: Array.isArray(this.snapshot?.proactiveHistory) ? this.snapshot.proactiveHistory : []
+      }
     }
   }
 
@@ -302,6 +340,132 @@ export class XinyuGateway {
     }
   }
 
+  async decideSelfActionApproval(request: SelfActionApprovalRequest): Promise<SelfActionApprovalResponse> {
+    const queueId = String(request.queueId || 'latest').trim() || 'latest'
+    const decision = String(request.decision || '').trim() as 'approved' | 'denied'
+    if (!['approved', 'denied'].includes(decision)) {
+      return { accepted: false, queueId, decision, error: 'invalid_decision' }
+    }
+    try {
+      const response = await fetch(`${this.httpUrl}/desktop/self-action/approval`, {
+        method: 'POST',
+        headers: {
+          ...this.authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          queueId,
+          decision,
+          reason: String(request.reason || ''),
+          execute: request.execute !== false,
+          authorizeCodex: Boolean(request.authorizeCodex),
+          authorizeExisting: Boolean(request.authorizeExisting),
+          decidedBy: 'owner_desktop'
+        })
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        return {
+          accepted: false,
+          queueId,
+          decision,
+          error: String(body.error || body.message || `self_action_approval_http_${response.status}`),
+          notes: Array.isArray(body.notes) ? body.notes : []
+        }
+      }
+      if (body.selfAction && typeof body.selfAction === 'object') {
+        this.snapshot = { ...(this.snapshot || { version: 1 }), selfAction: body.selfAction as Record<string, unknown> }
+      }
+      return {
+        accepted: Boolean(body.accepted ?? true),
+        queueId: String(body.queue_id || body.queueId || queueId),
+        decision: String(body.decision || decision),
+        approvalId: String(body.approval_id || body.approvalId || ''),
+        reply: String(body.reply || ''),
+        selfAction: body.selfAction && typeof body.selfAction === 'object' ? (body.selfAction as Record<string, unknown>) : undefined,
+        notes: Array.isArray(body.notes) ? body.notes : [],
+        error: String(body.error || '')
+      }
+    } catch (error) {
+      return { accepted: false, queueId, decision, error: errorLabel(error), notes: [] }
+    }
+  }
+
+  async getExternalPlugins(): Promise<Record<string, unknown>> {
+    try {
+      const response = await fetch(`${this.httpUrl}/external/plugins`, {
+        headers: this.authHeaders()
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        throw new Error(String(body.error || body.message || `external_plugins_http_${response.status}`))
+      }
+      this.status.lastError = ''
+      this.emitStatus()
+      return body
+    } catch (error) {
+      this.status.lastError = errorLabel(error)
+      this.emitStatus()
+      return { ok: false, plugins: [], error: errorLabel(error), notes: ['external_plugins_unavailable'] }
+    }
+  }
+
+  async setExternalPluginConfig(request: ExternalPluginConfigPatch): Promise<Record<string, unknown>> {
+    const pluginId = String(request.pluginId || '').trim()
+    if (!pluginId) {
+      return { ok: false, accepted: false, error: 'missing_plugin_id' }
+    }
+    try {
+      const response = await fetch(`${this.httpUrl}/external/plugins/config`, {
+        method: 'POST',
+        headers: {
+          ...this.authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          plugin_id: pluginId,
+          enabled: request.enabled,
+          proactive_enabled: request.proactiveEnabled,
+          config: request.config || {}
+        })
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        return { ok: false, accepted: false, error: String(body.error || body.message || `external_plugin_config_http_${response.status}`), notes: Array.isArray(body.notes) ? body.notes : [] }
+      }
+      return body
+    } catch (error) {
+      return { ok: false, accepted: false, error: errorLabel(error), notes: [] }
+    }
+  }
+
+  async installExternalPlugin(request: ExternalPluginInstallRequest): Promise<Record<string, unknown>> {
+    const pluginId = String(request.pluginId || '').trim()
+    if (!pluginId) {
+      return { ok: false, accepted: false, error: 'missing_plugin_id' }
+    }
+    try {
+      const response = await fetch(`${this.httpUrl}/external/plugins/install`, {
+        method: 'POST',
+        headers: {
+          ...this.authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          plugin_id: pluginId,
+          options: request.options || {}
+        })
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        return { ok: false, accepted: false, error: String(body.error || body.message || `external_plugin_install_http_${response.status}`), notes: Array.isArray(body.notes) ? body.notes : [] }
+      }
+      return body
+    } catch (error) {
+      return { ok: false, accepted: false, error: errorLabel(error), notes: [] }
+    }
+  }
+
   async listMetabolismTickets(statuses = 'requested,approved,running'): Promise<MetabolismTicketListResponse> {
     const query = statuses ? `?status=${encodeURIComponent(statuses)}` : ''
     try {
@@ -361,6 +525,7 @@ export class XinyuGateway {
           lastEventId: this.status.lastEventId,
           services: [],
           proactiveInbox: [],
+          proactiveHistory: [],
           recentTurns: [],
           recentMemoryEvents: [],
           notes: ['desktop_snapshot_unavailable']
@@ -484,7 +649,7 @@ export class XinyuGateway {
 
   private mergeEvent(event: XinYuDesktopEvent): void {
     if (!this.snapshot) {
-      this.snapshot = { version: 1, proactiveInbox: [], recentTurns: [], recentMemoryEvents: [] }
+      this.snapshot = { version: 1, proactiveInbox: [], proactiveHistory: [], recentTurns: [], recentMemoryEvents: [] }
     }
     const payload = event.payload || {}
     if (event.type === 'chat.turn.finished') {
@@ -502,6 +667,7 @@ export class XinyuGateway {
       const status = String(payload.status || '')
       const candidateId = String(payload.candidateId || '')
       if (candidateId && FINAL_PROACTIVE_STATUSES.has(status)) {
+        this.snapshot.proactiveHistory = appendLimited(this.snapshot.proactiveHistory || [], payload, 20, 'candidateId')
         this.snapshot.proactiveInbox = (this.snapshot.proactiveInbox || []).filter(
           (item) => recordString(item, 'candidateId') !== candidateId
         )

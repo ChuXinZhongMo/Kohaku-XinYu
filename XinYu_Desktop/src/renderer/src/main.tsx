@@ -4,9 +4,9 @@ import { Activity, Clock3 } from 'lucide-react'
 import './style.css'
 import { AffectiveSurfaceProvider, SurfacePart } from './AffectiveSurfaceProvider'
 import { buildAffectiveSurfaceCue } from './affectiveSurface'
-import { ImpulseObserverDialog, IntentDetailDialog, InteractionStream, IntentQueuePanel, MindStatePanel, StatusBadge, ThemeSwitcher } from './DesktopPanels'
-import type { AppState, CommandState, DesktopEvent, GatewayStatus, JsonRecord, ProactiveAction, ProactiveIntent, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, ServiceProbe, Snapshot, StickerActionState, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
-import { actionLabel, applyEvent, applyProactiveInbox, applySnapshot, asRecord, buildProactiveIntents, buildStats, commandStatusLabel, compact, createCommandId, defaultQQRuntimeConfig, defaultQQServices, deriveXinYuState, digestPressureLabel, digestResidueLabel, digestResultLabel, digestThemeLabel, errorLabel, eventLabel, formatLatency, formatTime, formatTurnMeta, initialTheme, isCommandRenderedByTurn, memorySummary, normalizeImpulseSoupState, normalizeQQEnvironmentStatus, normalizeQQRuntimeConfig, normalizeStickerLibrary, platformLabel, qqActionResultLabel, qqDetailLabel, qqDiagnosisLabel, qqEnvironmentMessage, qqRuntimeResultLabel, qqServiceLabel, riskLabel, runtimeLabel, sourceLabel, statusLabel, stickerClipLabel, stickerCorrectionMoods, stickerMoodLabel, themeOptions, updateCommand } from './desktopModel'
+import { ImpulseObserverDialog, IntentDetailDialog, InteractionStream, IntentQueuePanel, MindStatePanel, StatusBadge, SystemControlPanel, ThemeSwitcher } from './DesktopPanels'
+import type { ApiConfigProfilePatch, AppState, CommandState, DesktopEvent, ExternalPluginConfigPatch, ExternalPluginInstallRequest, GatewayStatus, JsonRecord, ProactiveAction, ProactiveIntent, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, ServiceProbe, Snapshot, StickerActionState, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
+import { actionLabel, apiConfigActionLabel, applyEvent, applyProactiveInbox, applySnapshot, asRecord, buildProactiveIntents, buildStats, chatErrorLabel, commandStatusLabel, compact, createCommandId, defaultQQRuntimeConfig, defaultQQServices, deriveXinYuState, digestPressureLabel, digestResidueLabel, digestResultLabel, digestThemeLabel, errorLabel, eventLabel, externalPluginActionLabel, formatLatency, formatTime, formatTurnMeta, initialTheme, isCommandRenderedByTurn, memorySummary, normalizeApiConfigStatus, normalizeExternalPluginsStatus, normalizeImpulseSoupState, normalizeQQEnvironmentStatus, normalizeQQRuntimeConfig, normalizeStickerLibrary, platformLabel, qqActionResultLabel, qqDetailLabel, qqDiagnosisLabel, qqEnvironmentMessage, qqRuntimeResultLabel, qqServiceLabel, riskLabel, runtimeLabel, sourceLabel, statusLabel, stickerClipLabel, stickerCorrectionMoods, stickerMoodLabel, themeOptions, updateCommand } from './desktopModel'
 
 const avatarSrc = './xinyu-avatar.png'
 
@@ -18,6 +18,7 @@ function App(): JSX.Element {
   const [selectedIntentId, setSelectedIntentId] = React.useState<string | null>(null)
   const [impulseObserverOpen, setImpulseObserverOpen] = React.useState(false)
   const [impulseLoading, setImpulseLoading] = React.useState(false)
+  const [selfActionApprovalBusy, setSelfActionApprovalBusy] = React.useState('')
   const [state, setState] = React.useState<AppState>({
     snapshot: null,
     gateway: null,
@@ -25,9 +26,14 @@ function App(): JSX.Element {
     commands: [],
     proactiveActions: {},
     proactiveInbox: [],
+    proactiveHistory: [],
     impulseSoup: null,
     recentTurns: [],
     recentMemoryEvents: [],
+    apiConfig: null,
+    apiConfigAction: { kind: 'idle', message: '' },
+    externalPlugins: null,
+    externalPluginAction: { kind: 'idle', message: '' },
     qqEnvironment: null,
     qqAction: { kind: 'idle', message: '' },
     qqRuntimeConfig: null,
@@ -84,6 +90,51 @@ function App(): JSX.Element {
           }))
         })
     }
+    const loadApiConfig = (): void => {
+      window.xinyu
+        .getApiConfigStatus()
+        .then((config) => {
+          if (!mounted) return
+          setState((current) => ({
+            ...current,
+            apiConfig: normalizeApiConfigStatus(config),
+            apiConfigAction:
+              current.apiConfigAction.kind === 'loading' ? { kind: 'idle', message: '' } : current.apiConfigAction
+          }))
+        })
+        .catch((error) => {
+          if (!mounted) return
+          setState((current) => ({
+            ...current,
+            apiConfigAction:
+              current.apiConfigAction.kind === 'idle'
+                ? { kind: 'idle', message: `API 资料读取失败：${compact(errorLabel(error), 72)}` }
+                : current.apiConfigAction
+          }))
+        })
+    }
+    const loadExternalPlugins = (): void => {
+      window.xinyu
+        .getExternalPlugins()
+        .then((plugins) => {
+          if (!mounted) return
+          setState((current) => ({
+            ...current,
+            externalPlugins: normalizeExternalPluginsStatus(plugins),
+            externalPluginAction: current.externalPluginAction.kind === 'loading' ? { kind: 'idle', message: '' } : current.externalPluginAction
+          }))
+        })
+        .catch((error) => {
+          if (!mounted) return
+          setState((current) => ({
+            ...current,
+            externalPluginAction:
+              current.externalPluginAction.kind === 'idle'
+                ? { kind: 'idle', message: `外部插件读取失败：${compact(errorLabel(error), 72)}` }
+                : current.externalPluginAction
+          }))
+        })
+    }
     const loadStickerLibrary = (): void => {
       window.xinyu
         .getStickerLibrary()
@@ -130,6 +181,8 @@ function App(): JSX.Element {
     })
     loadQQEnvironment()
     loadQQRuntimeConfig()
+    loadApiConfig()
+    loadExternalPlugins()
     loadStickerLibrary()
     loadImpulseSoup()
     const snapshotTimer = window.setInterval(() => {
@@ -146,6 +199,8 @@ function App(): JSX.Element {
     }, 5_000)
     const qqTimer = window.setInterval(loadQQEnvironment, 15_000)
     const qqRuntimeTimer = window.setInterval(loadQQRuntimeConfig, 30_000)
+    const apiConfigTimer = window.setInterval(loadApiConfig, 30_000)
+    const externalPluginTimer = window.setInterval(loadExternalPlugins, 30_000)
     const stickerTimer = window.setInterval(loadStickerLibrary, 30_000)
     const impulseTimer = window.setInterval(loadImpulseSoup, 5_000)
     const offEvent = window.xinyu.onCoreEvent((event) => {
@@ -160,6 +215,8 @@ function App(): JSX.Element {
       window.clearInterval(proactiveTimer)
       window.clearInterval(qqTimer)
       window.clearInterval(qqRuntimeTimer)
+      window.clearInterval(apiConfigTimer)
+      window.clearInterval(externalPluginTimer)
       window.clearInterval(stickerTimer)
       window.clearInterval(impulseTimer)
       offEvent()
@@ -169,9 +226,13 @@ function App(): JSX.Element {
 
   const xinyuState = React.useMemo(() => deriveXinYuState(state), [state])
   const intents = React.useMemo(() => buildProactiveIntents(state.proactiveInbox), [state.proactiveInbox])
+  const proactiveHistory = React.useMemo(() => buildProactiveIntents(state.proactiveHistory), [state.proactiveHistory])
   const selectedIntent = React.useMemo(
-    () => intents.find((intent) => intent.id === selectedIntentId) || null,
-    [intents, selectedIntentId]
+    () =>
+      intents.find((intent) => intent.id === selectedIntentId) ||
+      proactiveHistory.find((intent) => intent.id === selectedIntentId) ||
+      null,
+    [intents, proactiveHistory, selectedIntentId]
   )
   const stats = React.useMemo(() => buildStats(state), [state])
   const connected = xinyuState.connection === 'online'
@@ -209,6 +270,224 @@ function App(): JSX.Element {
       setSelectedIntentId(null)
     }
   }, [selectedIntent, selectedIntentId])
+
+  async function refreshApiConfig(): Promise<void> {
+    setState((current) => ({
+      ...current,
+      apiConfigAction: { kind: 'loading', message: '正在读取 API 资料' }
+    }))
+    try {
+      const status = normalizeApiConfigStatus(await window.xinyu.getApiConfigStatus())
+      setState((current) => ({
+        ...current,
+        apiConfig: status,
+        apiConfigAction: { kind: 'idle', message: 'API 资料已刷新' }
+      }))
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        apiConfigAction: { kind: 'idle', message: `API 资料刷新失败：${compact(errorLabel(error), 72)}` }
+      }))
+    }
+  }
+
+  async function saveApiConfigProfileFromPanel(profile: ApiConfigProfilePatch): Promise<void> {
+    setState((current) => ({
+      ...current,
+      apiConfigAction: { kind: 'saving', message: '正在保存 API 资料' }
+    }))
+    try {
+      const result = asRecord(await window.xinyu.saveApiConfigProfile(profile))
+      setState((current) => ({
+        ...current,
+        apiConfig: normalizeApiConfigStatus(result.status || {}),
+        apiConfigAction: { kind: 'idle', message: apiConfigActionLabel(String(result.message || 'api_profile_saved'), true, result.error) }
+      }))
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        apiConfigAction: { kind: 'idle', message: `保存失败：${compact(errorLabel(error), 72)}` }
+      }))
+    }
+  }
+
+  async function testApiConfigProfileFromPanel(profile: ApiConfigProfilePatch): Promise<void> {
+    setState((current) => ({
+      ...current,
+      apiConfigAction: { kind: 'testing', message: '正在测试 API 资料' }
+    }))
+    try {
+      const result = asRecord(await window.xinyu.testApiConfigProfile(profile))
+      const ok = Boolean(result.ok)
+      const status = Number(result.status || 0)
+      const elapsed = Number(result.elapsedMs || 0)
+      const replyPreview = compact(String(result.replyPreview || ''), 36)
+      const detail = ok
+        ? `API 测试通过：响应码 ${status}, ${elapsed}ms${replyPreview ? `，${replyPreview}` : ''}`
+        : `API 测试失败：${status ? `响应码 ${status}, ` : ''}${compact(apiConfigActionLabel(String(result.message || 'api_test_failed'), false, result.error), 72)}`
+      setState((current) => ({
+        ...current,
+        apiConfigAction: { kind: 'idle', message: detail }
+      }))
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        apiConfigAction: { kind: 'idle', message: `API 测试失败：${compact(errorLabel(error), 72)}` }
+      }))
+    }
+  }
+
+  async function deleteApiConfigProfileFromPanel(profileId: string): Promise<void> {
+    if (!profileId) {
+      return
+    }
+    setState((current) => ({
+      ...current,
+      apiConfigAction: { kind: 'deleting', message: '正在删除 API 资料' }
+    }))
+    try {
+      const result = asRecord(await window.xinyu.deleteApiConfigProfile(profileId))
+      setState((current) => ({
+        ...current,
+        apiConfig: normalizeApiConfigStatus(result.status || {}),
+        apiConfigAction: { kind: 'idle', message: apiConfigActionLabel(String(result.message || 'api_profile_deleted'), true, result.error) }
+      }))
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        apiConfigAction: { kind: 'idle', message: `删除失败：${compact(errorLabel(error), 72)}` }
+      }))
+    }
+  }
+
+  async function applyApiConfigProfileFromPanel(profileId: string): Promise<void> {
+    if (!profileId) {
+      return
+    }
+    setState((current) => ({
+      ...current,
+      apiConfigAction: { kind: 'applying', message: '正在应用 API 资料并重启核心' }
+    }))
+    try {
+      const result = asRecord(await window.xinyu.applyApiConfigProfile({ profileId, restartCore: true }))
+      const gateway = await window.xinyu.getGatewayStatus().catch(() => null)
+      setState((current) => ({
+        ...current,
+        gateway: asRecord(gateway) as GatewayStatus,
+        apiConfig: normalizeApiConfigStatus(result.status || {}),
+        apiConfigAction: { kind: 'idle', message: apiConfigActionLabel(String(result.message || 'api_profile_applied'), true, result.error) }
+      }))
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        apiConfigAction: { kind: 'idle', message: `应用失败：${compact(errorLabel(error), 72)}` }
+      }))
+    }
+  }
+
+  async function restartCoreBridgeFromPanel(): Promise<void> {
+    setState((current) => ({
+      ...current,
+      apiConfigAction: { kind: 'restarting', message: '正在重启核心桥接' }
+    }))
+    try {
+      const result = asRecord(await window.xinyu.restartCoreBridge())
+      const status = normalizeApiConfigStatus(await window.xinyu.getApiConfigStatus())
+      setState((current) => ({
+        ...current,
+        apiConfig: status,
+        apiConfigAction: { kind: 'idle', message: apiConfigActionLabel(String(result.message || 'core_bridge_restarted'), true, result.error) }
+      }))
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        apiConfigAction: { kind: 'idle', message: `重启失败：${compact(errorLabel(error), 72)}` }
+      }))
+    }
+  }
+
+  function externalPluginsStatusFromResult(value: unknown) {
+    const result = asRecord(value)
+    const nested = asRecord(result.status)
+    return normalizeExternalPluginsStatus(Array.isArray(result.plugins) ? result : nested.plugins ? nested : result)
+  }
+
+  async function refreshExternalPlugins(): Promise<void> {
+    setState((current) => ({
+      ...current,
+      externalPluginAction: { kind: 'loading', message: '正在读取外部插件' }
+    }))
+    try {
+      const status = normalizeExternalPluginsStatus(await window.xinyu.getExternalPlugins())
+      setState((current) => ({
+        ...current,
+        externalPlugins: status,
+        externalPluginAction: { kind: 'idle', message: '外部插件已刷新' }
+      }))
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        externalPluginAction: { kind: 'idle', message: `外部插件刷新失败：${compact(errorLabel(error), 72)}` }
+      }))
+    }
+  }
+
+  async function setExternalPluginConfigFromPanel(request: ExternalPluginConfigPatch): Promise<void> {
+    if (!request.pluginId) {
+      return
+    }
+    setState((current) => ({
+      ...current,
+      externalPluginAction: { kind: 'saving', pluginId: request.pluginId, message: '正在保存外部插件配置' }
+    }))
+    try {
+      const result = asRecord(await window.xinyu.setExternalPluginConfig(request))
+      setState((current) => ({
+        ...current,
+        externalPlugins: externalPluginsStatusFromResult(result),
+        externalPluginAction: {
+          kind: 'idle',
+          message: externalPluginActionLabel(String(result.message || 'external_plugin_config_saved'), true, result.error)
+        }
+      }))
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        externalPluginAction: { kind: 'idle', pluginId: request.pluginId, message: `外部插件保存失败：${compact(errorLabel(error), 72)}` }
+      }))
+    }
+  }
+
+  async function installExternalPluginFromPanel(request: ExternalPluginInstallRequest): Promise<void> {
+    if (!request.pluginId) {
+      return
+    }
+    setState((current) => ({
+      ...current,
+      externalPluginAction: { kind: 'installing', pluginId: request.pluginId, message: '正在安装外部插件' }
+    }))
+    try {
+      const result = asRecord(await window.xinyu.installExternalPlugin(request))
+      setState((current) => ({
+        ...current,
+        externalPlugins: externalPluginsStatusFromResult(result),
+        externalPluginAction: {
+          kind: 'idle',
+          pluginId: request.pluginId,
+          message: externalPluginActionLabel(
+            String(result.message || result.error_code || (result.ok === false ? 'external_plugin_install_failed' : 'external_plugin_installed')),
+            result.ok !== false,
+            result.error
+          )
+        }
+      }))
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        externalPluginAction: { kind: 'idle', pluginId: request.pluginId, message: `外部插件安装失败：${compact(errorLabel(error), 72)}` }
+      }))
+    }
+  }
 
   async function refreshQQEnvironment(): Promise<void> {
     setState((current) => ({
@@ -373,7 +652,7 @@ function App(): JSX.Element {
   async function openNapCatWebUIFromPanel(): Promise<void> {
     setState((current) => ({
       ...current,
-      qqAction: { kind: 'opening', message: '正在打开 NapCat WebUI' }
+      qqAction: { kind: 'opening', message: '正在打开 NapCat 网页端' }
     }))
 
     try {
@@ -398,7 +677,7 @@ function App(): JSX.Element {
   async function copyNapCatWebUITokenFromPanel(): Promise<void> {
     setState((current) => ({
       ...current,
-      qqAction: { kind: 'copying', message: '正在复制 WebUI token' }
+      qqAction: { kind: 'copying', message: '正在复制网页端口令' }
     }))
 
     try {
@@ -486,7 +765,7 @@ function App(): JSX.Element {
     const allowLocalWrite = routeCodex && codexLocalWrite
     const command: CommandState = {
       commandId,
-      textPreview: compact(`${routeCodex ? 'Codex: ' : ''}${text}`, 180),
+      textPreview: compact(`${routeCodex ? 'Codex：' : ''}${text}`, 180),
       kind: routeCodex ? 'codex' : 'chat',
       localWrite: allowLocalWrite,
       status: 'sending',
@@ -502,7 +781,7 @@ function App(): JSX.Element {
     const result = asRecord(await window.xinyu.sendChat({ text, commandId, codexMode: routeCodex, allowLocalWrite }))
     if (result.accepted === false) {
       setInput((current) => current || text)
-      setState((current) => updateCommand(current, commandId, 'failed', String(result.error || 'chat_request_failed')))
+      setState((current) => updateCommand(current, commandId, 'failed', chatErrorLabel(String(result.error || 'chat_request_failed'))))
       return
     }
 
@@ -543,7 +822,7 @@ function App(): JSX.Element {
           ...current,
           proactiveActions: rest,
           commands: current.commands.map((item) =>
-            item.commandId === commandId ? { ...item, status: 'failed', message: String(result.error || 'chat_request_failed') } : item
+            item.commandId === commandId ? { ...item, status: 'failed', message: chatErrorLabel(String(result.error || 'chat_request_failed')) } : item
           )
         }
       })
@@ -587,6 +866,41 @@ function App(): JSX.Element {
     setSelectedIntentId((current) => (current === candidateId ? null : current))
   }
 
+  async function decideSelfActionApproval(
+    queueId: string,
+    decision: 'approved' | 'denied',
+    options: { authorizeExisting?: boolean } = {}
+  ): Promise<void> {
+    if (!queueId || selfActionApprovalBusy) {
+      return
+    }
+    setSelfActionApprovalBusy(decision)
+    try {
+      const result = asRecord(
+        await window.xinyu.decideSelfActionApproval({
+          queueId,
+          decision,
+          execute: decision === 'approved',
+          authorizeCodex: decision === 'approved',
+          authorizeExisting: Boolean(options.authorizeExisting)
+        })
+      )
+      if (result.selfAction && typeof result.selfAction === 'object') {
+        setState((current) => ({
+          ...current,
+          snapshot: {
+            ...(current.snapshot || {}),
+            selfAction: result.selfAction as Snapshot['selfAction']
+          }
+        }))
+      }
+      const snapshot = await window.xinyu.getSnapshot()
+      setState((current) => applySnapshot(current, snapshot))
+    } finally {
+      setSelfActionApprovalBusy('')
+    }
+  }
+
   return (
     <AffectiveSurfaceProvider cue={surfaceCue}>
       <SurfacePart name="root" as="main" className="app-shell">
@@ -624,7 +938,14 @@ function App(): JSX.Element {
         </header>
 
         <section className="presence-workspace">
-          <MindStatePanel state={xinyuState} stats={stats} gateway={state.gateway} snapshot={state.snapshot} />
+          <MindStatePanel
+            state={xinyuState}
+            stats={stats}
+            gateway={state.gateway}
+            snapshot={state.snapshot}
+            selfActionApprovalBusy={selfActionApprovalBusy}
+            onDecideSelfActionApproval={decideSelfActionApproval}
+          />
 
           <InteractionStream
             xinyuState={xinyuState}
@@ -649,10 +970,15 @@ function App(): JSX.Element {
 
           <IntentQueuePanel
             intents={intents}
+            history={proactiveHistory}
             pending={state.proactiveActions}
             actionDigest={state.snapshot?.actionDigestState}
             recentMemoryEvents={state.recentMemoryEvents}
             lastEvent={state.events[0]}
+            apiConfig={state.apiConfig}
+            apiConfigAction={state.apiConfigAction}
+            externalPlugins={state.externalPlugins}
+            externalPluginAction={state.externalPluginAction}
             qqEnvironment={state.qqEnvironment}
             qqAction={state.qqAction}
             qqRuntimeConfig={state.qqRuntimeConfig}
@@ -661,6 +987,50 @@ function App(): JSX.Element {
             stickerAction={state.stickerAction}
             onAck={ackProactive}
             onOpenDetail={setSelectedIntentId}
+            onRefreshApiConfig={refreshApiConfig}
+            onSaveApiConfigProfile={saveApiConfigProfileFromPanel}
+            onTestApiConfigProfile={testApiConfigProfileFromPanel}
+            onDeleteApiConfigProfile={deleteApiConfigProfileFromPanel}
+            onApplyApiConfigProfile={applyApiConfigProfileFromPanel}
+            onRestartCoreBridge={restartCoreBridgeFromPanel}
+            onRefreshExternalPlugins={refreshExternalPlugins}
+            onSetExternalPluginConfig={setExternalPluginConfigFromPanel}
+            onInstallExternalPlugin={installExternalPluginFromPanel}
+            onRefreshQQ={refreshQQEnvironment}
+            onStartQQ={startQQEnvironmentFromPanel}
+            onOpenNapCat={openNapCatWebUIFromPanel}
+            onCopyNapCatToken={copyNapCatWebUITokenFromPanel}
+            onSetQQRuntimeConfig={setQQRuntimeConfigFromPanel}
+            onRestartQQGateway={restartQQGatewayFromPanel}
+            onRefreshStickerLibrary={refreshStickerLibrary}
+            onRunStickerMaintenance={runStickerMaintenanceFromPanel}
+            onMoveStickerToMood={moveStickerToMoodFromPanel}
+            onOpenStickerAssetDir={openStickerAssetDirFromPanel}
+          />
+
+          <SystemControlPanel
+            apiConfig={state.apiConfig}
+            apiConfigAction={state.apiConfigAction}
+            externalPlugins={state.externalPlugins}
+            externalPluginAction={state.externalPluginAction}
+            qqEnvironment={state.qqEnvironment}
+            qqAction={state.qqAction}
+            qqRuntimeConfig={state.qqRuntimeConfig}
+            qqRuntimeAction={state.qqRuntimeAction}
+            stickerLibrary={state.stickerLibrary}
+            stickerAction={state.stickerAction}
+            actionDigest={state.snapshot?.actionDigestState}
+            recentMemoryEvents={state.recentMemoryEvents}
+            lastEvent={state.events[0]}
+            onRefreshApiConfig={refreshApiConfig}
+            onSaveApiConfigProfile={saveApiConfigProfileFromPanel}
+            onTestApiConfigProfile={testApiConfigProfileFromPanel}
+            onDeleteApiConfigProfile={deleteApiConfigProfileFromPanel}
+            onApplyApiConfigProfile={applyApiConfigProfileFromPanel}
+            onRestartCoreBridge={restartCoreBridgeFromPanel}
+            onRefreshExternalPlugins={refreshExternalPlugins}
+            onSetExternalPluginConfig={setExternalPluginConfigFromPanel}
+            onInstallExternalPlugin={installExternalPluginFromPanel}
             onRefreshQQ={refreshQQEnvironment}
             onStartQQ={startQQEnvironmentFromPanel}
             onOpenNapCat={openNapCatWebUIFromPanel}

@@ -2,7 +2,8 @@ param(
     [switch]$Build,
     [switch]$Dev,
     [switch]$ShowConsoles,
-    [switch]$OpenNapCatWebUI
+    [switch]$OpenNapCatWebUI,
+    [switch]$SkipTinyKernel
 )
 
 $ErrorActionPreference = "Stop"
@@ -11,6 +12,7 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $DesktopDir = Join-Path $Root "XinYu_Desktop"
 $QQStart = Join-Path $Root "Start-XinYu-QQ.ps1"
+$TinyKernelStart = Join-Path $Root "Start-XinYu-TinyKernel.ps1"
 $ElectronExe = Join-Path $DesktopDir "node_modules\electron\dist\electron.exe"
 $BuiltMain = Join-Path $DesktopDir "out\main\index.js"
 
@@ -62,6 +64,16 @@ function Start-QQRuntime {
     }
 }
 
+function Start-TinyKernelRuntime {
+    if ($SkipTinyKernel) {
+        return
+    }
+    if (-not (Test-Path -LiteralPath $TinyKernelStart)) {
+        return
+    }
+    & $TinyKernelStart | Out-Null
+}
+
 function Ensure-DesktopBuild {
     if ($Dev) {
         return
@@ -107,6 +119,7 @@ function Start-Desktop {
     Start-Process -FilePath $ElectronExe -ArgumentList "." -WorkingDirectory $DesktopDir
 }
 
+Start-TinyKernelRuntime
 Start-QQRuntime
 Ensure-DesktopBuild
 Start-Desktop

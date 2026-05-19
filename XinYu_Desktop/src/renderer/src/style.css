@@ -4,16 +4,24 @@
 
 .presence-workspace {
   min-height: 0;
+  height: 100%;
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 340px;
+  grid-template-columns:
+    clamp(250px, 18vw, 310px)
+    minmax(420px, 1fr)
+    clamp(280px, 18vw, 340px)
+    clamp(420px, 25vw, 540px);
   gap: 14px;
+  align-items: stretch;
 }
 
 .mind-panel,
 .interaction-panel,
-.intent-panel {
+.intent-panel,
+.system-panel {
   min-width: 0;
   min-height: 0;
+  height: 100%;
   border: 1px solid rgba(39, 87, 82, 0.12);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.78);
@@ -77,7 +85,8 @@
 
 .mind-summary h2,
 .stream-head h2,
-.intent-head h2 {
+.intent-head h2,
+.system-head h2 {
   margin-top: 3px;
   color: #17201f;
   font-size: 22px;
@@ -111,6 +120,166 @@
   border-radius: inherit;
   background: linear-gradient(90deg, #2f8076, #c46a84);
   transition: width 260ms ease;
+}
+
+.self-action-panel {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  border-left: 3px solid #2f8076;
+  border-radius: 8px;
+  padding: 10px 11px;
+  color: #263331;
+  background: #f5f8f6;
+}
+
+.self-action-panel.warn {
+  border-left-color: #c08a3c;
+}
+
+.self-action-panel.blocked {
+  border-left-color: #bc6670;
+}
+
+.self-action-head,
+.self-action-head > span,
+.self-action-updated {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.self-action-head {
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.self-action-head > span {
+  gap: 6px;
+  color: #2f8076;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.self-action-head strong {
+  flex: 0 0 auto;
+  border-radius: 7px;
+  padding: 3px 7px;
+  color: #fff;
+  background: #2f8076;
+  font-size: 11px;
+}
+
+.self-action-panel.warn .self-action-head strong {
+  background: #c08a3c;
+}
+
+.self-action-panel.blocked .self-action-head strong {
+  background: #bc6670;
+}
+
+.self-action-panel.idle .self-action-head strong {
+  color: #72817d;
+  background: #e5ebe7;
+}
+
+.self-action-summary {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+}
+
+.self-action-summary svg {
+  margin-top: 2px;
+  color: #2f8076;
+}
+
+.self-action-summary small,
+.self-action-fact small,
+.self-action-updated {
+  color: #72817d;
+  font-size: 11px;
+}
+
+.self-action-summary strong,
+.self-action-fact strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.self-action-summary strong {
+  margin-top: 2px;
+  color: #23302e;
+  font-size: 13px;
+}
+
+.self-action-grid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.self-action-fact {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  border-radius: 8px;
+  padding: 7px 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.self-action-fact strong {
+  color: #23302e;
+  font-size: 11px;
+}
+
+.self-action-note {
+  min-width: 0;
+  color: #4c5b57;
+  font-size: 12px;
+  line-height: 1.38;
+  overflow-wrap: anywhere;
+}
+
+.self-action-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.self-action-actions button {
+  min-width: 0;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 8px;
+  padding: 0 8px;
+  color: #755674;
+  background: #f3edf2;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.self-action-actions button.approve {
+  color: #fff;
+  background: #2f8076;
+}
+
+.self-action-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.self-action-updated {
+  gap: 5px;
 }
 
 .state-lines,
@@ -765,10 +934,34 @@
 
 .intent-panel {
   display: grid;
-  grid-template-rows:
-    64px minmax(130px, 1.15fr) minmax(126px, 0.78fr) minmax(104px, 0.62fr) minmax(116px, 0.58fr)
-    minmax(72px, 0.32fr);
+  grid-template-rows: 64px minmax(0, 1fr);
   overflow: hidden;
+  scrollbar-gutter: stable;
+}
+
+.system-panel {
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.system-head {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(39, 87, 82, 0.1);
+  padding: 0 18px;
+}
+
+.system-head h2 {
+  margin-top: 3px;
+  color: #17201f;
+  font-size: 20px;
+  line-height: 1.12;
 }
 
 .intent-head > span {
@@ -783,11 +976,21 @@
 }
 
 .intent-list {
+  height: 100%;
   min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  padding: 14px;
+  overflow: hidden;
+}
+
+.intent-active-list {
+  min-height: 0;
+  height: 100%;
   display: grid;
   align-content: start;
   gap: 10px;
-  padding: 14px;
   overflow: auto;
 }
 
@@ -842,6 +1045,78 @@
 
 .intent-row.risk-blocked {
   border-left-color: #bc6670;
+}
+
+.intent-history {
+  display: none;
+}
+
+.intent-review-rail {
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  border-top: 1px solid rgba(39, 87, 82, 0.1);
+  padding-top: 10px;
+  overflow: hidden;
+}
+
+.intent-review-head,
+.intent-review-head > span {
+  display: flex;
+  align-items: center;
+}
+
+.intent-review-head {
+  justify-content: space-between;
+}
+
+.intent-review-head > span {
+  gap: 6px;
+}
+
+.intent-review-head {
+  color: #6d7d79;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.intent-review-head strong {
+  min-width: 24px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 7px;
+  color: #2f8076;
+  background: #e5f3ef;
+}
+
+.intent-review-list {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  overflow: auto;
+}
+
+.empty-review {
+  border: 1px dashed rgba(47, 128, 118, 0.2);
+  border-radius: 8px;
+  padding: 11px;
+  color: #7a8985;
+  background: #f8faf9;
+  font-size: 12px;
+}
+
+.intent-row-handled {
+  border-left-color: #9aa8a5;
+  background: #f8faf9;
+  box-shadow: none;
+}
+
+.intent-row-handled:hover {
+  box-shadow: 0 12px 24px rgba(37, 62, 61, 0.08);
 }
 
 .intent-meta {
@@ -1535,7 +1810,10 @@
 
 @media (max-width: 1140px) {
   .presence-workspace {
-    grid-template-columns: 270px minmax(0, 1fr) 310px;
+    grid-template-columns:
+      clamp(240px, 21vw, 290px)
+      minmax(0, 1fr)
+      clamp(340px, 31vw, 460px);
   }
 
   .mind-panel {
@@ -1544,6 +1822,15 @@
 
   .message-bubble {
     max-width: 84%;
+  }
+}
+
+@media (max-width: 980px) {
+  .presence-workspace {
+    grid-template-columns:
+      clamp(220px, 20vw, 260px)
+      minmax(0, 1fr)
+      clamp(320px, 34vw, 400px);
   }
 }
 
@@ -1668,7 +1955,8 @@ body {
 .topbar,
 .mind-panel,
 .interaction-panel,
-.intent-panel {
+.intent-panel,
+.system-panel {
   border-color: var(--app-border);
   background: var(--app-panel);
   box-shadow: 0 22px 52px var(--app-shadow);
@@ -1726,6 +2014,7 @@ body {
 .mind-summary h2,
 .stream-head h2,
 .intent-head h2,
+.system-head h2,
 .vital strong,
 .empty-intents strong,
 .state-line strong,
@@ -1734,6 +2023,8 @@ body {
 .action-digest-summary strong,
 .action-digest-flow strong,
 .action-digest-theme,
+.self-action-summary strong,
+.self-action-fact strong,
 .qq-bridge-summary span,
 .qq-service-row strong,
 .runtime-switch strong,
@@ -1759,6 +2050,10 @@ body {
 .action-digest-flow small,
 .action-digest-residue,
 .action-digest-facts span,
+.self-action-summary small,
+.self-action-fact small,
+.self-action-note,
+.self-action-updated,
 .qq-bridge-summary small,
 .qq-service-row small,
 .qq-service-row em,
@@ -1788,6 +2083,7 @@ body {
 .event-row,
 .continuity-row,
 .action-digest-flow span,
+.self-action-panel,
 .empty-conversation,
 .qq-service-row,
 .runtime-switch,
@@ -1904,6 +2200,7 @@ body {
 .action-digest-panel,
 .qq-bridge-panel,
 .sticker-library-panel,
+.self-action-panel,
 .qq-runtime-controls {
   border-color: var(--app-border);
 }
@@ -1914,8 +2211,60 @@ body {
 .empty-intents svg,
 .presence-note svg,
 .risk-label,
+.self-action-head > span,
+.self-action-summary svg,
+.self-action-updated svg,
 .endpoint-line svg {
   color: var(--app-accent-strong);
+}
+
+.self-action-head strong {
+  color: #fff;
+  background: var(--app-accent);
+}
+
+.self-action-panel {
+  border-left-color: var(--app-accent);
+}
+
+.self-action-panel.prepared .self-action-head strong,
+.self-action-panel.active .self-action-head strong {
+  background: var(--app-good);
+}
+
+.self-action-panel.warn {
+  border-left-color: var(--app-warning);
+}
+
+.self-action-panel.warn .self-action-head strong {
+  background: var(--app-warning);
+}
+
+.self-action-panel.blocked {
+  border-left-color: var(--app-danger);
+}
+
+.self-action-panel.blocked .self-action-head strong {
+  background: var(--app-danger);
+}
+
+.self-action-panel.idle .self-action-head strong {
+  color: var(--app-muted);
+  background: var(--app-accent-soft);
+}
+
+.self-action-fact {
+  background: color-mix(in srgb, var(--app-panel-solid) 74%, transparent);
+}
+
+.self-action-actions button {
+  color: var(--app-accent-strong);
+  background: var(--app-accent-soft);
+}
+
+.self-action-actions button.approve {
+  color: #fff;
+  background: var(--app-accent);
 }
 
 .presence-note {

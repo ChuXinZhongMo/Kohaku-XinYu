@@ -12,9 +12,28 @@ export type Snapshot = {
   snapshotAt?: string
   xinyuState?: JsonRecord
   proactiveInbox?: unknown[]
+  proactiveHistory?: unknown[]
   recentTurns?: unknown[]
   recentMemoryEvents?: unknown[]
   actionDigestState?: JsonRecord
+  selfAction?: SelfActionSnapshot
+}
+
+export type SelfActionSnapshot = {
+  observed?: boolean
+  updatedAt?: string
+  selectedGoalId?: string
+  selectedActionKind?: string
+  pendingApprovalCount?: number
+  latestPendingQueueId?: string
+  latestApprovalEvent?: JsonRecord
+  approvalQueue?: JsonRecord
+  gateway?: JsonRecord
+  handoff?: JsonRecord
+  patchExecutor?: JsonRecord
+  candidateActions?: JsonRecord[]
+  paths?: JsonRecord
+  notes?: string[]
 }
 
 export type ImpulseThoughtlet = {
@@ -80,6 +99,107 @@ export type GatewayStatus = {
   connecting?: boolean
   httpUrl?: string
   snapshotAt?: string
+}
+
+export type ApiConfigProfile = {
+  id: string
+  label: string
+  provider: string
+  model: string
+  baseUrl: string
+  allowInsecureHttp: boolean
+  disableStreaming: boolean
+  updatedAt: string
+  active: boolean
+  hasApiKey: boolean
+  apiKeyPreview: string
+}
+
+export type ApiConfigCurrent = {
+  configPath: string
+  provider: string
+  model: string
+  baseUrl: string
+  allowInsecureHttp: boolean
+  disableStreaming: boolean
+  hasApiKey: boolean
+  apiKeyPreview: string
+}
+
+export type ApiConfigStatus = {
+  ok: boolean
+  loadedAt: string
+  configPath: string
+  profilesPath: string
+  activeProfileId: string
+  current: ApiConfigCurrent
+  profiles: ApiConfigProfile[]
+  notes: string[]
+}
+
+export type ApiConfigProfilePatch = {
+  id?: string
+  label?: string
+  provider?: string
+  model?: string
+  baseUrl?: string
+  apiKey?: string
+  allowInsecureHttp?: boolean
+  disableStreaming?: boolean
+}
+
+export type ApiConfigActionState = {
+  kind: 'idle' | 'loading' | 'saving' | 'testing' | 'applying' | 'restarting' | 'deleting'
+  message: string
+}
+
+export type ExternalPluginInstallState = {
+  installed: boolean
+  installable: boolean
+  path: string
+  installer: string
+  missingReason: string
+}
+
+export type ExternalPluginControl = {
+  pluginId: string
+  title: string
+  kind: string
+  transport: string
+  enabled: boolean
+  proactiveEnabled: boolean
+  installed: boolean
+  installable: boolean
+  available: boolean
+  config: JsonRecord
+  install: ExternalPluginInstallState
+  notes: string[]
+}
+
+export type ExternalPluginsStatus = {
+  ok: boolean
+  protocol: string
+  configPath: string
+  plugins: ExternalPluginControl[]
+  notes: string[]
+}
+
+export type ExternalPluginActionState = {
+  kind: 'idle' | 'loading' | 'saving' | 'installing'
+  pluginId?: string
+  message: string
+}
+
+export type ExternalPluginConfigPatch = {
+  pluginId: string
+  enabled?: boolean
+  proactiveEnabled?: boolean
+  config?: JsonRecord
+}
+
+export type ExternalPluginInstallRequest = {
+  pluginId: string
+  options?: JsonRecord
 }
 
 export type ServiceProbe = {
@@ -195,9 +315,14 @@ export type AppState = {
   commands: CommandState[]
   proactiveActions: Record<string, ProactiveAction>
   proactiveInbox: unknown[]
+  proactiveHistory: unknown[]
   impulseSoup: ImpulseSoupState | null
   recentTurns: unknown[]
   recentMemoryEvents: unknown[]
+  apiConfig: ApiConfigStatus | null
+  apiConfigAction: ApiConfigActionState
+  externalPlugins: ExternalPluginsStatus | null
+  externalPluginAction: ExternalPluginActionState
   qqEnvironment: QQEnvironmentStatus | null
   qqAction: QQActionState
   qqRuntimeConfig: QQRuntimeConfig | null
@@ -233,9 +358,11 @@ export type ProactiveIntent = {
   status: string
   requestFamily: string
   requestedAction: string
+  desktopAction: string
   evidenceHash: string
   createdAt: string
   expiresAt: string
+  updatedAt: string
 }
 
 export type ThemeName = 'pastel' | 'sakura' | 'mint' | 'night'

@@ -17,18 +17,20 @@
 
 body {
   margin: 0;
-  min-width: 900px;
-  min-height: 620px;
+  min-width: 1480px;
+  min-height: 720px;
   background:
     linear-gradient(90deg, rgba(42, 91, 85, 0.04) 1px, transparent 1px),
     linear-gradient(rgba(42, 91, 85, 0.04) 1px, transparent 1px),
     linear-gradient(135deg, #f7f8f4 0%, #eef4f1 52%, #f8f2f4 100%);
   background-size: 34px 34px, 34px 34px, auto;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
