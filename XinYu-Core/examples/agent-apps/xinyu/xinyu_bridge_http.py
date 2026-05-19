@@ -21,6 +21,16 @@ DESKTOP_GET_ROUTES = {
 EXTERNAL_GET_ROUTES = {
     "/external/plugins",
 }
+TURN_GET_ROUTES = {
+    "/turn/current",
+}
+TURN_POST_ROUTES = {
+    "/turn/cancel",
+    "/turn/retry-lightweight",
+    "/turn/skip-sidecar",
+    "/turn/continue",
+    "/turn/status-message",
+}
 LIFE_TICKET_PREFIX = "/life/metabolism/tickets"
 
 
@@ -58,6 +68,7 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
             route not in {"/health", "/probe", "/proactive"}
             and route not in DESKTOP_GET_ROUTES
             and route not in EXTERNAL_GET_ROUTES
+            and route not in TURN_GET_ROUTES
             and not route.startswith(LIFE_TICKET_PREFIX)
         ):
             self._send_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
@@ -66,6 +77,7 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
             route in {"/probe", "/proactive"}
             or route in DESKTOP_GET_ROUTES
             or route in EXTERNAL_GET_ROUTES
+            or route in TURN_GET_ROUTES
             or route.startswith(LIFE_TICKET_PREFIX)
         ) and not self._is_authorized():
             self._send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "unauthorized"})
@@ -94,6 +106,8 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
                 data = self._run_on_loop(self.server.runtime.desktop_chat_recent(payload), timeout=5)
             elif route == "/external/plugins":
                 data = self._run_on_loop(self.server.runtime.external_plugin_manifest(payload), timeout=5)
+            elif route == "/turn/current":
+                data = self._run_on_loop(self.server.runtime.turn_current(payload), timeout=5)
             elif route == LIFE_TICKET_PREFIX:
                 data = self._run_on_loop(self.server.runtime.life_metabolism_ticket_list(payload), timeout=5)
             elif route.startswith(f"{LIFE_TICKET_PREFIX}/"):
@@ -140,6 +154,7 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
             "/external/plugins/config",
             "/external/plugins/install",
         }
+        post_routes.update(TURN_POST_ROUTES)
         if route not in post_routes and not self._is_life_ticket_action_route(route):
             self._send_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
             return
@@ -259,6 +274,16 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
                     self.server.runtime.external_plugin_install(payload),
                     timeout=self.server.request_timeout_seconds,
                 )
+            elif route == "/turn/cancel":
+                result = self._run_on_loop(self.server.runtime.turn_cancel(payload), timeout=10)
+            elif route == "/turn/retry-lightweight":
+                result = self._run_on_loop(self.server.runtime.turn_retry_lightweight(payload), timeout=10)
+            elif route == "/turn/skip-sidecar":
+                result = self._run_on_loop(self.server.runtime.turn_skip_sidecar(payload), timeout=10)
+            elif route == "/turn/continue":
+                result = self._run_on_loop(self.server.runtime.turn_continue(payload), timeout=10)
+            elif route == "/turn/status-message":
+                result = self._run_on_loop(self.server.runtime.turn_status_message(payload), timeout=10)
             else:
                 result = self._run_on_loop(
                     self.server.runtime.chat(payload),

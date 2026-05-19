@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+import asyncio
 import json
+from datetime import datetime, timedelta
+from types import SimpleNamespace
 
+import xinyu_bridge_turn_finish_sidecars as turn_finish_sidecars
+import xinyu_bridge_slow_live_turn as slow_live_turn
+import xinyu_core_bridge as core_bridge
 from xinyu_dialogue_working_memory import load_dialogue_tail, save_dialogue_tail
 from xinyu_core_bridge import XinYuBridgeRuntime
+from xinyu_bridge_session import AgentSession
 from xinyu_recent_attachment_context import record_recent_attachment_context
+from xinyu_turn_route_trace import record_turn_route_stage
 
 
 class FakeController:
@@ -1220,6 +1228,933 @@ def test_empty_visible_reply_fallback_is_disabled(tmp_path) -> None:
     )
 
     assert reply == ""
+
+
+def test_empty_visible_reply_recovery_uses_renderer_not_template(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    payload = {"message_type": "private_text", "metadata": {"is_owner_user": True}}
+    calls: list[dict[str, str]] = []
+
+    async def fake_render(agent, *, payload, user_text, draft_reply, canonical_recall_context=""):
+        del agent, payload, canonical_recall_context
+        calls.append({"user_text": user_text, "draft_reply": draft_reply})
+        return "晚上好。"
+
+    runtime._render_outward_reply = fake_render  # type: ignore[method-assign]
+
+    reply, flags = asyncio.run(
+        runtime._recover_empty_visible_reply(
+            FakeAgent(),
+            payload=payload,
+            user_text="晚上好",
+        )
+    )
+
+    assert reply == "晚上好。"
+    assert "empty_visible_reply_regenerated" in flags
+    assert calls == [{"user_text": "晚上好", "draft_reply": ""}]
+    assert runtime._empty_visible_reply_fallback(payload=payload, user_text="晚上好") == ""
+
+
+def test_owner_private_greeting_semantic_fast_decision_uses_v1_classifier(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    payload = {
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "metadata": {"is_owner_user": True},
+    }
+
+    decision = runtime._owner_private_semantic_fast_decision(payload, "\u665a\u4e0a\u597d")
+
+    assert decision["allowed"] is True
+    assert decision["route"] == "fast_path"
+    assert decision["intents"] == ("greeting",)
+
+
+def test_owner_private_relationship_pressure_stays_out_of_semantic_fast_route(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    payload = {
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "metadata": {"is_owner_user": True},
+    }
+
+    decision = runtime._owner_private_semantic_fast_decision(
+        payload,
+        "\u4f60\u521a\u624d\u90a3\u6837\u6211\u6709\u70b9\u5931\u671b",
+    )
+
+    assert decision["allowed"] is False
+    assert decision["route"] == "slow_path"
+    assert "relationship_pressure" in decision["intents"]
+
+
+def test_owner_private_greeting_semantic_fast_route_renders_not_v1_template(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    payload = {
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "metadata": {"is_owner_user": True},
+    }
+    session = AgentSession(key="qq:private:owner", agent=FakeAgent(), prompt_signature="")
+    render_calls: list[dict[str, str]] = []
+    published: list[dict[str, object]] = []
+
+    async def fake_render(agent, *, payload, user_text, draft_reply, canonical_recall_context=""):
+        del agent, payload, canonical_recall_context
+        render_calls.append({"user_text": user_text, "draft_reply": draft_reply})
+        return "\u665a\u4e0a\u597d\u3002"
+
+    async def fake_publish(payload, **kwargs):
+        del payload
+        published.append(kwargs)
+
+    runtime._render_outward_reply = fake_render  # type: ignore[method-assign]
+    runtime._desktop_publish_chat_finished = fake_publish  # type: ignore[method-assign]
+
+    response = asyncio.run(
+        runtime._maybe_handle_owner_private_semantic_fast_turn(
+            payload,
+            text="\u665a\u4e0a\u597d",
+            session=session,
+            session_key=session.key,
+            turn_id="turn-semantic-fast-test",
+            turn_started_wall="2026-05-19T21:56:00+08:00",
+            turn_started_at=0.0,
+            before_memory={},
+            cleanup={"cleaned_sessions": 0},
+            event_sidecar={"notes": ["event_sourcing_recorded"]},
+        )
+    )
+
+    assert response is not None
+    assert response["reply"] == "\u665a\u4e0a\u597d\u3002"
+    assert response["semantic_fast"]["intents"] == ["greeting"]
+    assert "owner_private_semantic_fast_intercepted" in response["notes"]
+    assert "semantic_fast_intents:greeting" in response["notes"]
+    assert render_calls == [{"user_text": "\u665a\u4e0a\u597d", "draft_reply": ""}]
+    assert published and published[0]["reply"] == "\u665a\u4e0a\u597d\u3002"
+    assert "\u5728\u3002" not in response["reply"]
+    tail = load_dialogue_tail(runtime.xinyu_dir, session.key, max_entries=4)
+    assert [item["content"] for item in tail[-2:]] == ["\u665a\u4e0a\u597d", "\u665a\u4e0a\u597d\u3002"]
+
+
+def test_owner_private_greeting_chat_replay_intercepts_before_full_live_event(tmp_path, monkeypatch) -> None:
+    runtime = _make_runtime(tmp_path)
+    payload = {
+        "platform": "qq",
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "text": "\u665a\u4e0a\u597d",
+        "metadata": {"is_owner_user": True},
+    }
+    render_calls: list[dict[str, str]] = []
+    published_started: list[dict[str, object]] = []
+    published_finished: list[dict[str, object]] = []
+
+    class FakeRuntimeAgent(FakeAgent):
+        def set_output_handler(self, handler, *, replace_default=False):
+            del handler, replace_default
+
+        async def start(self) -> None:
+            return None
+
+        async def stop(self) -> None:
+            return None
+
+    class FakeAgentFactory:
+        @staticmethod
+        def from_path(*args, **kwargs):
+            del args, kwargs
+            return FakeRuntimeAgent()
+
+    async def fake_render(agent, *, payload, user_text, draft_reply, canonical_recall_context=""):
+        del agent, payload, canonical_recall_context
+        render_calls.append({"user_text": user_text, "draft_reply": draft_reply})
+        return "\u665a\u4e0a\u597d\u3002"
+
+    async def fake_started(payload, **kwargs):
+        del payload
+        published_started.append(kwargs)
+
+    async def fake_finished(payload, **kwargs):
+        del payload
+        published_finished.append(kwargs)
+
+    def fail_full_live_event(*args, **kwargs):
+        del args, kwargs
+        raise AssertionError("semantic fast greeting should not create a full live user event")
+
+    async def fail_pre_model_routes(*args, **kwargs):
+        del args, kwargs
+        raise AssertionError("semantic fast greeting should not wait for pre-model routes")
+
+    monkeypatch.setattr(core_bridge, "run_pre_model_routes", fail_pre_model_routes)
+    runtime._loaded = True
+    runtime._agent_cls = FakeAgentFactory
+    runtime._create_user_input_event = fail_full_live_event
+    runtime._render_outward_reply = fake_render  # type: ignore[method-assign]
+    runtime._desktop_publish_chat_started = fake_started  # type: ignore[method-assign]
+    runtime._desktop_publish_chat_finished = fake_finished  # type: ignore[method-assign]
+
+    response = asyncio.run(runtime.chat(payload))
+
+    assert response["accepted"] is True
+    assert response["reply"] == "\u665a\u4e0a\u597d\u3002"
+    assert response["semantic_fast"]["route"] == "fast_path"
+    assert response["semantic_fast"]["intents"] == ["greeting"]
+    assert "owner_private_semantic_fast_intercepted" in response["notes"]
+    assert render_calls == [{"user_text": "\u665a\u4e0a\u597d", "draft_reply": ""}]
+    assert published_started
+    assert published_finished and published_finished[0]["reply"] == "\u665a\u4e0a\u597d\u3002"
+    assert "\u5728\u3002" not in response["reply"]
+    trace_path = runtime.xinyu_dir / "runtime" / "turn_route_trace.jsonl"
+    trace_rows = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    stages = [row["stage"] for row in trace_rows]
+    assert "pre_model_routes_started" not in stages
+    assert stages.index("route_decided") < stages.index("route_finished")
+    assert trace_rows[-1]["route"] == "owner_private_semantic_fast"
+    route_state = json.loads((runtime.xinyu_dir / "runtime" / "turn_route_state.json").read_text(encoding="utf-8"))
+    assert route_state["stage"] == "route_finished"
+    assert route_state["route"] == "owner_private_semantic_fast"
+
+
+def test_pre_model_routes_timeout_falls_through_without_bridge_timeout(tmp_path, monkeypatch) -> None:
+    runtime = _make_runtime(tmp_path)
+    runtime.pre_model_routes_timeout_seconds = 0.01
+    payload = {
+        "platform": "qq",
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "text": "\u8fd9\u4e8b\u9700\u8981\u8ba4\u771f\u770b\u4e00\u4e0b",
+        "metadata": {"is_owner_user": True},
+    }
+
+    class FakeRuntimeAgent(FakeAgent):
+        def set_output_handler(self, handler, *, replace_default=False):
+            del handler, replace_default
+
+        async def start(self) -> None:
+            return None
+
+        async def stop(self) -> None:
+            return None
+
+    class FakeAgentFactory:
+        @staticmethod
+        def from_path(*args, **kwargs):
+            del args, kwargs
+            return FakeRuntimeAgent()
+
+    async def hanging_pre_model_routes(*args, **kwargs):
+        del args, kwargs
+        await asyncio.sleep(60)
+
+    async def fake_late_route(payload, **kwargs):
+        del payload, kwargs
+        return {
+            "accepted": True,
+            "reply": "\u6211\u7ee7\u7eed\u770b\u3002",
+            "notes": ["continued_after_pre_model_timeout"],
+        }
+
+    monkeypatch.setattr(core_bridge, "run_pre_model_routes", hanging_pre_model_routes)
+    runtime._loaded = True
+    runtime._agent_cls = FakeAgentFactory
+    runtime._owner_private_semantic_fast_decision = lambda payload, text: {  # type: ignore[method-assign]
+        "allowed": False,
+        "notes": ["test_slow_path"],
+    }
+    runtime._maybe_handle_owner_private_semantic_fast_turn = fake_late_route  # type: ignore[method-assign]
+
+    response = asyncio.run(runtime.chat(payload))
+
+    assert response["accepted"] is True
+    assert response["reply"] == "\u6211\u7ee7\u7eed\u770b\u3002"
+    trace_path = runtime.xinyu_dir / "runtime" / "turn_route_trace.jsonl"
+    trace_rows = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    pre_model_finish = [row for row in trace_rows if row["stage"] == "pre_model_routes_finished"][-1]
+    assert pre_model_finish["status"] == "timeout"
+    assert "pre_model_routes_timeout:0.01s" in pre_model_finish["notes"]
+
+
+def _minimal_slow_finish_sidecars(before_memory: dict[str, object]) -> dict[str, object]:
+    return {
+        "uncertainty_pause": {"notes": []},
+        "learning_closed_loop": {"notes": []},
+        "residue_written": False,
+        "voice_calibrated": False,
+        "voice_trial_overlay": {"notes": []},
+        "curiosity_prediction": {"notes": []},
+        "private_thought_link": {"notes": []},
+        "archive_result": {"notes": [], "message_ids": []},
+        "candidate_result": {"notes": []},
+        "memory_self_review": {"notes": []},
+        "interaction_journal": {"notes": []},
+        "proactive_owner_reply_marked": False,
+        "promised_followup": {"notes": []},
+        "sticker_reply": {"notes": []},
+        "sticker_tail_recorded": False,
+        "turn_coherence": {"notes": []},
+        "after_memory": before_memory,
+    }
+
+
+def _install_minimal_slow_live_chat(
+    monkeypatch,
+    runtime: XinYuBridgeRuntime,
+    *,
+    reply: str = "\u6211\u770b\u5230\u4e86\u3002",
+    inject_delay: float = 0.0,
+    inject_error: Exception | None = None,
+) -> None:
+    class FakeRuntimeAgent(FakeAgent):
+        def __init__(self) -> None:
+            super().__init__()
+            self._handler = None
+
+        def set_output_handler(self, handler, *, replace_default=False):
+            del replace_default
+            self._handler = handler
+
+        async def start(self) -> None:
+            return None
+
+        async def stop(self) -> None:
+            return None
+
+        async def inject_event(self, event) -> None:
+            del event
+            if inject_delay > 0:
+                await asyncio.sleep(inject_delay)
+            if inject_error is not None:
+                raise inject_error
+            if self._handler is not None:
+                self._handler(reply)
+
+        def interrupt(self) -> None:
+            return None
+
+    class FakeAgentFactory:
+        @staticmethod
+        def from_path(*args, **kwargs):
+            del args, kwargs
+            return FakeRuntimeAgent()
+
+    async def no_pre_model_route(*args, **kwargs):
+        del args, kwargs
+        return core_bridge.PreModelRouteResult(
+            None,
+            {"notes": ["event_sourcing_test_skipped"]},
+            {"notes": ["v1_shadow_test_skipped"]},
+            {"notes": ["tinykernel_shadow_test_skipped"]},
+        )
+
+    async def no_semantic_fast_route(*args, **kwargs):
+        del args, kwargs
+        return None
+
+    async def no_chat_started(*args, **kwargs):
+        del args, kwargs
+        return None
+
+    async def no_chat_finished(*args, **kwargs):
+        del args, kwargs
+        return None
+
+    async def no_life_reply_policy(*args, **kwargs):
+        del args, kwargs
+        return {"notes": []}
+
+    async def minimal_finish_sidecars(runtime_arg, *, before_memory, **kwargs):
+        del runtime_arg, kwargs
+        return _minimal_slow_finish_sidecars(before_memory)
+
+    runtime._loaded = True
+    runtime._agent_cls = FakeAgentFactory
+    runtime._owner_private_semantic_fast_decision = lambda payload, text: {  # type: ignore[method-assign]
+        "allowed": False,
+        "notes": ["test_slow_path"],
+    }
+    runtime._maybe_handle_owner_private_semantic_fast_turn = no_semantic_fast_route  # type: ignore[method-assign]
+    runtime._desktop_publish_chat_started = no_chat_started  # type: ignore[method-assign]
+    runtime._desktop_publish_chat_finished = no_chat_finished  # type: ignore[method-assign]
+    runtime._create_user_input_event = lambda *args, **kwargs: {"event": "user_input"}  # type: ignore[method-assign]
+    runtime._build_life_reply_policy = no_life_reply_policy  # type: ignore[method-assign]
+    runtime._sync_recent_proactive_to_dialogue_tail = lambda *args, **kwargs: False  # type: ignore[method-assign]
+
+    monkeypatch.setattr(core_bridge, "run_pre_model_routes", no_pre_model_route)
+    monkeypatch.setattr(core_bridge, "run_emotion_council_shadow", lambda *args, **kwargs: {"notes": []})
+    monkeypatch.setattr(core_bridge, "observe_persona_turn", lambda *args, **kwargs: {"notes": [], "prompt_block": ""})
+    monkeypatch.setattr(slow_live_turn, "refresh_continuity_handoff", lambda *args, **kwargs: {"notes": []})
+    monkeypatch.setattr(slow_live_turn, "build_runtime_presence_prompt_block", lambda *args, **kwargs: "")
+    monkeypatch.setattr(slow_live_turn, "build_continuity_handoff_prompt_block", lambda *args, **kwargs: "")
+    monkeypatch.setattr(slow_live_turn, "build_uncertainty_pause_prompt_block", lambda *args, **kwargs: "")
+    monkeypatch.setattr(slow_live_turn, "build_life_reply_prompt_block", lambda *args, **kwargs: "")
+    monkeypatch.setattr(core_bridge, "apply_life_reply_policy", lambda *args, **kwargs: {"notes": []})
+    monkeypatch.setattr(
+        core_bridge,
+        "classify_response_error",
+        lambda *args, **kwargs: SimpleNamespace(error_class="none", severity="none"),
+    )
+    monkeypatch.setattr(core_bridge, "build_scene_frame", lambda *args, **kwargs: SimpleNamespace())
+    monkeypatch.setattr(
+        core_bridge,
+        "build_slow_state",
+        lambda *args, **kwargs: SimpleNamespace(reply_policy="steady", initiative_policy="steady", active_policies=[]),
+    )
+    monkeypatch.setattr(core_bridge, "run_slow_turn_finish_sidecars", minimal_finish_sidecars)
+
+
+def _install_successful_memory_recall(monkeypatch, runtime: XinYuBridgeRuntime) -> None:
+    async def fake_publish_recall(*args, **kwargs):
+        del args, kwargs
+        return {"id": "recall-test"}
+
+    def fake_recall_algorithm(*args, **kwargs):
+        del args, kwargs
+        return SimpleNamespace(
+            result=SimpleNamespace(notes=["recall_result_note"], prompt_block="memory prompt"),
+            notes=["recall_algorithm_note"],
+        )
+
+    runtime._desktop_publish_memory_recall = fake_publish_recall  # type: ignore[method-assign]
+    monkeypatch.setattr(core_bridge, "run_living_memory_recall_algorithm", fake_recall_algorithm)
+
+
+def test_slow_live_memory_recall_route_trace_records_success(tmp_path, monkeypatch) -> None:
+    runtime = _make_runtime(tmp_path)
+    _install_minimal_slow_live_chat(monkeypatch, runtime)
+    payload = {
+        "platform": "qq",
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "text": "\u8fd9\u4e8b\u9700\u8981\u8ba4\u771f\u770b\u4e00\u4e0b",
+        "metadata": {"is_owner_user": True},
+    }
+
+    _install_successful_memory_recall(monkeypatch, runtime)
+
+    response = asyncio.run(runtime.chat(payload))
+
+    assert response["accepted"] is True
+    trace_path = runtime.xinyu_dir / "runtime" / "turn_route_trace.jsonl"
+    trace_rows = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    stages = [row["stage"] for row in trace_rows]
+    assert "memory_recall_started" in stages
+    assert "memory_recall_finished" in stages
+    memory_finish = [row for row in trace_rows if row["stage"] == "memory_recall_finished"][-1]
+    assert memory_finish["route"] == "slow_live"
+    assert memory_finish["status"] == "ok"
+    assert "recall_algorithm_note" in memory_finish["notes"]
+    model_finish = [row for row in trace_rows if row["stage"] == "model_inject_finished"][-1]
+    assert model_finish["route"] == "slow_live"
+    assert model_finish["status"] == "ok"
+    sidecar_finish = [row for row in trace_rows if row["stage"] == "finish_sidecars_finished"][-1]
+    assert sidecar_finish["route"] == "slow_live"
+    assert sidecar_finish["status"] == "ok"
+
+
+def test_slow_live_memory_recall_route_trace_records_error(tmp_path, monkeypatch) -> None:
+    runtime = _make_runtime(tmp_path)
+    _install_minimal_slow_live_chat(monkeypatch, runtime)
+    payload = {
+        "platform": "qq",
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "text": "\u7ee7\u7eed\u5206\u6790\u8fd9\u4e2a\u95ee\u9898",
+        "metadata": {"is_owner_user": True},
+    }
+
+    def fake_recall_algorithm(*args, **kwargs):
+        del args, kwargs
+        raise RuntimeError("recall failed")
+
+    async def fail_publish_recall(*args, **kwargs):
+        del args, kwargs
+        raise AssertionError("publish should not run after recall error")
+
+    runtime._desktop_publish_memory_recall = fail_publish_recall  # type: ignore[method-assign]
+    monkeypatch.setattr(core_bridge, "run_living_memory_recall_algorithm", fake_recall_algorithm)
+
+    response = asyncio.run(runtime.chat(payload))
+
+    assert response["accepted"] is True
+    trace_path = runtime.xinyu_dir / "runtime" / "turn_route_trace.jsonl"
+    trace_rows = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    memory_error = [row for row in trace_rows if row["stage"] == "memory_recall_error"][-1]
+    assert memory_error["route"] == "slow_live"
+    assert memory_error["status"] == "error"
+    assert "context_retrieval_error:RuntimeError" in memory_error["notes"]
+
+
+def test_slow_live_memory_recall_route_trace_records_timeout(tmp_path, monkeypatch) -> None:
+    runtime = _make_runtime(tmp_path)
+    _install_minimal_slow_live_chat(monkeypatch, runtime)
+    payload = {
+        "platform": "qq",
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "text": "\u7ee7\u7eed\u770b\u4e00\u4e0b\u6162\u94fe\u8def",
+        "metadata": {"is_owner_user": True},
+    }
+
+    def fake_recall_algorithm(*args, **kwargs):
+        del args, kwargs
+        raise TimeoutError("recall timeout")
+
+    async def fail_publish_recall(*args, **kwargs):
+        del args, kwargs
+        raise AssertionError("publish should not run after recall timeout")
+
+    runtime._desktop_publish_memory_recall = fail_publish_recall  # type: ignore[method-assign]
+    monkeypatch.setattr(core_bridge, "run_living_memory_recall_algorithm", fake_recall_algorithm)
+
+    response = asyncio.run(runtime.chat(payload))
+
+    assert response["accepted"] is True
+    trace_path = runtime.xinyu_dir / "runtime" / "turn_route_trace.jsonl"
+    trace_rows = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    memory_timeout = [row for row in trace_rows if row["stage"] == "memory_recall_timeout"][-1]
+    assert memory_timeout["route"] == "slow_live"
+    assert memory_timeout["status"] == "timeout"
+    assert "context_retrieval_timeout:TimeoutError" in memory_timeout["notes"]
+
+
+def test_slow_live_model_inject_route_trace_records_timeout(tmp_path, monkeypatch) -> None:
+    runtime = _make_runtime(tmp_path)
+    runtime.turn_timeout_seconds = 0.01
+    _install_minimal_slow_live_chat(monkeypatch, runtime, inject_delay=60.0)
+    _install_successful_memory_recall(monkeypatch, runtime)
+    payload = {
+        "platform": "qq",
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "text": "\u6d4b\u8bd5\u6a21\u578b\u6ce8\u5165\u8d85\u65f6",
+        "metadata": {"is_owner_user": True},
+    }
+
+    try:
+        asyncio.run(runtime.chat(payload))
+    except core_bridge.BridgeRequestError as exc:
+        assert exc.status.value == 504
+    else:
+        raise AssertionError("model inject timeout should raise BridgeRequestError")
+
+    trace_path = runtime.xinyu_dir / "runtime" / "turn_route_trace.jsonl"
+    trace_rows = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    model_timeout = [row for row in trace_rows if row["stage"] == "model_inject_timeout"][-1]
+    assert model_timeout["route"] == "slow_live"
+    assert model_timeout["status"] == "timeout"
+    assert "turn_timeout" in model_timeout["notes"]
+    operator = runtime.health_snapshot()["operator"]
+    assert operator["route_stage"] == "model_inject_timeout"
+    assert operator["route_status"] == "timeout"
+    assert operator["last_timeout_stage"] == "model_inject_timeout"
+    assert operator["last_timeout_reason"] == "turn_timeout"
+
+
+def test_slow_live_model_inject_route_trace_records_error(tmp_path, monkeypatch) -> None:
+    runtime = _make_runtime(tmp_path)
+    _install_minimal_slow_live_chat(monkeypatch, runtime, inject_error=RuntimeError("inject failed"))
+    _install_successful_memory_recall(monkeypatch, runtime)
+    payload = {
+        "platform": "qq",
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "text": "\u6d4b\u8bd5\u6a21\u578b\u6ce8\u5165\u9519\u8bef",
+        "metadata": {"is_owner_user": True},
+    }
+
+    try:
+        asyncio.run(runtime.chat(payload))
+    except RuntimeError as exc:
+        assert str(exc) == "inject failed"
+    else:
+        raise AssertionError("model inject error should be propagated")
+
+    trace_path = runtime.xinyu_dir / "runtime" / "turn_route_trace.jsonl"
+    trace_rows = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    model_error = [row for row in trace_rows if row["stage"] == "model_inject_error"][-1]
+    assert model_error["route"] == "slow_live"
+    assert model_error["status"] == "error"
+    assert "turn_error:RuntimeError" in model_error["notes"]
+
+
+def test_slow_live_outward_renderer_route_trace_records_success(tmp_path, monkeypatch) -> None:
+    runtime = _make_runtime(tmp_path)
+    runtime.outward_renderer = True
+    _install_minimal_slow_live_chat(monkeypatch, runtime)
+    _install_successful_memory_recall(monkeypatch, runtime)
+    payload = {
+        "platform": "qq",
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "text": "\u6d4b\u8bd5\u5916\u663e\u6e32\u67d3",
+        "metadata": {"is_owner_user": True},
+    }
+
+    async def fake_render(*args, **kwargs):
+        del args, kwargs
+        return "\u6e32\u67d3\u540e\u7684\u56de\u590d\u3002"
+
+    runtime._renderer_reason = lambda **kwargs: "test_renderer"  # type: ignore[method-assign]
+    runtime._render_outward_reply = fake_render  # type: ignore[method-assign]
+
+    response = asyncio.run(runtime.chat(payload))
+
+    assert response["accepted"] is True
+    assert response["reply"] == "\u6e32\u67d3\u540e\u7684\u56de\u590d\u3002"
+    trace_path = runtime.xinyu_dir / "runtime" / "turn_route_trace.jsonl"
+    trace_rows = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    renderer_finish = [row for row in trace_rows if row["stage"] == "outward_renderer_finished"][-1]
+    assert renderer_finish["route"] == "slow_live"
+    assert renderer_finish["status"] == "ok"
+    assert "reason:test_renderer" in renderer_finish["notes"]
+
+
+def test_slow_live_final_reply_guard_rewrite_records_route_trace(tmp_path, monkeypatch) -> None:
+    runtime = _make_runtime(tmp_path)
+    _install_minimal_slow_live_chat(monkeypatch, runtime, reply="\u539f\u59cb\u56de\u590d")
+    _install_successful_memory_recall(monkeypatch, runtime)
+    payload = {
+        "platform": "qq",
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "text": "\u6d4b\u8bd5\u6700\u7ec8\u5b88\u536b\u6539\u5199",
+        "metadata": {"is_owner_user": True},
+    }
+
+    class FakeSpeechController:
+        @staticmethod
+        def final_reply_guard(*, payload, user_text, reply):
+            del payload, user_text
+            if reply == "\u539f\u59cb\u56de\u590d":
+                return "\u6539\u5199\u540e\u7684\u56de\u590d", ["minor_guard_rewrite"]
+            return reply, []
+
+    runtime.speech_controller = FakeSpeechController()
+
+    response = asyncio.run(runtime.chat(payload))
+
+    assert response["reply"] == "\u6539\u5199\u540e\u7684\u56de\u590d"
+    trace_path = runtime.xinyu_dir / "runtime" / "turn_route_trace.jsonl"
+    trace_rows = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    guard_rewrite = [row for row in trace_rows if row["stage"] == "final_reply_guard_rewrite"][-1]
+    assert guard_rewrite["route"] == "slow_live"
+    assert guard_rewrite["status"] == "applied"
+    assert "final_reply_guard_flags:minor_guard_rewrite" in guard_rewrite["notes"]
+
+
+def test_slow_live_outward_renderer_route_trace_records_timeout(tmp_path, monkeypatch) -> None:
+    runtime = _make_runtime(tmp_path)
+    runtime.outward_renderer = True
+    _install_minimal_slow_live_chat(monkeypatch, runtime)
+    _install_successful_memory_recall(monkeypatch, runtime)
+    payload = {
+        "platform": "qq",
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "text": "\u6d4b\u8bd5\u5916\u663e\u6e32\u67d3\u8d85\u65f6",
+        "metadata": {"is_owner_user": True},
+    }
+
+    async def fake_render(*args, **kwargs):
+        del args, kwargs
+        raise TimeoutError("renderer timeout")
+
+    runtime._renderer_reason = lambda **kwargs: "test_renderer"  # type: ignore[method-assign]
+    runtime._render_outward_reply = fake_render  # type: ignore[method-assign]
+
+    try:
+        asyncio.run(runtime.chat(payload))
+    except TimeoutError as exc:
+        assert str(exc) == "renderer timeout"
+    else:
+        raise AssertionError("outward renderer timeout should be propagated")
+
+    trace_path = runtime.xinyu_dir / "runtime" / "turn_route_trace.jsonl"
+    trace_rows = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    renderer_timeout = [row for row in trace_rows if row["stage"] == "outward_renderer_timeout"][-1]
+    assert renderer_timeout["route"] == "slow_live"
+    assert renderer_timeout["status"] == "timeout"
+    assert "reason:test_renderer" in renderer_timeout["notes"]
+
+
+def test_slow_live_outward_renderer_route_trace_records_error(tmp_path, monkeypatch) -> None:
+    runtime = _make_runtime(tmp_path)
+    runtime.outward_renderer = True
+    _install_minimal_slow_live_chat(monkeypatch, runtime)
+    _install_successful_memory_recall(monkeypatch, runtime)
+    payload = {
+        "platform": "qq",
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "text": "\u6d4b\u8bd5\u5916\u663e\u6e32\u67d3\u9519\u8bef",
+        "metadata": {"is_owner_user": True},
+    }
+
+    async def fake_render(*args, **kwargs):
+        del args, kwargs
+        raise RuntimeError("renderer failed")
+
+    runtime._renderer_reason = lambda **kwargs: "test_renderer"  # type: ignore[method-assign]
+    runtime._render_outward_reply = fake_render  # type: ignore[method-assign]
+
+    try:
+        asyncio.run(runtime.chat(payload))
+    except RuntimeError as exc:
+        assert str(exc) == "renderer failed"
+    else:
+        raise AssertionError("outward renderer error should be propagated")
+
+    trace_path = runtime.xinyu_dir / "runtime" / "turn_route_trace.jsonl"
+    trace_rows = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    renderer_error = [row for row in trace_rows if row["stage"] == "outward_renderer_error"][-1]
+    assert renderer_error["route"] == "slow_live"
+    assert renderer_error["status"] == "error"
+    assert "reason:test_renderer" in renderer_error["notes"]
+    assert "renderer_error:RuntimeError" in renderer_error["notes"]
+
+
+def test_slow_live_finish_sidecars_route_trace_records_timeout(tmp_path, monkeypatch) -> None:
+    runtime = _make_runtime(tmp_path)
+    _install_minimal_slow_live_chat(monkeypatch, runtime)
+    _install_successful_memory_recall(monkeypatch, runtime)
+    payload = {
+        "platform": "qq",
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "text": "\u6d4b\u8bd5\u6536\u5c3e\u4fa7\u8f66\u8d85\u65f6",
+        "metadata": {"is_owner_user": True},
+    }
+
+    async def timeout_finish_sidecars(*args, **kwargs):
+        del args, kwargs
+        raise TimeoutError("finish sidecars timeout")
+
+    monkeypatch.setattr(core_bridge, "run_slow_turn_finish_sidecars", timeout_finish_sidecars)
+
+    try:
+        asyncio.run(runtime.chat(payload))
+    except TimeoutError as exc:
+        assert str(exc) == "finish sidecars timeout"
+    else:
+        raise AssertionError("finish sidecars timeout should be propagated")
+
+    trace_path = runtime.xinyu_dir / "runtime" / "turn_route_trace.jsonl"
+    trace_rows = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    sidecar_timeout = [row for row in trace_rows if row["stage"] == "finish_sidecars_timeout"][-1]
+    assert sidecar_timeout["route"] == "slow_live"
+    assert sidecar_timeout["status"] == "timeout"
+    assert "finish_sidecars_timeout" in sidecar_timeout["notes"]
+
+
+def test_slow_live_finish_sidecars_route_trace_records_error(tmp_path, monkeypatch) -> None:
+    runtime = _make_runtime(tmp_path)
+    _install_minimal_slow_live_chat(monkeypatch, runtime)
+    _install_successful_memory_recall(monkeypatch, runtime)
+    payload = {
+        "platform": "qq",
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "text": "\u6d4b\u8bd5\u6536\u5c3e\u4fa7\u8f66\u9519\u8bef",
+        "metadata": {"is_owner_user": True},
+    }
+
+    async def error_finish_sidecars(*args, **kwargs):
+        del args, kwargs
+        raise RuntimeError("finish sidecars failed")
+
+    monkeypatch.setattr(core_bridge, "run_slow_turn_finish_sidecars", error_finish_sidecars)
+
+    try:
+        asyncio.run(runtime.chat(payload))
+    except RuntimeError as exc:
+        assert str(exc) == "finish sidecars failed"
+    else:
+        raise AssertionError("finish sidecars error should be propagated")
+
+    trace_path = runtime.xinyu_dir / "runtime" / "turn_route_trace.jsonl"
+    trace_rows = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    sidecar_error = [row for row in trace_rows if row["stage"] == "finish_sidecars_error"][-1]
+    assert sidecar_error["route"] == "slow_live"
+    assert sidecar_error["status"] == "error"
+    assert "finish_sidecars_error:RuntimeError" in sidecar_error["notes"]
+
+
+def test_health_operator_reports_stale_turn_age_and_route_state(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    started_at = (datetime.now().astimezone() - timedelta(seconds=420)).isoformat()
+    presence_path = runtime.xinyu_dir / "memory" / "context" / "runtime_self_presence.md"
+    presence_path.write_text(
+        "\n".join(
+            [
+                "# Runtime Self Presence",
+                "- current_turn_state: running",
+                f"- current_turn_started_at: {started_at}",
+                "- current_turn_id: turn-stale-test",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    record_turn_route_stage(
+        runtime.xinyu_dir,
+        turn_id="turn-stale-test",
+        stage="finish_sidecars_timeout",
+        route="slow_live",
+        status="timeout",
+        payload={"platform": "qq", "message_type": "private_text", "session_id": "s", "user_id": "u"},
+        notes=["finish_sidecars_timeout"],
+    )
+
+    operator = runtime.health_snapshot()["operator"]
+
+    assert operator["current_turn_state"] == "stale_running"
+    assert operator["current_turn_age_seconds"] >= 400
+    assert operator["route_stage"] == "finish_sidecars_timeout"
+    assert operator["route"] == "slow_live"
+    assert operator["route_status"] == "timeout"
+    assert operator["stale_running"] is True
+    assert operator["stale_age_seconds"] >= 100
+    assert operator["last_timeout_stage"] == "finish_sidecars_timeout"
+    assert operator["last_timeout_reason"] == "finish_sidecars_timeout"
+
+
+def test_slow_turn_finish_sidecars_preserve_archive_candidate_and_tail_order(tmp_path, monkeypatch) -> None:
+    runtime = _make_runtime(tmp_path)
+    payload = {
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "metadata": {"is_owner_user": True},
+    }
+    session = AgentSession(key="qq:private:owner", agent=FakeAgent(), prompt_signature="")
+    visible_turn = SimpleNamespace(turn_kind="ordinary_owner_chat")
+    captured: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        turn_finish_sidecars,
+        "record_learning_closed_loop_turn",
+        lambda *args, **kwargs: {"notes": ["learning_closed_loop"]},
+    )
+    monkeypatch.setattr(turn_finish_sidecars, "write_turn_residue", lambda *args, **kwargs: True)
+    monkeypatch.setattr(
+        turn_finish_sidecars,
+        "record_voice_trial_overlay",
+        lambda *args, **kwargs: {"recorded": True, "notes": ["voice_trial"]},
+    )
+    monkeypatch.setattr(turn_finish_sidecars, "record_voice_correction", lambda *args, **kwargs: True)
+    monkeypatch.setattr(
+        turn_finish_sidecars,
+        "record_reply_prediction",
+        lambda *args, **kwargs: {"notes": ["curiosity_prediction"]},
+    )
+    monkeypatch.setattr(
+        turn_finish_sidecars,
+        "record_private_thought_reply_link",
+        lambda *args, **kwargs: {"notes": ["private_thought_link"]},
+    )
+    monkeypatch.setattr(
+        turn_finish_sidecars,
+        "archive_dialogue_turn",
+        lambda *args, **kwargs: {"notes": ["archive"], "message_ids": ["user-1", "assistant-1"]},
+    )
+
+    def fake_extract(*args, **kwargs):
+        captured["candidate_source_ids"] = kwargs["source_message_ids"]
+        captured["candidate_dialogue_tail_before_append"] = list(kwargs["dialogue_tail"])
+        return {"notes": ["candidate"]}
+
+    monkeypatch.setattr(turn_finish_sidecars, "extract_memory_candidates", fake_extract)
+    monkeypatch.setattr(
+        turn_finish_sidecars,
+        "run_memory_self_review",
+        lambda *args, **kwargs: {"reviewed_candidates": 0, "notes": ["self_review"]},
+    )
+    monkeypatch.setattr(
+        turn_finish_sidecars,
+        "record_interaction_turn",
+        lambda *args, **kwargs: {"notes": ["journal"]},
+    )
+    monkeypatch.setattr(
+        turn_finish_sidecars,
+        "ensure_recent_context_health",
+        lambda *args, **kwargs: {"status": "ok", "action": "none"},
+    )
+    monkeypatch.setattr(
+        turn_finish_sidecars,
+        "maybe_enqueue_sticker_reply",
+        lambda *args, **kwargs: {"notes": ["sticker_skip:not_requested"]},
+    )
+
+    def fake_finish_turn_coherence(*args, **kwargs):
+        captured["action_result"] = kwargs["action_result"]
+        captured["component_notes"] = kwargs["component_notes"]
+        return {"notes": ["coherence"]}
+
+    monkeypatch.setattr(turn_finish_sidecars, "finish_turn_coherence", fake_finish_turn_coherence)
+    runtime._schedule_promised_followup_if_needed = lambda *args, **kwargs: {  # type: ignore[method-assign]
+        "scheduled": True,
+        "notes": ["promise"],
+    }
+    runtime._append_sticker_delivery_tail = lambda session, sticker_reply: False  # type: ignore[method-assign]
+
+    result = asyncio.run(
+        turn_finish_sidecars.run_slow_turn_finish_sidecars(
+            runtime,
+            payload=payload,
+            text="继续",
+            reply="我继续。",
+            draft_reply="我继续。",
+            session=session,
+            session_key=session.key,
+            turn_id="turn-finish-sidecar-test",
+            turn_started_at=0.0,
+            before_memory={},
+            visible_turn=visible_turn,
+            final_guard_flags=[],
+            expression_learning={"notes": []},
+            recalled_context=None,
+            recalled_context_notes=[],
+            private_thought_outcome={"notes": []},
+            emotion_council={"notes": []},
+            persona_sidecar={"notes": []},
+            continuity_handoff={"notes": []},
+            wait_to_think_sidecar={"notes": []},
+            self_code_task="",
+            direct_codex_task="",
+            model_codex_task="",
+            wait_to_think_task="",
+            model_codex_delegate_note="",
+        )
+    )
+
+    assert result["archive_result"]["message_ids"] == ["user-1", "assistant-1"]
+    assert captured["candidate_source_ids"] == ["user-1", "assistant-1"]
+    assert captured["candidate_dialogue_tail_before_append"] == []
+    assert [item["content"] for item in session.dialogue_tail] == ["继续", "我继续。"]
+    assert captured["action_result"] == "promised_followup_scheduled"
+    assert captured["component_notes"]["memory_candidate"] == {"notes": ["candidate"]}
+    assert result["voice_calibrated"] is True
+    assert result["sticker_tail_recorded"] is False
 
 
 def test_style_pressure_empty_fallback_is_disabled(tmp_path) -> None:

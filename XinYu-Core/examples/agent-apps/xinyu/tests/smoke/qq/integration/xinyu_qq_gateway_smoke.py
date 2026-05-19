@@ -227,6 +227,68 @@ def main() -> int:
     assert private_prepared.payload["metadata"]["source_channel"] == "owner_private"
     assert private_prepared.payload["metadata"]["qq_gateway_live_current_turn"] is True
 
+    class SemanticFastCoreClient:
+        def __init__(self):
+            self.calls = []
+
+        async def chat(self, payload):
+            self.calls.append(payload)
+            return {
+                "accepted": True,
+                "reply": "\u665a\u4e0a\u597d\u3002",
+                "route": "chat",
+                "session_id": payload.get("session_id", ""),
+                "turn_id": "turn-semantic-fast-gateway-smoke",
+                "reply_hash": "sha256:semantic-fast",
+                "archive_message_ids": [],
+                "semantic_fast": {
+                    "scope": "owner_private_greeting_ack",
+                    "route": "fast_path",
+                    "intents": ["greeting"],
+                },
+                "notes": ["owner_private_semantic_fast_intercepted", "semantic_fast_intents:greeting"],
+            }
+
+    class SemanticFastGateway(NativeQQGateway):
+        def __init__(self):
+            super().__init__(config)
+            self.client = SemanticFastCoreClient()
+            self.replies = []
+            self.trace_stages = []
+            self.acked = []
+
+        async def send_reply(self, websocket, target, text):
+            self.replies.append((target, text))
+            return {"status": "ok", "retcode": 0, "data": {"message_id": 3101}}
+
+        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error=""):
+            del event, arrival_seq, prepared, session_queue_key, queue_depth, error
+            self.trace_stages.append((stage, drop_reason))
+
+        async def _ack_sent_visible_reply(self, prepared, *, reply, core_response, action_response):
+            del prepared, action_response
+            self.acked.append((reply, list(core_response.get("notes", []))))
+
+    async def _semantic_fast_gateway_smoke():
+        semantic_gateway = SemanticFastGateway()
+        event = dict(private_event)
+        event["message_id"] = 10086
+        event["message"] = [{"type": "text", "data": {"text": "\u665a\u4e0a\u597d"}}]
+        event["raw_message"] = "\u665a\u4e0a\u597d"
+        prepared = semantic_gateway.prepare_message(event)
+        assert prepared is not None
+        await semantic_gateway._dispatch_prepared_message(None, prepared, event=event)
+        assert semantic_gateway.client.calls
+        assert semantic_gateway.client.calls[0]["text"] == "\u665a\u4e0a\u597d"
+        assert semantic_gateway.replies[0][1] == "\u665a\u4e0a\u597d\u3002"
+        assert semantic_gateway.acked[0][1] == [
+            "owner_private_semantic_fast_intercepted",
+            "semantic_fast_intents:greeting",
+        ]
+        assert ("reply_sent", "") in semantic_gateway.trace_stages
+
+    asyncio.run(_semantic_fast_gateway_smoke())
+
     blocked_gateway = NativeQQGateway(
         GatewayConfig(
             bridge_token="smoke-token",

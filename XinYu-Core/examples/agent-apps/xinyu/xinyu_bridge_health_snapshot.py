@@ -4,7 +4,8 @@ from typing import Any
 
 from xinyu_action_experience_digest import read_recent_action_digest_snapshot
 from xinyu_code_awareness import record_code_awareness
-from xinyu_runtime_presence import read_runtime_presence_summary
+from xinyu_runtime_presence import DEFAULT_RUNNING_STALE_SECONDS, read_runtime_presence_summary
+from xinyu_turn_route_trace import read_turn_route_summary
 
 
 def metabolism_health(runtime: Any) -> dict[str, Any]:
@@ -55,6 +56,7 @@ def health_snapshot(
         running_runtime_digest=runtime_source_digest,
     )
     runtime_presence = read_runtime_presence_summary(runtime.xinyu_dir)
+    turn_route = read_turn_route_summary(runtime.xinyu_dir)
     return {
         "ok": True,
         "bridge": "xinyu_core_bridge",
@@ -65,6 +67,7 @@ def health_snapshot(
         "memory_root": str(runtime.memory_root),
         "sessions": len(runtime._sessions),
         "turn_timeout_seconds": runtime.turn_timeout_seconds,
+        "pre_model_routes_timeout_seconds": runtime.pre_model_routes_timeout_seconds,
         "outward_renderer": runtime.outward_renderer,
         "renderer_mode": runtime.renderer_mode,
         "render_timeout_seconds": runtime.render_timeout_seconds,
@@ -78,6 +81,8 @@ def health_snapshot(
         "proactive_min_interval_seconds": runtime.proactive_min_interval_seconds,
         "autonomous_maintenance": autonomous_maintenance_health(runtime),
         "runtime_presence": runtime_presence,
+        "turn_route": turn_route,
+        "operator": _operator_health(runtime_presence=runtime_presence, turn_route=turn_route),
         "program_awareness": runtime_presence.get("program_awareness", {}),
         "code_awareness": code_awareness,
         "v1": runtime._v1_health(),
@@ -86,3 +91,39 @@ def health_snapshot(
         "action_experience_digest": read_recent_action_digest_snapshot(runtime.xinyu_dir, limit=3),
         "closed": runtime._closed,
     }
+
+
+def _operator_health(*, runtime_presence: dict[str, Any], turn_route: dict[str, Any]) -> dict[str, Any]:
+    current_turn_age_seconds = _safe_int(runtime_presence.get("current_turn_age_seconds"), 0)
+    stale_running = bool(runtime_presence.get("stale_running"))
+    stale_age_seconds = 0
+    if stale_running and current_turn_age_seconds > DEFAULT_RUNNING_STALE_SECONDS:
+        stale_age_seconds = current_turn_age_seconds - DEFAULT_RUNNING_STALE_SECONDS
+    return {
+        "current_turn_state": _safe_str(runtime_presence.get("current_turn_state"), "unknown"),
+        "current_turn_age_seconds": current_turn_age_seconds,
+        "route_stage": _safe_str(turn_route.get("last_stage"), "unknown"),
+        "route": _safe_str(turn_route.get("last_route"), "unknown"),
+        "route_status": _safe_str(turn_route.get("last_status"), "unknown"),
+        "stale_running": stale_running,
+        "stale_age_seconds": stale_age_seconds,
+        "last_timeout_stage": _safe_str(turn_route.get("last_timeout_stage")),
+        "last_timeout_reason": _safe_str(turn_route.get("last_timeout_reason")),
+    }
+
+
+def _safe_str(value: Any, default: str = "") -> str:
+    if value is None:
+        return default
+    try:
+        text = str(value)
+    except Exception:
+        return default
+    return text if text else default
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default

@@ -29,6 +29,14 @@ from xinyu_bridge_external_plugin_routes import (
     external_plugin_manifest as _external_plugin_manifest_route,
 )
 from xinyu_bridge_http import XinYuBridgeHTTPServer, XinYuBridgeRequestHandler
+from xinyu_bridge_intervention_routes import (
+    turn_cancel as _turn_cancel_route,
+    turn_continue as _turn_continue_route,
+    turn_current as _turn_current_route,
+    turn_retry_lightweight as _turn_retry_lightweight_route,
+    turn_skip_sidecar as _turn_skip_sidecar_route,
+    turn_status_message as _turn_status_message_route,
+)
 from xinyu_bridge_metabolism_routes import (
     apply_self_choice_metabolism_decision as _apply_self_choice_metabolism_decision_route,
     life_metabolism_ticket_approve as _life_metabolism_ticket_approve_route,
@@ -93,6 +101,7 @@ from xinyu_bridge_promises import compact_promise_text
 import xinyu_bridge_promise_followup
 from xinyu_bridge_promise_followup import PROMISE_FOLLOWUP_STATE_REL
 import xinyu_bridge_proactive_context
+from xinyu_proactive_lifecycle_trace import append_proactive_lifecycle_event
 from xinyu_bridge_proactive_delivery_routes import (
     claim_proactive_for_qq_outbox as _claim_proactive_for_qq_outbox_route,
     claim_proactive_for_qq_outbox_sync as _claim_proactive_for_qq_outbox_sync_route,
@@ -136,8 +145,17 @@ from xinyu_bridge_values import optional_int as _optional_int
 from xinyu_bridge_values import payload_text as _payload_text_from_payload
 from xinyu_bridge_values import safe_str as _safe_str
 import xinyu_bridge_action_routes
+from xinyu_bridge_reply_pipeline import recover_empty_visible_reply, render_outward_reply_with_trace
+import xinyu_bridge_semantic_fast_routes
+from xinyu_bridge_slow_live_turn import (
+    build_slow_live_model_contexts,
+    inject_slow_live_model_event,
+    run_slow_live_finish_sidecars_with_trace,
+    run_slow_live_memory_recall,
+)
+from xinyu_bridge_turn_finish_sidecars import run_slow_turn_finish_sidecars
 import xinyu_bridge_turn_sidecars
-from xinyu_bridge_turn_pipeline import run_pre_model_routes
+from xinyu_bridge_turn_pipeline import PreModelRouteResult, run_pre_model_routes, run_pre_model_routes_with_timeout
 import xinyu_bridge_v1_routes
 from v1_canary_gate import payload_has_attachment_signal as _payload_has_attachment_signal
 from xinyu_chat_service import ChatServiceError, build_chat_service
@@ -160,11 +178,9 @@ from xinyu_codex_service import (
     enqueue_codex_completion_if_needed,
     looks_like_codex_image_generation_task,
 )
-from xinyu_continuity_handoff import build_continuity_handoff_prompt_block, refresh_continuity_handoff
 from xinyu_contextual_self_observatory import run_contextual_self_observatory
-from xinyu_living_memory_recall import log_living_memory_recall, run_living_memory_recall_algorithm
-from xinyu_dialogue_curiosity import evaluate_previous_reaction, record_reply_prediction
-from xinyu_dialogue_archive import archive_dialogue_turn, archive_message
+from xinyu_living_memory_recall import run_living_memory_recall_algorithm
+from xinyu_dialogue_curiosity import evaluate_previous_reaction
 from xinyu_dialogue_working_memory import (
     compact_tail_for_prompt,
     load_dialogue_tail,
@@ -188,12 +204,11 @@ from xinyu_desktop_service import (
     desktop_services as desktop_service_services,
 )
 from xinyu_environment_sensor import sample_environment
-from xinyu_emotion_council import build_emotion_council_prompt_block, run_emotion_council_shadow
+from xinyu_emotion_council import run_emotion_council_shadow
 from xinyu_life_kernel import build_entropy_state, evaluate_life_kernel
 from xinyu_life_reply_policy import (
     apply_life_reply_policy,
     build_life_reply_policy,
-    build_life_reply_prompt_block,
 )
 from xinyu_response_error_loop import classify_response_error
 from xinyu_scene_frame import build_scene_frame
@@ -204,7 +219,6 @@ from xinyu_daily_digest import run_daily_digest_maintenance
 from xinyu_expression_self_learning import record_expression_self_learning_event
 from xinyu_goldmark_dehydrate import run_goldmark_dehydration_maintenance
 from xinyu_goal_outcome_observer import run_goal_outcome_observer
-from xinyu_interaction_journal import record_interaction_turn
 from xinyu_impulse_soup import run_impulse_soup
 from xinyu_initiative_orchestrator import record_initiative_feedback, run_initiative_orchestrator
 from xinyu_initiative_spine import run_initiative_spine
@@ -213,7 +227,6 @@ from xinyu_learning_closed_loop import (
     record_learning_closed_loop_turn,
 )
 from xinyu_life_month_slots import refresh_current_life_month_context  # noqa: F401 - compatibility for older tests/hooks
-from xinyu_memory_candidate_extractor import extract_memory_candidates
 from xinyu_experience_frame import (
     build_experience_frame,
     compose_recent_action_followup,
@@ -226,8 +239,6 @@ from xinyu_action_experience_digest import (
     digest_action_experience_residue,
 )
 from xinyu_memory_event_sourcing import record_action_experience_event, record_chat_event
-from xinyu_memory_self_review import run_memory_self_review
-from xinyu_turn_coherence import finish_turn_coherence
 from xinyu_metabolism_contract import (
     create_ticket as create_metabolism_ticket,
     list_tickets as list_metabolism_tickets,
@@ -248,12 +259,13 @@ from xinyu_qq_outbox import (
 )
 from xinyu_recent_context_guard import ensure_recent_context_health
 from xinyu_runtime_presence import (
-    build_runtime_presence_prompt_block,
     record_bridge_heartbeat,
     record_codex_presence,
     record_turn_finished,
     record_turn_started,
 )
+from xinyu_bridge_route_observer import TurnRouteObserver
+from xinyu_turn_route_trace import record_turn_route_stage
 from xinyu_runtime_security import (
     enforce_bridge_token_guard,
     enforce_llm_http_guard,
@@ -280,17 +292,13 @@ from xinyu_sent_reply_index import visible_text_hash
 from xinyu_storage_paths import knowledge_ref
 from xinyu_sticker_ingest import import_sticker_from_payload
 from xinyu_speech_controller import XinyuSpeechController
-from xinyu_sticker_pack import maybe_enqueue_sticker_reply, sticker_mood_label
+from xinyu_sticker_pack import sticker_mood_label
 from xinyu_text_variants import readable_markers
 from xinyu_tool_protocol import ActionOutcome, DELEGATED_LOCAL_RISK, ToolRequest
 from xinyu_v1_canary_readiness import record_v1_shadow_observation
-from xinyu_turn_residue import write_turn_residue
 from xinyu_turn_classifier import classify_visible_turn
 from xinyu_uncertainty_pause import (
-    build_uncertainty_pause_prompt_block,
-    is_waiting_reply,
     mark_uncertainty_pause_replied,
-    record_uncertainty_pause,
 )
 from xinyu_visible_reply_guard import dedupe_visible_reply
 from xinyu_visible_persona_voice import (
@@ -300,8 +308,6 @@ from xinyu_visible_persona_voice import (
     compose_watchdog_visible_message,
 )
 from xinyu_visible_state_hygiene import sanitize_visible_state_files
-from xinyu_voice_learning import record_voice_correction
-from xinyu_voice_trial_overlay import record_voice_trial_overlay
 from xinyu_watched_sources import run_watched_source_check
 
 
@@ -827,11 +833,19 @@ class XinYuBridgeRuntime:
         self.v1_enabled = _as_bool(os.environ.get("XINYU_V1_ENABLED"), default=False)
         self.v1_shadow_mode = _as_bool(os.environ.get("XINYU_V1_SHADOW_MODE"), default=False)
         self.v1_shadow_timeout_seconds = max(1, _as_int(os.environ.get("XINYU_V1_SHADOW_TIMEOUT_SECONDS"), 3))
+        self.pre_model_routes_timeout_seconds = max(
+            1,
+            _as_int(os.environ.get("XINYU_PRE_MODEL_ROUTES_TIMEOUT_SECONDS"), 8),
+        )
         self.emotion_council_prompt_enabled = _as_bool(
             os.environ.get("XINYU_EMOTION_COUNCIL_PROMPT_ENABLED"),
             default=False,
         )
         self.v1_owner_simple_canary = _as_bool(os.environ.get(V1_OWNER_SIMPLE_CANARY_ENV), default=False)
+        self.owner_private_semantic_fast_route = _as_bool(
+            os.environ.get("XINYU_OWNER_PRIVATE_SEMANTIC_FAST_ROUTE"),
+            default=True,
+        )
         self.v1_canary_timeout_seconds = max(
             1,
             _as_int(os.environ.get("XINYU_V1_CANARY_TIMEOUT_SECONDS"), self.v1_shadow_timeout_seconds),
@@ -903,6 +917,15 @@ class XinYuBridgeRuntime:
                 "autonomous_maintenance": "idle" if self.autonomous_maintenance_enabled else "disabled",
                 "qq_outbox": "unknown",
             },
+        )
+        record_turn_route_stage(
+            self.xinyu_dir,
+            turn_id=f"bridge-startup-{int(time.time())}",
+            stage="bridge_started",
+            route="idle",
+            status="ok",
+            elapsed_ms=0,
+            notes=["bridge_init"],
         )
 
     def _load_runtime(self) -> None:
@@ -2011,6 +2034,41 @@ class XinYuBridgeRuntime:
             event_sidecar=event_sidecar,
         )
 
+    def _owner_private_semantic_fast_decision(self, payload: dict[str, Any], text: str) -> dict[str, Any]:
+        return xinyu_bridge_semantic_fast_routes.owner_private_semantic_fast_decision(self, payload, text)
+
+    async def _maybe_handle_owner_private_semantic_fast_turn(
+        self,
+        payload: dict[str, Any],
+        *,
+        text: str,
+        session: AgentSession,
+        session_key: str,
+        turn_id: str,
+        turn_started_wall: str,
+        turn_started_at: float,
+        before_memory: dict[str, Any] | None,
+        cleanup: dict[str, Any],
+        event_sidecar: dict[str, Any],
+        decision: dict[str, Any] | None = None,
+        record_decision_stage: bool = True,
+    ) -> dict[str, Any] | None:
+        return await xinyu_bridge_semantic_fast_routes.handle_owner_private_semantic_fast_turn(
+            self,
+            payload,
+            text=text,
+            session=session,
+            session_key=session_key,
+            turn_id=turn_id,
+            turn_started_wall=turn_started_wall,
+            turn_started_at=turn_started_at,
+            before_memory=before_memory,
+            cleanup=cleanup,
+            event_sidecar=event_sidecar,
+            decision=decision,
+            record_decision_stage=record_decision_stage,
+        )
+
     async def start_background_tasks(self) -> None:
         if self._closed:
             return
@@ -2967,6 +3025,24 @@ tags: [autonomy, maintenance, runtime]
     async def probe(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         return await _probe_route(self, payload, bridge_version=BRIDGE_VERSION)
 
+    async def turn_current(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await _turn_current_route(self, payload)
+
+    async def turn_cancel(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await _turn_cancel_route(self, payload)
+
+    async def turn_retry_lightweight(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await _turn_retry_lightweight_route(self, payload)
+
+    async def turn_skip_sidecar(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await _turn_skip_sidecar_route(self, payload)
+
+    async def turn_continue(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await _turn_continue_route(self, payload)
+
+    async def turn_status_message(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await _turn_status_message_route(self, payload)
+
     async def external_plugin_manifest(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         return await _external_plugin_manifest_route(self, payload)
 
@@ -3512,6 +3588,17 @@ tags: [autonomy, maintenance, runtime]
             atomic_write_text(request_path, updated.rstrip() + extra, final_newline=False)
         except OSError:
             return False
+        append_proactive_lifecycle_event(
+            self.xinyu_dir,
+            event_kind="proactive_owner_reply_closed",
+            event_time=answered_at,
+            request_state=_read_text_safe(request_path),
+            dispatch_state=dispatch,
+            request_id=request_id,
+            ack_status="owner_replied",
+            adapter_status="owner_reply",
+            notes=["owner_reply_to_proactive", "request_answer_state_owner_replied"],
+        )
         self._refresh_initiative_spine_after_proactive_feedback(
             trigger="owner_reply_to_proactive",
             checked_at=answered_at,
@@ -4532,28 +4619,154 @@ tags: [autonomy, maintenance, runtime]
                 session_key=session_key,
                 active_sessions=len(self._sessions),
             )
-            await self._desktop_publish_chat_started(
-                payload,
-                text=text,
-                session_key=session_key,
-                turn_id=_safe_str(presence_start.get("turn_id")),
-                started_at=_timestamp_or_now_iso(turn_started_wall),
-                active_sessions=len(self._sessions),
+            turn_id = _safe_str(presence_start.get("turn_id"))
+            route_observer = TurnRouteObserver(
+                self.xinyu_dir,
+                turn_id=turn_id,
+                payload=payload,
+                started_at=turn_started_at,
             )
+            trace_route_stage = route_observer.record
+
+            trace_route_stage(
+                "turn_started",
+                elapsed_ms=0,
+                notes=[_safe_str(note) for note in presence_start.get("notes", [])[:4]],
+            )
+            desktop_started_published = False
+            semantic_fast_decision: dict[str, Any] = {"allowed": False, "notes": ["semantic_fast_not_checked"]}
+            try:
+                trace_route_stage("semantic_fast_probe_started")
+                semantic_fast_decision = self._owner_private_semantic_fast_decision(payload, text)
+                trace_route_stage(
+                    "semantic_fast_probe_finished",
+                    status="allowed" if semantic_fast_decision.get("allowed") else "skipped",
+                    notes=[_safe_str(note) for note in semantic_fast_decision.get("notes", [])[:4]],
+                )
+            except Exception as exc:
+                print(f"[xinyu_core_bridge] semantic fast probe failed: {type(exc).__name__}: {exc}", flush=True)
+                semantic_fast_decision = {"allowed": False, "notes": [f"semantic_fast_probe_error:{type(exc).__name__}"]}
+                trace_route_stage(
+                    "semantic_fast_probe_finished",
+                    status="error",
+                    notes=[f"semantic_fast_probe_error:{type(exc).__name__}"],
+                )
+
+            if semantic_fast_decision.get("allowed"):
+                trace_route_stage(
+                    "route_decided",
+                    route="owner_private_semantic_fast",
+                    status="accepted",
+                    notes=[_safe_str(note) for note in semantic_fast_decision.get("notes", [])[:4]],
+                )
+                try:
+                    trace_route_stage("desktop_started_publish_started", route="owner_private_semantic_fast")
+                    await asyncio.wait_for(
+                        self._desktop_publish_chat_started(
+                            payload,
+                            text=text,
+                            session_key=session_key,
+                            turn_id=turn_id,
+                            started_at=_timestamp_or_now_iso(turn_started_wall),
+                            active_sessions=len(self._sessions),
+                        ),
+                        timeout=1.5,
+                    )
+                    desktop_started_published = True
+                    trace_route_stage(
+                        "desktop_started_publish_finished",
+                        route="owner_private_semantic_fast",
+                        status="ok",
+                    )
+                except Exception as exc:
+                    print(f"[xinyu_core_bridge] desktop chat started publish skipped: {type(exc).__name__}: {exc}", flush=True)
+                    trace_route_stage(
+                        "desktop_started_publish_finished",
+                        route="owner_private_semantic_fast",
+                        status="error",
+                        notes=[f"desktop_publish_error:{type(exc).__name__}"],
+                    )
+                try:
+                    trace_route_stage("semantic_fast_session_started", route="owner_private_semantic_fast")
+                    session = await self._get_session(session_key)
+                    trace_route_stage("semantic_fast_session_finished", route="owner_private_semantic_fast", status="ok")
+                    proactive_tail_synced = self._sync_recent_proactive_to_dialogue_tail(session, payload)
+                    semantic_fast_response = await self._maybe_handle_owner_private_semantic_fast_turn(
+                        payload,
+                        text=text,
+                        session=session,
+                        session_key=session_key,
+                        turn_id=turn_id,
+                        turn_started_wall=turn_started_wall,
+                        turn_started_at=turn_started_at,
+                        before_memory=None,
+                        cleanup=cleanup,
+                        event_sidecar={"notes": ["event_sourcing_deferred_for_semantic_fast"]},
+                        decision=semantic_fast_decision,
+                        record_decision_stage=False,
+                    )
+                    if semantic_fast_response is not None:
+                        return semantic_fast_response
+                    trace_route_stage(
+                        "semantic_fast_fell_through",
+                        route="owner_private_semantic_fast",
+                        status="empty_or_blocked",
+                    )
+                except Exception as exc:
+                    print(f"[xinyu_core_bridge] semantic fast route failed: {type(exc).__name__}: {exc}", flush=True)
+                    trace_route_stage(
+                        "semantic_fast_fell_through",
+                        route="owner_private_semantic_fast",
+                        status="error",
+                        notes=[f"semantic_fast_error:{type(exc).__name__}"],
+                    )
+            if not desktop_started_published:
+                try:
+                    trace_route_stage("desktop_started_publish_started")
+                    await asyncio.wait_for(
+                        self._desktop_publish_chat_started(
+                            payload,
+                            text=text,
+                            session_key=session_key,
+                            turn_id=turn_id,
+                            started_at=_timestamp_or_now_iso(turn_started_wall),
+                            active_sessions=len(self._sessions),
+                        ),
+                        timeout=1.5,
+                    )
+                    desktop_started_published = True
+                    trace_route_stage("desktop_started_publish_finished", status="ok")
+                except Exception as exc:
+                    print(f"[xinyu_core_bridge] desktop chat started publish skipped: {type(exc).__name__}: {exc}", flush=True)
+                    trace_route_stage(
+                        "desktop_started_publish_finished",
+                        status="error",
+                        notes=[f"desktop_publish_error:{type(exc).__name__}"],
+                    )
+            trace_route_stage("memory_snapshot_started")
             before_memory = _memory_snapshot(self.memory_root)
+            trace_route_stage("memory_snapshot_finished", status="ok")
             curiosity_eval: dict[str, Any] = {"notes": []}
             try:
+                trace_route_stage("curiosity_eval_started")
                 curiosity_eval = evaluate_previous_reaction(
                     self.xinyu_dir,
                     payload,
                     text=text,
                     session_key=session_key,
                 )
+                trace_route_stage("curiosity_eval_finished", status="ok")
             except Exception as exc:
                 print(f"[xinyu_core_bridge] dialogue curiosity evaluation failed: {exc}", flush=True)
                 curiosity_eval = {"notes": [f"dialogue_curiosity_eval_error:{type(exc).__name__}"]}
+                trace_route_stage(
+                    "curiosity_eval_finished",
+                    status="error",
+                    notes=[f"dialogue_curiosity_eval_error:{type(exc).__name__}"],
+                )
             private_thought_outcome: dict[str, Any] = {"notes": []}
             try:
+                trace_route_stage("private_thought_outcome_started")
                 private_thought_outcome = record_private_thought_outcome(
                     self.xinyu_dir,
                     payload,
@@ -4561,34 +4774,59 @@ tags: [autonomy, maintenance, runtime]
                     session_key=session_key,
                     evaluation=curiosity_eval,
                 )
+                trace_route_stage("private_thought_outcome_finished", status="ok")
             except Exception as exc:
                 print(f"[xinyu_core_bridge] private thought outcome failed: {exc}", flush=True)
                 private_thought_outcome = {"notes": [f"private_thought_outcome_error:{type(exc).__name__}"]}
+                trace_route_stage(
+                    "private_thought_outcome_finished",
+                    status="error",
+                    notes=[f"private_thought_outcome_error:{type(exc).__name__}"],
+                )
             uncertainty_pause_reply: dict[str, Any] = {"notes": []}
             try:
+                trace_route_stage("uncertainty_pause_mark_started")
                 uncertainty_pause_reply = mark_uncertainty_pause_replied(
                     self.xinyu_dir,
                     text=text,
                     observed_at=datetime.now().astimezone().isoformat(),
                 )
+                trace_route_stage("uncertainty_pause_mark_finished", status="ok")
             except Exception as exc:
                 print(f"[xinyu_core_bridge] uncertainty pause reply mark failed: {exc}", flush=True)
                 uncertainty_pause_reply = {"notes": [f"uncertainty_pause_reply_error:{type(exc).__name__}"]}
-            pre_model_routes = await run_pre_model_routes(
+                trace_route_stage(
+                    "uncertainty_pause_mark_finished",
+                    status="error",
+                    notes=[f"uncertainty_pause_reply_error:{type(exc).__name__}"],
+                )
+            pre_model_routes = await run_pre_model_routes_with_timeout(
                 self,
                 payload,
                 text=text,
                 session_key=session_key,
-                turn_id=_safe_str(presence_start.get("turn_id")),
+                turn_id=turn_id,
                 turn_started_wall=turn_started_wall,
                 turn_started_at=turn_started_at,
                 before_memory=before_memory,
                 cleanup=cleanup,
+                timeout_seconds=self.pre_model_routes_timeout_seconds,
+                trace_route_stage=trace_route_stage,
+                runner=run_pre_model_routes,
             )
             event_sidecar = pre_model_routes.event_sidecar
             v1_shadow = pre_model_routes.v1_shadow
             tinykernel_shadow = pre_model_routes.tinykernel_shadow
             if pre_model_routes.response is not None:
+                pre_model_notes = pre_model_routes.response.get("notes", [])
+                if not isinstance(pre_model_notes, list):
+                    pre_model_notes = []
+                trace_route_stage(
+                    "route_finished",
+                    route="pre_model",
+                    status="ok",
+                    notes=[_safe_str(note) for note in pre_model_notes[:8]],
+                )
                 return pre_model_routes.response
             emotion_council: dict[str, Any] = {"notes": ["emotion_council_not_run"]}
             try:
@@ -4604,6 +4842,26 @@ tags: [autonomy, maintenance, runtime]
                 emotion_council = {"notes": [f"emotion_council_error:{type(exc).__name__}"]}
             session = await self._get_session(session_key)
             proactive_tail_synced = self._sync_recent_proactive_to_dialogue_tail(session, payload)
+            semantic_fast_response = await self._maybe_handle_owner_private_semantic_fast_turn(
+                payload,
+                text=text,
+                session=session,
+                session_key=session_key,
+                turn_id=_safe_str(presence_start.get("turn_id")),
+                turn_started_wall=turn_started_wall,
+                turn_started_at=turn_started_at,
+                before_memory=before_memory,
+                cleanup=cleanup,
+                event_sidecar=event_sidecar,
+            )
+            if semantic_fast_response is not None:
+                return semantic_fast_response
+            trace_route_stage(
+                "route_decided",
+                route="slow_live",
+                status="accepted",
+                notes=["semantic_fast_not_intercepted"],
+            )
             persona_sidecar: dict[str, Any] = {"notes": ["persona_state_not_run"], "prompt_block": ""}
             try:
                 persona_sidecar = observe_persona_turn(self.xinyu_dir, payload, text=text)
@@ -4632,72 +4890,50 @@ tags: [autonomy, maintenance, runtime]
                 ),
             )
             visible_turn = classify_visible_turn(self.xinyu_dir, payload=payload, user_text=text)
-            recalled_context = None
-            recalled_context_event: dict[str, Any] = {}
-            recalled_context_notes: list[str] = []
-            try:
-                recalled_algorithm = run_living_memory_recall_algorithm(
-                    self.xinyu_dir,
-                    payload,
-                    user_text=text,
-                    dialogue_tail=session.dialogue_tail,
-                    visible_turn=visible_turn,
-                    evaluated_at=turn_event_time,
-                )
-                recalled_context = recalled_algorithm.result
-                recalled_context_notes.extend(_safe_str(note) for note in recalled_algorithm.notes[:2])
-                recalled_context_notes.extend(_safe_str(note) for note in recalled_context.notes[:3])
-                recalled_context_event = await self._desktop_publish_memory_recall(
-                    payload,
-                    recalled_context,
-                    session_key=session_key,
-                    turn_id=_safe_str(presence_start.get("turn_id")),
-                )
-            except Exception as exc:
-                print(f"[xinyu_core_bridge] context retrieval failed: {exc}", flush=True)
-                recalled_context_notes.append(f"context_retrieval_error:{type(exc).__name__}")
+            memory_recall = await run_slow_live_memory_recall(
+                self,
+                payload,
+                user_text=text,
+                session=session,
+                session_key=session_key,
+                turn_id=turn_id,
+                visible_turn=visible_turn,
+                evaluated_at=turn_event_time,
+                trace_route_stage=trace_route_stage,
+                recall_runner=run_living_memory_recall_algorithm,
+            )
+            recalled_context = memory_recall.recalled_context
+            recalled_context_event = memory_recall.recalled_context_event
+            recalled_context_notes = memory_recall.recalled_context_notes
 
-            continuity_handoff: dict[str, Any] = {"notes": []}
-            try:
-                continuity_handoff = refresh_continuity_handoff(
-                    self.xinyu_dir,
-                    user_text=text,
-                    observed_at=datetime.now().astimezone().isoformat(),
-                )
-            except Exception as exc:
-                print(f"[xinyu_core_bridge] continuity handoff failed: {exc}", flush=True)
-                continuity_handoff = {"notes": [f"continuity_handoff_error:{type(exc).__name__}"]}
-            # runtime presence sidecar: factual runtime-state block for the current model turn.
-            runtime_presence_context = build_runtime_presence_prompt_block(self.xinyu_dir, limit=2200)
-            life_reply_policy = await self._build_life_reply_policy(
+            model_contexts = await build_slow_live_model_contexts(
+                self,
+                payload,
                 user_text=text,
                 visible_turn=visible_turn,
-                canonical_recall_context=_safe_str(getattr(recalled_context, "prompt_block", "")),
+                recalled_context=recalled_context,
                 evaluated_at=turn_event_time,
             )
-            emotion_council_context = ""
-            if self.emotion_council_prompt_enabled:
-                emotion_council_context = build_emotion_council_prompt_block(self.xinyu_dir)
+            continuity_handoff = model_contexts.continuity_handoff
+            runtime_presence_context = model_contexts.runtime_presence_context
+            life_reply_policy = model_contexts.life_reply_policy
+            emotion_council_context = model_contexts.emotion_council_context
             try:
-                self._inject_live_turn_context(
-                    session.agent,
+                await inject_slow_live_model_event(
+                    self,
                     payload=payload,
+                    session=session,
+                    event=event,
                     text=text,
-                    dialogue_tail=session.dialogue_tail,
-                    turn_id=_safe_str(presence_start.get("turn_id")),
-                    persona_context=_safe_str(persona_sidecar.get("prompt_block")),
-                    curiosity_context=_safe_str(curiosity_eval.get("prompt_block")),
+                    turn_id=turn_id,
                     visible_turn=visible_turn,
-                    recalled_context=_safe_str(getattr(recalled_context, "prompt_block", "")),
+                    persona_sidecar=persona_sidecar,
+                    curiosity_eval=curiosity_eval,
+                    recalled_context=recalled_context,
                     runtime_presence_context=runtime_presence_context,
-                    continuity_context=build_continuity_handoff_prompt_block(self.xinyu_dir, user_text=text),
-                    uncertainty_pause_context=build_uncertainty_pause_prompt_block(self.xinyu_dir),
-                    life_reply_context=build_life_reply_prompt_block(life_reply_policy),
+                    life_reply_policy=life_reply_policy,
                     emotion_council_context=emotion_council_context,
-                )
-                await asyncio.wait_for(
-                    session.agent.inject_event(event),
-                    timeout=self.turn_timeout_seconds,
+                    trace_route_stage=trace_route_stage,
                 )
             except TimeoutError as exc:
                 try:
@@ -4899,12 +5135,15 @@ tags: [autonomy, maintenance, runtime]
                     draft_reply=draft_reply,
                 )
                 if renderer_reason:
-                    rendered_reply = await self._render_outward_reply(
+                    rendered_reply = await render_outward_reply_with_trace(
+                        self._render_outward_reply,
                         session.agent,
                         payload=payload,
                         user_text=text,
                         draft_reply=draft_reply,
                         canonical_recall_context=_safe_str(getattr(recalled_context, "prompt_block", "")),
+                        reason=renderer_reason,
+                        trace_route_stage=trace_route_stage,
                     )
                     if rendered_reply:
                         reply = rendered_reply
@@ -4919,12 +5158,16 @@ tags: [autonomy, maintenance, runtime]
             critical_guard_flags = self._critical_final_guard_flags(final_guard_flags)
             if critical_guard_flags and not self_code_task and not model_codex_task and not direct_codex_task:
                 bad_reply = reply
-                repaired_reply = await self._render_outward_reply(
+                repair_reason = "final_guard_repair"
+                repaired_reply = await render_outward_reply_with_trace(
+                    self._render_outward_reply,
                     session.agent,
                     payload=payload,
                     user_text=text,
                     draft_reply=bad_reply,
                     canonical_recall_context=_safe_str(getattr(recalled_context, "prompt_block", "")),
+                    reason=repair_reason,
+                    trace_route_stage=trace_route_stage,
                 )
                 repaired_guarded, repaired_flags = self.speech_controller.final_reply_guard(
                     payload=payload,
@@ -4961,6 +5204,12 @@ tags: [autonomy, maintenance, runtime]
             final_guard_applied = guarded_reply != reply
             if final_guard_applied:
                 reply = guarded_reply
+                trace_route_stage(
+                    "final_reply_guard_rewrite",
+                    route="slow_live",
+                    status="applied",
+                    notes=[f"final_reply_guard_flags:{','.join(final_guard_flags[:4])}"] if final_guard_flags else [],
+                )
                 self._replace_last_assistant_message(session.agent, guarded_reply)
             visible_dedupe = dedupe_visible_reply(reply)
             if visible_dedupe.changed:
@@ -4994,6 +5243,27 @@ tags: [autonomy, maintenance, runtime]
                 reply = "哪句最明显？"
                 final_guard_flags = _dedupe(final_guard_flags + ["style_pressure_empty_reply_fallback"])
                 self._replace_last_assistant_message(session.agent, reply)
+            if (
+                not reply
+                and self._owner_private_payload_matches(payload)
+                and not self_code_task
+                and not model_codex_task
+                and not direct_codex_task
+                and not wait_to_think_task
+            ):
+                recovered_reply, recovery_flags = await self._recover_empty_visible_reply(
+                    session.agent,
+                    payload=payload,
+                    user_text=text,
+                    canonical_recall_context=_safe_str(getattr(recalled_context, "prompt_block", "")),
+                )
+                if recovery_flags:
+                    final_guard_flags = _dedupe(final_guard_flags + recovery_flags)
+                if recovered_reply:
+                    reply = recovered_reply
+                    rendered = True
+                    renderer_reason = renderer_reason or "empty_visible_reply_retry"
+                    self._replace_last_assistant_message(session.agent, reply)
             if not reply:
                 fallback_reply = self._empty_visible_reply_fallback(payload=payload, user_text=text)
                 if fallback_reply:
@@ -5043,270 +5313,52 @@ tags: [autonomy, maintenance, runtime]
                 print(f"[xinyu_core_bridge] response error/slow state failed: {exc}", flush=True)
                 response_error_loop = {"notes": [f"response_error_loop_error:{type(exc).__name__}"]}
                 slow_state_runtime = {"notes": [f"slow_state_error:{type(exc).__name__}"]}
-            uncertainty_pause: dict[str, Any] = {"notes": []}
-            if is_waiting_reply(reply):
-                try:
-                    uncertainty_pause = record_uncertainty_pause(
-                        self.xinyu_dir,
-                        payload,
-                        user_text=text,
-                        draft_reply=draft_reply,
-                        final_reply=reply,
-                        reason="waiting_marker",
-                        final_guard_flags=final_guard_flags,
-                        session_key=session_key,
-                        visible_turn_kind=_safe_str(getattr(visible_turn, "turn_kind", "")),
-                    )
-                except Exception as exc:
-                    print(f"[xinyu_core_bridge] uncertainty pause failed: {exc}", flush=True)
-                    uncertainty_pause = {"notes": [f"uncertainty_pause_error:{type(exc).__name__}"]}
-            elif "final_guard_blocked_unsendable_reply" in final_guard_flags:
-                try:
-                    uncertainty_pause = record_uncertainty_pause(
-                        self.xinyu_dir,
-                        payload,
-                        user_text=text,
-                        draft_reply=draft_reply,
-                        final_reply=reply,
-                        reason="final_guard_blocked_unsendable_reply",
-                        final_guard_flags=final_guard_flags,
-                        session_key=session_key,
-                        visible_turn_kind=_safe_str(getattr(visible_turn, "turn_kind", "")),
-                    )
-                except Exception as exc:
-                    print(f"[xinyu_core_bridge] uncertainty pause failed: {exc}", flush=True)
-                    uncertainty_pause = {"notes": [f"uncertainty_pause_error:{type(exc).__name__}"]}
-            learning_closed_loop: dict[str, Any] = {"notes": []}
-            try:
-                closed_loop_quality_flags = (
-                    self.speech_controller.reply_quality_flags(
-                        payload=payload,
-                        user_text=text,
-                        reply=reply,
-                    )
-                    if reply
-                    else []
-                )
-                learning_closed_loop = record_learning_closed_loop_turn(
-                    self.xinyu_dir,
-                    payload,
-                    user_text=text,
-                    reply=reply,
-                    session_key=session_key,
-                    visible_turn_kind=_safe_str(getattr(visible_turn, "turn_kind", "")),
-                    final_guard_flags=final_guard_flags,
-                    quality_flags=closed_loop_quality_flags,
-                    expression_notes=[_safe_str(note) for note in expression_learning.get("notes", [])],
-                )
-            except Exception as exc:
-                print(f"[xinyu_core_bridge] learning closed loop failed: {exc}", flush=True)
-                learning_closed_loop = {"notes": [f"learning_closed_loop_error:{type(exc).__name__}"]}
-            residue_written = write_turn_residue(
-                self.xinyu_dir,
-                scene=self.speech_controller.classify(payload=payload, user_text=text),
-                user_text=text,
+            finish_sidecars = await run_slow_live_finish_sidecars_with_trace(
+                self,
+                sidecars_runner=run_slow_turn_finish_sidecars,
+                trace_route_stage=trace_route_stage,
+                payload=payload,
+                text=text,
                 reply=reply,
-                source="qq_gateway",
+                draft_reply=draft_reply,
+                session=session,
+                session_key=session_key,
+                turn_id=turn_id,
+                turn_started_at=turn_started_at,
+                before_memory=before_memory,
+                visible_turn=visible_turn,
+                final_guard_flags=final_guard_flags,
+                expression_learning=expression_learning,
+                recalled_context=recalled_context,
+                recalled_context_notes=recalled_context_notes,
+                private_thought_outcome=private_thought_outcome,
+                emotion_council=emotion_council,
+                persona_sidecar=persona_sidecar,
+                continuity_handoff=continuity_handoff,
+                wait_to_think_sidecar=wait_to_think_sidecar,
+                self_code_task=self_code_task,
+                direct_codex_task=direct_codex_task,
+                model_codex_task=model_codex_task,
+                wait_to_think_task=wait_to_think_task,
+                model_codex_delegate_note=model_codex_delegate_note,
             )
-            metadata = payload.get("metadata")
-            if not isinstance(metadata, dict):
-                metadata = {}
-            is_owner = _as_bool(metadata.get("is_owner_user"), default=False)
-            voice_calibrated = False
-            voice_trial_overlay: dict[str, Any] = {"notes": []}
-            if is_owner:
-                try:
-                    voice_trial_overlay = record_voice_trial_overlay(
-                        self.xinyu_dir,
-                        payload,
-                        user_text=text,
-                        reply=reply,
-                        source="qq_gateway",
-                    )
-                except Exception as exc:
-                    print(f"[xinyu_core_bridge] voice trial overlay failed: {exc}", flush=True)
-                    voice_trial_overlay = {"notes": [f"voice_trial_overlay_error:{type(exc).__name__}"]}
-                voice_calibrated = record_voice_correction(
-                    self.xinyu_dir,
-                    user_text=text,
-                    reply=reply,
-                    source="qq_gateway",
-                )
-            curiosity_prediction: dict[str, Any] = {"notes": []}
-            try:
-                curiosity_prediction = record_reply_prediction(
-                    self.xinyu_dir,
-                    payload,
-                    user_text=text,
-                    reply=reply,
-                    session_key=session_key,
-                )
-            except Exception as exc:
-                print(f"[xinyu_core_bridge] dialogue curiosity prediction failed: {exc}", flush=True)
-                curiosity_prediction = {"notes": [f"dialogue_curiosity_prediction_error:{type(exc).__name__}"]}
-            private_thought_link: dict[str, Any] = {"notes": []}
-            try:
-                private_thought_link = record_private_thought_reply_link(
-                    self.xinyu_dir,
-                    payload,
-                    user_text=text,
-                    reply=reply,
-                    session_key=session_key,
-                )
-            except Exception as exc:
-                print(f"[xinyu_core_bridge] private thought reply link failed: {exc}", flush=True)
-                private_thought_link = {"notes": [f"private_thought_link_error:{type(exc).__name__}"]}
-            archive_result: dict[str, Any] = {"notes": [], "message_ids": []}
-            try:
-                archive_result = archive_dialogue_turn(
-                    self.xinyu_dir,
-                    payload,
-                    user_text=text,
-                    assistant_reply=reply,
-                    message_type=_safe_str(getattr(visible_turn, "turn_kind", "")),
-                    quality_flags=final_guard_flags,
-                )
-            except Exception as exc:
-                print(f"[xinyu_core_bridge] dialogue archive failed: {exc}", flush=True)
-                archive_result = {"notes": [f"dialogue_archive_error:{type(exc).__name__}"], "message_ids": []}
-            if recalled_context is not None and getattr(recalled_context, "items", ()):
-                try:
-                    if log_living_memory_recall(self.xinyu_dir, recalled_context):
-                        recalled_context_notes.append("recalled_context_logged")
-                except Exception as exc:
-                    print(f"[xinyu_core_bridge] recalled context log failed: {exc}", flush=True)
-                    recalled_context_notes.append(f"recalled_context_log_error:{type(exc).__name__}")
-            candidate_result: dict[str, Any] = {"notes": []}
-            try:
-                candidate_result = extract_memory_candidates(
-                    self.xinyu_dir,
-                    payload,
-                    user_text=text,
-                    assistant_reply=reply,
-                    source_message_ids=list(archive_result.get("message_ids", [])),
-                    dialogue_tail=session.dialogue_tail,
-                    visible_turn=visible_turn,
-                    quality_flags=final_guard_flags,
-                )
-            except Exception as exc:
-                print(f"[xinyu_core_bridge] memory candidate extraction failed: {exc}", flush=True)
-                candidate_result = {"notes": [f"memory_candidate_error:{type(exc).__name__}"]}
-            memory_self_review: dict[str, Any] = {"notes": []}
-            try:
-                memory_self_review = run_memory_self_review(self.xinyu_dir)
-                if int(memory_self_review.get("reviewed_candidates") or 0) > 0:
-                    memory_self_review.setdefault("notes", []).append(
-                        "memory_self_review:"
-                        f"{_safe_str(memory_self_review.get('reviewed_candidates'), '0')}/"
-                        f"{_safe_str(memory_self_review.get('self_approved'), '0')}/"
-                        f"{_safe_str(memory_self_review.get('observe_more'), '0')}/"
-                        f"{_safe_str(memory_self_review.get('owner_review_required'), '0')}/"
-                        f"{_safe_str(memory_self_review.get('blocked'), '0')}"
-                    )
-            except Exception as exc:
-                print(f"[xinyu_core_bridge] memory self-review failed: {exc}", flush=True)
-                memory_self_review = {"notes": [f"memory_self_review_error:{type(exc).__name__}"]}
-            interaction_journal: dict[str, Any] = {"notes": []}
-            try:
-                interaction_journal = record_interaction_turn(
-                    self.xinyu_dir,
-                    payload,
-                    user_text=text,
-                    reply=reply,
-                    session_key=session_key,
-                    source="qq_gateway",
-                    turn_kind=_safe_str(getattr(visible_turn, "turn_kind", "")),
-                    turn_id=_safe_str(presence_start.get("turn_id")),
-                    elapsed_ms=int((time.perf_counter() - turn_started_at) * 1000),
-                )
-                recent_context_guard = ensure_recent_context_health(self.xinyu_dir)
-                interaction_journal.setdefault("notes", []).append(
-                    "recent_context_guard:"
-                    f"{_safe_str(recent_context_guard.get('status'))}/"
-                    f"{_safe_str(recent_context_guard.get('action'))}"
-                )
-            except Exception as exc:
-                print(f"[xinyu_core_bridge] interaction journal failed: {exc}", flush=True)
-                interaction_journal = {"notes": [f"interaction_journal_error:{type(exc).__name__}"]}
-            self._append_dialogue_tail(session, user_text=text, reply=reply, payload=payload)
-            proactive_owner_reply_marked = self._mark_proactive_owner_reply(payload, text=text, reply=reply)
-            if proactive_owner_reply_marked:
-                await self._desktop_publish_proactive_delivery_from_state(
-                    status_override="answered",
-                    notes=["owner_replied_to_proactive"],
-                )
-            promised_followup: dict[str, Any] = {"notes": []}
-            try:
-                promised_followup = self._schedule_promised_followup_if_needed(
-                    payload,
-                    user_text=text,
-                    reply=reply,
-                    session_key=session_key,
-                    model_codex_task=self_code_task or model_codex_task or direct_codex_task,
-                )
-            except Exception as exc:
-                print(f"[xinyu_core_bridge] promised followup scheduling failed: {exc}", flush=True)
-                promised_followup = {"notes": [f"promised_followup_error:{type(exc).__name__}"]}
-            sticker_reply: dict[str, Any] = {"notes": []}
-            try:
-                sticker_reply = await asyncio.to_thread(
-                    maybe_enqueue_sticker_reply,
-                    self.xinyu_dir,
-                    payload,
-                    user_text=text,
-                    reply=reply,
-                    session_key=session_key,
-                    turn_id=_safe_str(presence_start.get("turn_id")),
-                )
-            except Exception as exc:
-                print(f"[xinyu_core_bridge] sticker reply enqueue failed: {exc}", flush=True)
-                sticker_reply = {"notes": [f"sticker_reply_error:{type(exc).__name__}"]}
-            sticker_tail_recorded = self._append_sticker_delivery_tail(session, sticker_reply)
-            action_result = "none"
-            if self_code_task:
-                action_result = model_codex_delegate_note or "self_code_iteration_considered"
-            elif direct_codex_task:
-                action_result = model_codex_delegate_note or "owner_direct_codex_considered"
-            elif model_codex_task:
-                action_result = model_codex_delegate_note or "model_codex_delegate_considered"
-            elif wait_to_think_task:
-                action_result = "wait_to_think_scheduled"
-            elif promised_followup.get("scheduled"):
-                action_result = "promised_followup_scheduled"
-            elif sticker_tail_recorded:
-                action_result = "sticker_reply_enqueued"
-            turn_coherence: dict[str, Any] = {"notes": []}
-            try:
-                turn_coherence = finish_turn_coherence(
-                    self.xinyu_dir,
-                    turn_id=_safe_str(presence_start.get("turn_id")),
-                    payload=payload,
-                    user_text=text,
-                    reply=reply,
-                    action_result=action_result,
-                    memory_changed=before_memory != _memory_snapshot(self.memory_root),
-                    final_guard_flags=final_guard_flags,
-                    component_notes={
-                        "private_thought_outcome": private_thought_outcome,
-                        "private_thought_link": private_thought_link,
-                        "emotion_council": emotion_council,
-                        "persona_sidecar": persona_sidecar,
-                        "memory_candidate": candidate_result,
-                        "memory_self_review": memory_self_review,
-                        "context_recall": recalled_context_notes,
-                        "continuity_handoff": continuity_handoff,
-                        "interaction_journal": interaction_journal,
-                        "learning_closed_loop": learning_closed_loop,
-                        "uncertainty_pause": uncertainty_pause,
-                        "promised_followup": promised_followup,
-                        "sticker_reply": sticker_reply,
-                    },
-                    checked_at=datetime.now().astimezone().isoformat(),
-                )
-            except Exception as exc:
-                print(f"[xinyu_core_bridge] turn coherence finish failed: {exc}", flush=True)
-                turn_coherence = {"notes": [f"turn_coherence_error:{type(exc).__name__}"]}
-            after_memory = _memory_snapshot(self.memory_root)
+            uncertainty_pause = finish_sidecars["uncertainty_pause"]
+            learning_closed_loop = finish_sidecars["learning_closed_loop"]
+            residue_written = finish_sidecars["residue_written"]
+            voice_calibrated = finish_sidecars["voice_calibrated"]
+            voice_trial_overlay = finish_sidecars["voice_trial_overlay"]
+            curiosity_prediction = finish_sidecars["curiosity_prediction"]
+            private_thought_link = finish_sidecars["private_thought_link"]
+            archive_result = finish_sidecars["archive_result"]
+            candidate_result = finish_sidecars["candidate_result"]
+            memory_self_review = finish_sidecars["memory_self_review"]
+            interaction_journal = finish_sidecars["interaction_journal"]
+            proactive_owner_reply_marked = finish_sidecars["proactive_owner_reply_marked"]
+            promised_followup = finish_sidecars["promised_followup"]
+            sticker_reply = finish_sidecars["sticker_reply"]
+            sticker_tail_recorded = finish_sidecars["sticker_tail_recorded"]
+            turn_coherence = finish_sidecars["turn_coherence"]
+            after_memory = finish_sidecars["after_memory"]
             notes: list[str] = []
             if not reply:
                 notes.append("empty_reply")
@@ -5398,6 +5450,13 @@ tags: [autonomy, maintenance, runtime]
                 status="ok",
                 notes=notes,
                 memory_changed=memory_changed,
+            )
+            trace_route_stage(
+                "route_finished",
+                route="slow_live",
+                status="ok",
+                elapsed_ms=elapsed_ms,
+                notes=notes[:8],
             )
             archive_message_ids = list(archive_result.get("message_ids", []))
             assistant_message_id = _safe_str(archive_message_ids[-1] if archive_message_ids else "")
@@ -6026,6 +6085,22 @@ tags: [autonomy, maintenance, runtime]
     def _empty_visible_reply_fallback(self, *, payload: dict[str, Any], user_text: str, delegate_note: str = "") -> str:
         del payload, user_text, delegate_note
         return ""
+
+    async def _recover_empty_visible_reply(
+        self,
+        agent: Any,
+        *,
+        payload: dict[str, Any],
+        user_text: str,
+        canonical_recall_context: str = "",
+    ) -> tuple[str, list[str]]:
+        return await recover_empty_visible_reply(
+            self,
+            agent,
+            payload=payload,
+            user_text=user_text,
+            canonical_recall_context=canonical_recall_context,
+        )
 
     _critical_final_guard_flags = staticmethod(critical_final_guard_flags)
 
