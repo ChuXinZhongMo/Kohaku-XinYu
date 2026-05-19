@@ -25,6 +25,7 @@ BENIGN_TEXT_EXCEPTION_MARKERS = (
     "websockets.exceptions.ConnectionClosedError: no close frame received or sent",
     "EOFError: connection closed while reading HTTP request line",
     "EOFError: stream ends after 0 bytes, before end of line",
+    "[xinyu_core_bridge] client disconnected before response body was sent:",
 )
 TEXT_LOG_ACTIVE_START_MARKERS = {
     "xinyu_qq_gateway.out.log": "[xinyu_qq_gateway] listening on",
