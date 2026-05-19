@@ -1,0 +1,18 @@
+XinYu
+Copyright 2026 XinYu contributors.
+
+This repository contains XinYu workspace code, documentation, tests, and
+operator tooling.
+
+Portions of the runtime are based on or intended to interoperate with the
+KohakuTerrarium / XinYuTerrariumRuntime codebase.
+
+KohakuTerrarium attribution:
+
+- Name: KohakuTerrarium
+- Upstream project: https://github.com/Kohaku-Lab/KohakuTerrarium
+- Copyright: 2024-2026 Shih-Ying Yeh (KohakuBlueLeaf) and contributors
+- License: KohakuTerrarium License Version 1.0
+
+No private runtime memory, owner-supplied material bodies, QQ payloads, tokens,
+or local credentials are intentionally distributed as part of this repository.

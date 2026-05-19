@@ -1,73 +1,88 @@
-# XinYu Workspace
+# XinYu
 
-`D:\XinYu` 是心玉的本地项目根目录。日常运行入口、桌面端、QQ/NapCat 接入、运行数据和本地工作区都在这里。
+XinYu is a local long-running personal AI runtime workspace. It combines a
+Python core runtime, QQ/NapCat gateway integration, a desktop shell, memory and
+learning boundaries, and validation tooling.
 
-## 入口
+This repository is prepared for source-code publication. It is not intended to
+publish private runtime state, owner-supplied materials, QQ payloads, local
+memory, or credentials.
 
-- `Start-XinYu-Desktop.bat`：日常入口。后台启动 XinYu Core、QQ gateway 和 NapCat，再打开生产版 XinYu Desktop。
-- `Start-XinYu-Frontend.bat`：只启动 `XinYu_Desktop` 前端开发模式，不启动 QQ/NapCat/后端。
-- `Stop-XinYu-Desktop.bat`：停止 XinYu Desktop、core、gateway 和 NapCat；不会停止系统里正常安装的 QQ。
-- `Start-XinYu-QQ.ps1`：调试 QQ 栈时使用，启动 `XinYu-Core`、QQ gateway 和 NapCat。
-- `XinYu-Core/`：新的 XinYu 核心运行目录，主运行包是 `xinyu_runtime`。
-- `XinYu_Desktop/`：本机桌面壳。
-- `NapCatQQ/`：独立 QQ/NapCat 运行环境。
-- `XinYu-Autonomy/`：owner 可见的自主性表面和导出区。
-- `XinYu-Local-Scope/`：本地请求、工作材料、inbox/outbox 的受控区域。
-- 旧运行目录已经移除；日常启动只走 `XinYu-Core/`。
+## Repository Layout
 
-## 边界
+- `XinYu-Core/` - core Python runtime and the active `xinyu` agent app.
+- `XinYu_Desktop/` - Electron/Vite desktop shell.
+- `XinYu-TinyKernel/` - local tiny-kernel experiments and training scaffolding.
+- `XinYu-Autonomy/` - owner-visible autonomy notes; private contents are
+  ignored except the README.
+- `XinYu-Local-Scope/` - local request/material staging; private contents are
+  ignored except the README.
+- `worklog/` - sanitized engineering worklogs and recovery points.
 
-当前运行路径已经迁到 `XinYu-Core/`。不要再把新功能写进旧框架目录或历史归档。
+## Privacy Boundary
 
-`XinYu-Core/src/xinyu_runtime/` 是主实现包；旧兼容包没有复制到新核心目录。许可证和来源记录保留在 `LICENSE`，不是运行依赖。
+The following are intentionally excluded from publication:
 
-## 私有状态
+- `.env`, token, key, and local credential files
+- runtime logs and process state
+- live memory stores
+- private QQ payloads
+- owner-supplied material bodies
+- self-found external source snapshots with unclear redistribution terms
+- generated build output and dependency directories
 
-不要上传或公开真实本地状态：
+See `.gitignore`, `OPEN_SOURCE_POLICY.md`, and `SECURITY.md`.
 
-- `.xinyu_bridge_token`
-- `XinYu-Core/examples/agent-apps/xinyu/xinyu.local.env`
-- `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.config.json`
-- `XinYu-Core/examples/agent-apps/xinyu/logs/`
-- `XinYu-Core/examples/agent-apps/xinyu/memory/`
-- `XinYu-Core/examples/agent-apps/xinyu/runtime/`
-- `XinYu-Core/examples/agent-apps/xinyu/learning/self_found/`
-- `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/`
+## License
 
-## 常用命令
+XinYu follows the KohakuTerrarium License Version 1.0 used by the embedded
+KohakuTerrarium/XinYuTerrariumRuntime source tree.
 
-日常启动：
+See:
 
-```powershell
-cd D:\XinYu
-.\Start-XinYu-Desktop.bat
-```
+- `LICENSE`
+- `NOTICE`
+- `THIRD-PARTY-NOTICES.md`
 
-只启动前端：
+## Setup
 
-```powershell
-cd D:\XinYu
-.\Start-XinYu-Frontend.bat
-```
-
-保留 NapCat/QQ，只重启 XinYu 桌面和核心时：
-
-```powershell
-cd D:\XinYu
-.\Stop-XinYu-Desktop.ps1 -KeepNapCat
-.\Start-XinYu-Desktop.ps1
-```
-
-状态检查：
+Python runtime:
 
 ```powershell
 cd D:\XinYu\XinYu-Core\examples\agent-apps\xinyu
-.\.venv\Scripts\python.exe xinyu_status.py
+.\.venv\Scripts\python.exe -m pytest tests -q
+.\.venv\Scripts\python.exe smoke_run.py --group quick --timeout-seconds 180 --json
 ```
 
-桌面端构建：
+Desktop shell:
 
 ```powershell
 cd D:\XinYu\XinYu_Desktop
+npm install
+npm run typecheck
 npm run build
 ```
+
+## Daily Entry Points
+
+Root launch scripts are provided for local Windows use:
+
+- `Start-XinYu-Desktop.ps1`
+- `Stop-XinYu-Desktop.ps1`
+- `Start-XinYu-TinyKernel.ps1`
+- `Stop-XinYu-TinyKernel.ps1`
+
+These scripts assume the local machine has the required runtime configuration.
+Do not commit local credentials or machine-specific secrets.
+
+## Current Validation Baseline
+
+Latest checked baseline:
+
+- Python tests: `667 passed`
+- quick smoke: `ok=true`
+- desktop typecheck: passed
+- desktop build: passed
+
+Detailed audit and recovery notes live in `worklog/` and
+`XinYu-Core/examples/agent-apps/xinyu/ops/reports/`.

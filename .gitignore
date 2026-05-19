@@ -24,6 +24,22 @@ __pycache__/
 *.py[cod]
 *.log
 
+# Integrated TinyKernel local artifacts
+XinYu-TinyKernel/.venv-train/
+XinYu-TinyKernel/models/
+XinYu-TinyKernel/adapters/
+XinYu-TinyKernel/data/candidates/
+XinYu-TinyKernel/data/cleaned/
+XinYu-TinyKernel/data/raw_index/
+XinYu-TinyKernel/data/rejected/
+XinYu-TinyKernel/data/sft/
+XinYu-TinyKernel/eval/reports/
+XinYu-TinyKernel/state/*.pid
+XinYu-TinyKernel/state/*.jsonl
+XinYu-TinyKernel/state/*.log
+XinYu-TinyKernel/state/*.out.log
+XinYu-TinyKernel/state/*.err.log
+
 # Desktop shell generated files
 XinYu_Desktop/node_modules/
 XinYu_Desktop/out/
@@ -38,8 +54,13 @@ XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.config.json
 XinYu-Core/examples/agent-apps/xinyu/logs/
 XinYu-Core/examples/agent-apps/xinyu/memory/
 XinYu-Core/examples/agent-apps/xinyu/runtime/
+XinYu-Core/examples/agent-apps/xinyu/data/
+XinYu-Core/examples/agent-apps/xinyu/data/external/
+XinYu-Core/examples/agent-apps/xinyu/data/replay/private/
+XinYu-Core/examples/agent-apps/xinyu/data/replay/sanitized/
 XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/
 XinYu-Core/examples/agent-apps/xinyu/learning/self_found/
+XinYu-Core/examples/agent-apps/xinyu/ops/archive/learning-self-found/*/learning/
 XinYu-Core/examples/agent-apps/xinyu/context/
 XinYu-Core/examples/agent-apps/xinyu/self/
 XinYu-Core/examples/agent-apps/xinyu/emotions/
