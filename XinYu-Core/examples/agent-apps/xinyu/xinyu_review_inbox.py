@@ -12,16 +12,25 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_qq_outbox import enqueue_qq_outbox_message
+from xinyu_storage_paths import knowledge_file_path, knowledge_ref
+from xinyu_visible_persona_voice import compose_review_inbox_card, compose_review_inbox_command_reply
+from stores.review_state import (
+    BOUNDARY_ID as REVIEW_STATE_BOUNDARY,
+    CURSOR_REL,
+    DECISIONS_REL,
+    read_review_cursor,
+    read_review_decisions,
+    review_lock_path,
+    write_review_cursor,
+    write_review_decisions,
+)
 
 
-CURSOR_REL = Path("memory/context/review_inbox_cursor.json")
-DECISIONS_REL = Path("memory/context/review_inbox_decisions.json")
 STATE_REL = Path("memory/context/review_inbox_state.md")
 TRACE_REL = Path("runtime/review_inbox_trace.jsonl")
-LOCK_REL = Path("memory/context/.review_inbox.lock")
 
 VOICE_REVIEW_REL = Path("memory/self/voice_profile_review_state.md")
-LEARNING_QUALITY_REL = Path("memory/knowledge/learning_quality_state.md")
+LEARNING_QUALITY_FILENAME = "learning_quality_state.md"
 
 CURSOR_VERSION = 1
 DECISION_VERSION = 1
@@ -49,6 +58,19 @@ def _safe_str(value: Any, default: str = "") -> str:
     if value is None:
         return default
     return str(value)
+
+
+def _timestamp_or_now_iso(value: Any) -> str:
+    text = _safe_str(value).strip()
+    if not text:
+        return _now()
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return _now()
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed.astimezone().isoformat(timespec="seconds")
 
 
 def _one_line(value: Any, *, limit: int = 220, default: str = "none") -> str:
@@ -83,20 +105,6 @@ def _atomic_write_text(path: Path, text: str) -> None:
             tmp_path.unlink()
         except OSError:
             pass
-
-
-def _read_json(path: Path, *, default: dict[str, Any]) -> dict[str, Any]:
-    if not path.exists():
-        return dict(default)
-    try:
-        data = json.loads(path.read_text(encoding="utf-8-sig"))
-    except Exception:
-        return dict(default)
-    return data if isinstance(data, dict) else dict(default)
-
-
-def _write_json(path: Path, data: dict[str, Any]) -> None:
-    _atomic_write_text(path, json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
 
 
 def _append_trace(root: Path, payload: dict[str, Any]) -> None:
@@ -167,14 +175,14 @@ def _md_blocks(text: str, heading_prefix: str = "###") -> list[tuple[str, str]]:
 
 
 def _load_decisions(root: Path) -> dict[str, Any]:
-    data = _read_json(
-        root / DECISIONS_REL,
-        default={"version": DECISION_VERSION, "updated_at": _now(), "decisions": []},
+    data = read_review_decisions(
+        root,
+        default={"version": DECISION_VERSION, "updated_at": _timestamp_or_now_iso(_now()), "decisions": []},
     )
     if not isinstance(data.get("decisions"), list):
         data["decisions"] = []
     data.setdefault("version", DECISION_VERSION)
-    data.setdefault("updated_at", _now())
+    data.setdefault("updated_at", _timestamp_or_now_iso(_now()))
     return data
 
 
@@ -252,8 +260,8 @@ def _parse_warning_line(line: str) -> dict[str, str] | None:
 
 
 def _learning_items(root: Path, decisions: dict[str, Any]) -> list[dict[str, Any]]:
-    rel = LEARNING_QUALITY_REL.as_posix()
-    text = _read_text(root / LEARNING_QUALITY_REL)
+    rel = knowledge_ref(LEARNING_QUALITY_FILENAME)
+    text = _read_text(knowledge_file_path(root, LEARNING_QUALITY_FILENAME))
     if _field(text, "quality_grade") != "review_needed":
         return []
 
@@ -348,21 +356,7 @@ def _cursor_expired(cursor: dict[str, Any], *, now: str | None = None) -> bool:
 
 
 def _render_card(cursor: dict[str, Any]) -> str:
-    items = [item for item in cursor.get("items", []) if isinstance(item, dict)]
-    lines = [
-        f"有 {len(items)} 条维护项需要你确认。",
-    ]
-    for item in items:
-        source = {
-            "voice": "表达习惯",
-            "learning": "学习质量",
-        }.get(_safe_str(item.get("source_kind")), _one_line(item.get("source_kind"), limit=32))
-        lines.append(
-            f"{item.get('index')}. {source}: "
-            f"{_one_line(item.get('title'), limit=80)} - {_one_line(item.get('summary'), limit=150)}"
-        )
-    lines.append("要处理时可以回：!ok all / !rej 1 / !mod 2 <改写>")
-    return " ".join(lines)
+    return compose_review_inbox_card(cursor)
 
 
 def _visible_enqueue_allowed(reason: str) -> bool:
@@ -380,7 +374,7 @@ def _write_state(
     stale: int = 0,
     note: str = "none",
 ) -> None:
-    observed_at = _now()
+    observed_at = _timestamp_or_now_iso(_now())
     text = f"""---
 title: Review Inbox State
 memory_type: review_inbox_state
@@ -428,7 +422,7 @@ def _cursor_for_items(
         "version": CURSOR_VERSION,
         "batch_id": f"rev-{_stamp()}-{digest[:8]}",
         "batch_hash": digest,
-        "created_at": observed_at,
+        "created_at": _timestamp_or_now_iso(observed_at),
         "expires_at": expires_at,
         "items": cursor_items,
     }
@@ -443,7 +437,7 @@ def _generate_locked(
     enqueue: bool = True,
     reason: str = "maintenance",
 ) -> dict[str, Any]:
-    observed = _now()
+    observed = _timestamp_or_now_iso(_now())
     items = _discover_items(root, limit=max_items)
     if not items:
         _write_state(root, status="no_pending", pending_count=0, note=reason)
@@ -451,7 +445,7 @@ def _generate_locked(
             root,
             {
                 "event_kind": "review_inbox_no_pending",
-                "observed_at": observed,
+                "observed_at": _timestamp_or_now_iso(observed),
                 "reason": reason,
             },
         )
@@ -464,8 +458,7 @@ def _generate_locked(
         }
 
     new_hash = _batch_hash(items)
-    cursor_path = root / CURSOR_REL
-    existing = _read_json(cursor_path, default={})
+    existing = read_review_cursor(root, default={})
     if (
         existing.get("version") == CURSOR_VERSION
         and _safe_str(existing.get("batch_hash")) == new_hash
@@ -474,8 +467,8 @@ def _generate_locked(
         cursor = existing
         cursor_status = "cursor_reused"
     else:
-        cursor = _cursor_for_items(items, observed_at=observed, ttl_seconds=ttl_seconds)
-        _write_json(cursor_path, cursor)
+        cursor = _cursor_for_items(items, observed_at=_timestamp_or_now_iso(observed), ttl_seconds=ttl_seconds)
+        write_review_cursor(root, cursor)
         cursor_status = "cursor_created"
 
     queued = {"queued": False, "message_id": "", "notes": ["enqueue_skipped"]}
@@ -510,7 +503,7 @@ def _generate_locked(
         root,
         {
             "event_kind": cursor_status,
-            "observed_at": observed,
+            "observed_at": _timestamp_or_now_iso(observed),
             "batch_id": cursor.get("batch_id"),
             "batch_hash": cursor.get("batch_hash"),
             "pending_count": len(cursor.get("items", [])),
@@ -540,7 +533,7 @@ def run_review_inbox_maintenance(
     reason: str = "maintenance",
 ) -> dict[str, Any]:
     root = root.resolve()
-    with _FileLock(root / LOCK_REL):
+    with _FileLock(review_lock_path(root)):
         return _generate_locked(
             root,
             owner_user_id=owner_user_id,
@@ -645,8 +638,8 @@ def _append_decision(
 def handle_review_inbox_command(root: Path, payload: dict[str, Any] | None = None) -> dict[str, Any]:
     root = root.resolve()
     payload = payload or {}
-    with _FileLock(root / LOCK_REL):
-        cursor = _read_json(root / CURSOR_REL, default={})
+    with _FileLock(review_lock_path(root)):
+        cursor = read_review_cursor(root, default={})
         if cursor.get("version") != CURSOR_VERSION or not cursor.get("items"):
             refreshed = _generate_locked(
                 root,
@@ -732,7 +725,7 @@ def handle_review_inbox_command(root: Path, payload: dict[str, Any] | None = Non
             )
 
         if processed:
-            _write_json(root / DECISIONS_REL, decisions)
+            write_review_decisions(root, decisions)
 
         refreshed = _generate_locked(
             root,
@@ -741,13 +734,11 @@ def handle_review_inbox_command(root: Path, payload: dict[str, Any] | None = Non
         )
         processed_count = len(processed)
         stale_count = len(stale)
-        reply = f"Review processed: {processed_count} applied"
-        if stale_count:
-            reply += f", {stale_count} stale"
-        if refreshed.get("pending_count"):
-            reply += "; refreshed card queued."
-        else:
-            reply += "; inbox is clear."
+        reply = compose_review_inbox_command_reply(
+            processed_count=processed_count,
+            stale_count=stale_count,
+            pending_count=int(refreshed.get("pending_count") or 0),
+        )
 
         _write_state(
             root,
@@ -763,7 +754,7 @@ def handle_review_inbox_command(root: Path, payload: dict[str, Any] | None = Non
             root,
             {
                 "event_kind": "command_processed",
-                "observed_at": _now(),
+                "observed_at": _timestamp_or_now_iso(_now()),
                 "batch_id": cursor.get("batch_id"),
                 "command": command,
                 "processed_count": processed_count,

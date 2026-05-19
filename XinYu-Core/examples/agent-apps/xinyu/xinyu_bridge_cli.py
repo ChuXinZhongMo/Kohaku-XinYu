@@ -11,6 +11,12 @@ def build_bridge_parser() -> argparse.ArgumentParser:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--turn-timeout-seconds", type=int, default=165)
+    parser.add_argument(
+        "--request-timeout-margin-seconds",
+        type=int,
+        default=as_int(os.environ.get("XINYU_BRIDGE_REQUEST_TIMEOUT_MARGIN_SECONDS"), 90),
+        help="Extra HTTP bridge wait time after the model turn timeout for post-turn sidecars.",
+    )
     parser.add_argument("--settle-seconds", type=float, default=0.0)
     parser.add_argument("--max-body-bytes", type=int, default=1024 * 1024)
     parser.add_argument("--max-text-chars", type=int, default=8000)

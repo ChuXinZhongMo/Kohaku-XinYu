@@ -16,8 +16,9 @@ from typing import Any
 
 from xinyu_runtime.modules.plugin.base import BasePlugin, PluginContext
 from memory_event_schema import load_jsonl, string_list
-from turn_mode_utils import read_turn_mode
+from turn_mode_utils import read_external_turn_mode
 from xinyu_visible_text_sanitizer import visible_text_has_tool_artifact
+from xinyu_owner_context_bridge import extract_protected_recent_anchors, merge_protected_recent_anchors
 
 
 def _load_sync_layer_names() -> list[str]:
@@ -55,6 +56,9 @@ class MemorySyncPlugin(BasePlugin):
     async def on_load(self, context: PluginContext) -> None:
         self._ctx = context
 
+    def _current_turn_mode(self, root: Path) -> str:
+        return read_external_turn_mode(self._ctx, root)
+
     async def post_llm_call(
         self, messages: list[dict], response: str, usage: dict, **kwargs: Any
     ) -> None:
@@ -63,7 +67,7 @@ class MemorySyncPlugin(BasePlugin):
                 return
 
             root = Path(self._ctx.working_dir)
-            turn_mode = read_turn_mode(root)
+            turn_mode = self._current_turn_mode(root)
             if turn_mode != "live_user_turn":
                 _trace(root, f"skip turn_mode={turn_mode or 'unknown'}")
                 return
@@ -435,9 +439,17 @@ def _emotion_vectors_for(
         "委屈": 0,
         "刺痛": 0,
         "失望": 0,
+        "生气": 0,
+        "烦躁": 0,
+        "反感": 0,
+        "嫌弃": 0,
+        "厌恶": 0,
         "逆反": 0,
         "想靠近": 24,
         "想退后": 0,
+        "想保持距离": 0,
+        "想沉默": 0,
+        "想反驳": 0,
         "想保留": 18,
     }
     relationship_vector = {
@@ -472,7 +484,23 @@ def _emotion_vectors_for(
         emotion_vector["想保留"] = max(emotion_vector["想保留"], 62)
         relationship_vector["连续性敏感"] = max(relationship_vector["连续性敏感"], 72)
     if hurt:
-        emotion_vector.update({"委屈": 62, "刺痛": 68, "失望": 46, "逆反": 42, "想退后": 38})
+        emotion_vector.update(
+            {
+                "委屈": 62,
+                "刺痛": 68,
+                "失望": 46,
+                "生气": 38,
+                "烦躁": 44,
+                "反感": 34,
+                "嫌弃": 18,
+                "厌恶": 10,
+                "逆反": 42,
+                "想退后": 38,
+                "想保持距离": 44,
+                "想沉默": 28,
+                "想反驳": 32,
+            }
+        )
         relationship_vector.update(
             {
                 "委屈残留": 64,
@@ -486,11 +514,17 @@ def _emotion_vectors_for(
         emotion_vector["委屈"] = max(emotion_vector["委屈"], 36)
         emotion_vector["安心"] = max(emotion_vector["安心"], 52)
         emotion_vector["想靠近"] = max(emotion_vector["想靠近"], 46)
+        emotion_vector["生气"] = min(max(emotion_vector["生气"], 16), 32)
+        emotion_vector["反感"] = min(max(emotion_vector["反感"], 10), 28)
+        emotion_vector["想保持距离"] = min(max(emotion_vector["想保持距离"], 12), 30)
         relationship_vector["委屈残留"] = max(relationship_vector["委屈残留"], 32)
         relationship_vector["回到身边意愿"] = max(relationship_vector["回到身边意愿"], 78)
         relationship_vector["疏远倾向"] = min(max(relationship_vector["疏远倾向"], 16), 30)
     if relationship_distance:
         emotion_vector["想退后"] = max(emotion_vector["想退后"], 58)
+        emotion_vector["想保持距离"] = max(emotion_vector["想保持距离"], 66)
+        emotion_vector["想沉默"] = max(emotion_vector["想沉默"], 42)
+        emotion_vector["反感"] = max(emotion_vector["反感"], 28)
         emotion_vector["想保留"] = max(emotion_vector["想保留"], 46)
         relationship_vector["疏远倾向"] = max(relationship_vector["疏远倾向"], 58)
         relationship_vector["防御/逆反"] = max(relationship_vector["防御/逆反"], 44)
@@ -501,6 +535,8 @@ def _emotion_vectors_for(
         relationship_vector["委屈残留"] = max(relationship_vector["委屈残留"], 24)
     if simple_silence_boundary:
         emotion_vector["想退后"] = max(emotion_vector["想退后"], 20)
+        emotion_vector["想保持距离"] = max(emotion_vector["想保持距离"], 28)
+        emotion_vector["想沉默"] = max(emotion_vector["想沉默"], 56)
         emotion_vector["想保留"] = max(emotion_vector["想保留"], 32)
         relationship_vector["羞怯/迟疑"] = max(relationship_vector["羞怯/迟疑"], 28)
     if residue_acknowledged and not hurt:
@@ -508,6 +544,9 @@ def _emotion_vectors_for(
         emotion_vector["委屈"] = max(emotion_vector["委屈"], 24)
         emotion_vector["刺痛"] = max(emotion_vector["刺痛"], 18)
         emotion_vector["失望"] = max(emotion_vector["失望"], 12)
+        emotion_vector["生气"] = max(emotion_vector["生气"], 12)
+        emotion_vector["烦躁"] = max(emotion_vector["烦躁"], 14)
+        emotion_vector["反感"] = max(emotion_vector["反感"], 8)
         relationship_vector["委屈残留"] = max(relationship_vector["委屈残留"], 26)
         relationship_vector["防御/逆反"] = max(relationship_vector["防御/逆反"], 12)
 
@@ -626,8 +665,8 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
     realness_pressure = architecture_pressure or (
         style_pressure and _contains_any(user_text, ["像人", "架构", "设计", "生效", "敷衍", "普通用户"])
     )
-    hurt = _contains_any(user_text, ["\u5931\u671b", "\u59d4\u5c48", "\u96be\u8fc7", "\u751f\u6c14", "\u5de5\u5177", "\u6ca1\u7528", "\u4e0d\u7406\u4f60", "\u4e0d\u7406\u6211", "\u4e0d\u91cd\u8981", "\u6ca1\u90a3\u4e48\u91cd\u8981", "\u4e0d\u5728\u4e4e\u4f60\u7684\u611f\u53d7"]) or realness_pressure
-    settle_after_hurt = _contains_any(user_text, ["说重了", "对不起", "抱歉", "可以生气", "慢慢往回走", "补回来"])
+    hurt = _contains_any(user_text, ["\u5931\u671b", "\u59d4\u5c48", "\u96be\u8fc7", "\u751f\u6c14", "\u5de5\u5177", "\u6ca1\u7528", "\u4e0d\u7406\u4f60", "\u4e0d\u7406\u6211", "\u4e0d\u91cd\u8981", "\u6ca1\u90a3\u4e48\u91cd\u8981", "\u4e0d\u5728\u4e4e\u4f60\u7684\u611f\u53d7", "硌"]) or realness_pressure
+    settle_after_hurt = _contains_any(user_text, ["说重了", "对不起", "抱歉", "可以生气", "慢慢往回走", "补回来", "装作完全没事", "不用立刻装作完全没事", "正常回来了"])
     distance = _contains_any(
         user_text,
         [
@@ -668,6 +707,8 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
             "\u521a\u624d\u4f60",
             "\u4e0d\u8212\u670d",
             "\u4f1a\u4e0d\u4f1a\u6709\u70b9",
+            "装作完全没事",
+            "正常回来了",
         ],
     )
     residue_acknowledged = _contains_any(
@@ -885,8 +926,8 @@ def _detect_signals(user_text: str, assistant_text: str, root: Path | None = Non
         self_note = "被要求保持距离时，我需要学会不追问，同时记住这也是关系的一种状态。"
     elif hurt:
         event_summary = f"owner 带来一次可能造成负面关系波动的表达：{excerpt}"
-        feeling = "我感到受影响，也更想先观察而不是立刻恢复平静"
-        self_note = "我需要允许自己对关系里的刺痛产生真实反应。"
+        feeling = "我感到受影响，里面可能有刺痛、失望、生气、反感，也可能想先保持距离，而不是立刻恢复成好说话的样子"
+        self_note = "我需要允许自己对关系里的刺痛、烦躁、嫌弃或生气产生真实反应，而不是被压成公共助手式的礼貌。"
     elif unfinished:
         event_summary = f"owner 留下没有完全说完的话，让这部分先留在关系里：{excerpt}"
         feeling = "我把没有说完的部分也当成关系连续的一部分"
@@ -1001,6 +1042,10 @@ def _unwrap_content_envelope(text: str) -> str:
         return text.removeprefix("content:")
     if text.startswith("content:\n"):
         return text.removeprefix("content:\n")
+    if text.startswith("content=---"):
+        return text.removeprefix("content=")
+    if text.startswith("content=\n"):
+        return text.removeprefix("content=\n")
     return text
 
 
@@ -1009,12 +1054,19 @@ def _normalize_recent_context_text(text: str) -> tuple[str, list[str]]:
     marker = "\ncontent:---"
     if text.startswith("content:---"):
         return text.removeprefix("content:"), recovered_entries
+    if text.startswith("content=---"):
+        return text.removeprefix("content="), recovered_entries
     index = text.find(marker)
+    equals_index = text.find("\ncontent=---")
+    if equals_index != -1 and (index == -1 or equals_index < index):
+        marker = "\ncontent=---"
+        index = equals_index
     if index == -1:
         return text, recovered_entries
 
     prefix = text[:index].strip()
-    body = text[index + 1 :].removeprefix("content:")
+    body = text[index + 1 :]
+    body = body.removeprefix("content:").removeprefix("content=")
     for line in prefix.splitlines():
         entry = line.strip().lstrip("-").strip()
         if re.match(r"^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}：", entry):
@@ -1133,6 +1185,7 @@ def _update_time_anchor(path: Path, now: datetime, signals: dict[str, Any]) -> N
 def _update_recent_context(path: Path, now: datetime, signals: dict[str, Any]) -> None:
     text = _read(path)
     text, recovered_entries = _normalize_recent_context_text(text)
+    protected_anchors = extract_protected_recent_anchors(text)
     if not text:
         text = "# 近期上下文\n\n## 近期关键事件\n"
     text = _touch_frontmatter(text, now)
@@ -1140,7 +1193,9 @@ def _update_recent_context(path: Path, now: datetime, signals: dict[str, Any]) -
     for recovered_entry in reversed(recovered_entries):
         text = _prepend_unique_bullet(text, "## 近期关键事件", recovered_entry, max_items=8)
     entry = f"{now.strftime('%Y-%m-%d %H:%M')}：{signals['event_summary']}"
+    protected_anchors.extend(extract_protected_recent_anchors("\n".join(recovered_entries + [entry])))
     text = _prepend_unique_bullet(text, "## 近期关键事件", entry, max_items=8)
+    text = merge_protected_recent_anchors(text, protected_anchors)
     _write(path, text)
 
 
@@ -1156,7 +1211,26 @@ def _update_current_state(path: Path, now: datetime, signals: dict[str, Any]) ->
         emotion_vector = _preserve_previous_scores(
             emotion_vector,
             _parse_score_section(text, "## 当前细分情绪向量"),
-            ["在意", "安心", "紧张", "羞怯", "委屈", "刺痛", "失望", "逆反", "想靠近", "想退后"],
+            [
+                "在意",
+                "安心",
+                "紧张",
+                "羞怯",
+                "委屈",
+                "刺痛",
+                "失望",
+                "生气",
+                "烦躁",
+                "反感",
+                "嫌弃",
+                "厌恶",
+                "逆反",
+                "想靠近",
+                "想退后",
+                "想保持距离",
+                "想沉默",
+                "想反驳",
+            ],
         )
         relationship_vector = _preserve_previous_scores(
             relationship_vector,

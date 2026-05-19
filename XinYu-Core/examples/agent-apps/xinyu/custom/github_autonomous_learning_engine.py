@@ -14,10 +14,12 @@ from urllib.parse import urlparse
 
 import httpx
 
+from xinyu_storage_paths import knowledge_file_path
+
 
 CONFIG_REL = Path("memory/context/github_learning_sources.md")
 STATE_REL = Path("memory/context/github_learning_state.md")
-CANDIDATES_REL = Path("memory/knowledge/github_learning_candidates.md")
+CANDIDATES_FILENAME = "github_learning_candidates.md"
 TRACE_REL = Path("runtime/github_learning_trace.jsonl")
 
 DEFAULT_GITHUB_SEARCH_ENDPOINT = "https://api.github.com/search/repositories"
@@ -53,8 +55,32 @@ def write_text(path: Path, text: str) -> None:
     path.write_text(text.rstrip() + "\n", encoding="utf-8")
 
 
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
+
+
 def now_iso() -> str:
     return datetime.now().astimezone().isoformat()
+
+
+def _timestamp_or_now_iso(value: Any) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return now_iso()
+    return parsed.astimezone().isoformat()
+
+
+def _parse_iso(value: Any) -> datetime | None:
+    text = one_line(value, limit=120, default="")
+    if not text or text == "none":
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
 
 
 def one_line(value: Any, *, limit: int = 260, default: str = "none") -> str:
@@ -258,7 +284,7 @@ def normalize_candidate(
         "learning_item_id": "none",
         "material_id": "none",
         "discovered_at": discovered_at,
-        "last_seen_at": discovered_at,
+        "last_seen_at": _timestamp_or_now_iso(discovered_at),
     }
 
 
@@ -308,8 +334,8 @@ def render_candidates(updated_at: str, candidates: list[dict[str, str]]) -> str:
             f"- stage_status: {one_line(item.get('stage_status'))}\n"
             f"- learning_item_id: {one_line(item.get('learning_item_id'))}\n"
             f"- material_id: {one_line(item.get('material_id'))}\n"
-            f"- discovered_at: {one_line(item.get('discovered_at'))}\n"
-            f"- last_seen_at: {one_line(item.get('last_seen_at'))}\n"
+            f"- discovered_at: {_timestamp_or_now_iso(item.get('discovered_at'))}\n"
+            f"- last_seen_at: {_timestamp_or_now_iso(item.get('last_seen_at'))}\n"
             f"- reason: {one_line(item.get('reason'), limit=300)}\n"
         )
     body = "\n".join(blocks) if blocks else "## github-candidate-none\n- status: none\n- url: none\n"
@@ -320,9 +346,9 @@ time_scope: short_term
 subject_ids: [xinyu]
 protected: false
 source: github_autonomous_learning_engine
-created_at: 2026-05-06T00:00:00+08:00
-updated_at: {updated_at}
-last_confirmed_at: {updated_at}
+created_at: {_timestamp_or_now_iso('2026-05-06T00:00:00+08:00')}
+updated_at: {_timestamp_or_now_iso(updated_at)}
+last_confirmed_at: {_timestamp_or_now_iso(updated_at)}
 importance_score: 76
 impact_score: 75
 confidence_score: 94
@@ -348,7 +374,7 @@ def existing_repo_urls(root: Path, candidates: list[dict[str, str]]) -> set[str]
         if item.get("stage_status") == "staged" and allowed_github_repo_url(url):
             urls.add(canonical_repo_url(url))
 
-    source_materials = read_text(root / "memory/knowledge/source_materials.md")
+    source_materials = read_text(_knowledge(root, "source_materials.md"))
     for match in re.finditer(r"(?m)^-\s*url:\s*(https://github\.com/[^\s]+)\s*$", source_materials):
         url = match.group(1).strip()
         if allowed_github_repo_url(url):
@@ -369,7 +395,7 @@ def existing_repo_urls(root: Path, candidates: list[dict[str, str]]) -> set[str]
 def material_id_for_learning_item(root: Path, learning_item_id: str) -> str:
     if not learning_item_id:
         return ""
-    text = read_text(root / "memory/knowledge/source_materials.md")
+    text = read_text(_knowledge(root, "source_materials.md"))
     marker = f"- learning_item_id: {learning_item_id}"
     marker_index = text.find(marker)
     if marker_index < 0:
@@ -424,7 +450,7 @@ def merge_candidate(
     by_url = {candidate.get("url"): candidate for candidate in candidates}
     existing = by_url.get(item["url"])
     if existing:
-        existing["last_seen_at"] = updated_at
+        existing["last_seen_at"] = _timestamp_or_now_iso(updated_at)
         for key in ("stars", "pushed_at", "description", "language"):
             if item.get(key):
                 existing[key] = item[key]
@@ -526,7 +552,7 @@ def run_github_autonomous_learning(
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
 ) -> dict[str, object]:
     root = root.resolve()
-    checked_at = checked_at or now_iso()
+    checked_at = _timestamp_or_now_iso(checked_at or now_iso())
     allowed, permission_reason = github_autonomy_allowed(root)
     sources = load_sources(root)
     queries_checked = 0
@@ -563,7 +589,7 @@ def run_github_autonomous_learning(
         append_trace(root, result)
         return result
 
-    existing = split_candidates(read_text(root / CANDIDATES_REL))
+    existing = split_candidates(read_text(_knowledge(root, CANDIDATES_FILENAME)))
     candidates = list(existing)
     duplicate_urls = existing_repo_urls(root, candidates)
 
@@ -603,7 +629,7 @@ def run_github_autonomous_learning(
                 normalized["max_files"] = str(source_int(source, "max_files", DEFAULT_MAX_FILES))
                 normalized["max_bytes"] = str(source_int(source, "max_bytes", DEFAULT_MAX_BYTES))
                 candidates_found += 1
-                item, is_new = merge_candidate(candidates, normalized, updated_at=checked_at)
+                item, is_new = merge_candidate(candidates, normalized, updated_at=_timestamp_or_now_iso(checked_at))
                 if is_new:
                     candidates_recorded += 1
                 latest_repo = item.get("full_name", item.get("url", "none"))
@@ -627,7 +653,7 @@ def run_github_autonomous_learning(
                     item["stage_status"] = "staged"
                     item["learning_item_id"] = stage_result["learning_item_id"]
                     item["material_id"] = stage_result["material_id"]
-                    item["last_seen_at"] = checked_at
+                    item["last_seen_at"] = _timestamp_or_now_iso(checked_at)
                     duplicate_urls.add(item["url"])
                     staged_repos += 1
                     latest_staged_repo = item.get("full_name", item["url"])
@@ -654,7 +680,7 @@ def run_github_autonomous_learning(
             status = "no_results"
             skipped_reason = "no_github_candidates"
 
-    write_text(root / CANDIDATES_REL, render_candidates(checked_at, candidates))
+    write_text(_knowledge(root, CANDIDATES_FILENAME), render_candidates(checked_at, candidates))
     write_text(
         root / STATE_REL,
         render_state(

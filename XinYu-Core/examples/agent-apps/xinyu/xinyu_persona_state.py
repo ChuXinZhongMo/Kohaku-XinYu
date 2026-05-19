@@ -310,7 +310,7 @@ def _write_recent_events_markdown(root: Path, rows: list[dict[str, Any]], *, eva
         tags = ", ".join(_safe_str(tag) for tag in row.get("tags", []) if _safe_str(tag))
         lines.extend(
             [
-                f"- timestamp: {_safe_str(row.get('timestamp'), 'unknown')}",
+                f"- timestamp: {_timestamp_or_default(row.get('timestamp'), evaluated)}",
                 f"  salience: {_safe_str(row.get('salience'), '0')}",
                 f"  tags: {tags or 'none'}",
                 f"  summary: {_safe_str(row.get('summary'))}",
@@ -330,6 +330,18 @@ def _write_recent_events_markdown(root: Path, rows: list[dict[str, Any]], *, eva
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
     return True
+
+
+def _timestamp_or_default(value: Any, default: datetime) -> str:
+    text = _safe_str(value).strip()
+    if text:
+        try:
+            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            parsed = default
+    else:
+        parsed = default
+    return parsed.astimezone().isoformat()
 
 
 def _update_state(

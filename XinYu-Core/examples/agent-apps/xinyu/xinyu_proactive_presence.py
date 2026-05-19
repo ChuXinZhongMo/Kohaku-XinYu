@@ -159,9 +159,16 @@ def _shape_candidate(
 
 def _parse_iso(value: str) -> datetime | None:
     try:
-        return datetime.fromisoformat(value)
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
     except Exception:
         return None
+
+
+def _timestamp_or_now_iso(value: object = None) -> str:
+    parsed = _parse_iso(str(value).strip()) if value is not None else None
+    if parsed is None:
+        return datetime.now().astimezone().isoformat()
+    return parsed.astimezone().isoformat()
 
 
 def _one_line(text: str) -> str:
@@ -651,7 +658,7 @@ def run_proactive_presence(
     evaluated_at: str | None = None,
     mode: str = "runtime_proactive_presence",
 ) -> dict[str, str]:
-    evaluated_at = evaluated_at or datetime.now().astimezone().isoformat()
+    evaluated_at = _timestamp_or_now_iso(evaluated_at)
     initiative = read_text(root / "memory/context/initiative_state.md")
     capability = read_text(root / "memory/context/capability_zones_state.md")
     life_posture_state = read_text(root / "memory/context/current_life_posture.md")
@@ -687,7 +694,7 @@ def claim_proactive_qq_message(
     claim_id: str = "",
     min_interval_seconds: int = 21600,
 ) -> dict[str, object]:
-    evaluated_at = evaluated_at or datetime.now().astimezone().isoformat()
+    evaluated_at = _timestamp_or_now_iso(evaluated_at)
     result = run_proactive_presence(root, evaluated_at=evaluated_at, mode=mode)
     candidate = _one_line(str(result["candidate_message"]))
     notes = ["no_agent_turn", "no_session_created"]
@@ -747,7 +754,7 @@ def claim_proactive_qq_message(
             request_status="claimed",
             claim_id=claim_id,
             ack_status="pending",
-            updated_at=evaluated_at,
+            updated_at=_timestamp_or_now_iso(evaluated_at),
         ):
             notes.append("proactive_request_marked_claimed")
         notes.append("candidate_claimed")
@@ -776,7 +783,7 @@ def acknowledge_proactive_qq_message(
     adapter_message_id: str = "",
     adapter_error: str = "",
 ) -> dict[str, object]:
-    acked_at = acked_at or datetime.now().astimezone().isoformat()
+    acked_at = _timestamp_or_now_iso(acked_at)
     ack_status = ack_status.strip().lower()
     notes = ["no_agent_turn", "no_session_created"]
 
@@ -827,7 +834,7 @@ def acknowledge_proactive_qq_message(
         ack_status=ack_status,
         adapter_message_id=adapter_message_id,
         adapter_error=adapter_error,
-        updated_at=acked_at,
+        updated_at=_timestamp_or_now_iso(acked_at),
     )
     return {
         "accepted": True,

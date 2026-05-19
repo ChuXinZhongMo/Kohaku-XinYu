@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "manifest_id": "stores/queue_boundary_manifest",
+  "updated_at": "2026-05-18",
+  "privacy_note": "Metadata-only runtime queue boundaries. Do not migrate, print, snapshot, or promote queue bodies into stable memory from these files.",
+  "queues": [
+    {
+      "queue_id": "qq_outbox",
+      "path": "memory/context/qq_outbox_queue.json",
+      "owner_module": "xinyu_qq_outbox",
+      "owner_symbols": [
+        "enqueue_qq_outbox_message",
+        "claim_next_qq_outbox_message",
+        "ack_qq_outbox_message"
+      ],
+      "projection_paths": [
+        "memory/context/qq_outbox_dispatch_state.md",
+        "memory/context/runtime_program_awareness.md"
+      ],
+      "allowed_raw_readers": [
+        "start_xinyu_core_bridge.ps1",
+        "xinyu_qq_gateway.py",
+        "xinyu_qq_outbox.py",
+        "xinyu_runtime_presence.py"
+      ],
+      "privacy": "private_runtime_queue",
+      "retention_policy": "operational_queue",
+      "body_policy": "no_body_migration",
+      "stable_memory_policy": "runtime_queue_not_stable_memory",
+      "status": "compat_runtime_queue"
+    }
+  ]
+}

@@ -4,9 +4,15 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import urlparse
 
-ALLOWED_SCHEMES = {"http", "https"}
+from source_protocol_utils import (
+    extract_dash_value,
+    is_allowed_source_url,
+    next_dated_id,
+    split_source_requests,
+)
+from xinyu_storage_paths import knowledge_file_path
+
 READY_PERMISSIONS = {"prepare_only", "integrate_ready"}
 
 
@@ -18,15 +24,16 @@ def write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
+
+
 def extract_value(text: str, field: str, default: str = "unknown") -> str:
-    pattern = re.compile(rf"^- {re.escape(field)}:\s*(.+)$", re.M)
-    match = pattern.search(text)
-    return match.group(1).strip() if match else default
+    return extract_dash_value(text, field, default)
 
 
 def is_allowed_url(url: str) -> bool:
-    parsed = urlparse(url)
-    return parsed.scheme in ALLOWED_SCHEMES and bool(parsed.netloc)
+    return is_allowed_source_url(url)
 
 
 def extract_source_candidates(source_gate_text: str) -> list[dict[str, str]]:
@@ -86,31 +93,7 @@ def extract_quality_followup_candidates(learning_quality_text: str, question_tar
 
 
 def split_requests(text: str) -> list[dict[str, str]]:
-    parts = re.split(r"(?m)^## (request-\d{4}-\d{2}-\d{2}-\d{3}|request-[\w-]+)\n", text)
-    requests: list[dict[str, str]] = []
-    if len(parts) < 3:
-        return requests
-    for i in range(1, len(parts), 2):
-        request_id = parts[i].strip()
-        body = parts[i + 1]
-        qid = extract_value(body, "question_id", "none")
-        if request_id == "request-none" or qid == "none":
-            continue
-        requests.append(
-            {
-                "request_id": request_id,
-                "question_id": qid,
-                "target": extract_value(body, "target", "unknown"),
-                "query": extract_value(body, "query", "none"),
-                "url": extract_value(body, "url", "none"),
-                "status": extract_value(body, "status", "hold"),
-                "reason": extract_value(body, "reason", "existing request"),
-                "followup_kind": extract_value(body, "followup_kind", "none"),
-                "avoid_host": extract_value(body, "avoid_host", "none"),
-                "followup_slot": extract_value(body, "followup_slot", "1"),
-            }
-        )
-    return requests
+    return split_source_requests(text)
 
 
 def env_url_map() -> dict[str, str]:
@@ -154,12 +137,7 @@ def resolve_url(candidate: dict[str, str], mapping: dict[str, str], fallback_ind
 
 
 def next_request_id(existing: list[dict[str, str]], date_part: str) -> str:
-    numbers: list[int] = []
-    for item in existing:
-        match = re.match(rf"request-{re.escape(date_part)}-(\d{{3}})$", item["request_id"])
-        if match:
-            numbers.append(int(match.group(1)))
-    return f"request-{date_part}-{max(numbers, default=0) + 1:03d}"
+    return next_dated_id(existing, id_field="request_id", prefix="request", date_part=date_part)
 
 
 def render_source_requests(planned_at: str, requests: list[dict[str, str]]) -> str:
@@ -277,20 +255,20 @@ def run_source_request_planner(
     mode: str = "runtime_source_request_planner",
 ) -> dict[str, object]:
     planned_at = planned_at or datetime.now().astimezone().isoformat()
-    integration_gate = read_text(root / "memory/knowledge/source_integration_gate_state.md")
+    integration_gate = read_text(_knowledge(root, "source_integration_gate_state.md"))
     permission = extract_value(integration_gate, "integration_permission", "hold")
-    source_gate = read_text(root / "memory/knowledge/source_gate_state.md")
+    source_gate = read_text(_knowledge(root, "source_gate_state.md"))
     candidates = extract_source_candidates(source_gate)
     question_targets = extract_active_question_targets(read_text(root / "memory/context/active_questions.md"))
     quality_followups = (
         extract_quality_followup_candidates(
-            read_text(root / "memory/knowledge/learning_quality_state.md"),
+            read_text(_knowledge(root, "learning_quality_state.md")),
             question_targets,
         )
         if not candidates
         else []
     )
-    existing = split_requests(read_text(root / "memory/knowledge/source_requests.md"))
+    existing = split_requests(read_text(_knowledge(root, "source_requests.md")))
     existing_qids = {item["question_id"] for item in existing}
     existing_followups = {
         (item.get("question_id", "none"), item.get("avoid_host", "none"), item.get("followup_slot", "1"))
@@ -355,9 +333,9 @@ def run_source_request_planner(
     ready_count = sum(1 for item in requests if item["status"] == "ready")
     pending_url_count = sum(1 for item in requests if item["status"] == "pending_url")
     if permission in READY_PERMISSIONS:
-        write_text(root / "memory/knowledge/source_requests.md", render_source_requests(planned_at, requests))
+        write_text(_knowledge(root, "source_requests.md"), render_source_requests(planned_at, requests))
     write_text(
-        root / "memory/knowledge/source_request_planner_state.md",
+        _knowledge(root, "source_request_planner_state.md"),
         render_state(
             planned_at,
             mode,

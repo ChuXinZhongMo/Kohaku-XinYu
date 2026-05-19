@@ -30,6 +30,19 @@ def _now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
+def _timestamp_or_now_iso(value: Any = None) -> str:
+    text = _safe_str(value).strip()
+    if not text or text.lower() in {"none", "unknown", "null", "n/a", "na"}:
+        return _now_iso()
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return _now_iso()
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed.astimezone().isoformat(timespec="seconds")
+
+
 def normalize_visible_text(text: str) -> str:
     cleaned = _CQ_RE.sub("", _safe_str(text))
     cleaned = re.sub(r"\s+", " ", cleaned).strip()
@@ -158,7 +171,7 @@ def register_sent_reply_ack(
     if not adapter or not adapter_message_id or not route:
         return {"accepted": False, "indexed": False, "notes": ["missing_adapter_message_id_or_route"]}
 
-    sent_at = _safe_str(payload.get("sent_at")).strip() or _now_iso()
+    sent_at = _timestamp_or_now_iso(payload.get("sent_at"))
     visible_text = normalize_visible_text(_safe_str(payload.get("visible_text") or payload.get("message")))
     text_hash = _safe_str(payload.get("visible_text_hash") or payload.get("reply_hash")).strip()
     if not text_hash and visible_text:
@@ -179,7 +192,7 @@ def register_sent_reply_ack(
             existing = item
             break
 
-    now = _now_iso()
+    now = _timestamp_or_now_iso()
     entry = {
         "key": key,
         "adapter": adapter,
@@ -196,8 +209,8 @@ def register_sent_reply_ack(
         "visible_text_hash": text_hash,
         "visible_text_preview": visible_text[:240],
         "sent_at": sent_at,
-        "first_seen_at": _safe_str(existing.get("first_seen_at")) if existing else now,
-        "last_seen_at": now,
+        "first_seen_at": _timestamp_or_now_iso(existing.get("first_seen_at")) if existing else now,
+        "last_seen_at": _timestamp_or_now_iso(now),
         "retry_count": int(existing.get("retry_count") or 0) + 1 if existing else 0,
         "metadata": payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {},
     }
@@ -206,7 +219,7 @@ def register_sent_reply_ack(
     entries = _compact_entries(entries, ttl_seconds=ttl_seconds, max_entries=max_entries)
     data = {
         "version": 1,
-        "updated_at": now,
+        "updated_at": _timestamp_or_now_iso(now),
         "ttl_seconds": ttl_seconds,
         "max_entries": max_entries,
         "entries": entries,

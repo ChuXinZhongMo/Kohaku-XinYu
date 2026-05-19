@@ -529,13 +529,24 @@ def _write_text(path: Path, text: str) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(text)
-        os.replace(tmp_path, path)
+        _replace_file_with_retry(tmp_path, path)
     finally:
         if tmp_path.exists():
             try:
                 tmp_path.unlink()
             except OSError:
                 pass
+
+
+def _replace_file_with_retry(source: Path, target: Path) -> None:
+    for attempt in range(20):
+        try:
+            os.replace(source, target)
+            return
+        except PermissionError:
+            if attempt == 19:
+                raise
+            time.sleep(min(0.05 * (attempt + 1), 0.5))
 
 
 def _append_ledger(root: Path, event: dict[str, Any]) -> None:

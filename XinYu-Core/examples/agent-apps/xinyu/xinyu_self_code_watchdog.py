@@ -32,6 +32,19 @@ def _now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
+def _timestamp_or_now_iso(value: Any) -> str:
+    text = _safe_str(value).strip()
+    if not text:
+        return _now_iso()
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return _now_iso()
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed.astimezone().isoformat(timespec="seconds")
+
+
 def _stamp() -> str:
     return datetime.now().astimezone().strftime("%Y%m%dT%H%M%S")
 
@@ -90,12 +103,14 @@ def _append_jsonl(path: Path, payload: dict[str, Any]) -> None:
 
 
 def _discover_snapshot_files(root: Path) -> list[Path]:
+    root = root.resolve()
     files: set[Path] = set()
     for pattern in SNAPSHOT_PATTERNS:
         for path in root.glob(pattern):
             if not path.is_file():
                 continue
-            if any(part in {".venv", "__pycache__", "runtime", "logs", "learning"} for part in path.parts):
+            rel_parts = path.resolve().relative_to(root).parts
+            if any(part in {".venv", "__pycache__", "runtime", "logs", "learning"} for part in rel_parts):
                 continue
             if _is_relative_to(path, root):
                 files.add(path.resolve())
@@ -160,7 +175,7 @@ def _write_state(
     notes: list[str],
     observed_at: str | None = None,
 ) -> None:
-    observed = observed_at or _now_iso()
+    observed = _timestamp_or_now_iso(observed_at)
     _atomic_write_text(
         root / STATE_REL,
         _render_state(
@@ -184,7 +199,7 @@ def create_self_code_snapshot(
     observed_at: str | None = None,
 ) -> dict[str, Any]:
     root = root.resolve()
-    observed = observed_at or _now_iso()
+    observed = _timestamp_or_now_iso(observed_at)
     snapshot_id = f"{_safe_token(approval_id, default='selfcode')}-{_stamp()}"
     snapshot_dir = root / SNAPSHOT_ROOT_REL / snapshot_id
     files_dir = snapshot_dir / "files"
@@ -212,7 +227,7 @@ def create_self_code_snapshot(
         "version": 1,
         "snapshot_id": snapshot_id,
         "approval_id": approval_id,
-        "created_at": observed,
+        "created_at": _timestamp_or_now_iso(observed),
         "root": str(root),
         "reason": reason,
         "status": "snapshot_created",
@@ -230,13 +245,13 @@ def create_self_code_snapshot(
         file_count=len(entries),
         reason=reason,
         notes=notes,
-        observed_at=observed,
+        observed_at=_timestamp_or_now_iso(observed),
     )
     _append_jsonl(
         root / TRACE_REL,
         {
             "event_kind": "snapshot_created",
-            "observed_at": observed,
+            "observed_at": _timestamp_or_now_iso(observed),
             "snapshot_id": snapshot_id,
             "approval_id": approval_id,
             "manifest_path": str(manifest_path),
@@ -280,6 +295,7 @@ def restore_self_code_snapshot(
 
     restored = 0
     skipped: list[str] = []
+    snapshot_files_dir = (manifest_path.parent / "files").resolve()
     for raw in manifest["files"]:
         if not isinstance(raw, dict):
             continue
@@ -292,14 +308,21 @@ def restore_self_code_snapshot(
         if not _is_relative_to(target, root_path):
             skipped.append(rel)
             continue
+        if not _is_relative_to(backup, snapshot_files_dir):
+            skipped.append(rel)
+            continue
         if not backup.exists():
+            skipped.append(rel)
+            continue
+        expected_sha256 = _safe_str(raw.get("sha256")).lower()
+        if expected_sha256 and _sha256_bytes(backup.read_bytes()) != expected_sha256:
             skipped.append(rel)
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(backup, target)
         restored += 1
 
-    observed = observed_at or _now_iso()
+    observed = _timestamp_or_now_iso(observed_at)
     snapshot_id = _safe_str(manifest.get("snapshot_id"), manifest_path.parent.name)
     approval_id = _safe_str(manifest.get("approval_id"), "unknown")
     notes = ["snapshot_restored", f"restored:{restored}"]
@@ -314,13 +337,13 @@ def restore_self_code_snapshot(
         file_count=restored,
         reason=reason,
         notes=notes,
-        observed_at=observed,
+        observed_at=_timestamp_or_now_iso(observed),
     )
     _append_jsonl(
         root_path / TRACE_REL,
         {
             "event_kind": "snapshot_restored",
-            "observed_at": observed,
+            "observed_at": _timestamp_or_now_iso(observed),
             "snapshot_id": snapshot_id,
             "approval_id": approval_id,
             "manifest_path": str(manifest_path),
@@ -367,7 +390,7 @@ def mark_self_code_watchdog_status(
         root / TRACE_REL,
         {
             "event_kind": "watchdog_status",
-            "observed_at": _now_iso(),
+            "observed_at": _timestamp_or_now_iso(_now_iso()),
             "snapshot_id": snapshot_id,
             "approval_id": approval_id,
             "manifest_path": manifest_path,

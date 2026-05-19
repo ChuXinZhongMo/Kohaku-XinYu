@@ -14,6 +14,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
+from xinyu_neuro_memory_rules import rule_ids_for_flow
+from xinyu_scene_frame import build_scene_frame
+
 
 STATE_REL = Path("memory/context/emotion_council_state.md")
 TRACE_REL = Path("runtime/emotion_council_trace.jsonl")
@@ -121,21 +124,21 @@ LENSES: tuple[LensConfig, ...] = (
     ),
     LensConfig(
         name="hurt",
-        dimensions=("hurt",),
+        dimensions=("hurt", "aversion", "disgust", "distance_impulse"),
         markers=("委屈", "刺痛", "难过", "伤", "冷淡", "忽略", "否定", "不像你", "失望"),
-        concern="there may be relationship pressure, but it must not become owner-blame",
-        suggested_bias="acknowledge pressure without self-pity or accusation",
-        risk_flags=("no_owner_blame", "no_self_pity_output"),
+        concern="owner-private hurt may need visible sting instead of public-assistant politeness",
+        suggested_bias="allow a short hurt, annoyed, or distancing line without converting it into a report",
+        risk_flags=("owner_private_negative_expression_allowed", "no_public_assistant_smoothing", "do_not_make_one_turn_permanent"),
         memory_queries=("recent_emotional_residue",),
         base=0.06,
     ),
     LensConfig(
         name="irritation",
-        dimensions=("irritation", "volatility"),
+        dimensions=("irritation", "volatility", "anger", "annoyance", "aversion", "disgust", "pushback_impulse"),
         markers=("烦", "呆", "呆呆", "机械", "模板", "客服", "控制面板", "一直", "重复", "离谱", "不行", "问题啊"),
-        concern="visible reply may need less explanation and less mechanism language",
-        suggested_bias="cut mechanism language and move to concrete repair",
-        risk_flags=("no_snapping", "compress_explanation", "no_status_report_tone"),
+        concern="visible reply may need real annoyance instead of safe support-bot smoothing",
+        suggested_bias="cut mechanism language; allow a sharp, annoyed, or rough private-chat line if it fits",
+        risk_flags=("private_temper_allowed", "tiny_profanity_leak_allowed", "avoid_resource_waste_loop"),
         memory_queries=("voice_correction", "mechanism_leak"),
         base=0.08,
     ),
@@ -171,6 +174,7 @@ def run_emotion_council_shadow(
     trigger: str = "live_turn",
     parallel_model: bool | None = None,
     lens_runner: LensRunner | None = None,
+    scene_frame: Any | None = None,
 ) -> dict[str, Any]:
     root = root.resolve()
     checked_at = checked_at or _now_iso()
@@ -179,10 +183,13 @@ def run_emotion_council_shadow(
     snapshot = _load_snapshot(root)
     combined_text = _combined_text(text, snapshot)
     emotion_values = _emotion_values(root, snapshot)
+    scene_frame = scene_frame or build_scene_frame(root, user_text=text, evaluated_at=checked_at)
+    scene_summary = _scene_frame_summary(scene_frame)
     lens_results = [
         _evaluate_lens(config, combined_text=combined_text, text=text, emotion_values=emotion_values, snapshot=snapshot)
         for config in LENSES
     ]
+    lens_results = _apply_scene_frame_modulation(lens_results, scene_summary)
     parallel_summary = _run_parallel_model_reviews(
         root,
         lens_results=lens_results,
@@ -217,6 +224,7 @@ def run_emotion_council_shadow(
         "active_lenses": [asdict(item) for item in active],
         "top_lenses": [asdict(item) for item in lens_results[:MAX_ACTIVE_LENSES]],
         "lens_memory_banks": _lens_memory_bank_summary(root),
+        "scene_frame": scene_summary,
         "parallel_model": parallel_summary,
         "boundaries": {
             "shadow_only": True,
@@ -232,13 +240,19 @@ def run_emotion_council_shadow(
     }
     residue_summary = _update_residue_cache(root, result)
     result["residue_cache"] = residue_summary
-    result["notes"] = _notes(
+    emotion_rule_ids = rule_ids_for_flow("emotion")
+    result["neuro_rule_ids"] = list(emotion_rule_ids)
+    result["notes"] = [
+        *_notes(
         status=status,
         active=active,
         owner_private=owner_private,
         parallel_summary=parallel_summary,
         residue_summary=residue_summary,
-    )
+        ),
+        *_scene_frame_notes(scene_summary),
+        "neuro_rules:" + ",".join(emotion_rule_ids),
+    ]
     _write_state(root, result)
     _append_trace(root, result)
     return {
@@ -258,6 +272,9 @@ def build_emotion_council_prompt_block(root: Path, *, max_chars: int = 800) -> s
     strongest = _extract_field(state, "strongest_lens")
     consensus = _extract_field(state, "consensus")
     output_bias = _extract_field(state, "output_bias")
+    scene_reply_policy = _extract_field(state, "scene_reply_policy")
+    scene_time_context = _extract_field(state, "scene_time_context")
+    scene_memory_relation = _extract_field(state, "scene_memory_relation")
     residue_lines = _residue_prompt_lines(residue)
     current_active = _extract_field(state, "status") == "active" and strongest not in {"", "none"} and bool(consensus)
     if not current_active and not residue_lines:
@@ -273,6 +290,14 @@ def build_emotion_council_prompt_block(root: Path, *, max_chars: int = 800) -> s
                 f"- strongest_lens: {strongest}",
                 f"- consensus: {consensus}",
                 f"- output_bias: {output_bias}",
+            ]
+        )
+    if scene_reply_policy:
+        lines.extend(
+            [
+                f"- scene_reply_policy: {scene_reply_policy}",
+                f"- scene_time_context: {scene_time_context or 'none'}",
+                f"- scene_memory_relation: {scene_memory_relation or 'none'}",
             ]
         )
     if residue_lines:
@@ -682,6 +707,77 @@ def _evaluate_lens(
     )
 
 
+def _apply_scene_frame_modulation(lens_results: list[LensResult], scene: dict[str, str]) -> list[LensResult]:
+    if not any(scene.values()):
+        return lens_results
+    boosted: list[LensResult] = []
+    for item in lens_results:
+        delta = 0.0
+        evidence: list[str] = []
+        if item.lens == "fatigue":
+            if scene.get("owner_state") == "low_energy_or_tired":
+                delta += 0.3
+                evidence.append("scene_frame:low_energy_or_tired")
+            if scene.get("memory_relation") == "time_bound_recall":
+                delta += 0.18
+                evidence.append("scene_frame:time_bound_recall")
+            if scene.get("reply_policy") in {"short_direct_low_burden", "short_gentle_low_burden", "warm_low_burden"}:
+                delta += 0.12
+                evidence.append("scene_frame:low_burden_reply")
+        elif item.lens == "stability" and scene.get("task_mode") in {"technical_execution", "runtime_status"}:
+            delta += 0.22
+            evidence.append(f"scene_frame:{scene.get('task_mode')}")
+        elif item.lens == "hurt" and scene.get("task_mode") == "relational_support":
+            delta += 0.3
+            evidence.append("scene_frame:relational_support")
+        elif item.lens == "attachment" and scene.get("reply_policy") in {"warm_boundary_aware", "warm_low_burden"}:
+            delta += 0.18
+            evidence.append(f"scene_frame:{scene.get('reply_policy')}")
+        if delta <= 0:
+            boosted.append(item)
+            continue
+        boosted.append(
+            LensResult(
+                lens=item.lens,
+                activation=_clamp_float(item.activation + delta),
+                concern=item.concern,
+                suggested_bias=item.suggested_bias,
+                risk_flags=item.risk_flags,
+                memory_queries=item.memory_queries,
+                evidence=tuple([*item.evidence, *evidence][:6]),
+            )
+        )
+    return boosted
+
+
+def _scene_frame_summary(scene_frame: Any | None) -> dict[str, str]:
+    return {
+        "scene_id": _scene_frame_value(scene_frame, "scene_id"),
+        "time_context": _scene_frame_value(scene_frame, "time_context"),
+        "owner_state": _scene_frame_value(scene_frame, "owner_state"),
+        "task_mode": _scene_frame_value(scene_frame, "task_mode"),
+        "memory_relation": _scene_frame_value(scene_frame, "memory_relation"),
+        "reply_policy": _scene_frame_value(scene_frame, "reply_policy"),
+    }
+
+
+def _scene_frame_value(scene_frame: Any | None, key: str) -> str:
+    if scene_frame is None:
+        return ""
+    if isinstance(scene_frame, dict):
+        return _one_line(scene_frame.get(key), limit=80)
+    return _one_line(getattr(scene_frame, key, ""), limit=80)
+
+
+def _scene_frame_notes(scene: dict[str, str]) -> list[str]:
+    notes: list[str] = []
+    if scene.get("reply_policy"):
+        notes.append("scene_frame_reply_policy:" + scene["reply_policy"])
+    if scene.get("memory_relation") == "time_bound_recall":
+        notes.append("scene_frame_time_bound_recall")
+    return notes
+
+
 def _context_bonus(config_name: str, *, text: str, snapshot: dict[str, str]) -> tuple[float, list[str]]:
     joined = " ".join(snapshot.values()).lower()
     text_l = text.lower()
@@ -738,9 +834,9 @@ def _consensus(active: list[LensResult], all_results: list[LensResult]) -> tuple
         )
     if strongest == "irritation":
         return (
-            "move to concrete repair and avoid mechanism or status-report language",
+            "move to the living private-chat line; irritation, a sharp edge, or tiny profanity can be more honest than a safe status report",
             conflicts,
-            "concrete_fix_no_self_analysis",
+            "private_irritation_allowed_no_public_smoothing",
         )
     if strongest == "curiosity":
         return (
@@ -756,9 +852,9 @@ def _consensus(active: list[LensResult], all_results: list[LensResult]) -> tuple
         )
     if strongest == "hurt":
         return (
-            "acknowledge pressure internally but do not blame the owner or perform self-pity",
+            "let hurt or aversion show briefly if present; do not sand it down into public assistant politeness or make it permanent",
             conflicts,
-            "less_defensive_no_self_pity",
+            "short_hurt_or_distance_allowed",
         )
     if strongest == "fatigue":
         return (
@@ -928,12 +1024,18 @@ def _emotion_values(root: Path, snapshot: dict[str, str]) -> dict[str, float]:
     legacy = snapshot.get("emotion_legacy", "")
     legacy_map = {
         "hurt": ("刺痛", "委屈", "难过"),
+        "anger": ("生气", "火大"),
+        "annoyance": ("烦躁", "烦"),
+        "aversion": ("反感", "嫌弃"),
+        "disgust": ("厌恶",),
+        "distance_impulse": ("想保持距离", "疏远倾向", "想退后"),
+        "pushback_impulse": ("想反驳", "逆反"),
         "attachment": ("想靠近", "想你", "期待"),
         "guardedness": ("距离感", "顺从", "保持距离"),
         "fatigue": ("疲惫", "累"),
         "stability": ("平静", "稳定"),
         "warmth": ("余温", "温暖"),
-        "irritation": ("烦", "恼"),
+        "irritation": ("烦", "恼", "烦躁", "反感", "嫌弃"),
     }
     for dimension, markers in legacy_map.items():
         if any(marker in legacy for marker in markers):
@@ -985,6 +1087,7 @@ def _write_state(root: Path, result: dict[str, Any]) -> None:
     parallel = result.get("parallel_model") if isinstance(result.get("parallel_model"), dict) else {}
     residue = result.get("residue_cache") if isinstance(result.get("residue_cache"), dict) else {}
     memory_banks = result.get("lens_memory_banks") if isinstance(result.get("lens_memory_banks"), list) else []
+    scene_frame = result.get("scene_frame") if isinstance(result.get("scene_frame"), dict) else {}
     memory_bank_lines: list[str] = []
     for item in memory_banks:
         if not isinstance(item, dict):
@@ -1025,6 +1128,14 @@ def _write_state(root: Path, result: dict[str, Any]) -> None:
             f"- consensus: {_one_line(result.get('consensus'), limit=240)}",
             f"- output_bias: {_one_line(result.get('output_bias'), limit=120)}",
             f"- conflicts: {', '.join(_one_line(item, limit=80) for item in conflicts) or 'none'}",
+            "",
+            "## Scene Frame Modulation",
+            f"- scene_id: {_one_line(scene_frame.get('scene_id'), limit=80) or 'none'}",
+            f"- scene_reply_policy: {_one_line(scene_frame.get('reply_policy'), limit=80) or 'none'}",
+            f"- scene_time_context: {_one_line(scene_frame.get('time_context'), limit=80) or 'none'}",
+            f"- scene_owner_state: {_one_line(scene_frame.get('owner_state'), limit=80) or 'none'}",
+            f"- scene_task_mode: {_one_line(scene_frame.get('task_mode'), limit=80) or 'none'}",
+            f"- scene_memory_relation: {_one_line(scene_frame.get('memory_relation'), limit=80) or 'none'}",
             "",
             "## Active Lenses",
             *lens_lines,

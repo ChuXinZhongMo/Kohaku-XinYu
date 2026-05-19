@@ -20,6 +20,7 @@ SELF_THOUGHT_REL = Path("memory/context/self_thought_state.md")
 DEFAULT_COOLDOWN_SECONDS = 21600
 DEFAULT_EXPIRES_SECONDS = 86400
 DEFAULT_MAX_CHARS = 180
+DREAM_SHARE_MAX_CHARS = 1000
 DEFAULT_INITIAL_MESSAGE_BUDGET = 3
 DEFAULT_FOLLOWUP_BUDGET = 6
 DEFAULT_NO_REPLY_FOLLOWUP_BUDGET = 2
@@ -136,7 +137,7 @@ def run_proactive_request_loop(
     max_chars: int = DEFAULT_MAX_CHARS,
 ) -> dict[str, Any]:
     root = root.resolve()
-    evaluated_at = evaluated_at or _now_iso()
+    evaluated_at = _timestamp_or_now_iso(evaluated_at)
     delivery_level = _normalize_delivery_level(delivery_level)
     self_thought = _read_text(root / SELF_THOUGHT_REL)
     previous_state = _read_text(root / STATE_REL)
@@ -236,9 +237,10 @@ def _candidate_from_self_thought(
     focus_label = _one_line(raw_focus_label, limit=80)
     evidence_label = _one_line(raw_evidence_label, limit=120)
     evidence_hash = _normalize_hash(_extract_value(state, "evidence_hash", ""))
-    question = _one_line(raw_question, limit=max_chars)
+    message_limit = _request_message_limit(focus_kind, intention, max_chars)
+    question = _one_line(raw_question, limit=message_limit)
     requested_action = _clean_token(_extract_value(state, "requested_action", "none"))
-    after_owner_replies = _one_line(raw_after_owner_replies, limit=max_chars)
+    after_owner_replies = _one_line(raw_after_owner_replies, limit=message_limit)
     tool_artifact = visible_text_has_tool_artifact(
         f"{raw_focus_label} {raw_evidence_label} {raw_question} {raw_after_owner_replies}"
     )
@@ -266,7 +268,7 @@ def _candidate_from_self_thought(
     thread_id = f"prothread:{request_family}:{evidence_hash}"
     return {
         "request_id": "proreq-" + _timestamp_id(evaluated_at),
-        "created_at": evaluated_at,
+        "created_at": _timestamp_or_now_iso(evaluated_at),
         "status": "none",
         "kind": KIND_BY_INTENTION.get(intention, "none"),
         "priority": _priority_for(focus_kind, intention),
@@ -291,7 +293,7 @@ def _candidate_from_self_thought(
         "cooldown_seconds": DEFAULT_COOLDOWN_SECONDS,
         "expires_at": _expires_at(evaluated_at, expires_seconds),
         "delivery_level": "none",
-        "max_chars": max_chars,
+        "max_chars": message_limit,
         "initial_message_budget": DEFAULT_INITIAL_MESSAGE_BUDGET,
         "followup_budget": DEFAULT_FOLLOWUP_BUDGET,
         "no_reply_followup_budget": DEFAULT_NO_REPLY_FOLLOWUP_BUDGET,
@@ -434,6 +436,7 @@ def _preserved_previous_request(
 def _render_state(request: dict[str, Any]) -> str:
     gates = request["gates"]
     notes = "\n".join(f"- {note}" for note in request["notes"]) or "- none"
+    message_limit = int(request.get("max_chars") or DEFAULT_MAX_CHARS)
     return f"""---
 title: Proactive Request State
 memory_type: proactive_request_state
@@ -441,7 +444,7 @@ time_scope: short_term
 subject_ids: [xinyu, owner]
 protected: true
 source: xinyu_proactive_request_loop
-updated_at: {_one_line(request['created_at'])}
+updated_at: {_timestamp_or_now_iso(request['created_at'])}
 status: active
 tags: [proactive, request, owner-private, boundary]
 ---
@@ -450,7 +453,7 @@ tags: [proactive, request, owner-private, boundary]
 
 ## Current Request
 - request_id: {_one_line(request['request_id'])}
-- created_at: {_one_line(request['created_at'])}
+- created_at: {_timestamp_or_now_iso(request['created_at'])}
 - status: {_one_line(request['status'])}
 - kind: {_one_line(request['kind'])}
 - source: {_one_line(request['source'])}
@@ -464,10 +467,10 @@ tags: [proactive, request, owner-private, boundary]
 - conversation_mode: {_one_line(request['conversation_mode'])}
 - evidence_label: {_one_line(request['evidence_label'])}
 - evidence_hash: {_one_line(request['evidence_hash'])}
-- concrete_question: {_one_line(request['concrete_question'], limit=DEFAULT_MAX_CHARS)}
+- concrete_question: {_one_line(request['concrete_question'], limit=message_limit)}
 - requested_action: {_one_line(request['requested_action'])}
-- why_now: {_one_line(request['why_now'], limit=DEFAULT_MAX_CHARS)}
-- after_owner_replies: {_one_line(request['after_owner_replies'], limit=DEFAULT_MAX_CHARS)}
+- why_now: {_one_line(request['why_now'], limit=message_limit)}
+- after_owner_replies: {_one_line(request['after_owner_replies'], limit=message_limit)}
 - dedupe_key: {_one_line(request['dedupe_key'])}
 - cooldown_seconds: {int(request['cooldown_seconds'])}
 - expires_at: {_one_line(request['expires_at'])}
@@ -529,7 +532,7 @@ tags: [proactive, request, owner-private, boundary]
 def _append_trace(root: Path, request: dict[str, Any]) -> None:
     payload = {
         "request_id": request["request_id"],
-        "created_at": request["created_at"],
+        "created_at": _timestamp_or_now_iso(request["created_at"]),
         "status": request["status"],
         "kind": request["kind"],
         "source": request["source"],
@@ -703,6 +706,12 @@ def _memory_feedback_target(focus_kind: str, intention: str) -> str:
     return "memory_event_or_reflection_gate_if_meaningful"
 
 
+def _request_message_limit(focus_kind: str, intention: str, default: int) -> int:
+    if focus_kind == "dream_residue" and intention == "share_dream":
+        return max(default, DREAM_SHARE_MAX_CHARS)
+    return default
+
+
 def _expires_at(created_at: str, seconds: int) -> str:
     parsed = _parse_iso(created_at)
     if parsed is None:
@@ -756,11 +765,24 @@ def _now_iso() -> str:
     return datetime.now().astimezone().isoformat()
 
 
-def _parse_iso(value: str) -> datetime | None:
+def _timestamp_or_now_iso(value: Any) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return _now_iso()
+    return parsed.astimezone().isoformat()
+
+
+def _parse_iso(value: Any) -> datetime | None:
+    text = _one_line(value, limit=80)
+    if not text or text == "none":
+        return None
     try:
-        return datetime.fromisoformat(value)
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
     except Exception:
         return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
 
 
 def _age_seconds(started_at: str, now: str) -> float:

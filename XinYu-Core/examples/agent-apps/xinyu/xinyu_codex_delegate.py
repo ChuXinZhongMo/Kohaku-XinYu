@@ -795,6 +795,7 @@ def _write_request(
 ) -> None:
     now = datetime.now().astimezone().isoformat(timespec="seconds")
     url_lines = "\n".join(f"- {url}" for url in urls) or "- none"
+    goal_block = _format_request_goal(task_text)
     request_path.write_text(
         f"""---
 title: QQ Codex Delegation Request
@@ -807,7 +808,7 @@ source: qq_owner_request
 # QQ Codex Delegation Request
 
 ## Goal
-- {task_text}
+{goal_block}
 
 ## Input URLs
 {url_lines}
@@ -831,6 +832,16 @@ source: qq_owner_request
 """,
         encoding="utf-8",
     )
+
+
+def _format_request_goal(task_text: str) -> str:
+    text = _safe_str(task_text).strip()
+    if "\n" not in text:
+        return f"- {text}"
+    fence = "```"
+    while fence in text:
+        fence += "`"
+    return f"{fence}text\n{text}\n{fence}"
 
 
 def _is_self_code_task(task_text: str) -> bool:

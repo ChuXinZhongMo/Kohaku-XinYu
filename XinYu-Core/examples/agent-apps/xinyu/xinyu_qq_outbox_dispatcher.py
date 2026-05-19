@@ -66,6 +66,12 @@ async def poll_qq_outbox(gateway: Any, websocket: Any, connection_id: str, *, ga
                         adapter_error=adapter_error,
                     )
                 if ok and message:
+                    gateway._record_outbox_visible_send_shadow(
+                        claim,
+                        target,
+                        message,
+                        delivery_kind="caption",
+                    )
                     caption_response = await gateway.send_reply(websocket, target, message)
                     caption_ok, caption_message_id, caption_error = gateway._onebot_action_result(caption_response)
                     if caption_ok and caption_message_id:
@@ -100,6 +106,12 @@ async def poll_qq_outbox(gateway: Any, websocket: Any, connection_id: str, *, ga
                 if not message:
                     await gateway._ack_qq_outbox(claim, status="failed", error="empty text message")
                     continue
+                gateway._record_outbox_visible_send_shadow(
+                    claim,
+                    target,
+                    message,
+                    delivery_kind=message_type or "text",
+                )
                 bubbles = gateway._outbox_visible_reply_bubbles(target, message, claim)
                 responses: list[dict[str, Any] | None] = []
                 for index, bubble in enumerate(bubbles):

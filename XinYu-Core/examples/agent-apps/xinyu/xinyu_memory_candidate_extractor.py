@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_bridge_state_text import payload_event_time_iso
 from xinyu_dialogue_archive import (
     GROUP_SCOPE,
     OWNER_PRIVATE_SCOPE,
@@ -17,6 +18,8 @@ from xinyu_dialogue_archive import (
     store_memory_candidate,
     store_temporal_trace_from_candidate,
 )
+from xinyu_memory_immune_gate import BLOCK
+from xinyu_memory_immune_gate import evaluate_memory_immune_gate
 from xinyu_text_variants import readable_markers
 
 
@@ -266,8 +269,29 @@ def extract_memory_candidates(
     candidate_ids: list[str] = []
     inserted = 0
     traces_inserted = 0
+    immune_blocked = 0
+    immune_notes: list[str] = []
+    created_at = payload_event_time_iso(payload, fallback=datetime.now().astimezone().isoformat())
     for spec in specs:
         candidate_id = _candidate_id(spec.candidate_type, spec.text, message_ids)
+        immune = evaluate_memory_immune_gate(
+            root,
+            payload=payload,
+            candidate_type=spec.candidate_type,
+            target_memory_layer=spec.target_memory_layer,
+            candidate_text=spec.text,
+            reason=spec.reason,
+            confidence_score=spec.confidence_score,
+        )
+        immune_notes.append(f"memory_immune:{spec.candidate_type}:{immune.immune_status}:{immune.danger_level}")
+        if immune.immune_status == BLOCK:
+            immune_blocked += 1
+            continue
+        review_notes = (
+            "pending owner/gate review; no stable memory write performed; "
+            f"memory_immune={immune.immune_status}/{immune.danger_level}/{immune.action}; "
+            "stable_write_allowed=false"
+        )
         if store_memory_candidate(
             root,
             candidate_id=candidate_id,
@@ -278,8 +302,8 @@ def extract_memory_candidates(
             target_gate=spec.target_gate,
             target_memory_layer=spec.target_memory_layer,
             reason=spec.reason,
-            review_notes="pending owner/gate review; no stable memory write performed",
-            created_at=datetime.now().astimezone().isoformat(),
+            review_notes=review_notes,
+            created_at=created_at,
         ):
             inserted += 1
             candidate_ids.append(candidate_id)
@@ -294,9 +318,13 @@ def extract_memory_candidates(
                 target_memory_layer=spec.target_memory_layer,
                 reason=spec.reason,
                 scope=scope.scope,
+                created_at=created_at,
             ):
                 traces_inserted += 1
     notes = ["memory_candidate_queued"] if inserted else ["memory_candidate_none"]
+    if immune_blocked:
+        notes.append(f"memory_immune_blocked:{immune_blocked}")
+    notes.extend(immune_notes[:3])
     if traces_inserted:
         notes.append("temporal_trace_queued")
     if scope.scope == GROUP_SCOPE:

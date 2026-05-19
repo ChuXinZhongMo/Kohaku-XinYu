@@ -4,6 +4,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from xinyu_storage_paths import knowledge_file_path
+
 
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8-sig")
@@ -11,6 +13,34 @@ def read_text(path: Path) -> str:
 
 def write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
+
+
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
+
+
+def _now_iso() -> str:
+    return datetime.now().astimezone().isoformat()
+
+
+def _timestamp_or_now_iso(value: object) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return _now_iso()
+    return parsed.astimezone().isoformat()
+
+
+def _parse_iso(value: object) -> datetime | None:
+    text = "" if value is None else str(value).strip()
+    if not text or text == "none":
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
 
 
 def extract_queue_items(text: str) -> list[tuple[str, str]]:
@@ -61,9 +91,9 @@ time_scope: short_term
 subject_ids: [xinyu]
 protected: true
 source: system
-created_at: 2026-04-24T00:00:00+08:00
-updated_at: {checked_at}
-last_confirmed_at: {checked_at}
+created_at: {_timestamp_or_now_iso('2026-04-24T00:00:00+08:00')}
+updated_at: {_timestamp_or_now_iso(checked_at)}
+last_confirmed_at: {_timestamp_or_now_iso(checked_at)}
 importance_score: 79
 impact_score: 79
 confidence_score: 100
@@ -95,8 +125,12 @@ def update_source_notes(path: Path, checked_at: str, items: list[tuple[str, str]
     note_lines = "\n".join(lines) if lines else "- no current source-gate candidates"
     if path.exists():
         text = read_text(path).rstrip()
-        text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {checked_at}", text)
-        text = re.sub(r"(?m)^last_confirmed_at:\s*.+$", f"last_confirmed_at: {checked_at}", text)
+        text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {_timestamp_or_now_iso(checked_at)}", text)
+        text = re.sub(
+            r"(?m)^last_confirmed_at:\s*.+$",
+            f"last_confirmed_at: {_timestamp_or_now_iso(checked_at)}",
+            text,
+        )
         section = f"## Current Source-Gate Candidates\n{note_lines}"
         if "## Current Source-Gate Candidates" in text:
             text = re.sub(
@@ -116,9 +150,9 @@ time_scope: mid_term
 subject_ids: [xinyu]
 protected: false
 source: system
-created_at: 2026-04-22T00:00:00+08:00
-updated_at: {checked_at}
-last_confirmed_at: {checked_at}
+created_at: {_timestamp_or_now_iso('2026-04-22T00:00:00+08:00')}
+updated_at: {_timestamp_or_now_iso(checked_at)}
+last_confirmed_at: {_timestamp_or_now_iso(checked_at)}
 importance_score: 72
 impact_score: 58
 confidence_score: 76
@@ -143,16 +177,16 @@ def run_source_gate(
     checked_at: str | None = None,
     mode: str = "runtime_source_gate",
 ) -> dict[str, object]:
-    checked_at = checked_at or datetime.now().astimezone().isoformat()
+    checked_at = _timestamp_or_now_iso(checked_at)
     items = extract_queue_items(read_text(root / "memory/context/exploration_queue.md"))
 
     update_source_gate_state(
-        root / "memory/knowledge/source_gate_state.md",
+        _knowledge(root, "source_gate_state.md"),
         checked_at,
         mode,
         items,
     )
-    update_source_notes(root / "memory/knowledge/source_notes.md", checked_at, items)
+    update_source_notes(_knowledge(root, "source_notes.md"), checked_at, items)
     return {
         "checked_at": checked_at,
         "candidate_count": len(items),

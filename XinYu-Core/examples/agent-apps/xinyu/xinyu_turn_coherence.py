@@ -14,6 +14,30 @@ STATE_MD_REL = Path("memory/context/turn_coherence_state.md")
 TRACE_REL = Path("runtime/turn_coherence_trace.jsonl")
 
 
+def _now_iso() -> str:
+    return datetime.now().astimezone().isoformat()
+
+
+def _timestamp_or_now_iso(value: Any) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return _now_iso()
+    return parsed.astimezone().isoformat()
+
+
+def _parse_iso(value: Any) -> datetime | None:
+    text = _one_line(value)
+    if not text or text.lower() in {"none", "unknown", "null", "n/a", "na"}:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
+
+
 @dataclass(frozen=True, slots=True)
 class TurnCoherenceSnapshot:
     checked_at: str
@@ -87,7 +111,7 @@ def build_turn_coherence_snapshot(
     max_chars: int = 2200,
 ) -> TurnCoherenceSnapshot:
     root = root.resolve()
-    checked_at = checked_at or datetime.now().astimezone().isoformat()
+    checked_at = _timestamp_or_now_iso(checked_at)
     speaker_relation = _speaker_relation(payload)
     current_turn_intent = _classify_turn_intent(user_text)
     memory_lane = _memory_lane(
@@ -162,7 +186,7 @@ def finish_turn_coherence(
     component_notes: dict[str, Any] | None = None,
     checked_at: str | None = None,
 ) -> dict[str, Any]:
-    checked_at = checked_at or datetime.now().astimezone().isoformat()
+    checked_at = _timestamp_or_now_iso(checked_at)
     current_turn_intent = _classify_turn_intent(user_text)
     memory_lane = "changed" if memory_changed else "observed"
     thought_lane = _finish_thought_lane(component_notes or {})
@@ -240,7 +264,7 @@ def write_turn_coherence_state(
         "subject_ids: [xinyu]",
         "protected: true",
         "source: xinyu_turn_coherence",
-        f"updated_at: {snapshot.checked_at}",
+        f"updated_at: {_timestamp_or_now_iso(snapshot.checked_at)}",
         "status: active",
         "tags: [turn, coherence, memory, thought, action]",
         "---",
@@ -283,7 +307,7 @@ def append_turn_coherence_trace(
 ) -> None:
     event = {
         "event_kind": event_kind,
-        "observed_at": snapshot.checked_at,
+        "observed_at": _timestamp_or_now_iso(snapshot.checked_at),
         **snapshot_to_json(snapshot),
     }
     event.update(extra or {})

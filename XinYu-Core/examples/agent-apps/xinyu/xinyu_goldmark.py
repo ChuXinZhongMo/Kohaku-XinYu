@@ -1,22 +1,23 @@
 from __future__ import annotations
 
-import contextlib
 import hashlib
-import json
-import os
 import re
 import sqlite3
-import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from stores.persona_runtime_overlay import (
+    BOUNDARY_ID as PERSONA_RUNTIME_OVERLAY_BOUNDARY,
+    OVERLAY_REL,
+    read_goldmark_overlay as store_read_goldmark_overlay,
+    write_goldmark_overlay,
+)
 from xinyu_dialogue_archive import dialogue_archive_path
 from xinyu_sent_reply_index import lookup_sent_reply_by_adapter_msg_id, normalize_visible_text
 
 
-OVERLAY_REL = Path("memory/self/goldmark_positive_overlay.json")
 MAX_OWNER_NOTE_CHARS = 500
 MAX_OVERLAY_ENTRIES = 1000
 
@@ -44,32 +45,6 @@ def _safe_str(value: Any, default: str = "") -> str:
 
 def _now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
-
-
-def _read_overlay(path: Path) -> list[dict[str, Any]]:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
-        return []
-    if isinstance(data, list):
-        return [item for item in data if isinstance(item, dict)]
-    if isinstance(data, dict) and isinstance(data.get("entries"), list):
-        return [item for item in data.get("entries", []) if isinstance(item, dict)]
-    return []
-
-
-def _atomic_write_json(path: Path, data: list[dict[str, Any]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
-            json.dump(data, fh, ensure_ascii=False, indent=2)
-            fh.write("\n")
-        os.replace(tmp_name, path)
-    finally:
-        if os.path.exists(tmp_name):
-            with contextlib.suppress(OSError):
-                os.unlink(tmp_name)
 
 
 def _mark_id_from_turn(turn_id: str, adapter_message_id: str) -> str:
@@ -175,7 +150,7 @@ def validate_goldmark_target(root: Path, entry: dict[str, Any]) -> dict[str, Any
 
 
 def read_goldmark_overlay(root: Path) -> list[dict[str, Any]]:
-    return _read_overlay(root / OVERLAY_REL)
+    return store_read_goldmark_overlay(root)
 
 
 def mark_goldmark_request(root: Path, payload: dict[str, Any] | None) -> dict[str, Any]:
@@ -246,7 +221,6 @@ def mark_goldmark_request(root: Path, payload: dict[str, Any] | None) -> dict[st
         "error_log": None,
     }
 
-    path = root / OVERLAY_REL
     entries = read_goldmark_overlay(root)
     identity = _entry_identity(entry)
     existing = next((item for item in entries if _entry_identity(item) == identity), None)
@@ -268,7 +242,7 @@ def mark_goldmark_request(root: Path, payload: dict[str, Any] | None) -> dict[st
     entries = [item for item in entries if _entry_identity(item) != identity]
     entries.insert(0, entry)
     entries = entries[:MAX_OVERLAY_ENTRIES]
-    _atomic_write_json(path, entries)
+    write_goldmark_overlay(root, entries)
     return {
         "accepted": True,
         "marked": True,

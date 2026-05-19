@@ -120,16 +120,20 @@ def compose_action_reply(
         base = summary[0] if summary else "这个目标还没登记清楚，我先不动工具"
         return base.rstrip("。") + "。"
 
+    if tool == "status_probe":
+        parts = summary[:2] if tight else summary[:3]
+        body = "；".join(part.rstrip("。") for part in parts if part)
+        return (body or "我在线").rstrip("。") + "。"
+
     if not outcome.get("ok"):
         base = summary[0] if summary else "这次没有跑顺"
         if _has_report(outcome):
             return f"{base}。报告在 Outbox。"
         return base.rstrip("。") + "。"
 
-    if tool == "status_probe":
-        if tight:
-            return "看过了。" + "；".join(summary[:2]) + "。"
-        return "看过了。" + "；".join(summary[:3]) + "。"
+    if tool == "external_plugin_call":
+        base = summary[0] if summary else "external plugin completed"
+        return base.rstrip(".!?") + "."
 
     if tool == "log_scan":
         diagnosis = action_diagnosis(outcome)

@@ -7,8 +7,14 @@ from urllib.parse import urlparse
 
 from source_request_planner_engine import render_source_requests, split_requests
 from source_search_resolver_engine import split_existing_results
+from source_protocol_utils import next_dated_id
+from xinyu_storage_paths import knowledge_file_path
 
 ACCEPTED_RELIABILITY = {"medium_candidate", "high_candidate"}
+
+
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
 
 
 def read_text(path: Path) -> str:
@@ -30,16 +36,11 @@ def next_registry_id(existing_text: str, date_part: str) -> str:
 
 
 def next_request_id(existing: list[dict[str, str]], date_part: str) -> str:
-    numbers: list[int] = []
-    for item in existing:
-        match = re.match(rf"request-{re.escape(date_part)}-(\d{{3}})$", item["request_id"])
-        if match:
-            numbers.append(int(match.group(1)))
-    return f"request-{date_part}-{max(numbers, default=0) + 1:03d}"
+    return next_dated_id(existing, id_field="request_id", prefix="request", date_part=date_part)
 
 
 def append_registry(root: Path, gated_at: str, accepted: list[dict[str, str]]) -> list[str]:
-    path = root / "memory/knowledge/source_registry.md"
+    path = _knowledge(root, "source_registry.md")
     text = read_text(path).rstrip()
     ids: list[str] = []
     if "# Source Registry" not in text:
@@ -88,7 +89,7 @@ tags: [knowledge, sources, registry]
 
 
 def update_requests_for_accepted(root: Path, gated_at: str, accepted: list[dict[str, str]]) -> int:
-    requests = split_requests(read_text(root / "memory/knowledge/source_requests.md"))
+    requests = split_requests(read_text(_knowledge(root, "source_requests.md")))
     by_request_id: dict[str, list[dict[str, str]]] = {}
     for item in accepted:
         by_request_id.setdefault(item["request_id"], []).append(item)
@@ -116,7 +117,7 @@ def update_requests_for_accepted(root: Path, gated_at: str, accepted: list[dict[
                 }
             )
             updated += 1
-    write_text(root / "memory/knowledge/source_requests.md", render_source_requests(gated_at, requests))
+    write_text(_knowledge(root, "source_requests.md"), render_source_requests(gated_at, requests))
     return updated
 
 
@@ -162,8 +163,8 @@ def run_search_result_gate(
     mode: str = "runtime_search_result_gate",
 ) -> dict[str, object]:
     gated_at = gated_at or datetime.now().astimezone().isoformat()
-    results = split_existing_results(read_text(root / "memory/knowledge/source_search_results.md"))
-    requests = split_requests(read_text(root / "memory/knowledge/source_requests.md"))
+    results = split_existing_results(read_text(_knowledge(root, "source_search_results.md")))
+    requests = split_requests(read_text(_knowledge(root, "source_requests.md")))
     pending_request_ids = {
         item["request_id"] for item in requests if item.get("status") == "pending_url"
     }
@@ -194,7 +195,7 @@ def run_search_result_gate(
     updated_requests = update_requests_for_accepted(root, gated_at, accepted) if accepted else 0
     registry_ids = append_registry(root, gated_at, accepted) if accepted else []
     write_text(
-        root / "memory/knowledge/search_result_gate_state.md",
+        _knowledge(root, "search_result_gate_state.md"),
         render_state(gated_at, mode, len(candidates), len(accepted), updated_requests, skipped_reason),
     )
     return {

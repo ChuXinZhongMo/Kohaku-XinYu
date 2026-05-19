@@ -7,9 +7,10 @@ from typing import Any
 
 
 PROTOCOL_VERSION = "xinyu.tool.v1"
-ALLOWED_TOOLS = frozenset({"status_probe", "log_scan", "codex_delegate"})
+ALLOWED_TOOLS = frozenset({"status_probe", "log_scan", "codex_delegate", "external_plugin_call"})
 READ_ONLY_RISK = "read_only"
 DELEGATED_LOCAL_RISK = "delegated_local"
+EXTERNAL_RUNTIME_RISK = "external_runtime"
 
 
 def now_iso() -> str:

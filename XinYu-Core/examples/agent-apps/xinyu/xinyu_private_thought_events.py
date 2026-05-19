@@ -146,6 +146,19 @@ def _now_iso() -> str:
     return datetime.now().astimezone().isoformat()
 
 
+def _timestamp_or_now_iso(value: Any = None) -> str:
+    text = "" if value is None else str(value).strip()
+    if not text or text.lower() in {"none", "unknown", "null", "n/a", "na"}:
+        return _now_iso()
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return _now_iso()
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed.astimezone().isoformat()
+
+
 def _hash_text(text: str, length: int = 16) -> str:
     return hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest()[:length]
 
@@ -650,6 +663,7 @@ def build_private_thought_event_snapshot(
     source_response: str = "",
     llm_payload: dict[str, Any] | None = None,
 ) -> PrivateThoughtEventSnapshot:
+    generated_at = _timestamp_or_now_iso(generated_at)
     seed = refresh_thought_seeds(root, generated_at=generated_at)
     payload = dict(_fallback_payload(seed, source_kind=source_kind))
     if llm_payload:
@@ -721,9 +735,11 @@ def build_private_thought_event_snapshot(
         note_material="",
     )
     state_text = render_state_text(placeholder, generated_at=generated_at)
-    feedback_state = read_text(root / FEEDBACK_REL) or render_feedback_state(updated_at=generated_at)
+    feedback_state = read_text(root / FEEDBACK_REL) or render_feedback_state(
+        updated_at=_timestamp_or_now_iso(generated_at)
+    )
     self_model_text = render_self_model_state(
-        updated_at=generated_at,
+        updated_at=_timestamp_or_now_iso(generated_at),
         private_state=state_text,
         feedback_state=feedback_state,
     )
@@ -761,13 +777,14 @@ def write_private_thought_snapshot(root: Path, snapshot: PrivateThoughtEventSnap
     if not log_path.exists():
         write_text(
             log_path,
-            """---
+            f"""---
 title: Private Thought Log
 memory_type: private_thought_log
 time_scope: mid_term
 subject_ids: [xinyu]
 protected: true
 source: xinyu_private_thought_events
+updated_at: {snapshot.generated_at}
 status: active
 tags: [self, private_thought, autonomy, feedback]
 ---
@@ -778,7 +795,7 @@ tags: [self, private_thought, autonomy, feedback]
     write_text(root / STATE_REL, snapshot.state_text)
     write_text(root / SELF_MODEL_REL, snapshot.self_model_text)
     if not (root / FEEDBACK_REL).exists():
-        write_text(root / FEEDBACK_REL, render_feedback_state(updated_at=snapshot.generated_at))
+        write_text(root / FEEDBACK_REL, render_feedback_state(updated_at=_timestamp_or_now_iso(snapshot.generated_at)))
 
 
 async def refresh_private_thought_event(
@@ -791,7 +808,7 @@ async def refresh_private_thought_event(
     source_response: str = "",
     use_llm: bool = True,
 ) -> PrivateThoughtEventSnapshot:
-    generated = generated_at or _now_iso()
+    generated = _timestamp_or_now_iso(generated_at)
     seed = refresh_thought_seeds(root, generated_at=generated)
     llm_payload: dict[str, Any] | None = None
     if llm is not None and use_llm:
@@ -830,7 +847,7 @@ def refresh_private_thought_event_sync(
     source_kind: str = "deterministic_seed_summary",
     trigger: str = "manual_refresh",
 ) -> PrivateThoughtEventSnapshot:
-    generated = generated_at or _now_iso()
+    generated = _timestamp_or_now_iso(generated_at)
     snapshot = build_private_thought_event_snapshot(
         root,
         generated_at=generated,
@@ -845,15 +862,16 @@ def read_private_thought_state(root: Path, *, generated_at: str | None = None) -
     existing = read_text(root / STATE_REL).strip()
     if existing:
         return existing
-    state = render_state_text(None, generated_at=generated_at or "not_written")
+    generated = _timestamp_or_now_iso(generated_at)
+    state = render_state_text(None, generated_at=generated)
     write_text(root / STATE_REL, state)
     if not (root / FEEDBACK_REL).exists():
-        write_text(root / FEEDBACK_REL, render_feedback_state(updated_at=generated_at or "not_written"))
+        write_text(root / FEEDBACK_REL, render_feedback_state(updated_at=_timestamp_or_now_iso(generated)))
     if not (root / SELF_MODEL_REL).exists():
         write_text(
             root / SELF_MODEL_REL,
             render_self_model_state(
-                updated_at=generated_at or "not_written",
+                updated_at=_timestamp_or_now_iso(generated),
                 private_state=state,
                 feedback_state=read_text(root / FEEDBACK_REL),
             ),
@@ -865,10 +883,11 @@ def read_self_model_state(root: Path, *, generated_at: str | None = None) -> str
     existing = read_text(root / SELF_MODEL_REL).strip()
     if existing:
         return existing
+    generated = _timestamp_or_now_iso(generated_at)
     private_state = read_private_thought_state(root, generated_at=generated_at)
-    feedback_state = read_text(root / FEEDBACK_REL) or render_feedback_state(updated_at=generated_at or "not_written")
+    feedback_state = read_text(root / FEEDBACK_REL) or render_feedback_state(updated_at=_timestamp_or_now_iso(generated))
     state = render_self_model_state(
-        updated_at=generated_at or "not_written",
+        updated_at=_timestamp_or_now_iso(generated),
         private_state=private_state,
         feedback_state=feedback_state,
     )
@@ -911,7 +930,7 @@ def mark_private_thought_desktop_written(
     note_path: Path,
     generated_at: str | None = None,
 ) -> None:
-    updated = generated_at or _now_iso()
+    updated = _timestamp_or_now_iso(generated_at)
     append_text(
         root / LOG_REL,
         f"""## desktop-note-{_hash_text(str(note_path), 12)}
@@ -936,7 +955,7 @@ def record_private_thought_reply_link(
     event_id = latest_private_thought_event_id(root)
     if event_id == "none" or not reply.strip():
         return {"linked": False, "notes": ["private_thought_no_active_event"]}
-    updated = linked_at or _now_iso()
+    updated = _timestamp_or_now_iso(linked_at)
     reply_hash = _hash_text(reply, 24)
     user_hash = _hash_text(user_text, 24)
     notes = (
@@ -944,7 +963,7 @@ def record_private_thought_reply_link(
         "await next owner/user reaction before self-model confidence change",
     )
     feedback = render_feedback_state(
-        updated_at=updated,
+        updated_at=_timestamp_or_now_iso(updated),
         event_id=event_id,
         session_key=session_key,
         status="pending_next_reaction",
@@ -960,7 +979,7 @@ def record_private_thought_reply_link(
     private_state = read_private_thought_state(root, generated_at=updated)
     write_text(
         root / SELF_MODEL_REL,
-        render_self_model_state(updated_at=updated, private_state=private_state, feedback_state=feedback),
+        render_self_model_state(updated_at=_timestamp_or_now_iso(updated), private_state=private_state, feedback_state=feedback),
     )
     append_text(
         root / LOG_REL,
@@ -1018,10 +1037,10 @@ def record_private_thought_outcome(
     if persona_feedback["promotion_signal"]:
         notes.append("persona_trial_promotion_signal")
 
-    updated = observed_at or _now_iso()
+    updated = _timestamp_or_now_iso(observed_at)
     reaction_hash = _hash_text(text, 24)
     new_feedback = render_feedback_state(
-        updated_at=updated,
+        updated_at=_timestamp_or_now_iso(updated),
         event_id=event_id,
         session_key=session_key,
         status="evaluated",
@@ -1039,7 +1058,11 @@ def record_private_thought_outcome(
     private_state = read_private_thought_state(root, generated_at=updated)
     write_text(
         root / SELF_MODEL_REL,
-        render_self_model_state(updated_at=updated, private_state=private_state, feedback_state=new_feedback),
+        render_self_model_state(
+            updated_at=_timestamp_or_now_iso(updated),
+            private_state=private_state,
+            feedback_state=new_feedback,
+        ),
     )
     append_text(
         root / LOG_REL,

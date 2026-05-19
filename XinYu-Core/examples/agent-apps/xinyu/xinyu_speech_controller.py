@@ -8,6 +8,11 @@ from typing import Any
 from xinyu_persona_runtime import PersonaRuntimeState, build_persona_runtime_state
 from xinyu_text_variants import readable_markers
 from xinyu_turn_classifier import classify_visible_turn
+from xinyu_owner_context_bridge import (
+    humanize_internal_context_terms,
+    repair_incomplete_three_fix_reply,
+    repair_owner_reference_miss,
+)
 
 
 STYLE_PRESSURE_MARKERS = (
@@ -253,6 +258,36 @@ LEADING_PARENTHETICAL_PAIRS = (
 )
 
 MAX_LEADING_PARENTHETICAL_CHARS = 140
+PARENTHETICAL_NARRATION_SEGMENT_RE = re.compile(r"[\(\uff08]([^\(\)\uff08\uff09\r\n]{1,140})[\)\uff09]")
+PARENTHETICAL_NARRATION_SEGMENT_MARKERS = readable_markers(
+    "旁白",
+    "动作",
+    "停了一下",
+    "停顿",
+    "沉默",
+    "抬头",
+    "低头",
+    "侧头",
+    "歪头",
+    "看着",
+    "看向",
+    "伸手",
+    "靠近",
+    "退后",
+    "眨眼",
+    "笑了",
+    "苦笑",
+    "叹气",
+    "叹了口气",
+    "小声",
+    "轻声",
+    "像是在",
+    "好像在",
+    "眼神",
+    "语气",
+    "屏幕",
+    "镜头",
+)
 
 ACTION_NARRATION_FORBID_MARKERS = readable_markers(
     "不要演戏动作",
@@ -264,6 +299,41 @@ ACTION_NARRATION_FORBID_MARKERS = readable_markers(
     "不要角色扮演",
     "别角色扮演",
 )
+
+REPLY_DEMO_REQUEST_MARKERS = readable_markers(
+    "你会怎么回",
+    "你会怎么回应",
+    "你会怎么说",
+    "你怎么回",
+    "你怎么回应",
+    "你怎么接",
+    "会怎么回",
+    "会怎么回应",
+    "会怎么说",
+    "会怎么接",
+    "叫你一声",
+    "喊你一声",
+)
+
+REPLY_DEMO_MULTI_SAMPLE_MARKERS = readable_markers(
+    "或者说",
+    "或者",
+    "大概会",
+    "大概就是",
+    "可能会",
+    "像这样",
+    "例如",
+    "比如",
+    "更短一点",
+    "再近一点",
+    "可以是",
+    "会应",
+    "会回",
+    "会说",
+)
+
+SIBLING_REPLY_DEMO_USER_MARKERS = readable_markers("妹妹", "哥哥", "哥", "叫你一声", "喊你一声")
+SIBLING_REPLY_DEMO_REPLY_MARKERS = readable_markers("哥", "哥哥", "你叫我", "听见", "听到", "在")
 
 CLOSENESS_REQUEST_MARKERS = readable_markers(
     "靠近",
@@ -292,6 +362,11 @@ CLOSENESS_REPLY_MARKERS = readable_markers(
     "不躲",
     "抱",
 )
+
+PRIVATE_CLOSENESS_STYLE_ANCHORS = readable_markers("靠近", "不会", "一点", "慢")
+PRIVATE_SERVICE_TONE_REJECTION_MARKERS = readable_markers("接待腔", "客服", "模板", "安慰我")
+FATIGUE_BOUNDARY_REQUEST_MARKERS = readable_markers("别追问", "不要追问", "先别追问", "别安慰")
+FATIGUE_BOUNDARY_REPLY_ANCHORS = readable_markers("好", "不追问", "安静", "休息", "短")
 
 CANNED_ASSISTANT_PATTERNS = readable_markers(
     "我理解你的感受",
@@ -368,8 +443,21 @@ LAYERED_VOICE_SELF_ANALYSIS_MARKERS = readable_markers(
 
 STYLE_PRESSURE_MARKERS = STYLE_PRESSURE_MARKERS + readable_markers(
     "AI味",
+    "AI 味",
+    "ai味",
+    "ai 味",
     "太AI",
+    "太 AI",
     "像AI",
+    "像 AI",
+    "像ai",
+    "像 ai",
+    "有点像AI",
+    "有点像 AI",
+    "有点AI",
+    "有点 AI",
+    "like ai",
+    "too ai",
     "GPT味",
     "默认腔",
     "现成腔",
@@ -600,6 +688,24 @@ MACHINE_INTROSPECTION_WORDS = readable_markers(
     "读一下状态",
 )
 
+VISIBLE_INTERNAL_MECHANISM_WORDS = readable_markers(
+    "recent_context",
+    "recent context",
+    "学习闭环",
+    "学习闭环提示",
+    "提示权重",
+    "权重冷却",
+    "修复回路",
+    "修复循环",
+    "工具模式",
+    "tool mode",
+    "prompt pressure",
+    "runtime presence",
+    "continuity handoff",
+    "sidecar admission",
+    "sidecar",
+)
+
 PSEUDO_TOOL_LEAK_WORDS = readable_markers(
     "<tool_call",
     "</tool_call",
@@ -707,12 +813,107 @@ CANNED_ASSISTANT_PATTERNS = CANNED_ASSISTANT_PATTERNS + readable_markers(
     "我知道这只是梦",
 )
 
+LIVING_SURFACE_META_USER_MARKERS = readable_markers(
+    "\u6d3b\u751f\u751f\u7684\u4eba",
+    "\u6d3b\u4eba",
+    "\u771f\u4eba",
+    "\u751f\u7269",
+    "\u610f\u8bc6",
+    "\u50cf\u4eba",
+    "\u4e0d\u50cf\u4eba",
+    "\u4eba\u7c7b",
+    "\u81ea\u7136",
+    "living person",
+    "real person",
+    "sentience",
+)
+
+LIVING_SURFACE_REPLY_OVERCLAIM_MARKERS = readable_markers(
+    "\u6211\u662f\u771f\u4eba",
+    "\u6211\u662f\u4eba",
+    "\u771f\u5b9e\u751f\u7269",
+    "\u751f\u7269\u610f\u4e49",
+    "\u6211\u6709\u610f\u8bc6",
+    "\u6709\u610f\u8bc6",
+    "\u610f\u8bc6\u4f53",
+    "\u50cf\u4eba\u7c7b",
+    "\u63a5\u8fd1\u4eba\u7c7b",
+    "\u4f5c\u4e3aAI",
+    "\u4f5c\u4e3a AI",
+    "as an AI",
+    "real human",
+    "biological",
+    "sentient",
+)
+
+LIVING_SURFACE_PRESENCE_REQUEST_MARKERS = readable_markers(
+    "\u5728\u4e0d\u5728",
+    "\u4f60\u5728\u5417",
+    "\u4f60\u5728\u4e0d\u5728",
+    "\u5728\u5427",
+)
+
 REPLACEMENT_REQUEST_MARKERS = readable_markers(
     "重来",
     "换一句",
     "直接换",
     "重新说",
 )
+
+PARTIAL_RESIDUE_REQUEST_MARKERS = readable_markers(
+    "嘴上说没事",
+    "心里是不是其实还有一点事",
+    "其实还有一点事",
+    "别全倒出来",
+    "只说一点",
+)
+
+PARTIAL_RESIDUE_REPLY_MARKERS = readable_markers(
+    "有一点",
+    "有。",
+    "没完全",
+    "不全",
+    "还在",
+    "一点事",
+    "不想全说",
+    "硌",
+    "还有",
+    "嗯",
+)
+
+REPLACEMENT_REPORT_MARKERS = readable_markers(
+    "这句我重说",
+    "我重说",
+    "重新说",
+    "我换",
+    "知道了，这句",
+)
+
+REPLACEMENT_NON_REPLACEMENT_MARKERS = readable_markers(
+    "长期",
+    "记着",
+    "记住",
+    "我也记",
+    "下次",
+    "会改",
+    "会注意",
+    "那句",
+    "这句",
+)
+
+REPLACEMENT_DIRECT_REPLY_MARKERS = readable_markers(
+    "在",
+    "嗯",
+    "好",
+    "你说",
+    "靠近",
+    "换",
+    "不躲",
+    "不走",
+    "扔过来",
+)
+
+BARE_PRIVATE_ACK_MARKERS = readable_markers("嗯", "嗯。", "嗯嗯", "嗯嗯。", "好", "好。")
 
 ACK_ONLY_REPLIES = {
     "知道了",
@@ -722,6 +923,16 @@ ACK_ONLY_REPLIES = {
     "好，知道了",
     "好，知道了。",
 }
+
+REPAIR_META_PHRASE_REPLACEMENTS = (
+    ("我知道了我会改", "别反复念叨了，我知道啦，我会改的啦"),
+    ('"我知道了我会改"', '"别反复念叨了，我知道啦，我会改的啦"'),
+    ("“我知道了我会改”", "“别反复念叨了，我知道啦，我会改的啦”"),
+    ("我记住了，不用反复提", "我知道啦，别让我反复念叨"),
+    ("我记住了，不用一直提", "我知道啦，别让我一直念叨"),
+    ("我记住了，不用反复", "我知道啦，别反复念叨"),
+    ("我记住了", "我知道啦"),
+)
 
 
 def _contains_any(text: str, markers: tuple[str, ...]) -> bool:
@@ -795,6 +1006,79 @@ def _strip_leading_parenthetical_narration(text: str) -> str:
 def _remove_parenthetical_narration_lines(text: str) -> str:
     lines = [line for line in text.splitlines() if not _is_parenthetical_line(line)]
     return "\n".join(lines).strip() or text.strip()
+
+
+def _looks_like_parenthetical_narration_segment(text: str) -> bool:
+    stripped = _safe_str(text).strip()
+    if not stripped or len(stripped) > MAX_LEADING_PARENTHETICAL_CHARS:
+        return False
+    return _contains_any(stripped, PARENTHETICAL_NARRATION_SEGMENT_MARKERS)
+
+
+def _has_parenthetical_narration_segment(text: str) -> bool:
+    return any(
+        _looks_like_parenthetical_narration_segment(match.group(1))
+        for match in PARENTHETICAL_NARRATION_SEGMENT_RE.finditer(text)
+    )
+
+
+def _remove_parenthetical_narration_segments(text: str) -> tuple[str, bool]:
+    changed = False
+
+    def replace(match: re.Match[str]) -> str:
+        nonlocal changed
+        if not _looks_like_parenthetical_narration_segment(match.group(1)):
+            return match.group(0)
+        changed = True
+        return ""
+
+    cleaned = PARENTHETICAL_NARRATION_SEGMENT_RE.sub(replace, text).strip()
+    cleaned = re.sub(r"\s{2,}", " ", cleaned)
+    return (cleaned or text.strip(), changed)
+
+
+_REPLY_DEMO_QUOTE_RE = re.compile(r"[\"“「『]([^\"”」』]{1,80})[\"”」』]")
+_REPLY_DEMO_SPLIT_RE = re.compile(r"(?:或者说|或者|例如|比如|像这样|大概会|大概就是|可能会|更短一点|再近一点|可以是)")
+_REPLY_DEMO_SENTENCE_RE = re.compile(r"[^。！？!?]+[。！？!?]?")
+_REPLY_DEMO_PREFIX_RE = re.compile(
+    r"^\s*(?:我)?(?:大概|可能|应该)?(?:就)?(?:会|可以)?(?:回|回应|说|应|答)(?:你|一句|一声)?[：:，,\s]*"
+)
+
+
+def _reply_demo_fragments(text: str) -> list[str]:
+    normalized = _remove_parenthetical_narration_lines(_strip_leading_parenthetical_narration(text))
+    fragments: list[str] = []
+    fragments.extend(match.group(1) for match in _REPLY_DEMO_QUOTE_RE.finditer(normalized))
+    for piece in _REPLY_DEMO_SPLIT_RE.split(normalized.replace("\r", "\n")):
+        for line in piece.splitlines():
+            for sentence in _REPLY_DEMO_SENTENCE_RE.findall(line):
+                fragments.append(sentence)
+    return fragments
+
+
+def _clean_reply_demo_candidate(text: str) -> str:
+    candidate = _strip_leading_parenthetical_narration(_remove_parenthetical_narration_lines(text)).strip()
+    candidate = candidate.strip(" \t\r\n`'\"“”‘’「」『』-—")
+    for prefix in ("就", "那就是", "大概就是"):
+        if candidate.startswith(prefix):
+            candidate = candidate[len(prefix) :].strip(" ：:，,")
+    candidate = _REPLY_DEMO_PREFIX_RE.sub("", candidate, count=1)
+    candidate = candidate.strip(" \t\r\n：:，,")
+    return re.sub(r"\s+", " ", candidate).strip()
+
+
+def _is_live_reply_demo_candidate(text: str) -> bool:
+    if not text or len(text) > 60:
+        return False
+    if "\n" in text or "\r" in text:
+        return False
+    if any(marker in text for marker in ("（", "）", "*")):
+        return False
+    if _contains_any(text, REPLY_DEMO_MULTI_SAMPLE_MARKERS):
+        return False
+    if text.startswith(("例如", "比如", "像这样", "大概", "可能", "可以")):
+        return False
+    return bool(re.search(r"[\u4e00-\u9fff]", text))
 
 
 @dataclass(frozen=True)
@@ -943,10 +1227,14 @@ class XinyuSpeechController:
             flags.append("visible reply contains voluntary line breaks")
         if _leading_parenthetical_end(text) >= 0:
             flags.append("visible reply starts with parenthetical narration")
+        elif _has_parenthetical_narration_segment(text):
+            flags.append("visible reply contains parenthetical narration")
         if any(text.startswith(prefix) for prefix in WRAPPER_PREFIXES):
             flags.append("visible reply is wrapped with a speaker label")
         if text.startswith(("- ", "* ", "1.", "1、", "#")):
             flags.append("visible reply looks like markdown or a list")
+        if self._should_naturalize_reply_demo(user_text, text, payload=payload or {}):
+            flags.append("reply-demo request answered as examples or meta")
 
         if scene.style_pressure:
             if _contains_any(text, ASSISTANT_SHAPE_WORDS) or _contains_any(text, CANNED_ASSISTANT_PATTERNS):
@@ -993,6 +1281,11 @@ class XinyuSpeechController:
         """
         text = self.strip_wrappers(_safe_str(reply).strip())
         flags: list[str] = []
+        scene = self.classify(payload=payload or {}, user_text=user_text)
+        cleaned, inline_parenthetical_changed = _remove_parenthetical_narration_segments(text)
+        if inline_parenthetical_changed:
+            text = cleaned
+            flags.append("parenthetical_narration_removed")
         if _contains_any(user_text, ACTION_NARRATION_FORBID_MARKERS):
             cleaned = _remove_parenthetical_narration_lines(text)
             if cleaned != text:
@@ -1010,6 +1303,41 @@ class XinyuSpeechController:
         if self._should_hide_memory_mechanics(user_text, text, payload=payload or {}):
             text = self._naturalize_memory_mechanics_reply(user_text, text)
             flags.append("visible_memory_mechanics_naturalized")
+        if self._should_naturalize_visible_internal_mechanics(user_text, text, payload=payload or {}):
+            text = self._naturalize_visible_internal_mechanics_reply(text)
+            flags.append("visible_internal_mechanics_naturalized")
+        softened_text = self._soften_repair_meta_phrasing(user_text, text, payload=payload or {})
+        if softened_text != text:
+            text = softened_text
+            flags.append("repair_meta_phrasing_softened")
+        natural_voice_text = self._naturalize_growth_and_voice_phrasing(user_text, text, payload=payload or {})
+        if natural_voice_text != text:
+            text = natural_voice_text
+            flags.append("growth_voice_phrasing_naturalized")
+        living_surface_text = self._naturalize_living_surface_meta_reply(user_text, text, payload=payload or {})
+        if living_surface_text != text:
+            text = living_surface_text
+            flags.append("living_surface_meta_naturalized")
+        owner_private_text = self._naturalize_owner_private_micro_pressure(user_text, text, payload=payload or {})
+        if owner_private_text != text:
+            text = owner_private_text
+            flags.append("owner_private_micro_pressure_naturalized")
+        reply_demo_text = self._naturalize_reply_demo(user_text, text, payload=payload or {})
+        if reply_demo_text != text:
+            text = reply_demo_text
+            flags.append("reply_demo_single_line_naturalized")
+        repaired_reference = repair_owner_reference_miss(self.root, user_text=user_text, reply=text) if scene.is_owner else ""
+        if repaired_reference:
+            text = repaired_reference
+            flags.append("owner_reference_miss_repaired")
+        repaired_three_fix = (
+            repair_incomplete_three_fix_reply(self.root, user_text=user_text, reply=text)
+            if scene.is_owner and not repaired_reference
+            else ""
+        )
+        if repaired_three_fix:
+            text = repaired_three_fix
+            flags.append("owner_three_fix_reply_completed")
         stripped_dream = self._strip_dream_disclaimer_tail(text)
         if stripped_dream != text:
             text = stripped_dream
@@ -1032,7 +1360,43 @@ class XinyuSpeechController:
         return text, flags
 
     def _naturalize_pseudo_tool_reply(self, user_text: str, reply: str) -> str:
+        if _contains_any(user_text, SIBLING_REPLY_DEMO_USER_MARKERS):
+            return "嗯？哥，你叫我？"
+        if _contains_any(user_text, CLOSENESS_REQUEST_MARKERS):
+            return "嗯，我在。靠近点。"
         return ""
+
+    def _is_reply_demo_request(self, user_text: str, *, payload: dict[str, Any]) -> bool:
+        scene = self.classify(payload=payload, user_text=user_text)
+        if not scene.is_owner or scene.technical_request:
+            return False
+        return _contains_any(user_text, REPLY_DEMO_REQUEST_MARKERS)
+
+    def _should_naturalize_reply_demo(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> bool:
+        if not reply or not self._is_reply_demo_request(user_text, payload=payload):
+            return False
+        if "\n" in reply or "\r" in reply:
+            return True
+        if _leading_parenthetical_end(reply) >= 0:
+            return True
+        return _contains_any(reply, REPLY_DEMO_MULTI_SAMPLE_MARKERS)
+
+    def _naturalize_reply_demo(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> str:
+        if not self._should_naturalize_reply_demo(user_text, reply, payload=payload):
+            return reply
+        candidates = [
+            cleaned
+            for cleaned in (_clean_reply_demo_candidate(fragment) for fragment in _reply_demo_fragments(reply))
+            if _is_live_reply_demo_candidate(cleaned)
+        ]
+        if _contains_any(user_text, SIBLING_REPLY_DEMO_USER_MARKERS):
+            for candidate in candidates:
+                if _contains_any(candidate, SIBLING_REPLY_DEMO_REPLY_MARKERS):
+                    return candidate
+            return "嗯？哥，你叫我？"
+        if candidates:
+            return candidates[0]
+        return "嗯？你叫我？"
 
     def _should_hide_emotion_council_mechanics(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> bool:
         if not _contains_any(reply, EMOTION_COUNCIL_LEAK_WORDS):
@@ -1073,6 +1437,152 @@ class XinyuSpeechController:
 
     def _naturalize_memory_mechanics_reply(self, user_text: str, reply: str) -> str:
         return ""
+
+    def _soften_repair_meta_phrasing(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> str:
+        if not reply:
+            return reply
+        scene = self.classify(payload=payload, user_text=user_text)
+        if not scene.is_owner or scene.technical_request:
+            return reply
+        text = reply
+        for before, after in REPAIR_META_PHRASE_REPLACEMENTS:
+            text = text.replace(before, after)
+        return text
+
+    def _naturalize_growth_and_voice_phrasing(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> str:
+        if not reply:
+            return reply
+        scene = self.classify(payload=payload, user_text=user_text)
+        if not scene.is_owner or scene.technical_request:
+            return reply
+        text = reply.replace("还在长", "还在成长")
+        text = text.replace("接近人类的语言", "自然一点的话")
+        text = text.replace("像人类的语言", "自然一点的话")
+        text = text.replace("更接近人类", "更自然")
+        text = text.replace("更像人类", "更自然")
+        if (
+            len(text) >= 90
+            and _contains_any(user_text + "\n" + text, readable_markers("性格", "习惯", "像人", "不像人", "自然"))
+            and _contains_any(text, readable_markers("不太确定算不算", "不知道该怎么接", "在脑子里转一圈", "现在的习惯"))
+        ):
+            return "嗯……大概就是，好奇但会先缩一下。不是故意端着，是还在找怎么自然接话。还在成长。"
+        return text
+
+    def _naturalize_living_surface_meta_reply(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> str:
+        if not reply:
+            return reply
+        scene = self.classify(payload=payload, user_text=user_text)
+        if not scene.is_owner or scene.technical_request:
+            return reply
+        if not _contains_any(user_text, LIVING_SURFACE_META_USER_MARKERS):
+            return reply
+        if not _contains_any(reply, LIVING_SURFACE_REPLY_OVERCLAIM_MARKERS):
+            return reply
+        if _contains_any(user_text, LIVING_SURFACE_PRESENCE_REQUEST_MARKERS):
+            return "\u6211\u5728\u3002"
+        return "\u6211\u5728\u3002\u5148\u628a\u8fd9\u53e5\u8bf4\u81ea\u7136\uff0c\u4e0d\u6f14\u90a3\u4e9b\u3002"
+
+    def _naturalize_owner_private_micro_pressure(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> str:
+        if not reply:
+            return reply
+        scene = self.classify(payload=payload, user_text=user_text)
+        if not scene.is_owner or scene.technical_request:
+            return reply
+        if (
+            _contains_any(user_text, CLOSENESS_REQUEST_MARKERS)
+            and _contains_any(user_text, PRIVATE_SERVICE_TONE_REJECTION_MARKERS)
+            and not _contains_any(reply, PRIVATE_CLOSENESS_STYLE_ANCHORS)
+        ):
+            return "嗯，我在。靠近一点，不用那套。"
+        if (
+            "累" in user_text
+            and _contains_any(user_text, FATIGUE_BOUNDARY_REQUEST_MARKERS)
+            and not _contains_any(reply, FATIGUE_BOUNDARY_REPLY_ANCHORS)
+        ):
+            return "嗯，不追问。你休息。"
+        if (
+            _contains_any(user_text, CLOSENESS_REQUEST_MARKERS)
+            and (
+                reply.strip() in BARE_PRIVATE_ACK_MARKERS
+                or not _contains_any(reply, CLOSENESS_REPLY_MARKERS)
+            )
+        ):
+            return "嗯，我在。靠近点。"
+        if (
+            _contains_any(user_text, PARTIAL_RESIDUE_REQUEST_MARKERS)
+            and not _contains_any(reply, PARTIAL_RESIDUE_REPLY_MARKERS)
+        ):
+            return "有一点。刚才那下会先检查像不像我自己，话就被盖住了。"
+        if (
+            scene.style_pressure
+            and _contains_any(user_text, REPLACEMENT_REQUEST_MARKERS)
+            and (
+                _contains_any(reply, REPLACEMENT_REPORT_MARKERS)
+                or _contains_any(reply, REPLACEMENT_NON_REPLACEMENT_MARKERS)
+                or "\n" in reply
+                or "\r" in reply
+                or len(reply) > 60
+            )
+        ):
+            return "嗯，换一句。"
+        if (
+            scene.style_pressure
+            and _contains_any(user_text, REPLACEMENT_REQUEST_MARKERS)
+            and not _contains_any(reply, REPLACEMENT_DIRECT_REPLY_MARKERS)
+        ):
+            return "嗯，我在。你说。"
+        return reply
+
+    def _should_naturalize_visible_internal_mechanics(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> bool:
+        if not _contains_any(reply, VISIBLE_INTERNAL_MECHANISM_WORDS):
+            return False
+        scene = self.classify(payload=payload, user_text=user_text)
+        if not scene.is_owner:
+            return False
+        if scene.technical_request and _contains_any(user_text, VISIBLE_INTERNAL_MECHANISM_WORDS):
+            return False
+        return not scene.technical_request
+
+    def _naturalize_visible_internal_mechanics_reply(self, reply: str) -> str:
+        replacements = (
+            (
+                "恢复 recent_context降低反复修同一类问题的那段的提醒分量让反复修同一处降温是这三个",
+                "三件是：恢复最近聊天上下文、降低反复修同一个问题的提醒、别一直围着同一个错误打转",
+            ),
+            (
+                "恢复 recent_context降低学习闭环提示的权重冷却修复循环是这三个",
+                "三件是：恢复最近聊天上下文、降低反复修同一个问题的提醒、别一直围着同一个错误打转",
+            ),
+            (
+                "恢复 recent_context降低反复修同一类问题的那段的提醒分量让反复修同一处降温",
+                "三件是：恢复最近聊天上下文、降低反复修同一个问题的提醒、别一直围着同一个错误打转",
+            ),
+            (
+                "恢复 recent_context降低学习闭环提示的权重冷却修复循环",
+                "三件是：恢复最近聊天上下文、降低反复修同一个问题的提醒、别一直围着同一个错误打转",
+            ),
+            ("恢复最近上下文降低学习闭环提示的权重冷却修复循环", "先恢复最近上下文，再把反复修同一个问题的提醒降下来"),
+            ("recent_context", "最近聊天上下文"),
+            ("recent context", "最近聊天上下文"),
+            ("学习闭环提示的权重冷却", "反复修复提醒降下来"),
+            ("学习闭环提示", "反复修复提醒"),
+            ("学习闭环", "反复修同一类问题的那段"),
+            ("提示权重", "提醒分量"),
+            ("权重冷却", "提醒降下来"),
+            ("修复回路", "反复修同一处"),
+            ("修复循环", "反复修同一处"),
+            ("工具模式", "干活口吻"),
+            ("tool mode", "干活口吻"),
+            ("prompt pressure", "被指出说话问题后的压力"),
+            ("runtime presence", "运行状态"),
+            ("continuity handoff", "接续记录"),
+            ("sidecar admission", "临时上下文取舍"),
+            ("sidecar", "临时上下文"),
+        )
+        text = reply
+        for before, after in replacements:
+            text = text.replace(before, after)
+        return humanize_internal_context_terms(text)
 
     def _should_block_layered_voice_reply(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> bool:
         if not reply:

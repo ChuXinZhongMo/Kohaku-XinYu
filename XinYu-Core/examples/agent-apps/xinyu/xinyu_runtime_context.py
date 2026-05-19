@@ -2,14 +2,37 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
-import json
 from pathlib import Path
 import re
 from typing import Any
 
+from stores.persona_runtime_overlay import OVERLAY_REL as GOLDMARK_OVERLAY_REL
+from stores.persona_runtime_overlay import read_goldmark_overlay
+from xinyu_contextual_self_loop import append_contextual_self_loop_trace
+from xinyu_contextual_self_loop import build_contextual_self_loop_snapshot
+from xinyu_contextual_self_loop import context_file_policy
+from xinyu_contextual_self_loop import snapshot_to_prompt_block
+from xinyu_contextual_self_loop import write_contextual_self_loop_state
+from xinyu_contextual_recall import build_contextual_recall_prompt_block
 from xinyu_initiative_spine import build_initiative_spine_prompt_block
 from xinyu_memory_braid import build_memory_braid_prompt_block
 from xinyu_turn_coherence import build_turn_coherence_prompt_block
+from xinyu_owner_context_bridge import build_owner_continuity_hint
+from xinyu_scene_frame import build_scene_frame
+from xinyu_scene_frame import render_scene_frame_prompt_block
+from xinyu_slow_state_modulator import build_slow_state
+from xinyu_slow_state_modulator import render_slow_state_prompt_block
+from xinyu_turn_triage_gate import render_turn_triage_prompt_block
+from xinyu_turn_triage_gate import triage_turn
+
+
+"""Renderer context assembly.
+
+`build_renderer_memory_context()` may include an offline contextual recall pack
+when no live recall block is supplied. During live chat, callers should pass the
+canonical `run_living_memory_recall_algorithm(...).prompt_block` so the renderer
+does not run a second recall path.
+"""
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +57,7 @@ class RuntimeContextSnapshot:
     watched_source_state: str = ""
     github_learning_state: str = ""
     daily_digest_state: str = ""
+    creative_writing_state: str = ""
     memory_self_review_state: str = ""
 
 
@@ -54,16 +78,25 @@ RENDERER_CONTEXT_FILES: tuple[RuntimeContextFile, ...] = (
     RuntimeContextFile("memory/context/watched_source_state.md", 1600, "watched_source"),
     RuntimeContextFile("memory/context/github_learning_state.md", 1200, "github_learning"),
     RuntimeContextFile("memory/context/daily_digest_state.md", 900, "ephemeral_digest"),
+    RuntimeContextFile("memory/creative/planning/novel_profile.md", 900, "creative_writing"),
+    RuntimeContextFile("memory/creative/planning/novel_state.md", 1000, "creative_writing"),
+    RuntimeContextFile("memory/creative/planning/publication_state.md", 900, "creative_writing"),
     RuntimeContextFile("memory/context/memory_self_review_state.md", 1400, "memory_self_review"),
     RuntimeContextFile("memory/context/continuity_handoff_state.md", 1600, "continuity_handoff"),
     RuntimeContextFile("memory/context/uncertainty_pause_state.md", 1100, "uncertainty_pause"),
     RuntimeContextFile("memory/context/async_exploration_state.md", 1400, "async_exploration"),
     RuntimeContextFile("memory/context/self_code_approval_state.md", 1000, "self_code_approval"),
     RuntimeContextFile("memory/self/expression_self_learning_state.md", 1600, "expression_self_learning"),
-    RuntimeContextFile("memory/self/learning_closed_loop_state.md", 1800, "learning_closed_loop"),
     RuntimeContextFile("memory/context/codex_delegation_policy.md", 1800, "codex_boundary"),
     RuntimeContextFile("memory/context/recent_context.md", 2600, "recent_context"),
     RuntimeContextFile("memory/context/initiative_state.md", 1400, "initiative"),
+    RuntimeContextFile("memory/context/initiative_lifecycle_state.md", 1200, "initiative_lifecycle"),
+    RuntimeContextFile("memory/context/initiative_feedback_state.md", 900, "initiative_feedback"),
+    RuntimeContextFile("memory/context/self_chosen_goal_ecology_state.md", 1200, "goal_ecology"),
+    RuntimeContextFile("memory/context/self_action_gateway_state.md", 1200, "self_action_gateway"),
+    RuntimeContextFile("memory/context/self_action_gateway_execution_handoff.md", 1200, "self_action_gateway_handoff"),
+    RuntimeContextFile("memory/context/self_action_patch_executor_state.md", 1200, "self_action_patch_executor"),
+    RuntimeContextFile("memory/context/self_action_patch_executor_task.md", 1600, "self_action_patch_task"),
 )
 
 RECALLED_CONTEXT_PRIORITY_WORDING = "\n".join(
@@ -75,9 +108,6 @@ RECALLED_CONTEXT_PRIORITY_WORDING = "\n".join(
         "When uncertain, say uncertainty naturally instead of pretending.",
     ]
 )
-
-GOLDMARK_OVERLAY_REL = Path("memory/self/goldmark_positive_overlay.json")
-
 
 def _safe_str(value: Any, default: str = "") -> str:
     if value is None:
@@ -102,20 +132,11 @@ def _unwrap_content_envelope(text: str) -> str:
         return text.removeprefix("content:")
     if text.startswith("content:\n"):
         return text.removeprefix("content:\n")
+    if text.startswith("content=---"):
+        return text.removeprefix("content=")
+    if text.startswith("content=\n"):
+        return text.removeprefix("content=\n")
     return text
-
-
-def _read_goldmark_overlay(root: Path) -> list[dict[str, Any]]:
-    path = root / GOLDMARK_OVERLAY_REL
-    try:
-        data = json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
-        return []
-    if isinstance(data, list):
-        return [item for item in data if isinstance(item, dict)]
-    if isinstance(data, dict) and isinstance(data.get("entries"), list):
-        return [item for item in data.get("entries", []) if isinstance(item, dict)]
-    return []
 
 
 def _goldmark_sort_key(entry: dict[str, Any]) -> str:
@@ -179,7 +200,7 @@ def _valid_goldmark_features(entry: dict[str, Any]) -> dict[str, Any] | None:
 
 def build_goldmark_auth_prompt_block(root: Path, *, limit: int = 3) -> str:
     valid: list[tuple[float, str, dict[str, Any]]] = []
-    for entry in _read_goldmark_overlay(root):
+    for entry in read_goldmark_overlay(root):
         features = _valid_goldmark_features(entry)
         if features is None:
             continue
@@ -240,12 +261,57 @@ def refresh_runtime_context(
         watched_source_state=read_limited(root, "memory/context/watched_source_state.md", limit=1600),
         github_learning_state=read_limited(root, "memory/context/github_learning_state.md", limit=1200),
         daily_digest_state=read_limited(root, "memory/context/daily_digest_state.md", limit=900),
+        creative_writing_state=read_limited(root, "memory/creative/planning/novel_state.md", limit=1000),
         memory_self_review_state=read_limited(root, "memory/context/memory_self_review_state.md", limit=1400),
     )
 
 
-def build_renderer_memory_context(root: Path, *, user_text: str = "") -> str:
+def build_renderer_memory_context(
+    root: Path,
+    *,
+    user_text: str = "",
+    canonical_recall_context: str = "",
+) -> str:
     parts: list[str] = []
+    contextual_self = build_contextual_self_loop_snapshot(
+        root,
+        user_text=user_text,
+        trigger="renderer_memory_context",
+    )
+    write_contextual_self_loop_state(root, contextual_self)
+    append_contextual_self_loop_trace(root, contextual_self, user_text=user_text)
+    scene_frame = build_scene_frame(
+        root,
+        user_text=user_text,
+        contextual_scene=contextual_self.current_scene,
+        canonical_recall_context=canonical_recall_context,
+    )
+    scene_frame_block = render_scene_frame_prompt_block(scene_frame)
+    if scene_frame_block:
+        parts.append("[runtime/scene_frame]\n[layer: scene_frame]\n" + scene_frame_block)
+    turn_triage = triage_turn(
+        root,
+        user_text=user_text,
+        scene_frame=scene_frame,
+        recent_work_context=read_limited(root, "memory/context/recent_context.md", limit=1200),
+        canonical_recall_context=canonical_recall_context,
+    )
+    turn_triage_block = render_turn_triage_prompt_block(turn_triage)
+    if turn_triage_block:
+        parts.append("[runtime/turn_triage_gate]\n[layer: current_turn_priority]\n" + turn_triage_block)
+    slow_state = build_slow_state(
+        root,
+        user_text=user_text,
+        scene_frame=scene_frame,
+        triage_decision=turn_triage,
+        persist=True,
+    )
+    slow_state_block = render_slow_state_prompt_block(slow_state) if slow_state.active_policies else ""
+    if slow_state_block:
+        parts.append("[runtime/slow_state_modulator]\n[layer: slow_state]\n" + slow_state_block)
+    owner_continuity_hint = build_owner_continuity_hint(root, user_text=user_text)
+    if owner_continuity_hint:
+        parts.append("[runtime/owner_continuity_hint]\n[layer: current_turn]\n" + owner_continuity_hint)
     braid_block = build_memory_braid_prompt_block(root, user_text=user_text, max_chars=2200)
     if braid_block:
         parts.append("[memory/context/memory_braid]\n[layer: memory_orchestration]\n" + braid_block)
@@ -260,13 +326,38 @@ def build_renderer_memory_context(root: Path, *, user_text: str = "") -> str:
     initiative_block = build_initiative_spine_prompt_block(root, trigger="renderer_memory_context", max_chars=1800)
     if initiative_block:
         parts.append("[memory/context/initiative_spine]\n[layer: initiative_orchestration]\n" + initiative_block)
+    contextual_self_block = snapshot_to_prompt_block(contextual_self, max_chars=1400)
+    if contextual_self_block:
+        parts.append("[memory/context/contextual_self_loop]\n[layer: context_horizon]\n" + contextual_self_block)
+    live_recall_block = _safe_str(canonical_recall_context).strip()
+    if live_recall_block:
+        parts.append("[memory/context/living_memory_recall]\n[layer: canonical_recall]\n" + live_recall_block)
+        contextual_recall_block = ""
+    else:
+        contextual_recall_block = build_contextual_recall_prompt_block(
+            root,
+            contextual_self=contextual_self,
+            user_text=user_text,
+            max_items=4,
+            max_chars=1400,
+        )
+    if contextual_recall_block:
+        parts.append("[memory/context/contextual_recall]\n[layer: contextual_recall]\n" + contextual_recall_block)
     for spec in RENDERER_CONTEXT_FILES:
-        text = read_limited(root, spec.rel_path, limit=spec.limit)
+        policy = context_file_policy(
+            contextual_self.current_scene,
+            rel_path=spec.rel_path,
+            layer=spec.layer,
+            default_limit=spec.limit,
+        )
+        if not policy.get("include"):
+            continue
+        text = read_limited(root, spec.rel_path, limit=int(policy.get("limit") or spec.limit))
         if text:
             parts.append(f"[{spec.rel_path}]\n[layer: {spec.layer}]\n{text}")
     goldmark_block = build_goldmark_auth_prompt_block(root)
     if goldmark_block:
-        parts.append("[memory/self/goldmark_positive_overlay.json]\n[layer: runtime_expression_auth]\n" + goldmark_block)
+        parts.append(f"[{GOLDMARK_OVERLAY_REL.as_posix()}]\n[layer: runtime_expression_auth]\n" + goldmark_block)
     return "\n\n".join(parts) if parts else "(no memory context loaded)"
 
 

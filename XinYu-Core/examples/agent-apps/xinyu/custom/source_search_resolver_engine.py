@@ -6,9 +6,15 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
-from source_request_planner_engine import split_requests
+from source_protocol_utils import (
+    is_allowed_source_url,
+    next_dated_id,
+    split_search_results,
+    split_source_requests,
+)
+from xinyu_storage_paths import knowledge_file_path
 
-ALLOWED_SCHEMES = {"http", "https"}
+split_requests = split_source_requests
 
 
 def read_text(path: Path) -> str:
@@ -19,9 +25,12 @@ def write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
+
+
 def is_allowed_url(url: str) -> bool:
-    parsed = urlparse(url)
-    return parsed.scheme in ALLOWED_SCHEMES and bool(parsed.netloc)
+    return is_allowed_source_url(url)
 
 
 def source_type_for_url(url: str) -> str:
@@ -80,31 +89,11 @@ def choose_results(request: dict[str, str], mapping: dict[str, list[dict[str, st
 
 
 def split_existing_results(text: str) -> list[dict[str, str]]:
-    parts = re.split(r"(?m)^## (result-\d{4}-\d{2}-\d{2}-\d{3})\n", text)
-    results: list[dict[str, str]] = []
-    if len(parts) < 3:
-        return results
-    for i in range(1, len(parts), 2):
-        result_id = parts[i].strip()
-        body = parts[i + 1]
-        item = {"result_id": result_id}
-        for line in body.splitlines():
-            stripped = line.strip()
-            if stripped.startswith("- ") and ": " in stripped:
-                key, value = stripped[2:].split(": ", 1)
-                item[key] = value.strip()
-        if item.get("url"):
-            results.append(item)
-    return results
+    return split_search_results(text)
 
 
 def next_result_id(existing: list[dict[str, str]], date_part: str) -> str:
-    numbers: list[int] = []
-    for item in existing:
-        match = re.match(rf"result-{re.escape(date_part)}-(\d{{3}})$", item["result_id"])
-        if match:
-            numbers.append(int(match.group(1)))
-    return f"result-{date_part}-{max(numbers, default=0) + 1:03d}"
+    return next_dated_id(existing, id_field="result_id", prefix="result", date_part=date_part)
 
 
 def render_results(resolved_at: str, results: list[dict[str, str]]) -> str:
@@ -198,9 +187,9 @@ def run_source_search_resolver(
     mode: str = "runtime_source_search_resolver",
 ) -> dict[str, object]:
     resolved_at = resolved_at or datetime.now().astimezone().isoformat()
-    requests = split_requests(read_text(root / "memory/knowledge/source_requests.md"))
+    requests = split_requests(read_text(_knowledge(root, "source_requests.md")))
     pending = [item for item in requests if item.get("status") == "pending_url"]
-    existing_results = split_existing_results(read_text(root / "memory/knowledge/source_search_results.md"))
+    existing_results = split_existing_results(read_text(_knowledge(root, "source_search_results.md")))
     existing_keys = {(item.get("request_id"), item.get("url")) for item in existing_results}
     mapping = env_result_map()
 
@@ -237,8 +226,11 @@ def run_source_search_resolver(
         if added <= 0:
             skipped_reason = "results_already_resolved"
 
-    write_text(root / "memory/knowledge/source_search_results.md", render_results(resolved_at, results))
-    write_text(root / "memory/knowledge/source_search_resolver_state.md", render_state(resolved_at, mode, len(pending), added, skipped_reason))
+    write_text(_knowledge(root, "source_search_results.md"), render_results(resolved_at, results))
+    write_text(
+        _knowledge(root, "source_search_resolver_state.md"),
+        render_state(resolved_at, mode, len(pending), added, skipped_reason),
+    )
     return {
         "resolved_at": resolved_at,
         "pending_requests": len(pending),

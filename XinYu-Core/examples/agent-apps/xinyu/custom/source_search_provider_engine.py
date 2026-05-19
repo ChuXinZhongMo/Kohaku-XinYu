@@ -9,6 +9,7 @@ from urllib.parse import parse_qs, quote_plus, unquote, urljoin, urlparse
 
 import httpx
 
+from source_protocol_utils import extract_dash_value
 from source_request_planner_engine import split_requests
 from source_search_resolver_engine import (
     candidate_reliability,
@@ -18,6 +19,7 @@ from source_search_resolver_engine import (
     source_type_for_url,
     split_existing_results,
 )
+from xinyu_storage_paths import knowledge_file_path
 
 SUPPORTED_PROVIDERS = {"duckduckgo_html"}
 
@@ -30,15 +32,17 @@ def write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
+
+
 def extract_value(text: str, field: str, default: str = "unknown") -> str:
-    pattern = re.compile(rf"^- {re.escape(field)}:\s*(.+)$", re.M)
-    match = pattern.search(text)
-    return match.group(1).strip() if match else default
+    return extract_dash_value(text, field, default)
 
 
 def activation_gate(root: Path) -> tuple[bool, int, str]:
     try:
-        text = read_text(root / "memory/knowledge/autonomous_search_activation_state.md")
+        text = read_text(_knowledge(root, "autonomous_search_activation_state.md"))
     except FileNotFoundError:
         return False, 0, "activation_state_missing"
     permission = extract_value(text, "activation_permission", "blocked")
@@ -193,9 +197,9 @@ def run_source_search_provider(
 ) -> dict[str, object]:
     searched_at = searched_at or datetime.now().astimezone().isoformat()
     provider = provider_name(root)
-    requests = split_requests(read_text(root / "memory/knowledge/source_requests.md"))
+    requests = split_requests(read_text(_knowledge(root, "source_requests.md")))
     pending = [item for item in requests if item.get("status") == "pending_url"]
-    existing_results = split_existing_results(read_text(root / "memory/knowledge/source_search_results.md"))
+    existing_results = split_existing_results(read_text(_knowledge(root, "source_search_results.md")))
     existing_keys = {(item.get("request_id"), item.get("url")) for item in existing_results}
 
     results = list(existing_results)
@@ -243,9 +247,9 @@ def run_source_search_provider(
         if added <= 0:
             skipped_reason = "no_provider_results"
 
-    write_text(root / "memory/knowledge/source_search_results.md", render_results(searched_at, results))
+    write_text(_knowledge(root, "source_search_results.md"), render_results(searched_at, results))
     write_text(
-        root / "memory/knowledge/source_search_provider_state.md",
+        _knowledge(root, "source_search_provider_state.md"),
         render_state(searched_at, mode, provider, len(pending), added, skipped_reason),
     )
     return {

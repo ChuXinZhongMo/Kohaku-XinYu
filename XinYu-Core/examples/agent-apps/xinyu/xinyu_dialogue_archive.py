@@ -12,6 +12,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 
+from xinyu_bridge_state_text import payload_event_time_iso
+
 
 ARCHIVE_REL_PATH = Path("runtime") / "dialogue_archive" / "dialogue.sqlite3"
 SCHEMA_VERSION = 2
@@ -22,7 +24,9 @@ NON_OWNER_PRIVATE_SCOPE = "qq_private_non_owner"
 SYSTEM_SCOPE = "system_maintenance"
 CODEX_CALLBACK_SCOPE = "codex_callback"
 SEMANTIC_MODEL = "local_hash_v1"
+SEMANTIC_RUNTIME_MODEL_PREFIX = "runtime_embedding"
 LOCAL_CONTEXT_PATH_RE = re.compile(r"(?i)(?:[a-z]:[\\/]|\\\\|file://)[^\s<>'\"]+")
+_RUNTIME_EMBEDDER_CACHE: dict[str, Any] = {}
 
 SEMANTIC_SYNONYM_GROUPS: tuple[tuple[str, ...], ...] = (
     ("search", "lookup", "find", "搜索", "搜", "检索", "查找", "找资料"),
@@ -117,6 +121,11 @@ def archive_group_scope_enabled() -> bool:
 
 def semantic_retrieval_enabled() -> bool:
     return _env_bool("XINYU_DIALOGUE_SEMANTIC_RETRIEVAL_ENABLED", False)
+
+
+def semantic_embedding_provider() -> str:
+    provider = _safe_str(os.environ.get("XINYU_DIALOGUE_SEMANTIC_EMBEDDING_PROVIDER"), "hash").strip().lower()
+    return provider or "hash"
 
 
 def semantic_embedding_dimensions() -> int:
@@ -249,6 +258,91 @@ def _hash_embedding(text: str, *, dimensions: int | None = None) -> list[float]:
     return [value / norm for value in values]
 
 
+def _semantic_embedding(text: str, *, dimensions: int | None = None) -> tuple[list[float], str, int]:
+    provider = semantic_embedding_provider()
+    if provider not in {"hash", "local_hash", "local-hash"}:
+        runtime = _runtime_semantic_embedding(text, provider=provider)
+        if runtime is not None:
+            return runtime
+    embedding = _hash_embedding(text, dimensions=dimensions)
+    return embedding, SEMANTIC_MODEL, len(embedding)
+
+
+def _semantic_index_identity() -> tuple[str, int]:
+    provider = semantic_embedding_provider()
+    if provider in {"hash", "local_hash", "local-hash"}:
+        return SEMANTIC_MODEL, semantic_embedding_dimensions()
+    try:
+        _, model, dimensions = _semantic_embedding("xinyu semantic index identity")
+        return model, dimensions
+    except Exception:
+        return SEMANTIC_MODEL, semantic_embedding_dimensions()
+
+
+def _runtime_semantic_embedding(text: str, *, provider: str) -> tuple[list[float], str, int] | None:
+    try:
+        embedder, model_label = _runtime_semantic_embedder(provider)
+        vector = embedder.encode_one(text)
+    except Exception:
+        return None
+    try:
+        raw_values = vector.tolist()
+    except AttributeError:
+        raw_values = list(vector)
+    values = [float(value) for value in raw_values]
+    if not values:
+        return None
+    return values, f"{SEMANTIC_RUNTIME_MODEL_PREFIX}:{model_label}:{len(values)}", len(values)
+
+
+def _runtime_semantic_embedder(provider: str) -> tuple[Any, str]:
+    config = _runtime_semantic_config(provider)
+    cache_key = _json_dumps(config)
+    if cache_key not in _RUNTIME_EMBEDDER_CACHE:
+        from xinyu_runtime.session.embedding import NullEmbedder, create_embedder
+
+        embedder = create_embedder(config)
+        if isinstance(embedder, NullEmbedder):
+            raise RuntimeError("runtime semantic embedding provider resolved to none")
+        _RUNTIME_EMBEDDER_CACHE[cache_key] = embedder
+    label = ":".join(
+        _safe_str(part)
+        for part in (
+            config.get("provider", "auto"),
+            config.get("model", "auto"),
+            config.get("dimensions", "auto"),
+        )
+        if _safe_str(part)
+    )
+    return _RUNTIME_EMBEDDER_CACHE[cache_key], label
+
+
+def _runtime_semantic_config(provider: str) -> dict[str, Any]:
+    runtime_provider = _safe_str(os.environ.get("XINYU_DIALOGUE_SEMANTIC_RUNTIME_PROVIDER"), provider).strip() or "auto"
+    if runtime_provider in {"runtime", "embedding", "embeddings"}:
+        runtime_provider = "auto"
+    config: dict[str, Any] = {"provider": runtime_provider}
+    model = _safe_str(os.environ.get("XINYU_DIALOGUE_SEMANTIC_EMBEDDING_MODEL")).strip()
+    if model:
+        config["model"] = model
+    dims_text = _safe_str(os.environ.get("XINYU_DIALOGUE_SEMANTIC_RUNTIME_DIMENSIONS")).strip()
+    if dims_text:
+        try:
+            config["dimensions"] = max(1, int(dims_text))
+        except ValueError:
+            pass
+    device = _safe_str(os.environ.get("XINYU_DIALOGUE_SEMANTIC_EMBEDDING_DEVICE")).strip()
+    if device:
+        config["device"] = device
+    api_key_env = _safe_str(os.environ.get("XINYU_DIALOGUE_SEMANTIC_EMBEDDING_API_KEY_ENV")).strip()
+    if api_key_env:
+        config["api_key_env"] = api_key_env
+    base_url = _safe_str(os.environ.get("XINYU_DIALOGUE_SEMANTIC_EMBEDDING_BASE_URL")).strip()
+    if base_url:
+        config["base_url"] = base_url
+    return config
+
+
 def _cosine_similarity(left: list[float], right: list[float]) -> float:
     if not left or not right:
         return 0.0
@@ -265,17 +359,28 @@ def _now_iso() -> str:
     return datetime.now().astimezone().isoformat()
 
 
+def _parse_iso_datetime(value: Any) -> datetime | None:
+    text = _safe_str(value).strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).astimezone()
+    except (TypeError, ValueError):
+        return None
+
+
+def _timestamp_or_now_iso(value: Any = None, *, fallback: str | None = None) -> str:
+    parsed = _parse_iso_datetime(value)
+    if parsed is not None:
+        return parsed.isoformat()
+    fallback_parsed = _parse_iso_datetime(fallback)
+    if fallback_parsed is not None:
+        return fallback_parsed.isoformat()
+    return _now_iso()
+
+
 def _created_at_from_payload(payload: dict[str, Any] | None) -> str:
-    if not isinstance(payload, dict):
-        return _now_iso()
-    raw = payload.get("timestamp") or payload.get("observed_at")
-    if isinstance(raw, (int, float)):
-        try:
-            return datetime.fromtimestamp(float(raw)).astimezone().isoformat()
-        except (OSError, OverflowError, ValueError):
-            return _now_iso()
-    text = _safe_str(raw).strip()
-    return text or _now_iso()
+    return payload_event_time_iso(payload, fallback=_now_iso())
 
 
 def _metadata(payload: dict[str, Any] | None) -> dict[str, Any]:
@@ -506,8 +611,7 @@ def _fts_available(conn: sqlite3.Connection) -> bool:
 def _index_semantic_message(conn: sqlite3.Connection, *, message_id: int, text: str, text_hash: str) -> None:
     if not semantic_retrieval_enabled():
         return
-    dimensions = semantic_embedding_dimensions()
-    embedding = _hash_embedding(text, dimensions=dimensions)
+    embedding, model, dimensions = _semantic_embedding(text, dimensions=semantic_embedding_dimensions())
     conn.execute(
         """
         INSERT INTO dialogue_semantic_index (
@@ -523,7 +627,7 @@ def _index_semantic_message(conn: sqlite3.Connection, *, message_id: int, text: 
         """,
         (
             message_id,
-            SEMANTIC_MODEL,
+            model,
             dimensions,
             _json_dumps(embedding),
             text_hash,
@@ -536,7 +640,7 @@ def ensure_dialogue_semantic_index(root: Path, *, limit: int | None = None) -> d
     if not archive_enabled():
         return {"indexed": 0, "notes": ["dialogue_archive_disabled"]}
     safe_limit = semantic_max_scan() if limit is None else max(1, int(limit))
-    dimensions = semantic_embedding_dimensions()
+    model, dimensions = _semantic_index_identity()
     indexed = 0
     with _connection(root) as conn:
         _ensure_schema(conn)
@@ -553,7 +657,7 @@ def ensure_dialogue_semantic_index(root: Path, *, limit: int | None = None) -> d
             ORDER BY m.created_at DESC, m.id DESC
             LIMIT ?
             """,
-            (SEMANTIC_MODEL, dimensions, safe_limit),
+            (model, dimensions, safe_limit),
         ).fetchall()
         for row in rows:
             _index_semantic_message(
@@ -563,7 +667,12 @@ def ensure_dialogue_semantic_index(root: Path, *, limit: int | None = None) -> d
                 text_hash=_safe_str(row["text_hash"]),
             )
             indexed += 1
-    return {"indexed": indexed, "model": SEMANTIC_MODEL, "dimensions": dimensions}
+    return {
+        "indexed": indexed,
+        "model": model,
+        "dimensions": dimensions,
+        "provider": semantic_embedding_provider(),
+    }
 
 
 def _redacted_metadata(payload: dict[str, Any] | None, extra: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -659,7 +768,7 @@ def archive_message(
     scope = resolve_dialogue_scope(payload)
     if not _should_archive_scope(scope):
         return None
-    seen_at = created_at or _created_at_from_payload(payload)
+    seen_at = _timestamp_or_now_iso(created_at, fallback=_created_at_from_payload(payload))
     flags: dict[str, Any]
     if isinstance(quality_flags, dict):
         flags = quality_flags
@@ -726,7 +835,7 @@ def archive_dialogue_turn(
     if not _should_archive_scope(scope):
         return {"archived": False, "notes": ["dialogue_archive_skipped"], "message_ids": [], "scope": scope.scope}
 
-    created_at = _created_at_from_payload(payload)
+    created_at = _timestamp_or_now_iso(_created_at_from_payload(payload))
     user_id = archive_message(
         root,
         payload,
@@ -740,7 +849,7 @@ def archive_dialogue_turn(
         payload,
         role="assistant",
         text=assistant_reply,
-        created_at=_now_iso(),
+        created_at=_timestamp_or_now_iso(_now_iso()),
         message_type=message_type or _payload_value(payload, "message_type"),
         reply_to_id=user_id,
         quality_flags=quality_flags,
@@ -839,9 +948,9 @@ def _search_dialogue_archive_semantic_conn(
     query = _safe_str(query_text).strip()
     if not query:
         return []
-    dimensions = semantic_embedding_dimensions()
+    query_embedding, model, dimensions = _semantic_embedding(query, dimensions=semantic_embedding_dimensions())
 
-    missing_params: list[Any] = [SEMANTIC_MODEL, dimensions]
+    missing_params: list[Any] = [model, dimensions]
     missing_scope_sql = _scope_clause(scopes, missing_params)
     missing_session_sql = _session_clause(session_key, missing_params)
     missing_params.append(semantic_max_scan())
@@ -868,7 +977,7 @@ def _search_dialogue_archive_semantic_conn(
             text_hash=_safe_str(row["text_hash"]),
         )
 
-    params: list[Any] = [SEMANTIC_MODEL, dimensions]
+    params: list[Any] = [model, dimensions]
     scope_sql = _scope_clause(scopes, params)
     session_sql = _session_clause(session_key, params)
     params.append(semantic_max_scan())
@@ -884,7 +993,6 @@ def _search_dialogue_archive_semantic_conn(
         params,
     ).fetchall()
 
-    query_embedding = _hash_embedding(query, dimensions=dimensions)
     scored: list[DialogueArchiveRecord] = []
     min_score = semantic_min_score()
     for row in rows:

@@ -1,23 +1,15 @@
 ﻿from __future__ import annotations
 
 import re
-import unicodedata
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
-from xinyu_text_variants import looks_like_legacy_mojibake
-
-
-def read_text(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8-sig")
-    except OSError:
-        return ""
-
-
-def write_text(path: Path, text: str) -> None:
-    path.write_text(text, encoding="utf-8")
+from source_material_quality import claim_is_placeholder, claim_is_too_thin, claim_looks_garbled
+from source_material_parser import integrated_source_material_ids as parse_integrated_source_material_ids
+from source_material_parser import split_material_field_maps
+from source_protocol_utils import split_source_requests
+from xinyu_storage_paths import knowledge_file_path
 
 
 def count_regex(text: str, pattern: str) -> int:
@@ -28,13 +20,31 @@ def count_quality_followup_candidates(text: str) -> int:
     return len(re.findall(r"(?m)^- repeated_question_host:\s+severity=review;\s+target=q-\d+@", text))
 
 
-def extract_value(body: str, field: str, default: str = "unknown") -> str:
-    pattern = re.compile(rf"^- {re.escape(field)}:\s*(.+)$", re.M)
-    match = pattern.search(body)
-    return match.group(1).strip() if match else default
-
-
 from xinyu_state_io import extract_value as extract_value, read_text as read_text, write_text as write_text
+
+
+MATERIAL_FIELDS = (
+    "question_id",
+    "status",
+    "reliability",
+    "integration_scope",
+    "comparison_status",
+    "claim",
+    "extraction_status",
+)
+MATERIAL_DEFAULTS = {
+    "question_id": "none",
+    "status": "hold",
+    "reliability": "unknown",
+    "integration_scope": "hold",
+    "comparison_status": "not_compared",
+    "claim": "none",
+    "extraction_status": "unknown",
+}
+
+
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
 
 
 def owner_followthrough_granted(root: Path) -> bool:
@@ -76,52 +86,19 @@ def is_http_url(url: str) -> bool:
 
 
 def split_requests(text: str) -> list[dict[str, str]]:
-    parts = re.split(r"(?m)^## (request-\d{4}-\d{2}-\d{2}-\d{3}|request-[\w-]+)\n", text)
-    requests: list[dict[str, str]] = []
-    if len(parts) < 3:
-        return requests
-    for i in range(1, len(parts), 2):
-        request_id = parts[i].strip()
-        body = parts[i + 1]
-        if request_id == "request-none":
-            continue
-        requests.append(
-            {
-                "request_id": request_id,
-                "question_id": extract_value(body, "question_id", "none"),
-                "target": extract_value(body, "target", "unknown"),
-                "url": extract_value(body, "url", "none"),
-                "status": extract_value(body, "status", "hold"),
-            }
-        )
-    return requests
+    return split_source_requests(
+        text,
+        fields=("question_id", "target", "url", "status"),
+        skip_none_question=False,
+    )
 
 
 def split_materials(text: str) -> list[dict[str, str]]:
-    parts = re.split(r"(?m)^## (material-\d{4}-\d{2}-\d{2}-\d{3})\n", text)
-    materials: list[dict[str, str]] = []
-    if len(parts) < 3:
-        return materials
-    for i in range(1, len(parts), 2):
-        material_id = parts[i].strip()
-        body = parts[i + 1]
-        materials.append(
-            {
-                "material_id": material_id,
-                "question_id": extract_value(body, "question_id", "none"),
-                "status": extract_value(body, "status", "hold"),
-                "reliability": extract_value(body, "reliability", "unknown"),
-                "integration_scope": extract_value(body, "integration_scope", "hold"),
-                "comparison_status": extract_value(body, "comparison_status", "not_compared"),
-                "claim": extract_value(body, "claim", "none"),
-                "extraction_status": extract_value(body, "extraction_status", "unknown"),
-            }
-        )
-    return materials
+    return split_material_field_maps(text, fields=MATERIAL_FIELDS, defaults=MATERIAL_DEFAULTS)
 
 
 def integrated_source_material_ids(text: str) -> set[str]:
-    return set(re.findall(r"(?m)^- source_material:\s*(material-\d{4}-\d{2}-\d{2}-\d{3})\s*$", text))
+    return parse_integrated_source_material_ids(text)
 
 
 def existing_material_urls(text: str) -> set[str]:
@@ -165,52 +142,6 @@ def count_pending_ai_followthrough_materials(source_materials: str, general: str
             continue
         count += 1
     return count
-
-
-def claim_looks_garbled(claim: str) -> bool:
-    sample = claim.strip()[:2000]
-    if looks_like_legacy_mojibake(sample):
-        return True
-    mojibake_markers = sum(
-        sample.count(marker)
-        for marker in ("\u951f\u65a4\u62f7", "\u951f\u65a4", "\u65a4\u62f7", "\ufffd\ufffd", "\ufffd\ufffd\ufffd")
-    )
-    chars = [char for char in sample if not char.isspace()]
-    if len(chars) < 24:
-        return False
-    control_or_replacement = sum(
-        1
-        for char in chars
-        if char == "\ufffd" or unicodedata.category(char) in {"Cc", "Cf", "Cs"}
-    )
-    private_use = sum(1 for char in chars if 0xE000 <= ord(char) <= 0xF8FF or unicodedata.category(char) == "Co")
-    rare_cjk = sum(
-        1
-        for char in chars
-        if 0x3400 <= ord(char) <= 0x4DBF or 0x20000 <= ord(char) <= 0x2FA1F
-    )
-    uncommon_latin = sum(1 for char in chars if 0x1D00 <= ord(char) <= 0x1EFF or 0xA720 <= ord(char) <= 0xABFF)
-    total = len(chars)
-    if mojibake_markers >= 2 and (mojibake_markers * 3) / total > 0.01:
-        return True
-    if control_or_replacement and control_or_replacement / total > 0.004:
-        return True
-    if private_use and private_use / total > 0.003:
-        return True
-    if total >= 80 and (rare_cjk + uncommon_latin + private_use + control_or_replacement) / total > 0.18:
-        return True
-    return False
-
-
-def claim_is_placeholder(claim: str) -> bool:
-    normalized = re.sub(r"\s+", " ", claim.strip().lower())
-    return normalized.startswith("owner/local material copied from ") or normalized.startswith("downloaded ")
-
-
-def claim_is_too_thin(claim: str) -> bool:
-    tokens = [token for token in re.findall(r"[a-z0-9]+", claim.lower()) if len(token) > 2]
-    cjk_chars = [char for char in claim if "\u4e00" <= char <= "\u9fff"]
-    return len(tokens) < 8 and len(cjk_chars) < 24
 
 
 def count_pending_curated_materials(source_materials: str, general: str) -> int:
@@ -296,12 +227,12 @@ def run_source_integration_gate(
 ) -> dict[str, object]:
     checked_at = checked_at or datetime.now().astimezone().isoformat()
 
-    source_gate = read_text(root / "memory/knowledge/source_gate_state.md")
-    source_reliability = read_text(root / "memory/knowledge/source_reliability_state.md")
-    learning_quality = read_text(root / "memory/knowledge/learning_quality_state.md")
-    source_materials = read_text(root / "memory/knowledge/source_materials.md")
-    general = read_text(root / "memory/knowledge/general.md")
-    source_requests = read_text(root / "memory/knowledge/source_requests.md")
+    source_gate = read_text(_knowledge(root, "source_gate_state.md"))
+    source_reliability = read_text(_knowledge(root, "source_reliability_state.md"))
+    learning_quality = read_text(_knowledge(root, "learning_quality_state.md"))
+    source_materials = read_text(_knowledge(root, "source_materials.md"))
+    general = read_text(_knowledge(root, "general.md"))
+    source_requests = read_text(_knowledge(root, "source_requests.md"))
 
     source_gate_candidates = count_regex(source_gate, r"^- q-\d+:")
     reliability_ready = count_regex(source_reliability, r"^- q-\d+:\s+(medium_ready|high_ready)$")
@@ -342,7 +273,7 @@ def run_source_integration_gate(
         gate_reason = "candidates_prepared_but_not_ingested"
 
     write_text(
-        root / "memory/knowledge/source_integration_gate_state.md",
+        _knowledge(root, "source_integration_gate_state.md"),
         render_state(
             checked_at,
             mode,

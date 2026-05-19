@@ -22,6 +22,12 @@ def session_key_from_payload(payload: Mapping[str, Any]) -> str:
         value = _safe_text(payload.get(key)).strip()
         if value:
             return value
+    metadata = payload.get("metadata")
+    if isinstance(metadata, Mapping):
+        for key in ("session_id", "user_id"):
+            value = _safe_text(metadata.get(key)).strip()
+            if value:
+                return value
     return "qq:default"
 
 

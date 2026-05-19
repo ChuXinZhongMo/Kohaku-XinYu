@@ -8,6 +8,38 @@ from urllib.parse import urlparse
 
 TRUTHY = {"1", "true", "yes", "on"}
 
+BRIDGE_RUNTIME_SOURCE_RELS = (
+    "xinyu_core_bridge.py",
+    "xinyu_bridge_turn_pipeline.py",
+    "xinyu_bridge_turn_sidecars.py",
+    "xinyu_bridge_proactive_context.py",
+    "xinyu_bridge_health_snapshot.py",
+    "xinyu_bridge_desktop_snapshot.py",
+    "xinyu_living_memory_recall.py",
+    "xinyu_context_retrieval.py",
+    "xinyu_retrieval_envelope.py",
+    "xinyu_retrieval_need_reranker.py",
+    "xinyu_sparse_memory_router.py",
+    "xinyu_conversation_experience_cases.py",
+    "xinyu_conversation_experience_matcher.py",
+    "xinyu_conversation_experience_sidecar.py",
+    "xinyu_storage_paths.py",
+    "xinyu_bridge_action_routes.py",
+    "xinyu_bridge_promise_followup.py",
+    "xinyu_runtime_context.py",
+    "xinyu_memory_braid.py",
+    "xinyu_turn_coherence.py",
+    "xinyu_initiative_spine.py",
+    "xinyu_initiative_orchestrator.py",
+    "xinyu_emotion_council.py",
+    "xinyu_self_chosen_goal_ecology.py",
+    "xinyu_goal_outcome_observer.py",
+    "xinyu_self_action_gateway.py",
+    "xinyu_self_action_patch_executor.py",
+    "xinyu_speech_controller.py",
+    "xinyu_creative_writing.py",
+)
+
 
 def env_truthy(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in TRUTHY
@@ -70,6 +102,10 @@ def source_file_digest(path: Path, *, length: int = 16) -> str:
         return "unknown"
     digest = hashlib.sha256(data).hexdigest()
     return digest[: max(8, length)]
+
+
+def runtime_source_paths(root: Path) -> tuple[Path, ...]:
+    return tuple(Path(root) / rel for rel in BRIDGE_RUNTIME_SOURCE_RELS)
 
 
 def source_files_digest(paths: list[Path] | tuple[Path, ...], *, length: int = 16) -> str:

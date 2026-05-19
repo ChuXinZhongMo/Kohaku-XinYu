@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from datetime import datetime
 from typing import Any
 
 import v1_canary_gate
@@ -23,6 +24,19 @@ def _safe_str(value: Any, default: str = "") -> str:
         return str(value)
     except Exception:
         return default
+
+
+def _timestamp_or_now_iso(value: Any = None) -> str:
+    text = _safe_str(value).strip()
+    if not text:
+        return datetime.now().astimezone().isoformat(timespec="seconds")
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return datetime.now().astimezone().isoformat(timespec="seconds")
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed.astimezone().isoformat(timespec="seconds")
 
 
 def _command_id(payload: dict[str, Any]) -> str:
@@ -245,7 +259,7 @@ async def handle_canary_turn(
         reply=reply,
         session_key=session_key,
         turn_id=turn_id,
-        started_at=turn_started_wall,
+        started_at=_timestamp_or_now_iso(turn_started_wall),
         elapsed_ms=total_elapsed_ms,
         status="ok",
         notes=notes,

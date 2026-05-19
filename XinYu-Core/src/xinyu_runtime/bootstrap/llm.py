@@ -12,6 +12,7 @@ from typing import Any
 from xinyu_runtime.core.config import AgentConfig
 from xinyu_runtime.llm.base import LLMProvider
 from xinyu_runtime.llm.codex_provider import CodexOAuthProvider
+from xinyu_runtime.llm.failover import wrap_llm_with_visible_failover
 from xinyu_runtime.llm.openai import OpenAIProvider
 from xinyu_runtime.llm.profiles import LLMProfile, get_api_key, resolve_controller_llm
 from xinyu_runtime.utils.logging import get_logger
@@ -111,7 +112,7 @@ def _create_from_profile(profile: LLMProfile) -> LLMProvider:
         )
         provider._profile_max_context = profile.max_context
         _apply_backend_native_identity(provider, profile)
-        return provider
+        return wrap_llm_with_visible_failover(provider)
 
     api_key = get_api_key(profile.provider) if profile.provider else ""
     if not api_key and profile.api_key_env:
@@ -133,7 +134,7 @@ def _create_from_profile(profile: LLMProfile) -> LLMProvider:
     )
     provider._profile_max_context = profile.max_context
     _apply_backend_native_identity(provider, profile)
-    return provider
+    return wrap_llm_with_visible_failover(provider)
 
 
 def _apply_backend_native_identity(provider: LLMProvider, profile: LLMProfile) -> None:
@@ -168,7 +169,7 @@ def create_llm_from_profile_name(name: str) -> LLMProvider:
     profile = resolve_controller_llm({}, llm_override=name)
     if not profile:
         raise ValueError(f"Model profile not found: {name}")
-    return _create_from_profile(profile)
+    return wrap_llm_with_visible_failover(_create_from_profile(profile))
 
 
 def _create_from_inline(config: AgentConfig) -> LLMProvider:
@@ -191,7 +192,7 @@ def _create_from_inline(config: AgentConfig) -> LLMProvider:
             "Using Codex OAuth provider (ChatGPT subscription)",
             model=config.model,
         )
-        return provider
+        return wrap_llm_with_visible_failover(provider)
 
     # Standard API key auth (OpenAI, OpenRouter, etc.)
     api_key = config.get_api_key()
@@ -200,11 +201,11 @@ def _create_from_inline(config: AgentConfig) -> LLMProvider:
             f"API key not found. Set {config.api_key_env} environment variable."
         )
 
-    return OpenAIProvider(
+    return wrap_llm_with_visible_failover(OpenAIProvider(
         api_key=api_key,
         base_url=config.base_url,
         model=config.model,
         temperature=config.temperature,
         max_tokens=config.max_tokens,
         extra_body=config.extra_body or None,
-    )
+    ))

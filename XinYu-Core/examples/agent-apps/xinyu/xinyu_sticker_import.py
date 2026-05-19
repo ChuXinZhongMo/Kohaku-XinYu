@@ -50,6 +50,19 @@ def _safe_str(value: Any, default: str = "") -> str:
     return str(value)
 
 
+def _timestamp_or_now_iso(value: Any = None) -> str:
+    text = _safe_str(value).strip()
+    if not text or text.lower() in {"none", "unknown", "null", "n/a", "na"}:
+        return datetime.now().astimezone().isoformat(timespec="seconds")
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return datetime.now().astimezone().isoformat(timespec="seconds")
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed.astimezone().isoformat(timespec="seconds")
+
+
 @dataclass
 class ImportPlanItem:
     source: Path
@@ -862,7 +875,7 @@ def _write_corrections_manifest(base: Path, items: list[ImportPlanItem]) -> Path
         for item in data.get("items", [])
         if isinstance(item, dict) and _safe_str(item.get("file"))
     }
-    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    now = _timestamp_or_now_iso()
     for item in items:
         if not item.confirmed or not item.previous_file:
             continue
@@ -873,11 +886,11 @@ def _write_corrections_manifest(base: Path, items: list[ImportPlanItem]) -> Path
             "previous_mood": item.previous_mood,
             "previous_file": item.previous_file,
             "source": "owner_folder_move",
-            "updated_at": now,
+            "updated_at": _timestamp_or_now_iso(now),
         }
     data["version"] = 1
     data["generated_by"] = "xinyu_sticker_import"
-    data["updated_at"] = now
+    data["updated_at"] = _timestamp_or_now_iso(now)
     data["items"] = [existing[key] for key in sorted(existing)]
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
@@ -902,7 +915,7 @@ def _write_generated_manifest(base: Path, items: list[ImportPlanItem]) -> Path:
             continue
         if not resolved.exists():
             existing.pop(rel, None)
-    now = datetime.now().astimezone().isoformat(timespec="seconds")
+    now = _timestamp_or_now_iso()
     for item in items:
         rel = _rel(item.destination, base)
         source_rel = _rel(item.source, base)
@@ -978,7 +991,7 @@ def _write_generated_manifest(base: Path, items: list[ImportPlanItem]) -> Path:
                     existing[rel][key] = old_item[key]
     data["version"] = 1
     data["generated_by"] = "xinyu_sticker_import"
-    data["updated_at"] = now
+    data["updated_at"] = _timestamp_or_now_iso(now)
     data["stickers"] = [existing[key] for key in sorted(existing)]
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     return path

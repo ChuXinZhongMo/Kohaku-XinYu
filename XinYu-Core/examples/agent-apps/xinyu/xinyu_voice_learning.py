@@ -93,6 +93,23 @@ def _trim(text: str, limit: int = 160) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
+def _now_iso() -> str:
+    return datetime.now().astimezone().isoformat()
+
+
+def _timestamp_or_now_iso(value: object = None) -> str:
+    text = "" if value is None else str(value).strip()
+    if not text or text.lower() in {"none", "unknown", "null", "n/a", "na"}:
+        return _now_iso()
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return _now_iso()
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed.astimezone().isoformat()
+
+
 def _visible_reply_note(reply: str) -> str:
     product_hits = _markers(reply, PRODUCT_WORD_MARKERS)
     leak_hits = _markers(reply, SURFACE_LEAK_WORD_MARKERS)
@@ -153,7 +170,7 @@ def record_voice_correction(
     if f"## {entry_id}" in text:
         return False
 
-    recorded_at = recorded_at or datetime.now().astimezone().isoformat()
+    recorded_at = _timestamp_or_now_iso(recorded_at)
     correction_markers = _markers(user_text, STYLE_CORRECTION_MARKERS)
     product_hits = _markers(reply, PRODUCT_WORD_MARKERS)
     entry = f"""
@@ -173,7 +190,7 @@ def record_voice_correction(
         text = text.replace("- none", entry.strip(), 1)
     else:
         text = text.rstrip() + entry
-    text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {recorded_at}", text, count=1)
+    text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {_timestamp_or_now_iso(recorded_at)}", text, count=1)
     path.write_text(text.rstrip() + "\n", encoding="utf-8")
     try:
         from xinyu_voice_promotion_gate import build_voice_promotion_review

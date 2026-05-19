@@ -689,6 +689,7 @@ def append_dream_log(
 - dreamed_at: {produced_at}
 - source_seed: {primary.seed_id}
 - source_seeds: {source_seeds}
+- theme: {primary.theme}
 - dream_surface: {surface}
 - fragments: {fragments}
 - distortions: {distortions}

@@ -31,6 +31,13 @@ def _safe_str(value: Any, default: str = "") -> str:
     return str(value)
 
 
+def _timestamp_or_now_iso(value: Any) -> str:
+    parsed = _parse_time(_safe_str(value))
+    if parsed is None:
+        return _now()
+    return parsed.astimezone().isoformat(timespec="seconds")
+
+
 def _one_line(value: Any, *, limit: int = MAX_MESSAGE_CHARS) -> str:
     text = re.sub(r"\s+", " ", _safe_str(value)).strip()
     if limit > 0 and len(text) > limit:
@@ -129,18 +136,18 @@ def _lock_path(root: Path) -> Path:
 
 def _read_json(path: Path) -> dict[str, Any]:
     if not path.exists():
-        return {"version": QUEUE_VERSION, "updated_at": _now(), "items": []}
+        return {"version": QUEUE_VERSION, "updated_at": _timestamp_or_now_iso(_now()), "items": []}
     try:
         data = json.loads(path.read_text(encoding="utf-8-sig"))
     except Exception:
-        return {"version": QUEUE_VERSION, "updated_at": _now(), "items": []}
+        return {"version": QUEUE_VERSION, "updated_at": _timestamp_or_now_iso(_now()), "items": []}
     if not isinstance(data, dict):
-        return {"version": QUEUE_VERSION, "updated_at": _now(), "items": []}
+        return {"version": QUEUE_VERSION, "updated_at": _timestamp_or_now_iso(_now()), "items": []}
     items = data.get("items")
     if not isinstance(items, list):
         data["items"] = []
     data.setdefault("version", QUEUE_VERSION)
-    data.setdefault("updated_at", _now())
+    data.setdefault("updated_at", _timestamp_or_now_iso(_now()))
     return data
 
 
@@ -324,12 +331,13 @@ def enqueue_qq_outbox_message(
 
         message_id = _message_id(source, dedupe_key)
         message_type = "file" if normalized_file_path else ("image" if normalized_image_path else "text")
+        created_at = _timestamp_or_now_iso(_now())
         item = {
             "id": message_id,
             "status": "queued",
             "message_type": message_type,
-            "created_at": _now(),
-            "updated_at": _now(),
+            "created_at": _timestamp_or_now_iso(created_at),
+            "updated_at": _timestamp_or_now_iso(created_at),
             "source": source,
             "dedupe_key": dedupe_key,
             "target": {"message_kind": "private", "user_id": user_id, "group_id": ""},
@@ -351,6 +359,28 @@ def enqueue_qq_outbox_message(
         _write_json(path, data)
         _write_state(root, data, last_event="enqueue", last_message_id=message_id)
         return {"accepted": True, "queued": True, "message_id": message_id, "notes": ["queued"]}
+
+
+def enqueue_owner_qq_outbox_message(
+    root: Path,
+    *,
+    message: str,
+    source: str,
+    dedupe_key: str = "",
+    metadata: dict[str, Any] | None = None,
+    config_path: Path | None = None,
+) -> dict[str, Any]:
+    user_id, notes = _owner_user_id_from_config(root, config_path=config_path)
+    if notes:
+        return {"accepted": False, "queued": False, "message_id": "", "notes": notes}
+    return enqueue_qq_outbox_message(
+        root,
+        user_id=user_id,
+        message=message,
+        source=source,
+        dedupe_key=dedupe_key,
+        metadata=metadata,
+    )
 
 
 def enqueue_qq_outbox_image(

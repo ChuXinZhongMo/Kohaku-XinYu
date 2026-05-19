@@ -52,6 +52,19 @@ def _now_iso() -> str:
     return datetime.now().astimezone().isoformat()
 
 
+def _timestamp_or_now_iso(value: Any) -> str:
+    text = _safe_str(value).strip()
+    if not text:
+        return _now_iso()
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return _now_iso()
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed.astimezone().isoformat()
+
+
 def _safe_str(value: Any, default: str = "") -> str:
     if value is None:
         return default
@@ -287,7 +300,7 @@ def consume_self_code_approval(
     task = _default_codex_task(request, owner_text=owner_text, session_key=session_key, reply=reply)
     fields = {
         "approval_id": approval_id,
-        "updated_at": observed,
+        "updated_at": _timestamp_or_now_iso(observed),
         "status": "denied" if decision == "denied" else "approved_once",
         "approval_route": "pending_qq_application",
         "proactive_request_id": request.get("request_id", "none"),
@@ -307,7 +320,7 @@ def consume_self_code_approval(
         root / TRACE_REL,
         {
             "approval_id": approval_id,
-            "observed_at": observed,
+            "observed_at": _timestamp_or_now_iso(observed),
             "decision": decision,
             "proactive_request_id": request.get("request_id", "none"),
             "evidence_hash": request.get("evidence_hash", "none"),
@@ -349,7 +362,7 @@ def create_direct_self_code_approval(
     task = _direct_codex_task(owner_text=owner_text, session_key=session_key, reply=reply)
     fields = {
         "approval_id": approval_id,
-        "updated_at": observed,
+        "updated_at": _timestamp_or_now_iso(observed),
         "status": "approved_once",
         "approval_route": "direct_owner_private_qq_request",
         "proactive_request_id": "none",
@@ -369,7 +382,7 @@ def create_direct_self_code_approval(
         root / TRACE_REL,
         {
             "approval_id": approval_id,
-            "observed_at": observed,
+            "observed_at": _timestamp_or_now_iso(observed),
             "decision": "approved",
             "approval_route": "direct_owner_private_qq_request",
             "evidence_hash": fields["evidence_hash"],
@@ -427,7 +440,7 @@ def mark_self_code_execution_scheduled(
         root / TRACE_REL,
         {
             "approval_id": fields["approval_id"],
-            "observed_at": observed,
+            "observed_at": _timestamp_or_now_iso(observed),
             "event_kind": "execution_scheduled",
             "job_id": fields["execution_job_id"],
             "watchdog_snapshot_id": fields["watchdog_snapshot_id"],

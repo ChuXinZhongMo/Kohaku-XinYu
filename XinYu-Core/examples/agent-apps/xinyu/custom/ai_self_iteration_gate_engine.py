@@ -4,6 +4,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from xinyu_storage_paths import knowledge_file_path
+
 
 Q006_TARGET = "ai-self-understanding"
 AI_SELF_ITERATION_SECTION = "## AI Self-Iteration Gate"
@@ -238,9 +240,9 @@ def run_ai_self_iteration_gate(
 ) -> dict[str, object]:
     evaluated_at = evaluated_at or datetime.now().astimezone().isoformat()
 
-    ai_domain_text = read_text(root / "memory/knowledge/ai_domain.md")
-    general_text = read_text(root / "memory/knowledge/general.md")
-    learning_quality_path = root / "memory/knowledge/learning_quality_state.md"
+    ai_domain_text = read_text(knowledge_file_path(root, "ai_domain.md"))
+    general_text = read_text(knowledge_file_path(root, "general.md"))
+    learning_quality_path = knowledge_file_path(root, "learning_quality_state.md")
     learning_quality_text = read_text(learning_quality_path) if learning_quality_path.exists() else ""
     entries = q006_entries(general_text)
     confidence_score, gate_status, risk_level = score_candidate(entries, ai_domain_text, learning_quality_text)

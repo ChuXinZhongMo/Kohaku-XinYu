@@ -4,10 +4,16 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from xinyu_storage_paths import knowledge_file_path
+
 
 ALLOWED_SOCIAL_TARGETS = {"human-relationship", "memory-emotion", "relationship-meaning"}
 AI_PROFESSIONAL_TARGET = "ai-self-understanding"
 ANSWER_SOURCE_KINDS = {"social_reply", "human_expert", "owner_clarification"}
+
+
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
 
 
 def read_text(path: Path) -> str:
@@ -308,15 +314,15 @@ def run_social_inquiry_policy(
 ) -> dict[str, object]:
     evaluated_at = evaluated_at or datetime.now().astimezone().isoformat()
     inquiries = split_blocks(read_text(root / "memory/context/social_inquiry_candidates.md"), "inquiry")
-    answers = split_blocks(read_text(root / "memory/knowledge/social_inquiry_answers.md"), "answer")
+    answers = split_blocks(read_text(_knowledge(root, "social_inquiry_answers.md")), "answer")
     inquiry_decisions = [inquiry_decision(item) for item in inquiries]
     answer_decisions = [answer_decision(item) for item in answers]
 
     write_text(
-        root / "memory/knowledge/social_inquiry_policy_state.md",
+        _knowledge(root, "social_inquiry_policy_state.md"),
         render_state(evaluated_at, mode, inquiry_decisions, answer_decisions),
     )
-    append_source_notes(root / "memory/knowledge/source_notes.md", evaluated_at, inquiry_decisions + answer_decisions)
+    append_source_notes(_knowledge(root, "source_notes.md"), evaluated_at, inquiry_decisions + answer_decisions)
 
     return {
         "evaluated_at": evaluated_at,

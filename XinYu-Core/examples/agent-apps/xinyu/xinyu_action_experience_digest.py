@@ -13,6 +13,7 @@ from xinyu_visible_text_sanitizer import (
     visible_action_result_label,
     visible_action_theme_label,
 )
+from xinyu_visible_persona_voice import compose_action_digest_followup_reply
 
 
 ACTION_RESIDUE_REL = Path("runtime/life_kernel/action_experience_residue.jsonl")
@@ -26,6 +27,30 @@ def _safe_str(value: Any, default: str = "") -> str:
     if value is None:
         return default
     return str(value)
+
+
+def _now_iso() -> str:
+    return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def _timestamp_or_now_iso(value: Any) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return _now_iso()
+    return parsed.astimezone().isoformat(timespec="seconds")
+
+
+def _parse_iso(value: Any) -> datetime | None:
+    text = _safe_str(value).strip()
+    if not text or text.lower() in {"none", "unknown", "null", "n/a", "na"}:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
 
 
 def _compact(value: Any, *, limit: int = 220, default: str = "none") -> str:
@@ -257,7 +282,7 @@ def _append_reflection_queue_item(
 
     item_id = _next_reflection_item_id(text, produced_at)
     body = f"""## {item_id}
-- topic: 行动残留来自 {_theme(row)}
+- topic: 我想把那次动作留下的感觉再想一遍：{_theme(row)}
 - source: {source_line}
 - priority: {priority}
 - suggested_writer: reflection_writer
@@ -271,7 +296,7 @@ def _append_reflection_queue_item(
 
 def _trace_digest(root: Path, row: dict[str, Any], result: dict[str, Any]) -> None:
     trace = {
-        "created_at": result.get("produced_at"),
+        "created_at": _timestamp_or_now_iso(result.get("produced_at")),
         "experience_id": row.get("experience_id"),
         "seed_id": result.get("seed_id"),
         "reflection_item_id": result.get("reflection_item_id"),
@@ -291,7 +316,7 @@ def digest_action_experience_residue(
     max_items: int = 4,
     salience_threshold: float = 0.6,
 ) -> dict[str, Any]:
-    produced_at = produced_at or datetime.now().astimezone().isoformat(timespec="seconds")
+    produced_at = _timestamp_or_now_iso(produced_at)
     state_path = root / DIGEST_STATE_REL
     state = _load_state(state_path)
     digested_ids = [_safe_str(item) for item in state.get("digested_ids", []) if _safe_str(item)]
@@ -353,10 +378,10 @@ def digest_action_experience_residue(
     state.update(
         {
             "version": 1,
-            "updated_at": produced_at,
+            "updated_at": _timestamp_or_now_iso(produced_at),
             "digested_ids": new_ids[-512:],
             "last_digest": {
-                "produced_at": produced_at,
+                "produced_at": _timestamp_or_now_iso(produced_at),
                 "digested_count": len(candidates),
                 "dream_seed_ids": dream_seed_ids,
                 "reflection_item_ids": reflection_item_ids,
@@ -501,15 +526,11 @@ def compose_action_digest_followup(
         return None
     row = fresh[-1]
     seed_id = _safe_str(row.get("seed_id"))
-    item_id = _safe_str(row.get("reflection_item_id")) or "none"
     detail = _seed_digest_detail(root, seed_id)
     residue = _compact(detail.get("residue"), limit=180, default="没有留下可读的残留摘要")
     consumed_at = _safe_str(detail.get("consumed_at"), "none") or "none"
-    dream_state = "已经被梦境用过" if consumed_at not in {"", "none", "unknown"} else "还只是梦种，等下一轮梦境输出读取"
-    if mode == "residue":
-        reply = f"留下的是这段：{residue}。它已经进了梦种 {seed_id}，反思队列也有 {item_id}。"
-    else:
-        reply = f"进了。它现在是梦种 {seed_id}，{dream_state}；反思队列是 {item_id}。"
+    consumed = consumed_at not in {"", "none", "unknown"}
+    reply = compose_action_digest_followup_reply(mode=mode, residue=residue, consumed=consumed)
     return {
         "reply": reply,
         "mode": mode,

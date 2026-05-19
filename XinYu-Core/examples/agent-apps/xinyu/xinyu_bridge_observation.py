@@ -15,6 +15,26 @@ def _safe_str(value: Any, default: str = "") -> str:
     return str(value)
 
 
+def _timestamp_or_now_iso(value: Any) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return datetime.now().astimezone().isoformat()
+    return parsed.astimezone().isoformat()
+
+
+def _parse_iso(value: Any) -> datetime | None:
+    text = _safe_str(value).strip()
+    if not text or text == "none":
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
+
+
 def _as_bool(value: Any, default: bool = False) -> bool:
     if isinstance(value, bool):
         return value
@@ -65,9 +85,9 @@ time_scope: short_term
 subject_ids: [xinyu]
 protected: true
 source: system
-created_at: {created_at}
-updated_at: {updated_at}
-last_confirmed_at: {updated_at}
+created_at: {_timestamp_or_now_iso(created_at)}
+updated_at: {_timestamp_or_now_iso(updated_at)}
+last_confirmed_at: {_timestamp_or_now_iso(updated_at)}
 importance_score: 78
 impact_score: 76
 confidence_score: 90
@@ -79,17 +99,23 @@ tags: [{tags}]
 def _ensure_observation_file(path: Path, observed_at: str) -> None:
     if path.exists():
         text = path.read_text(encoding="utf-8-sig", errors="replace")
-        text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {observed_at}", text, count=1)
-        text = re.sub(r"(?m)^last_confirmed_at:\s*.+$", f"last_confirmed_at: {observed_at}", text, count=1)
+        text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {_timestamp_or_now_iso(observed_at)}", text, count=1)
+        text = re.sub(
+            r"(?m)^last_confirmed_at:\s*.+$",
+            f"last_confirmed_at: {_timestamp_or_now_iso(observed_at)}",
+            text,
+            count=1,
+        )
         path.write_text(text.rstrip() + "\n", encoding="utf-8")
         return
+    safe_observed_at = _timestamp_or_now_iso(observed_at)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         _header(
             title="Group Learning Observations",
             memory_type="group_learning_observations",
-            created_at=observed_at,
-            updated_at=observed_at,
+            created_at=safe_observed_at,
+            updated_at=safe_observed_at,
             tags="qq, group, learning, observations, candidates",
         )
         + """
@@ -108,22 +134,28 @@ def _ensure_observation_file(path: Path, observed_at: str) -> None:
 
 def _update_real_life_events(memory_root: Path, observed_at: str, entry: dict[str, str]) -> None:
     path = memory_root / "context/real_life_input_events.md"
+    safe_observed_at = _timestamp_or_now_iso(observed_at)
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
             _header(
                 title="Real Life Input Events",
                 memory_type="real_life_input_events",
-                created_at=observed_at,
-                updated_at=observed_at,
+                created_at=safe_observed_at,
+                updated_at=safe_observed_at,
                 tags="context, input_adapter, events",
             )
             + "\n\n# Real Life Input Events\n",
             encoding="utf-8",
         )
     text = path.read_text(encoding="utf-8-sig", errors="replace")
-    text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {observed_at}", text, count=1)
-    text = re.sub(r"(?m)^last_confirmed_at:\s*.+$", f"last_confirmed_at: {observed_at}", text, count=1)
+    text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {_timestamp_or_now_iso(observed_at)}", text, count=1)
+    text = re.sub(
+        r"(?m)^last_confirmed_at:\s*.+$",
+        f"last_confirmed_at: {_timestamp_or_now_iso(observed_at)}",
+        text,
+        count=1,
+    )
     event_block = f"""
 
 ## event-{entry['observation_id']}
@@ -134,7 +166,7 @@ def _update_real_life_events(memory_root: Path, observed_at: str, entry: dict[st
 - relationship_scope: group_context
 - content_type: text
 - content_summary: {entry['text_excerpt']}
-- observed_at: {observed_at}
+- observed_at: {_timestamp_or_now_iso(observed_at)}
 - contains_owner_private: unknown
 - contains_private_location: unknown
 - owner_intent: priority_learning_group_monitoring
@@ -183,7 +215,7 @@ async def observe(
     text = _safe_str(payload.get("text") or payload.get("raw_message")).strip()
     if not text:
         return {"accepted": True, "observed": False, "reply": "", "notes": ["empty_text"]}
-    observed_at = _safe_str(payload.get("observed_at")).strip() or datetime.now().astimezone().isoformat()
+    observed_at = _timestamp_or_now_iso(payload.get("observed_at") or datetime.now().astimezone().isoformat())
     group_id = _safe_str(payload.get("group_id"), "unknown").strip() or "unknown"
     user_id = _safe_str(payload.get("user_id"), "unknown").strip() or "unknown"
     message_id = _safe_str(payload.get("message_id"), "unknown").strip() or "unknown"
@@ -200,7 +232,7 @@ async def observe(
         _ensure_observation_file(path, observed_at)
         block = f"""
 ## obs-{observation_id}
-- observed_at: {observed_at}
+- observed_at: {_timestamp_or_now_iso(observed_at)}
 - source_channel: qq_group
 - group_id: {group_id}
 - priority_learning_group: {str(priority).lower()}

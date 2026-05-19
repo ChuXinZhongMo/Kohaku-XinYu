@@ -70,6 +70,75 @@ def extract_review_admin_command(gateway: Any, text: str) -> dict[str, Any] | No
     }
 
 
+def extract_self_action_approval_command(gateway: Any, text: str) -> dict[str, str] | None:
+    stripped = text.strip()
+    if stripped.startswith("！"):
+        stripped = "!" + stripped[1:].lstrip()
+    normalized = stripped.replace("：", ":").strip()
+    match = re.match(r"(?is)^/(?:sa|self-action|self_action)\s+(approve|approved|ok|accept|deny|denied|reject)\b(?:\s+([A-Za-z0-9:_./-]+))?(?:\s+(.+))?\s*$", normalized)
+    if match:
+        command = _safe_str(match.group(1)).lower()
+        queue_id = _safe_str(match.group(2)).strip() or "latest"
+        reason = _safe_str(match.group(3)).strip()
+        return {
+            "decision": "denied" if command in {"deny", "denied", "reject"} else "approved",
+            "queue_id": queue_id,
+            "reason": reason,
+        }
+    chinese_match = re.match(r"(?s)^(批准|同意|拒绝|否决)自行动作(?:\s+([A-Za-z0-9:_./-]+))?(?:\s+(.+))?\s*$", normalized)
+    if chinese_match:
+        command = _safe_str(chinese_match.group(1))
+        queue_id = _safe_str(chinese_match.group(2)).strip() or "latest"
+        reason = _safe_str(chinese_match.group(3)).strip()
+        return {
+            "decision": "denied" if command in {"拒绝", "否决"} else "approved",
+            "queue_id": queue_id,
+            "reason": reason,
+        }
+    return None
+
+
+def extract_self_action_quote_approval_command(gateway: Any, text: str) -> dict[str, str] | None:
+    del gateway
+    stripped = re.sub(r"\s+", "", text.strip().lower())
+    stripped = stripped.replace("！", "!").replace("：", ":")
+    if not stripped:
+        return None
+    approve_markers = {
+        "批准",
+        "同意",
+        "可以",
+        "授权",
+        "授权执行",
+        "执行",
+        "批准执行",
+        "approve",
+        "approved",
+        "accept",
+        "ok",
+        "yes",
+        "y",
+    }
+    deny_markers = {
+        "拒绝",
+        "否决",
+        "不批准",
+        "不同意",
+        "别执行",
+        "不要执行",
+        "deny",
+        "denied",
+        "reject",
+        "no",
+        "n",
+    }
+    if stripped in deny_markers:
+        return {"decision": "denied", "queue_id": "latest", "reason": "quoted_self_action_message"}
+    if stripped in approve_markers:
+        return {"decision": "approved", "queue_id": "latest", "reason": "quoted_self_action_message"}
+    return None
+
+
 def group_trigger_result(gateway: Any, event: dict[str, Any], *, text: str) -> tuple[bool, str, str]:
     group_id = _safe_str(event.get("group_id"), "")
     if gateway.config.allowed_group_ids and group_id not in gateway.config.allowed_group_ids:

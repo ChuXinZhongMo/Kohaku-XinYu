@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import contextlib
 import json
 import os
 import re
 import sqlite3
-import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -13,8 +11,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from stores.persona_runtime_overlay import write_goldmark_overlay
 from xinyu_dialogue_archive import dialogue_archive_path
-from xinyu_goldmark import OVERLAY_REL, read_goldmark_overlay
+from xinyu_goldmark import read_goldmark_overlay
 from xinyu_sent_reply_index import normalize_visible_text
 
 
@@ -61,20 +60,6 @@ def _parse_iso(value: Any) -> datetime | None:
         return datetime.fromisoformat(text)
     except ValueError:
         return None
-
-
-def _atomic_write_json(path: Path, data: list[dict[str, Any]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
-            json.dump(data, fh, ensure_ascii=False, indent=2)
-            fh.write("\n")
-        os.replace(tmp_name, path)
-    finally:
-        if os.path.exists(tmp_name):
-            with contextlib.suppress(OSError):
-                os.unlink(tmp_name)
 
 
 def _entry_identity(entry: dict[str, Any]) -> str:
@@ -416,7 +401,6 @@ def validate_vibe_features(features: dict[str, Any], *, source_text: str) -> dic
 
 
 def _mark_processing(root: Path, identities: set[str], *, provider: str) -> None:
-    path = root / OVERLAY_REL
     entries = read_goldmark_overlay(root)
     now = _now_iso()
     for item in entries:
@@ -427,17 +411,16 @@ def _mark_processing(root: Path, identities: set[str], *, provider: str) -> None
             item["dehydration_started_at"] = now
             item["processing_stale_after_seconds"] = PROCESSING_STALE_SECONDS
             item["error_log"] = None
-    _atomic_write_json(path, entries)
+    write_goldmark_overlay(root, entries)
 
 
 def _update_entry(root: Path, identity: str, updates: dict[str, Any]) -> None:
-    path = root / OVERLAY_REL
     entries = read_goldmark_overlay(root)
     for item in entries:
         if _entry_identity(item) == identity:
             item.update(updates)
             break
-    _atomic_write_json(path, entries)
+    write_goldmark_overlay(root, entries)
 
 
 def _processing_is_stale(entry: dict[str, Any]) -> bool:
@@ -449,7 +432,6 @@ def _processing_is_stale(entry: dict[str, Any]) -> bool:
 
 
 def _candidate_entries(root: Path, *, limit: int, force: bool) -> tuple[list[dict[str, Any]], int]:
-    path = root / OVERLAY_REL
     entries = read_goldmark_overlay(root)
     recovered = 0
     for item in entries:
@@ -460,7 +442,7 @@ def _candidate_entries(root: Path, *, limit: int, force: bool) -> tuple[list[dic
             item["error_log"] = "stale_processing_recovered"
             recovered += 1
     if recovered:
-        _atomic_write_json(path, entries)
+        write_goldmark_overlay(root, entries)
 
     candidates: list[dict[str, Any]] = []
     for item in entries:

@@ -1,0 +1,326 @@
+{
+  "schema_version": 1,
+  "generated_by": "xinyu-cross-domain-synaesthesia-batch-a-2026-05-19",
+  "policy": "mechanism-transfer registry; no biological overclaiming; no direct stable-memory writes",
+  "score_axes": [
+    "mechanism_clarity",
+    "xinyu_fit",
+    "testability",
+    "risk_control",
+    "reduction_value"
+  ],
+  "entries": [
+    {
+      "id": "neuro_memory_rules_baseline",
+      "domain": "neuroscience_memory",
+      "tier": 0,
+      "status": "implemented_baseline",
+      "source_anchor": "https://pubmed.ncbi.nlm.nih.gov/3008780/",
+      "source_anchors": [
+        "https://pubmed.ncbi.nlm.nih.gov/3008780/",
+        "https://stanford.edu/~jlmcc/papers/McCMcNaughtonOReilly95.pdf",
+        "https://pmc.ncbi.nlm.nih.gov/articles/PMC6757810/"
+      ],
+      "mechanism": "compact indexing, goal-gated recall, temporal binding, mismatch-gated updates, emotion modulation, and replay as weight",
+      "xinyu_problem": "memory recall and memory write pressure need source-backed boundaries instead of transcript dumping or mood-made facts",
+      "xinyu_mapping": "xinyu_neuro_memory_rules, canonical living memory recall, temporal memory context, emotion council",
+      "risk_boundary": "engineering analogy only; does not imply biological memory, consciousness, or real emotion",
+      "candidate_module": "xinyu_neuro_memory_rules.py",
+      "minimal_test": "tests/test_neuro_memory_rules.py validates sources, boundaries, flow mappings, and emotion trace notes",
+      "owner_runtime_benefit": "keeps recall compact, time-aware, and bounded against emotion-created facts",
+      "integration_target": "recall, write, emotion",
+      "score": {
+        "mechanism_clarity": 3,
+        "xinyu_fit": 3,
+        "testability": 3,
+        "risk_control": 3,
+        "reduction_value": 3
+      }
+    },
+    {
+      "id": "control_response_error_loop",
+      "domain": "control_theory_cybernetics",
+      "tier": 1,
+      "status": "planned_tier1",
+      "source_anchor": "https://psycnet.apa.org/record/1958-03810-000",
+      "source_anchors": [
+        "https://psycnet.apa.org/record/1958-03810-000",
+        "https://en.wikipedia.org/wiki/Variety_(cybernetics)"
+      ],
+      "mechanism": "feedback loop, error classification, correction, stability, and overcorrection guard",
+      "xinyu_problem": "reply failures can be patched locally without a durable next-turn correction loop",
+      "xinyu_mapping": "classify visible reply errors and feed a bounded policy hint into the next turn",
+      "risk_boundary": "one correction can create replay or policy residue, but cannot rewrite stable persona or owner memory",
+      "candidate_module": "xinyu_response_error_loop.py",
+      "minimal_test": "bad prior reply plus owner correction produces task_miss, tone_miss, memory_miss, or boundary_miss",
+      "owner_runtime_benefit": "reduces repeated failures and turns owner corrections into testable repair paths",
+      "integration_target": "final_guard, expression_learning, runtime_context",
+      "score": {
+        "mechanism_clarity": 3,
+        "xinyu_fit": 3,
+        "testability": 3,
+        "risk_control": 2,
+        "reduction_value": 3
+      }
+    },
+    {
+      "id": "medical_turn_triage",
+      "domain": "medical_triage",
+      "tier": 1,
+      "status": "planned_tier1",
+      "source_anchor": "https://pubmed.ncbi.nlm.nih.gov/20727026/",
+      "source_anchors": [
+        "https://pubmed.ncbi.nlm.nih.gov/20727026/",
+        "https://www.ncbi.nlm.nih.gov/books/NBK557583/"
+      ],
+      "mechanism": "sort urgent and important lanes before detailed treatment",
+      "xinyu_problem": "short owner commands and mixed turns need priority sorting before recall, tools, or reply expansion",
+      "xinyu_mapping": "turn_triage_gate selects a primary lane and secondary lanes before downstream providers",
+      "risk_boundary": "triage advises priority; it does not suppress explicit owner instructions or replace Scene Frame",
+      "candidate_module": "xinyu_turn_triage_gate.py",
+      "minimal_test": "continue/start/next resolves to active task; correction outranks stale memory; low-energy context suppresses optional expansion",
+      "owner_runtime_benefit": "makes terse live commands and mixed-priority turns more reliable",
+      "integration_target": "scene_frame, recall, reply_policy, tool_routing",
+      "score": {
+        "mechanism_clarity": 3,
+        "xinyu_fit": 3,
+        "testability": 3,
+        "risk_control": 3,
+        "reduction_value": 3
+      }
+    },
+    {
+      "id": "immune_memory_danger_gate",
+      "domain": "immune_system_danger_theory",
+      "tier": 1,
+      "status": "planned_tier1",
+      "source_anchor": "https://www.nature.com/articles/s41577-024-01102-9",
+      "source_anchors": [
+        "https://www.nature.com/articles/s41577-024-01102-9",
+        "https://pubmed.ncbi.nlm.nih.gov/21712488/"
+      ],
+      "mechanism": "danger signals, quarantine, tolerance, and controlled response",
+      "xinyu_problem": "external sources, group chat, stale memory, and hallucinated replies can contaminate stable memory",
+      "xinyu_mapping": "memory_immune_gate classifies candidates as allow_review, quarantine, reject, needs_owner_confirmation, or safe_as_library_only",
+      "risk_boundary": "quarantine is review, not destructive deletion; too much rejection must not block learning",
+      "candidate_module": "xinyu_memory_immune_gate.py",
+      "minimal_test": "group-only fact cannot enter owner-private memory; public article cannot rewrite persona or relationship memory",
+      "owner_runtime_benefit": "protects stable memory while still allowing reviewed learning",
+      "integration_target": "memory_candidate_extractor, source_material_parser, public_dataset_importer",
+      "score": {
+        "mechanism_clarity": 3,
+        "xinyu_fit": 3,
+        "testability": 3,
+        "risk_control": 3,
+        "reduction_value": 3
+      }
+    },
+    {
+      "id": "allostatic_slow_state",
+      "domain": "allostasis_endocrine_slow_variables",
+      "tier": 1,
+      "status": "planned_tier1",
+      "source_anchor": "https://pubmed.ncbi.nlm.nih.gov/12098108/",
+      "source_anchors": [
+        "https://pubmed.ncbi.nlm.nih.gov/12098108/",
+        "https://pubmed.ncbi.nlm.nih.gov/22672612/"
+      ],
+      "mechanism": "slow predictive regulation across the whole system",
+      "xinyu_problem": "fatigue, guardedness, curiosity, and closeness are too turn-local",
+      "xinyu_mapping": "slow_state_modulator decays state over time and influences reply energy, initiative threshold, recall threshold, and emotion bias",
+      "risk_boundary": "slow state modulates thresholds and pacing; it cannot create facts or override current owner text",
+      "candidate_module": "xinyu_slow_state_modulator.py",
+      "minimal_test": "night-shift fatigue persists briefly and decays; repeated owner dismissal raises proactive threshold",
+      "owner_runtime_benefit": "makes XinYu feel more continuous without turning mood into fact",
+      "integration_target": "life_reply_policy, emotion_council, proactive_request_loop, scene_frame",
+      "score": {
+        "mechanism_clarity": 3,
+        "xinyu_fit": 3,
+        "testability": 3,
+        "risk_control": 3,
+        "reduction_value": 2
+      }
+    },
+    {
+      "id": "ecology_module_pruning",
+      "domain": "ecology_gardening",
+      "tier": 1,
+      "status": "planned_tier1",
+      "source_anchor": "https://www.annualreviews.org/doi/10.1146/annurev.es.04.110173.000245",
+      "source_anchors": [
+        "https://www.annualreviews.org/doi/10.1146/annurev.es.04.110173.000245",
+        "https://www.science.org/doi/10.1126/science.1172133"
+      ],
+      "mechanism": "niche, competition, dormancy, pruning, succession, and resilience",
+      "xinyu_problem": "modules and memories accumulate unless each has a role, activity signal, and retirement rule",
+      "xinyu_mapping": "module_ecology_audit classifies code and memory lanes as kept, merged, dormant, archive_candidate, or delete_candidate",
+      "risk_boundary": "no archive/delete without reference checks, validation evidence, and recovery path",
+      "candidate_module": "ops/validation/module_ecology_audit.py",
+      "minimal_test": "referenced module cannot be delete_candidate; duplicate module family becomes merge candidate",
+      "owner_runtime_benefit": "continues the subtractive goal by making module survival explicit",
+      "integration_target": "ops_validation, worklog, cleanup_batches",
+      "score": {
+        "mechanism_clarity": 3,
+        "xinyu_fit": 3,
+        "testability": 2,
+        "risk_control": 3,
+        "reduction_value": 3
+      }
+    },
+    {
+      "id": "legal_memory_evidence_grade",
+      "domain": "legal_evidence_systems",
+      "tier": 2,
+      "status": "candidate_tier2",
+      "source_anchor": "https://pubmed.ncbi.nlm.nih.gov/18436948/",
+      "source_anchors": [
+        "https://pubmed.ncbi.nlm.nih.gov/18436948/",
+        "https://www.gradeworkinggroup.org/"
+      ],
+      "mechanism": "evidence grade, review, appeal, reversal, and burden of proof",
+      "xinyu_problem": "stable memory promotion needs clearer proof standards",
+      "xinyu_mapping": "memory_evidence_grade labels candidate memory before promotion or quarantine",
+      "risk_boundary": "evidence labels support review; no direct stable memory write from sidecars",
+      "candidate_module": "xinyu_memory_evidence_grade.py",
+      "minimal_test": "owner explicit statement outranks inference; emotion residue cannot become fact",
+      "owner_runtime_benefit": "makes memory promotion explainable and reversible",
+      "integration_target": "memory_immune_gate, memory_self_review",
+      "score": {
+        "mechanism_clarity": 3,
+        "xinyu_fit": 3,
+        "testability": 3,
+        "risk_control": 3,
+        "reduction_value": 2
+      }
+    },
+    {
+      "id": "library_memory_facets",
+      "domain": "library_science_faceted_classification",
+      "tier": 2,
+      "status": "candidate_tier2",
+      "source_anchor": "https://archive.org/details/prolegomenatolib00rang",
+      "source_anchors": [
+        "https://archive.org/details/prolegomenatolib00rang",
+        "https://www.loc.gov/aba/cataloging/subject/"
+      ],
+      "mechanism": "facets, subject headings, controlled vocabulary, and catalog metadata",
+      "xinyu_problem": "memory, library, cases, and runtime state need clearer retrieval metadata",
+      "xinyu_mapping": "memory_facet_index adds source, scope, time, sensitivity, use case, and stability facets",
+      "risk_boundary": "facets organize references; they must not copy private memory bodies into public library records",
+      "candidate_module": "xinyu_memory_facet_index.py",
+      "minimal_test": "retrieval can filter by scope, sensitivity, source type, and time before keyword fallback",
+      "owner_runtime_benefit": "makes library and memory separation operational instead of folder-only",
+      "integration_target": "memory_library_manifest, living_memory_recall",
+      "score": {
+        "mechanism_clarity": 3,
+        "xinyu_fit": 3,
+        "testability": 2,
+        "risk_control": 3,
+        "reduction_value": 3
+      }
+    },
+    {
+      "id": "information_foraging_retrieval_budget",
+      "domain": "information_foraging",
+      "tier": 2,
+      "status": "candidate_tier2",
+      "source_anchor": "https://dl.acm.org/doi/10.1145/302979.303040",
+      "source_anchors": [
+        "https://dl.acm.org/doi/10.1145/302979.303040",
+        "https://www.microsoft.com/en-us/research/publication/information-foraging/"
+      ],
+      "mechanism": "information scent, expected gain, and search cost",
+      "xinyu_problem": "retrieval and external search can run when the current turn needs a direct answer",
+      "xinyu_mapping": "retrieval_scent_budget decides when to continue, stop, or fallback",
+      "risk_boundary": "budgeting controls search effort; it cannot hide uncertainty or skip required evidence",
+      "candidate_module": "xinyu_retrieval_scent_budget.py",
+      "minimal_test": "obvious direct answer avoids extra retrieval; ambiguous recall follows high-scent sources",
+      "owner_runtime_benefit": "reduces over-retrieval and keeps responses timely",
+      "integration_target": "retrieval_need_reranker, source_request_planner",
+      "score": {
+        "mechanism_clarity": 3,
+        "xinyu_fit": 3,
+        "testability": 2,
+        "risk_control": 2,
+        "reduction_value": 3
+      }
+    },
+    {
+      "id": "hro_near_miss_replay",
+      "domain": "high_reliability_aviation_safety",
+      "tier": 2,
+      "status": "candidate_tier2",
+      "source_anchor": "https://psycnet.apa.org/record/2007-04450-000",
+      "source_anchors": [
+        "https://psycnet.apa.org/record/2007-04450-000",
+        "https://journals.sagepub.com/doi/10.1177/0149206314547527"
+      ],
+      "mechanism": "near-miss logging, checklist, and preoccupation with failure",
+      "xinyu_problem": "serious reply, memory, or tool failures are not always converted into replay cases",
+      "xinyu_mapping": "near_miss_replay_queue records redacted failure metadata for future regression tests",
+      "risk_boundary": "near-miss records must be redacted and must not store raw QQ/private memory bodies",
+      "candidate_module": "xinyu_near_miss_replay_queue.py",
+      "minimal_test": "final guard failure records redacted replay metadata and no private body",
+      "owner_runtime_benefit": "turns failures into durable tests instead of one-off fixes",
+      "integration_target": "final_guard, response_error_loop, replay_cases",
+      "score": {
+        "mechanism_clarity": 3,
+        "xinyu_fit": 3,
+        "testability": 3,
+        "risk_control": 3,
+        "reduction_value": 2
+      }
+    },
+    {
+      "id": "distributed_context_map",
+      "domain": "distributed_cognition",
+      "tier": 2,
+      "status": "candidate_tier2",
+      "source_anchor": "https://mitpress.mit.edu/9780262581462/cognition-in-the-wild/",
+      "source_anchors": [
+        "https://mitpress.mit.edu/9780262581462/cognition-in-the-wild/",
+        "https://doi.org/10.1017/CBO9780511805249"
+      ],
+      "mechanism": "cognition distributed across person, artifacts, tools, and environment",
+      "xinyu_problem": "XinYu operates through owner, memory, QQ, Desktop, Codex, tools, and attachments rather than one model alone",
+      "xinyu_mapping": "distributed_context_map records the scoped role of active external artifacts in the current turn",
+      "risk_boundary": "mapping describes roles; it must not expand permissions or imply hidden surveillance",
+      "candidate_module": "xinyu_distributed_context_map.py",
+      "minimal_test": "Codex task, attachment, QQ rich context, and desktop state each get scoped current-turn roles",
+      "owner_runtime_benefit": "makes tool/artifact participation explicit and bounded",
+      "integration_target": "scene_frame, bridge_turn_sidecars, desktop_context",
+      "score": {
+        "mechanism_clarity": 3,
+        "xinyu_fit": 3,
+        "testability": 2,
+        "risk_control": 3,
+        "reduction_value": 2
+      }
+    },
+    {
+      "id": "drama_living_surface_eval",
+      "domain": "drama_literature_performance",
+      "tier": 3,
+      "status": "watch_tier3",
+      "source_anchor": "https://archive.org/details/aspectsnovel0000fors",
+      "source_anchors": [
+        "https://archive.org/details/aspectsnovel0000fors"
+      ],
+      "mechanism": "subtext, timing, reaction, silence, and character arc",
+      "xinyu_problem": "living surface can degrade into explanation or templates",
+      "xinyu_mapping": "living_surface_replay_eval checks currentness, relation, restraint, and specificity",
+      "risk_boundary": "extract response structure only; do not create roleplay scripts or fixed lines",
+      "candidate_module": "xinyu_living_surface_replay_eval.py",
+      "minimal_test": "bad replies fail for overexplaining, roleplay script shape, or lack of current-turn specificity",
+      "owner_runtime_benefit": "improves visible reply shape without adding persona lore",
+      "integration_target": "persona_realism_eval, speech_controller",
+      "score": {
+        "mechanism_clarity": 2,
+        "xinyu_fit": 3,
+        "testability": 2,
+        "risk_control": 2,
+        "reduction_value": 2
+      }
+    }
+  ]
+}

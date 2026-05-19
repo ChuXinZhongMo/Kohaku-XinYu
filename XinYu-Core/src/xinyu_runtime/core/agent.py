@@ -909,6 +909,18 @@ class Agent(AgentInitMixin, AgentHandlersMixin, AgentMessagesMixin, AgentModelMi
             def on_activity(self, activity_type: str, detail: str) -> None:
                 pass
 
+            def on_activity_with_metadata(
+                self, activity_type: str, detail: str, metadata: dict
+            ) -> None:
+                if activity_type != "assistant_message_edited":
+                    return
+                original_preview = str(metadata.get("original_preview") or "").strip()
+                rewritten_text = metadata.get("rewritten_text")
+                if not original_preview or not isinstance(rewritten_text, str):
+                    return
+                if rewritten_text:
+                    self._callback(f"\n{rewritten_text}")
+
         callback_output = CallbackOutput(handler)
 
         if replace_default:

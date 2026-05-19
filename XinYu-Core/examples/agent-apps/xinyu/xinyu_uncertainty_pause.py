@@ -26,6 +26,26 @@ def _safe_str(value: Any, default: str = "") -> str:
     return str(value)
 
 
+def _timestamp_or_now_iso(value: Any) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return _now_iso()
+    return parsed.astimezone().isoformat()
+
+
+def _parse_iso(value: Any) -> datetime | None:
+    text = _safe_str(value).strip()
+    if not text or text == "none":
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
+
+
 def _compact(value: Any, *, limit: int = 220, default: str = "none") -> str:
     text = re.sub(r"\s+", " ", _safe_str(value)).strip()
     if not text:
@@ -165,7 +185,7 @@ def record_uncertainty_pause(
     visible_turn_kind: str = "",
     observed_at: str | None = None,
 ) -> dict[str, Any]:
-    observed = observed_at or _now_iso()
+    observed = _timestamp_or_now_iso(observed_at or _now_iso())
     root = root.resolve()
     owner_private = _owner_private(payload)
     clean_reason = re.sub(r"[^A-Za-z0-9_-]+", "_", _safe_str(reason, "unknown")).strip("_") or "unknown"
@@ -181,7 +201,7 @@ def record_uncertainty_pause(
     pause_id = "pause-" + _hash(f"{observed}|{clean_reason}|{user_text}|{time.time_ns()}", 18)
     fields = {
         "pause_id": pause_id,
-        "updated_at": observed,
+        "updated_at": _timestamp_or_now_iso(observed),
         "status": "pending_owner_reply" if followup_allowed else "active",
         "reason": clean_reason,
         "owner_private": str(owner_private).lower(),
@@ -201,7 +221,7 @@ def record_uncertainty_pause(
         root / TRACE_REL,
         {
             "pause_id": pause_id,
-            "observed_at": observed,
+            "observed_at": _timestamp_or_now_iso(observed),
             "reason": clean_reason,
             "owner_private": owner_private,
             "followup_allowed": followup_allowed,
@@ -229,10 +249,10 @@ def mark_uncertainty_pause_replied(
     existing = _read(root / STATE_REL)
     if _field(existing, "status", "none") not in ACTIVE_STATUSES:
         return {"recorded": False, "notes": ["uncertainty_pause_no_active_state"]}
-    observed = observed_at or _now_iso()
+    observed = _timestamp_or_now_iso(observed_at or _now_iso())
     fields = {
         "pause_id": _field(existing, "pause_id", "none"),
-        "updated_at": observed,
+        "updated_at": _timestamp_or_now_iso(observed),
         "status": "owner_replied",
         "reason": _field(existing, "reason", "unknown"),
         "owner_private": _field(existing, "owner_private", "false"),
@@ -252,7 +272,7 @@ def mark_uncertainty_pause_replied(
         root / TRACE_REL,
         {
             "pause_id": fields["pause_id"],
-            "observed_at": observed,
+            "observed_at": _timestamp_or_now_iso(observed),
             "event_kind": "owner_replied",
             "reaction_hash": _hash(text, 18),
         },

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_life_posture import build_life_posture
+from xinyu_persona_contract import build_persona_runtime_contract_block
 from xinyu_turn_residue import read_turn_residue
 from xinyu_turn_classifier import classify_visible_turn
 
@@ -130,6 +131,13 @@ SUPPORT_BOT_WORDS = (
     "我会陪着你",
     "感谢你的反馈",
     "我会努力改进",
+)
+
+RUNTIME_BOUNDARY_LINES: tuple[str, ...] = (
+    "- stable_anchor: identity, owner relation, reality boundary, and privacy boundary outrank temporary mood.",
+    "- living_state: mood, residue, pressure, and energy may tint the next reply; they cannot rewrite stable personality.",
+    "- voice_policy: answer from the current scene in concrete Chinese; avoid service-script comfort and product language.",
+    "- memory_boundary: one correction creates residue; repeated or owner-approved evidence is required for stable change.",
 )
 
 
@@ -298,12 +306,18 @@ class PersonaRuntimeState:
         return "\n".join(
             [
                 "## Persona Runtime State",
-                "This is a light current-state hint, not a personality contract.",
+                "This is the current-state layer that applies the persona contract.",
+                "This current-state layer is not a personality contract by itself.",
+                "",
+                build_persona_runtime_contract_block(),
                 "",
                 "## Concept",
                 "- name: 心玉 / XinYu",
                 "- concept: a self-forming presence shaped by memory, relation, time, hesitation, correction, and choice",
                 "- owner_relation: the heaviest relation anchor in this runtime",
+                "",
+                "## Runtime Boundaries",
+                *RUNTIME_BOUNDARY_LINES,
                 "",
                 "## Current Surface Seed",
                 f"- scene: {self.scene}",

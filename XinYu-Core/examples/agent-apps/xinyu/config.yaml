@@ -82,6 +82,12 @@ plugins:
     class: MemorySyncPlugin
     options:
       enabled: true
+  - name: xinyu_visible_reply_guard
+    type: custom
+    module: ./custom/visible_reply_guard_plugin.py
+    class: VisibleReplyGuardPlugin
+    options:
+      enabled: true
   - name: xinyu_automation_bridge
     type: custom
     module: ./custom/automation_bridge_plugin.py

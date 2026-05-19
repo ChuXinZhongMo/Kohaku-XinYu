@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from .clock import SystemClock
 from .config import XinYuV1Config
@@ -121,27 +123,44 @@ class XinYuV1App:
 
     async def _reason(self, request: ReasoningRequest) -> ReasoningResult:
         if request.route.route is RouteName.FAST_PATH:
-            return await self.local_reflex.run(request)
+            result = await self.local_reflex.run(request)
+            if result.draft.strip():
+                return result
+            fallback_note = "fast_path_empty_fallthrough" if "empty" in result.notes else "fast_path_fallthrough"
+            return await self._run_slow_reasoning(request, notes=(*result.notes, fallback_note))
         if request.route.route is RouteName.MAINTENANCE:
             return ReasoningResult(draft="[WAITING]", memory_changed=False, notes=("maintenance_route",))
+        return await self._run_slow_reasoning(request)
+
+    async def _run_slow_reasoning(self, request: ReasoningRequest, *, notes: tuple[str, ...] = ()) -> ReasoningResult:
         try:
-            return await self.slow_runtime.run(
+            result = await self.slow_runtime.run(
                 request,
                 timeout_seconds=self.config.latency.budget_for_route(RouteName.SLOW_PATH),
+            )
+            if not notes:
+                return result
+            return ReasoningResult(
+                draft=result.draft,
+                memory_changed=result.memory_changed,
+                notes=(*notes, *result.notes),
+                usage=result.usage,
+                metadata=result.metadata,
             )
         except Exception as exc:
             return ReasoningResult(
                 draft="我先慢一点想。",
                 memory_changed=None,
-                notes=("slow_path_failed", exc.__class__.__name__),
+                notes=(*notes, "slow_path_failed", exc.__class__.__name__),
             )
 
     async def _record_raw_event(self, turn: InboundTurn, route: RouteName) -> None:
         if turn.kind not in {TurnKind.HUMAN_CHAT, TurnKind.OBSERVATION, TurnKind.FILE_ATTACHMENT}:
             return
+        turn_timestamp = self._timestamp_or_now_iso(turn.timestamp)
         event = MemoryEvent.from_text(
             text=turn.text,
-            timestamp=turn.timestamp,
+            timestamp=turn_timestamp,
             source_channel=turn.actor.source_channel,
             privacy_scope=turn.actor.privacy_scope,
             actor_hash=turn.trace.actor_hash,
@@ -164,7 +183,7 @@ class XinYuV1App:
                     text=turn.text,
                     layer=MemoryLayer.EVENTS,
                     mode=MemoryWriteMode.EVENT_ONLY,
-                    timestamp=turn.timestamp,
+                    timestamp=self._timestamp_or_now_iso(turn_timestamp),
                     source_event_id=event.event_id,
                     tags=(turn.actor.source_channel.value,),
                     metadata={
@@ -205,7 +224,7 @@ class XinYuV1App:
                 text=reply,
                 layer=MemoryLayer.EVENTS,
                 mode=MemoryWriteMode.EVENT_ONLY,
-                timestamp=event.timestamp,
+                timestamp=self._timestamp_or_now_iso(event.timestamp),
                 source_event_id=event.event_id,
                 tags=("assistant", route.value),
                 metadata=metadata,
@@ -235,3 +254,24 @@ class XinYuV1App:
         )
         write_emotion_state(self._emotion_path, transition.current)
         write_compat_markdown(self._emotion_compat_path, transition.current)
+
+    def _timestamp_or_now_iso(self, value: Any) -> str:
+        text = str(value).strip() if value is not None else ""
+        if text:
+            try:
+                numeric = float(text)
+            except ValueError:
+                numeric = None
+            if numeric is not None:
+                if numeric > 10_000_000_000:
+                    numeric = numeric / 1000.0
+                return datetime.fromtimestamp(numeric, tz=self.clock.timezone).isoformat(timespec="seconds")
+            try:
+                parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+            except ValueError:
+                parsed = None
+            if parsed is not None:
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=self.clock.timezone)
+                return parsed.astimezone(self.clock.timezone).isoformat(timespec="seconds")
+        return self.clock.now_iso()

@@ -1,19 +1,13 @@
 from __future__ import annotations
 
 import re
-import unicodedata
 from datetime import datetime
 from pathlib import Path
 
-from xinyu_text_variants import looks_like_legacy_mojibake
-
-
-def read_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8-sig")
-
-
-def write_text(path: Path, text: str) -> None:
-    path.write_text(text, encoding="utf-8")
+from source_material_quality import claim_is_placeholder, claim_is_too_thin, claim_looks_garbled
+from source_material_parser import integrated_source_material_ids as parse_integrated_source_material_ids
+from source_material_parser import split_material_field_maps
+from xinyu_storage_paths import knowledge_file_path
 
 
 def append_lines_to_section(text: str, heading: str, lines: list[str]) -> str:
@@ -29,55 +23,41 @@ def append_lines_to_section(text: str, heading: str, lines: list[str]) -> str:
     return text[: match.start()] + replacement + text[match.end():]
 
 
-def extract_value(text: str, field: str, default: str = "unknown") -> str:
-    pattern = re.compile(rf"^- {re.escape(field)}:\s*(.+)$", re.M)
-    match = pattern.search(text)
-    return match.group(1).strip() if match else default
-
-
 from xinyu_state_io import extract_value as extract_value, read_text as read_text, write_text as write_text
 
 
+MATERIAL_FIELDS = (
+    "question_id",
+    "url",
+    "source_type",
+    "reliability",
+    "integration_scope",
+    "status",
+    "comparison_status",
+    "evidence_hosts",
+    "claim",
+    "extraction_status",
+)
+MATERIAL_DEFAULTS = {
+    "question_id": "none",
+    "url": "none",
+    "source_type": "unknown",
+    "reliability": "unknown",
+    "integration_scope": "hold",
+    "status": "hold",
+    "comparison_status": "not_compared",
+    "evidence_hosts": "0",
+    "claim": "none",
+    "extraction_status": "unknown",
+}
+
+
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
+
+
 def split_materials(text: str) -> list[dict[str, str]]:
-    parts = re.split(r"(?m)^## (material-\d{4}-\d{2}-\d{2}-\d{3})\n", text)
-    materials: list[dict[str, str]] = []
-    if len(parts) < 3:
-        return materials
-    for i in range(1, len(parts), 2):
-        material_id = parts[i].strip()
-        body = parts[i + 1]
-        item = {
-            "material_id": material_id,
-            "question_id": "none",
-            "url": "none",
-            "source_type": "unknown",
-            "reliability": "unknown",
-            "integration_scope": "hold",
-            "status": "hold",
-            "comparison_status": "not_compared",
-            "evidence_hosts": "0",
-            "claim": "none",
-            "extraction_status": "unknown",
-        }
-        for line in body.splitlines():
-            stripped = line.strip()
-            for key in [
-                "question_id",
-                "url",
-                "source_type",
-                "reliability",
-                "integration_scope",
-                "status",
-                "comparison_status",
-                "evidence_hosts",
-                "claim",
-                "extraction_status",
-            ]:
-                prefix = f"- {key}: "
-                if stripped.startswith(prefix):
-                    item[key] = stripped.removeprefix(prefix).strip()
-        materials.append(item)
-    return materials
+    return split_material_field_maps(text, fields=MATERIAL_FIELDS, defaults=MATERIAL_DEFAULTS)
 
 
 def ready_materials(materials: list[dict[str, str]]) -> list[dict[str, str]]:
@@ -111,54 +91,8 @@ def material_is_ready_except_claim_quality(item: dict[str, str]) -> bool:
     )
 
 
-def claim_looks_garbled(claim: str) -> bool:
-    sample = claim.strip()[:2000]
-    if looks_like_legacy_mojibake(sample):
-        return True
-    mojibake_markers = sum(
-        sample.count(marker)
-        for marker in ("\u951f\u65a4\u62f7", "\u951f\u65a4", "\u65a4\u62f7", "\ufffd\ufffd", "\ufffd\ufffd\ufffd")
-    )
-    chars = [char for char in sample if not char.isspace()]
-    if len(chars) < 24:
-        return False
-    control_or_replacement = sum(
-        1
-        for char in chars
-        if char == "\ufffd" or unicodedata.category(char) in {"Cc", "Cf", "Cs"}
-    )
-    private_use = sum(1 for char in chars if 0xE000 <= ord(char) <= 0xF8FF or unicodedata.category(char) == "Co")
-    rare_cjk = sum(
-        1
-        for char in chars
-        if 0x3400 <= ord(char) <= 0x4DBF or 0x20000 <= ord(char) <= 0x2FA1F
-    )
-    uncommon_latin = sum(1 for char in chars if 0x1D00 <= ord(char) <= 0x1EFF or 0xA720 <= ord(char) <= 0xABFF)
-    total = len(chars)
-    if mojibake_markers >= 2 and (mojibake_markers * 3) / total > 0.01:
-        return True
-    if control_or_replacement and control_or_replacement / total > 0.004:
-        return True
-    if private_use and private_use / total > 0.003:
-        return True
-    if total >= 80 and (rare_cjk + uncommon_latin + private_use + control_or_replacement) / total > 0.18:
-        return True
-    return False
-
-
-def claim_is_placeholder(claim: str) -> bool:
-    normalized = re.sub(r"\s+", " ", claim.strip().lower())
-    return normalized.startswith("owner/local material copied from ") or normalized.startswith("downloaded ")
-
-
-def claim_is_too_thin(claim: str) -> bool:
-    tokens = [token for token in re.findall(r"[a-z0-9]+", claim.lower()) if len(token) > 2]
-    cjk_chars = [char for char in claim if "\u4e00" <= char <= "\u9fff"]
-    return len(tokens) < 8 and len(cjk_chars) < 24
-
-
 def integrated_source_material_ids(text: str) -> set[str]:
-    return set(re.findall(r"(?m)^- source_material:\s*(material-\d{4}-\d{2}-\d{2}-\d{3})\s*$", text))
+    return parse_integrated_source_material_ids(text)
 
 
 def next_learned_id(text: str, date_part: str) -> str:
@@ -369,9 +303,9 @@ def run_learner_integration(
     mode: str = "runtime_learner_integration",
 ) -> dict[str, object]:
     integrated_at = integrated_at or datetime.now().astimezone().isoformat()
-    gate_text = read_text(root / "memory/knowledge/source_integration_gate_state.md")
+    gate_text = read_text(_knowledge(root, "source_integration_gate_state.md"))
     permission = extract_value(gate_text, "integration_permission", "hold")
-    materials = split_materials(read_text(root / "memory/knowledge/source_materials.md"))
+    materials = split_materials(read_text(_knowledge(root, "source_materials.md")))
     ready = ready_materials(materials)
     blocked_unreadable = [
         item for item in materials
@@ -393,7 +327,7 @@ def run_learner_integration(
             or claim_is_too_thin(item.get("claim", ""))
         )
     ]
-    general_path = root / "memory/knowledge/general.md"
+    general_path = _knowledge(root, "general.md")
 
     integrated: list[dict[str, str]] = []
     skipped_reason = "none"
@@ -405,7 +339,7 @@ def run_learner_integration(
         for item in ready:
             if append_general_knowledge(general_path, integrated_at, item):
                 integrated.append(item)
-        append_source_notes(root / "memory/knowledge/source_notes.md", integrated_at, integrated)
+        append_source_notes(_knowledge(root, "source_notes.md"), integrated_at, integrated)
         update_question_states(root / "memory/context/question_states.md", integrated_at, integrated)
         update_active_questions(root / "memory/context/active_questions.md", integrated_at, integrated)
         update_exploration_queue(root / "memory/context/exploration_queue.md", integrated_at, integrated)
@@ -418,7 +352,7 @@ def run_learner_integration(
     pending_ready = ready_ids - integrated_ids
 
     write_text(
-        root / "memory/knowledge/learner_integration_state.md",
+        _knowledge(root, "learner_integration_state.md"),
         render_state(
             integrated_at,
             mode,

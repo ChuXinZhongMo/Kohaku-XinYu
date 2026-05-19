@@ -17,6 +17,15 @@ EMOTION_DIMENSIONS: tuple[str, ...] = (
     "attachment",
     "conflict",
     "irritation",
+    "anger",
+    "annoyance",
+    "aversion",
+    "disgust",
+    "dislike",
+    "resentment",
+    "distance_impulse",
+    "silence_impulse",
+    "pushback_impulse",
     "stability",
     "volatility",
     "openness",
@@ -91,4 +100,3 @@ class EmotionTransition:
     delta: EmotionDelta
     applied_delta: EmotionVector
     notes: tuple[str, ...] = field(default_factory=tuple)
-

@@ -6,6 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
+from source_material_parser import split_material_sections
+from xinyu_storage_paths import knowledge_file_path
 
 READY_STATUSES = {"ready"}
 READY_RELIABILITY = {"medium_ready", "high_ready", "verified", "curated"}
@@ -50,6 +52,34 @@ MIN_QUESTION_OVERLAP = 0.50
 MIN_SHARED_QUESTION_TOKENS = 2
 
 
+def _now_iso() -> str:
+    return datetime.now().astimezone().isoformat()
+
+
+def _timestamp_or_now_iso(value: object) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return _now_iso()
+    return parsed.astimezone().isoformat()
+
+
+def _parse_iso(value: object) -> datetime | None:
+    text = "" if value is None else str(value).strip()
+    if not text or text == "none":
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
+
+
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
+
+
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8-sig")
 
@@ -83,23 +113,7 @@ def host_of(url: str) -> str:
 
 
 def split_material_blocks(text: str) -> tuple[str, list[dict[str, object]]]:
-    parts = re.split(r"(?m)^## (material-\d{4}-\d{2}-\d{2}-\d{3}|material-[\w-]+)\n", text)
-    preface = parts[0].rstrip()
-    materials: list[dict[str, object]] = []
-    if len(parts) < 3:
-        return preface, materials
-    for i in range(1, len(parts), 2):
-        material_id = parts[i].strip()
-        body = parts[i + 1].rstrip()
-        fields: dict[str, str] = {}
-        for line in body.splitlines():
-            stripped = line.strip()
-            if not stripped.startswith("- ") or ": " not in stripped:
-                continue
-            key, value = stripped[2:].split(": ", 1)
-            fields[key.strip()] = value.strip()
-        materials.append({"material_id": material_id, "body": body, "fields": fields})
-    return preface, materials
+    return split_material_sections(text, allow_named_ids=True, rstrip_body=True)
 
 
 def split_question_refs(text: str) -> dict[str, str]:
@@ -145,8 +159,12 @@ def apply_updates(material: dict[str, object], updates: dict[str, str]) -> None:
 
 def render_materials(compared_at: str, preface: str, materials: list[dict[str, object]]) -> str:
     text = preface
-    text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {compared_at}", text)
-    text = re.sub(r"(?m)^last_confirmed_at:\s*.+$", f"last_confirmed_at: {compared_at}", text)
+    text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {_timestamp_or_now_iso(compared_at)}", text)
+    text = re.sub(
+        r"(?m)^last_confirmed_at:\s*.+$",
+        f"last_confirmed_at: {_timestamp_or_now_iso(compared_at)}",
+        text,
+    )
     blocks = []
     for material in materials:
         blocks.append(f"## {material['material_id']}\n{str(material['body']).rstrip()}")
@@ -476,9 +494,9 @@ time_scope: short_term
 subject_ids: [xinyu]
 protected: true
 source: system
-created_at: 2026-04-24T00:00:00+08:00
-updated_at: {compared_at}
-last_confirmed_at: {compared_at}
+created_at: {_timestamp_or_now_iso('2026-04-24T00:00:00+08:00')}
+updated_at: {_timestamp_or_now_iso(compared_at)}
+last_confirmed_at: {_timestamp_or_now_iso(compared_at)}
 importance_score: 82
 impact_score: 82
 confidence_score: 100
@@ -516,7 +534,7 @@ def append_source_notes(root: Path, compared_at: str, group_results: list[dict[s
     hold_groups = [item for item in group_results if item["status"] in HOLD_STATUSES]
     if not hold_groups:
         return
-    path = root / "memory/knowledge/source_notes.md"
+    path = _knowledge(root, "source_notes.md")
     text = read_text(path).rstrip()
     lines: list[str] = []
     for item in hold_groups:
@@ -556,7 +574,7 @@ def update_question_states(root: Path, compared_at: str, group_results: list[dic
         replacement_body = (
             f"- state: {state}\n"
             f"- reason: {reason}\n"
-            f"- updated_at: {compared_at}\n"
+            f"- updated_at: {_timestamp_or_now_iso(compared_at)}\n"
         )
         match = re.search(pattern, text, flags=re.S)
         if match:
@@ -646,14 +664,14 @@ def run_source_comparison(
     compared_at: str | None = None,
     mode: str = "runtime_source_comparison",
 ) -> dict[str, object]:
-    compared_at = compared_at or datetime.now().astimezone().isoformat()
-    path = root / "memory/knowledge/source_materials.md"
+    compared_at = _timestamp_or_now_iso(compared_at)
+    path = _knowledge(root, "source_materials.md")
     original = read_text(path)
     preface, materials = split_material_blocks(original)
     active_questions_path = root / "memory/context/active_questions.md"
     question_refs = split_question_refs(read_text(active_questions_path)) if active_questions_path.exists() else {}
     ready = ready_materials(materials)
-    existing_state = read_text(root / "memory/knowledge/source_comparison_state.md")
+    existing_state = read_text(_knowledge(root, "source_comparison_state.md"))
 
     skipped_reason = "none"
     group_results: list[dict[str, object]] = []
@@ -682,7 +700,7 @@ def run_source_comparison(
             update_exploration_queue(root, compared_at, group_results)
 
     write_text(
-        root / "memory/knowledge/source_comparison_state.md",
+        _knowledge(root, "source_comparison_state.md"),
         render_state(compared_at, mode, len(ready), group_results, skipped_reason),
     )
     return {

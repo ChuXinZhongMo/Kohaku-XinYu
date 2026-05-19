@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import re
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +13,7 @@ from xinyu_memory_event_sourcing import record_chat_event
 from xinyu_runtime_presence import record_turn_finished
 from xinyu_runtime_security import source_file_digest
 from xinyu_sent_reply_index import visible_text_hash
+from xinyu_tinykernel_shadow import record_tinykernel_shadow, shadow_enabled
 from xinyu_turn_coherence import finish_turn_coherence
 
 
@@ -23,11 +26,22 @@ def _safe_str(value: Any, default: str = "") -> str:
         return default
 
 
+def _timestamp_or_now_iso(value: Any) -> str:
+    text = _safe_str(value).strip()
+    if text:
+        try:
+            return datetime.fromisoformat(text.replace("Z", "+00:00")).astimezone().isoformat()
+        except ValueError:
+            pass
+    return datetime.now().astimezone().isoformat()
+
+
 @dataclass
 class PreModelRouteResult:
     response: dict[str, Any] | None
     event_sidecar: dict[str, Any]
     v1_shadow: dict[str, Any]
+    tinykernel_shadow: dict[str, Any] = field(default_factory=dict)
 
 
 async def run_pre_model_routes(
@@ -122,7 +136,53 @@ async def run_pre_model_routes(
         return PreModelRouteResult(v1_canary_response, event_sidecar, v1_shadow)
 
     v1_shadow = await runtime._run_v1_shadow(payload, text=text)
-    return PreModelRouteResult(None, event_sidecar, v1_shadow)
+    tinykernel_shadow = await _run_tinykernel_shadow(runtime, payload, text=text, turn_id=turn_id, observed_at=turn_started_wall)
+    return PreModelRouteResult(None, event_sidecar, v1_shadow, tinykernel_shadow)
+
+
+async def _run_tinykernel_shadow(
+    runtime: Any,
+    payload: dict[str, Any],
+    *,
+    text: str,
+    turn_id: str,
+    observed_at: str,
+) -> dict[str, Any]:
+    if not shadow_enabled():
+        return {"notes": []}
+
+    owner_private = getattr(runtime, "_owner_private_payload_matches", None)
+    if callable(owner_private):
+        try:
+            if not owner_private(payload):
+                return {"notes": []}
+        except Exception as exc:
+            return {"notes": [f"tinykernel_shadow_scope_error:{type(exc).__name__}"]}
+
+    source = _safe_str(payload.get("source") or payload.get("message_type") or "xinyu_bridge", "xinyu_bridge")
+    try:
+        return await asyncio.to_thread(
+            record_tinykernel_shadow,
+            Path(runtime.xinyu_dir),
+            turn_id=turn_id,
+            source=source,
+            user_text=text,
+            context={
+                "recent_turns": [],
+                "persona_state": "",
+                "owner_profile": "",
+                "runtime_state": "",
+                "memory_recall": [],
+            },
+            capabilities={
+                "codex_available": True,
+                "external_api_available": True,
+                "local_tools_available": True,
+            },
+            observed_at=_timestamp_or_now_iso(observed_at),
+        )
+    except Exception as exc:
+        return {"recorded": False, "ok": False, "notes": [f"tinykernel_shadow_error:{type(exc).__name__}"]}
 
 
 async def _maybe_handle_runtime_repair_status_turn(
@@ -213,7 +273,7 @@ async def _maybe_handle_runtime_repair_status_turn(
         reply=reply,
         session_key=session_key,
         turn_id=turn_id,
-        started_at=turn_started_wall,
+        started_at=_timestamp_or_now_iso(turn_started_wall),
         elapsed_ms=elapsed_ms,
         status=status,
         notes=notes,

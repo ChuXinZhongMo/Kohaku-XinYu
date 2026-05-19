@@ -57,6 +57,19 @@ def _now_iso() -> str:
     return datetime.now().astimezone().isoformat()
 
 
+def _timestamp_or_now_iso(value: Any = None) -> str:
+    text = _safe_str(value).strip()
+    if not text:
+        return _now_iso()
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return _now_iso()
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed.astimezone().isoformat()
+
+
 def _hash_text(value: str, length: int = 16) -> str:
     return hashlib.sha256(value.encode("utf-8", errors="replace")).hexdigest()[:length]
 
@@ -232,10 +245,11 @@ def record_interaction_turn(
     elapsed_ms: int | None = None,
     finished_at: str | None = None,
 ) -> dict[str, Any]:
-    updated = finished_at or _now_iso()
+    updated = _timestamp_or_now_iso(finished_at)
     source_scope = _source_scope(payload)
     row = {
         "interaction_id": "interaction-" + _hash_text(f"{session_key}|{updated}|{time.time_ns()}", 18),
+        "event_time": updated,
         "finished_at": updated,
         "source": _scrub(source, limit=80),
         "source_scope": source_scope,
@@ -253,7 +267,7 @@ def record_interaction_turn(
     rows = _load_rows(root / LOG_REL)
     rows.append(row)
     _write_rows(root / LOG_REL, rows)
-    state = _render_state(row=row, rows=rows, updated_at=updated)
+    state = _render_state(row=row, rows=rows, updated_at=_timestamp_or_now_iso(updated))
     state_path = root / STATE_REL
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(state.rstrip() + "\n", encoding="utf-8")

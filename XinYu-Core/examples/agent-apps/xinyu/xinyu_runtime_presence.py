@@ -17,6 +17,7 @@ PRESENCE_MD_REL = Path("memory/context/runtime_self_presence.md")
 PROGRAM_AWARENESS_MD_REL = Path("memory/context/runtime_program_awareness.md")
 PRESENCE_TRACE_REL = Path("runtime/self_presence_trace.jsonl")
 CODEX_STATE_REL = Path("runtime/codex_presence_state.json")
+INITIATIVE_METRICS_REL = Path("runtime/initiative_metrics.json")
 
 DEFAULT_PROMPT_LIMIT = 2200
 DEFAULT_PREVIEW_CHARS = 160
@@ -57,6 +58,50 @@ _PROGRAM_STATE_FILES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "self_chosen_goal_ecology",
+        "memory/context/self_chosen_goal_ecology_state.md",
+        (
+            "selected_goal_id",
+            "selected_label",
+            "selected_score",
+            "action_policy",
+            "next_safe_action",
+            "boundary",
+            "last_observed_goal_id",
+            "last_outcome",
+            "last_reason_code",
+            "observations_24h",
+            "goal_switch_count_24h",
+            "cooled_goal_ids",
+        ),
+    ),
+    (
+        "self_action_gateway",
+        "memory/context/self_action_gateway_state.md",
+        (
+            "checked_at",
+            "selected_goal_id",
+            "candidate_count",
+            "executed_action_count",
+            "queued_approval_count",
+            "pending_approval_count",
+        ),
+    ),
+    (
+        "self_action_patch_executor",
+        "memory/context/self_action_patch_executor_state.md",
+        (
+            "checked_at",
+            "status",
+            "execution_level",
+            "queue_id",
+            "approval_id",
+            "task_id",
+            "codex_status",
+            "report_path",
+        ),
+    ),
+    (
         "proactive_request",
         "memory/context/proactive_request_state.md",
         ("status", "kind", "delivery_level", "request_answer_state", "last_ack_status", "adapter_error"),
@@ -74,6 +119,110 @@ _PROGRAM_STATE_FILES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
             "shadow_only",
             "hard_blocks",
             "next_review_after",
+        ),
+    ),
+    (
+        "contextual_self_loop",
+        "memory/context/contextual_self_loop_state.md",
+        (
+            "evaluated_at",
+            "last_trigger",
+            "current_scene",
+            "working_context_budget",
+            "forgetting_posture",
+            "retrieval_intents",
+            "admitted_context_count",
+            "suppressed_context_count",
+            "working_self",
+            "initiative_posture",
+            "next_action_bias",
+            "short_context_first",
+            "retrieval_before_expansion",
+            "hidden_orchestration_only",
+        ),
+    ),
+    (
+        "contextual_recall",
+        "memory/context/contextual_recall_state.md",
+        (
+            "evaluated_at",
+            "current_scene",
+            "retrieval_intents",
+            "admitted_recall_count",
+            "suppressed_recall_count",
+            "source_count",
+            "short_previews_only",
+            "raw_history_dump",
+            "visible_source_labels",
+        ),
+    ),
+    (
+        "contextual_self_observatory",
+        "memory/context/contextual_self_observatory_state.md",
+        (
+            "updated_at",
+            "window_hours",
+            "self_loop_event_count_24h",
+            "recall_event_count_24h",
+            "initiative_decision_count_24h",
+            "initiative_feedback_count_24h",
+            "latest_scene",
+            "latest_working_self",
+            "latest_initiative_posture",
+            "recall_admitted_count_24h",
+            "recall_suppressed_count_24h",
+            "latest_recall_admitted_count",
+            "initiative_held_by_context_count_24h",
+            "initiative_allowed_by_context_count_24h",
+            "quiet_default_hold_count_24h",
+            "feedback_after_context_allowed_count_24h",
+            "posture",
+            "observatory_only",
+            "behavior_change",
+            "raw_history_dump",
+        ),
+    ),
+    (
+        "initiative_lifecycle",
+        "memory/context/initiative_lifecycle_state.md",
+        (
+            "checked_at",
+            "last_trigger",
+            "candidate_count",
+            "decision_count",
+            "selected_candidate_id",
+            "selected_source",
+            "selected_intent",
+            "selected_decision",
+            "selected_score",
+            "blocked_count",
+            "held_count",
+            "delivery_level",
+            "pending_feedback_count",
+            "context_gate_observed",
+            "context_scene",
+            "context_initiative_posture",
+            "context_recall_support",
+            "context_gate_age_seconds",
+            "context_gate_stale",
+            "interruption_posture",
+            "next_step",
+        ),
+    ),
+    (
+        "initiative_feedback",
+        "memory/context/initiative_feedback_state.md",
+        (
+            "last_feedback_at",
+            "candidate_id",
+            "candidate_signature",
+            "action",
+            "source_type",
+            "intent_type",
+            "future_effect",
+            "stable_memory_write",
+            "personality_promotion",
+            "scoring_bias_only",
         ),
     ),
     (
@@ -331,6 +480,19 @@ _PROGRAM_STATE_FILES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "code_awareness",
+        "memory/context/code_change_awareness_state.md",
+        (
+            "status",
+            "source_changed",
+            "changed_count",
+            "bridge_restart_required",
+            "runtime_restart_required",
+            "gateway_restart_may_be_needed",
+            "last_changed_files",
+        ),
+    ),
+    (
         "runtime_bridge",
         "memory/context/runtime_bridge_state.md",
         (
@@ -352,8 +514,14 @@ _PROGRAM_STATE_FILES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
 _PROGRAM_TRACE_FILES: tuple[tuple[str, str], ...] = (
     ("self_presence", "runtime/self_presence_trace.jsonl"),
     ("self_thought", "runtime/self_thought_trace.jsonl"),
+    ("self_chosen_goal_ecology", "runtime/self_chosen_goal_ecology/trace.jsonl"),
+    ("self_action_gateway", "runtime/self_action_gateway/trace.jsonl"),
+    ("self_action_patch_executor", "runtime/self_action_patch_executor/trace.jsonl"),
     ("proactive_request", "runtime/proactive_request_trace.jsonl"),
     ("proactive_decision", "memory/context/proactive_decision_trace.jsonl"),
+    ("contextual_self_loop", "runtime/contextual_self_loop_trace.jsonl"),
+    ("contextual_recall", "runtime/contextual_recall_trace.jsonl"),
+    ("initiative_lifecycle", "runtime/initiative_lifecycle_events.jsonl"),
     ("impulse_soup", "memory/context/impulse_soup_trace.jsonl"),
     ("v1_shadow", "runtime/v1_shadow_trace.jsonl"),
     ("research_handoff", "runtime/research_handoff_trace.jsonl"),
@@ -375,7 +543,14 @@ _CODE_SURFACE_ENTRYPOINTS: tuple[str, ...] = (
     "xinyu_qq_gateway.py",
     "xinyu_bridge_renderer.py",
     "xinyu_runtime_presence.py",
+    "xinyu_contextual_self_loop.py",
+    "xinyu_contextual_recall.py",
+    "xinyu_contextual_self_observatory.py",
     "xinyu_learning_closed_loop.py",
+    "xinyu_self_chosen_goal_ecology.py",
+    "xinyu_goal_outcome_observer.py",
+    "xinyu_self_action_gateway.py",
+    "xinyu_self_action_patch_executor.py",
     "xinyu_self_code_approval.py",
     "xinyu_self_code_watchdog.py",
 )
@@ -414,14 +589,14 @@ def record_bridge_heartbeat(
         event = {
             "event_id": _event_id("presence"),
             "event_kind": "bridge_heartbeat",
-            "observed_at": observed_at,
+            "observed_at": _timestamp_or_now_iso(observed_at),
             "reason": _scrub_field(reason),
             "bridge_process": fields["bridge_process"],
             "active_sessions": fields.get("active_sessions", "unknown"),
             "notes": write_notes,
         }
         trace_notes = _append_trace(root, event)
-        return {"ok": True, "observed_at": observed_at, "notes": write_notes + trace_notes}
+        return {"ok": True, "observed_at": _timestamp_or_now_iso(observed_at), "notes": write_notes + trace_notes}
     except Exception as exc:
         return _soft_failure("bridge_heartbeat", exc)
 
@@ -460,7 +635,7 @@ def record_turn_started(
         event = {
             "event_id": _event_id("presence"),
             "event_kind": "turn_started",
-            "observed_at": observed_at,
+            "observed_at": _timestamp_or_now_iso(observed_at),
             "turn_id": turn_id,
             "session_hash": session_hash,
             "user_hash": user_hash,
@@ -475,7 +650,7 @@ def record_turn_started(
         return {
             "ok": True,
             "turn_id": turn_id,
-            "observed_at": observed_at,
+            "observed_at": _timestamp_or_now_iso(observed_at),
             "session_hash": session_hash,
             "source_channel": source_channel,
             "relation": relation,
@@ -529,7 +704,7 @@ def record_turn_finished(
         event = {
             "event_id": _event_id("presence"),
             "event_kind": event_kind,
-            "observed_at": observed_at,
+            "observed_at": _timestamp_or_now_iso(observed_at),
             "turn_id": current_turn_id,
             "session_hash": fields.get("last_session_hash", ""),
             "source_channel": fields.get("last_source", "unknown"),
@@ -540,7 +715,12 @@ def record_turn_finished(
             "notes": clean_notes + write_notes,
         }
         trace_notes = _append_trace(root, event)
-        return {"ok": True, "observed_at": observed_at, "turn_id": current_turn_id, "notes": write_notes + trace_notes}
+        return {
+            "ok": True,
+            "observed_at": _timestamp_or_now_iso(observed_at),
+            "turn_id": current_turn_id,
+            "notes": write_notes + trace_notes,
+        }
     except Exception as exc:
         return _soft_failure("turn_finished", exc)
 
@@ -591,7 +771,7 @@ def record_codex_presence(
         event = {
             "event_id": _event_id("presence"),
             "event_kind": _codex_event_kind(clean_status),
-            "observed_at": observed_at,
+            "observed_at": _timestamp_or_now_iso(observed_at),
             "job_id": clean_job_id,
             "status": clean_status,
             "request_label": request_label,
@@ -639,7 +819,7 @@ def build_runtime_presence_prompt_block(root: Path, *, limit: int = DEFAULT_PROM
         if current_turn_state == "stale_running":
             continuity = "stale"
         lines = [
-            f"- observed_at: {_scrub_field(fields.get('updated_at') or 'unknown')}",
+            f"- observed_at: {_timestamp_or_now_iso(fields.get('updated_at'))}",
             f"- bridge_process: {_scrub_field(fields.get('bridge_process') or 'unknown')}",
             f"- current_turn: {_scrub_field(current_turn)}",
             f"- current_turn_state: {_scrub_field(current_turn_state)}",
@@ -659,6 +839,23 @@ def build_runtime_presence_prompt_block(root: Path, *, limit: int = DEFAULT_PROM
             lines.append(f"- last_relation: {_scrub_field(fields.get('last_relation'))}")
         if fields.get("last_session_hash"):
             lines.append(f"- last_session_hash: {_scrub_field(fields.get('last_session_hash'))}")
+        code_fields = _load_markdown_state_fields(root, "memory/context/code_change_awareness_state.md")
+        if code_fields.get("_exists") == "true":
+            code_status = _format_subsystem_line(
+                _select_state_fields(
+                    code_fields,
+                    (
+                        "status",
+                        "source_changed",
+                        "changed_count",
+                        "bridge_restart_required",
+                        "runtime_restart_required",
+                        "gateway_restart_may_be_needed",
+                    ),
+                )
+            )
+            if code_status:
+                lines.append(f"- code_awareness: {code_status}")
         lines.extend(
             [
                 f"- codex_delegate: {_scrub_field(codex_line)}",
@@ -711,6 +908,26 @@ def read_runtime_presence_summary(root: Path) -> dict[str, Any]:
             "stale_running": stale_running,
         }
         summary["program_awareness"] = _collect_program_awareness(root, presence_fields=fields)
+        summary["initiative_lifecycle"] = summary["program_awareness"].get("subsystems", {}).get(
+            "initiative_lifecycle",
+            {},
+        )
+        summary["contextual_self_loop"] = summary["program_awareness"].get("subsystems", {}).get(
+            "contextual_self_loop",
+            {},
+        )
+        summary["contextual_recall"] = summary["program_awareness"].get("subsystems", {}).get(
+            "contextual_recall",
+            {},
+        )
+        summary["contextual_self_observatory"] = summary["program_awareness"].get("subsystems", {}).get(
+            "contextual_self_observatory",
+            {},
+        )
+        summary["initiative_metrics"] = summary["program_awareness"].get("subsystems", {}).get(
+            "initiative_metrics",
+            {},
+        )
         if running_age_seconds is not None:
             summary["current_turn_age_seconds"] = int(running_age_seconds)
         try:
@@ -856,6 +1073,9 @@ def _collect_program_awareness(root: Path, *, presence_fields: dict[str, str] | 
     qq_counts = _load_qq_queue_counts(root)
     if qq_counts:
         subsystems.setdefault("qq_outbox", {}).update(qq_counts)
+    initiative_metrics = _load_initiative_metrics(root)
+    if initiative_metrics:
+        subsystems["initiative_metrics"] = initiative_metrics
 
     traces = {
         name: _trace_file_summary(root, rel)
@@ -866,7 +1086,7 @@ def _collect_program_awareness(root: Path, *, presence_fields: dict[str, str] | 
 
     return {
         "available": True,
-        "updated_at": _scrub_field(fields.get("updated_at") or _now_iso()),
+        "updated_at": _timestamp_or_now_iso(fields.get("updated_at")),
         "scope": "known_runtime_state_files_and_bridge_health",
         "code_surface": _collect_code_surface(root),
         "observed_subsystem_count": observed_count,
@@ -894,7 +1114,16 @@ def _program_awareness_prompt_lines(awareness: dict[str, Any]) -> list[str]:
         "bridge_core",
         "autonomous_loop",
         "self_thought",
+        "self_chosen_goal_ecology",
+        "self_action_gateway",
+        "self_action_patch_executor",
         "proactive_request",
+        "contextual_self_loop",
+        "contextual_recall",
+        "contextual_self_observatory",
+        "initiative_lifecycle",
+        "initiative_metrics",
+        "initiative_feedback",
         "proactive_dispatch",
         "qq_outbox",
         "v1_canary_readiness",
@@ -916,6 +1145,7 @@ def _program_awareness_prompt_lines(awareness: dict[str, Any]) -> list[str]:
         "self_code_watchdog",
         "runtime_bridge",
         "memory_gate",
+        "code_awareness",
     ]
     for name in ordered_names:
         data = subsystems.get(name)
@@ -985,8 +1215,17 @@ def _render_program_awareness_markdown(root: Path, fields: dict[str, str]) -> st
             "bridge_core",
             "autonomous_loop",
             "self_thought",
+            "self_chosen_goal_ecology",
+            "self_action_gateway",
+            "self_action_patch_executor",
             "proactive_request",
             "proactive_decision_shadow",
+            "contextual_self_loop",
+            "contextual_recall",
+            "contextual_self_observatory",
+            "initiative_lifecycle",
+            "initiative_metrics",
+            "initiative_feedback",
             "impulse_soup",
             "proactive_dispatch",
             "qq_outbox",
@@ -1009,6 +1248,7 @@ def _render_program_awareness_markdown(root: Path, fields: dict[str, str]) -> st
             "self_code_watchdog",
             "runtime_bridge",
             "memory_gate",
+            "code_awareness",
         ):
             data = subsystems.get(name)
             if not isinstance(data, dict):
@@ -1168,6 +1408,44 @@ def _load_qq_queue_counts(root: Path) -> dict[str, str]:
     }
 
 
+def _load_initiative_metrics(root: Path) -> dict[str, str]:
+    path = root / INITIATIVE_METRICS_REL
+    try:
+        stat = path.stat()
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {"observed": "false"} if path.exists() else {}
+    if not isinstance(data, dict):
+        return {"observed": "false"}
+    wanted = (
+        "updated_at",
+        "window_hours",
+        "event_count_24h",
+        "decision_event_count_24h",
+        "candidate_seen_count_24h",
+        "selected_count_24h",
+        "desktop_shown_count_24h",
+        "held_private_count_24h",
+        "blocked_count_24h",
+        "feedback_count_24h",
+        "dismiss_count_24h",
+        "reply_count_24h",
+        "approved_qq_count_24h",
+        "failed_count_24h",
+        "pending_feedback_count",
+    )
+    result = {
+        "observed": "true",
+        "age_seconds": str(max(0, int(time.time() - stat.st_mtime))),
+    }
+    for key in wanted:
+        value = data.get(key)
+        if value is None:
+            continue
+        result[key] = _clip_preview(value, limit=80)
+    return result
+
+
 def _trace_file_summary(root: Path, rel: str) -> dict[str, str]:
     path = root / rel
     try:
@@ -1258,6 +1536,47 @@ def _format_subsystem_line(data: dict[str, Any]) -> str:
         "kind",
         "delivery_level",
         "request_answer_state",
+        "current_scene",
+        "working_context_budget",
+        "forgetting_posture",
+        "retrieval_intents",
+        "admitted_recall_count",
+        "suppressed_recall_count",
+        "source_count",
+        "short_previews_only",
+        "raw_history_dump",
+        "visible_source_labels",
+        "self_loop_event_count_24h",
+        "recall_event_count_24h",
+        "initiative_decision_count_24h",
+        "initiative_feedback_count_24h",
+        "latest_scene",
+        "latest_working_self",
+        "latest_initiative_posture",
+        "recall_admitted_count_24h",
+        "recall_suppressed_count_24h",
+        "latest_recall_admitted_count",
+        "initiative_held_by_context_count_24h",
+        "initiative_allowed_by_context_count_24h",
+        "quiet_default_hold_count_24h",
+        "feedback_after_context_allowed_count_24h",
+        "posture",
+        "observatory_only",
+        "behavior_change",
+        "admitted_context_count",
+        "suppressed_context_count",
+        "working_self",
+        "initiative_posture",
+        "next_action_bias",
+        "short_context_first",
+        "retrieval_before_expansion",
+        "hidden_orchestration_only",
+        "context_gate_observed",
+        "context_scene",
+        "context_initiative_posture",
+        "context_recall_support",
+        "context_gate_age_seconds",
+        "context_gate_stale",
         "source_type",
         "intent_type",
         "total_score",
@@ -1266,6 +1585,20 @@ def _format_subsystem_line(data: dict[str, Any]) -> str:
         "shadow_only",
         "hard_blocks",
         "next_review_after",
+        "window_hours",
+        "event_count_24h",
+        "decision_event_count_24h",
+        "candidate_seen_count_24h",
+        "selected_count_24h",
+        "desktop_shown_count_24h",
+        "held_private_count_24h",
+        "blocked_count_24h",
+        "feedback_count_24h",
+        "dismiss_count_24h",
+        "reply_count_24h",
+        "approved_qq_count_24h",
+        "failed_count_24h",
+        "pending_feedback_count",
         "schema_version",
         "thoughtlet_count",
         "active_count",
@@ -1373,6 +1706,7 @@ def _is_meaningful_error_value(value: Any) -> bool:
 
 def _render_presence_markdown(fields: dict[str, str]) -> str:
     value = lambda key, default="": _scrub_field(fields.get(key) or default)
+    updated_at = _timestamp_or_now_iso(fields.get("updated_at"))
     return "\n".join(
         [
             "---",
@@ -1382,7 +1716,7 @@ def _render_presence_markdown(fields: dict[str, str]) -> str:
             "subject_ids: [xinyu]",
             "protected: true",
             "source: xinyu_runtime_presence",
-            f"updated_at: {value('updated_at')}",
+            f"updated_at: {_timestamp_or_now_iso(updated_at)}",
             "status: active",
             "tags: [runtime, presence, continuity, sidecar]",
             "---",
@@ -1664,6 +1998,13 @@ def _safe_str(value: Any, default: str = "") -> str:
 
 def _now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def _timestamp_or_now_iso(value: Any) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return _now_iso()
+    return parsed.astimezone().isoformat(timespec="seconds")
 
 
 def _parse_iso(value: Any) -> datetime | None:

@@ -13,32 +13,19 @@ from ai_self_iteration_review_engine import (
     owner_review_granted,
     run_ai_self_iteration_review,
 )
-from turn_mode_utils import read_turn_mode
+from maintenance_bridge_utils import (
+    append_trace,
+    cooldown_ready,
+    maintenance_preflight,
+    read_text_optional,
+    resolve_root,
+)
 
-
-def _default_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
-def _resolve_root(ctx: PluginContext | None) -> Path:
-    candidate = Path(ctx.working_dir) if ctx else _default_root()
-    if (candidate / "memory").exists():
-        return candidate
-    return _default_root()
-
-
-def _read(path: Path) -> str:
-    if not path.exists():
-        return ""
-    return path.read_text(encoding="utf-8-sig", errors="replace")
+TRACE_REL = "memory/self/ai_self_iteration_review_trace.log"
 
 
 def _trace(root: Path, line: str) -> None:
-    trace_path = root / "memory/self/ai_self_iteration_review_trace.log"
-    trace_path.parent.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now().astimezone().isoformat()
-    with trace_path.open("a", encoding="utf-8") as fh:
-        fh.write(f"{stamp} {line}\n")
+    append_trace(root, TRACE_REL, line)
 
 
 class AiSelfIterationReviewBridgePlugin(BasePlugin):
@@ -53,34 +40,39 @@ class AiSelfIterationReviewBridgePlugin(BasePlugin):
 
     async def on_load(self, context: PluginContext) -> None:
         self._ctx = context
-        _trace(_resolve_root(context), "on_load ok")
+        _trace(resolve_root(context), "on_load ok")
 
     def _cooldown_ready(self) -> tuple[bool, str]:
+        ready, reason = cooldown_ready(
+            self._ctx,
+            state_key="ai_self_iteration_review_last_run",
+            min_interval_seconds=self._min_interval_seconds,
+        )
+        if not ready:
+            return False, reason
+
         if not self._ctx:
-            return False, "no_context"
+            return True, reason
         last_run = self._ctx.get_state("ai_self_iteration_review_last_run")
         if not last_run:
             return True, "never_run"
         try:
-            last_dt = datetime.fromisoformat(str(last_run))
-            delta = (datetime.now().astimezone() - last_dt).total_seconds()
-            if delta < self._min_interval_seconds:
-                return False, f"cooldown:{int(delta)}"
+            datetime.fromisoformat(str(last_run))
         except Exception:
             return True, "bad_last_run"
         return True, "cooldown_ready"
 
     def _should_run(self, root: Path) -> tuple[bool, str]:
-        turn_mode = read_turn_mode(root)
-        if turn_mode != "maintenance_schedule_turn":
-            return False, f"turn_mode:{turn_mode or 'unknown'}"
+        should_continue, reason = maintenance_preflight(self._ctx, root)
+        if not should_continue:
+            return False, reason
 
-        gate = _read(root / "memory/self/ai_self_iteration_state.md")
+        gate = read_text_optional(root / "memory/self/ai_self_iteration_state.md")
         gate_status = extract_value(gate, "gate_status")
         if gate_status != "growth_review_candidate":
             return False, f"gate_status:{gate_status}"
 
-        review = _read(root / "memory/self/ai_self_iteration_review_state.md")
+        review = read_text_optional(root / "memory/self/ai_self_iteration_review_state.md")
         review_permission = extract_value(review, "review_permission")
         if owner_review_granted(root) and review_permission != "owner_approved_for_non_stable_planning":
             return True, "owner_grant_refresh"
@@ -94,7 +86,7 @@ class AiSelfIterationReviewBridgePlugin(BasePlugin):
     ) -> None:
         if not self._enabled or not self._ctx:
             return
-        root = _resolve_root(self._ctx)
+        root = resolve_root(self._ctx)
         try:
             _trace(root, "post_llm_call entered")
             should_run, reason = self._should_run(root)

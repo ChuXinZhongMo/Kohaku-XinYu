@@ -40,6 +40,7 @@ from xinyu_runtime.core.executor import Executor
 from xinyu_runtime.core.job import JobResult, JobStatus, JobStore
 from xinyu_runtime.core.registry import Registry
 from xinyu_runtime.llm.base import LLMProvider
+from xinyu_runtime.llm.failover import failover_context_from_events, provider_failover_context
 from xinyu_runtime.llm.message import ContentPart, FilePart, ImagePart, TextPart
 from xinyu_runtime.llm.tools import build_provider_native_tools, build_tool_schemas
 from xinyu_runtime.modules.tool.base import ToolInfo
@@ -859,6 +860,7 @@ class Controller:
             return
 
         logger.debug("Processing events", count=len(events))
+        failover_context = failover_context_from_events(events)
 
         user_content, combined_text = self._build_turn_context(events)
 
@@ -901,28 +903,29 @@ class Controller:
 
         logger.info("Generating response...")
 
-        if self._is_native_mode:
-            tool_schemas = self._get_native_tool_schemas()
-            async for event in self._run_native_completion(messages, tool_schemas):
-                yield event
-        else:
-            async for event in self._run_text_completion(messages):
-                yield event
-            self._log_token_usage()
-            structured = self._collect_structured_assistant_parts()
-            for part in structured:
-                if isinstance(part, ImagePart):
-                    yield AssistantImageEvent(
-                        url=part.url,
-                        detail=part.detail,
-                        source_type=part.source_type,
-                        source_name=part.source_name,
-                        revised_prompt=getattr(part, "revised_prompt", None),
-                    )
-            self.conversation.append(
-                "assistant",
-                _merge_text_and_parts(self._last_assistant_content, structured),
-            )
+        with provider_failover_context(self.llm, failover_context):
+            if self._is_native_mode:
+                tool_schemas = self._get_native_tool_schemas()
+                async for event in self._run_native_completion(messages, tool_schemas):
+                    yield event
+            else:
+                async for event in self._run_text_completion(messages):
+                    yield event
+                self._log_token_usage()
+                structured = self._collect_structured_assistant_parts()
+                for part in structured:
+                    if isinstance(part, ImagePart):
+                        yield AssistantImageEvent(
+                            url=part.url,
+                            detail=part.detail,
+                            source_type=part.source_type,
+                            source_name=part.source_name,
+                            revised_prompt=getattr(part, "revised_prompt", None),
+                        )
+                self.conversation.append(
+                    "assistant",
+                    _merge_text_and_parts(self._last_assistant_content, structured),
+                )
 
         # Plugin post_llm_call chain-with-return (cluster B.3). Logic
         # lives in ``controller_plugins.py`` to keep this file under

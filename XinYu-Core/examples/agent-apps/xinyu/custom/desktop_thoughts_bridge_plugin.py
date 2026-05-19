@@ -9,26 +9,14 @@ from typing import Any
 
 from xinyu_runtime.modules.plugin.base import BasePlugin, PluginContext
 
+from maintenance_bridge_utils import append_trace, resolve_root
 from turn_mode_utils import read_turn_mode
 
-
-def _default_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
-def _resolve_root(ctx: PluginContext | None) -> Path:
-    candidate = Path(ctx.working_dir) if ctx else _default_root()
-    if (candidate / "memory").exists():
-        return candidate
-    return _default_root()
+TRACE_REL = "memory/context/desktop_thoughts_trace.log"
 
 
 def _trace(root: Path, line: str) -> None:
-    trace_path = root / "memory/context/desktop_thoughts_trace.log"
-    trace_path.parent.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now().astimezone().isoformat()
-    with trace_path.open("a", encoding="utf-8") as fh:
-        fh.write(f"{stamp} {line}\n")
+    append_trace(root, TRACE_REL, line)
 
 
 def _newest_thought_file(output_dir: Path) -> Path | None:
@@ -67,7 +55,7 @@ class DesktopThoughtsBridgePlugin(BasePlugin):
 
     async def on_load(self, context: PluginContext) -> None:
         self._ctx = context
-        _trace(_resolve_root(context), "on_load ok")
+        _trace(resolve_root(context), "on_load ok")
 
     def _load_renderer(self, root: Path) -> tuple[Any, Any, Any, Any]:
         if str(root) not in sys.path:
@@ -160,7 +148,7 @@ class DesktopThoughtsBridgePlugin(BasePlugin):
     async def on_agent_start(self) -> None:
         if not self._enabled or not self._ctx or not self._write_on_startup:
             return
-        root = _resolve_root(self._ctx)
+        root = resolve_root(self._ctx)
         try:
             ready, reason = self._cooldown_ready(root, startup=True)
             _trace(root, f"on_agent_start ready={ready} reason={reason}")
@@ -172,7 +160,7 @@ class DesktopThoughtsBridgePlugin(BasePlugin):
     async def post_llm_call(self, messages: list[dict], response: str, usage: dict, **kwargs: Any) -> None:
         if not self._enabled or not self._ctx:
             return
-        root = _resolve_root(self._ctx)
+        root = resolve_root(self._ctx)
         try:
             turn_mode = read_turn_mode(root)
             if turn_mode != "maintenance_schedule_turn":

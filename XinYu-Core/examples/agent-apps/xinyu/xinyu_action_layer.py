@@ -10,7 +10,14 @@ from typing import Any
 from xinyu_action_reply_composer import compose_action_reply
 from xinyu_local_scope import default_local_scope_root, ensure_local_scope, resolve_local_scope_path
 from xinyu_tool_intent_router import RouteDecision, ToolIntentRouter
-from xinyu_tool_protocol import ALLOWED_TOOLS, DELEGATED_LOCAL_RISK, READ_ONLY_RISK, ActionOutcome, ToolRequest
+from xinyu_tool_protocol import (
+    ALLOWED_TOOLS,
+    DELEGATED_LOCAL_RISK,
+    EXTERNAL_RUNTIME_RISK,
+    READ_ONLY_RISK,
+    ActionOutcome,
+    ToolRequest,
+)
 from xinyu_tool_targets import TargetRegistry, TargetRegistryError
 
 
@@ -169,6 +176,13 @@ class XinyuActionLayer:
                     error_code="external_executor_required",
                     risk=DELEGATED_LOCAL_RISK,
                 )
+            elif req.tool == "external_plugin_call":
+                outcome = ActionOutcome.failed(
+                    tool=req.tool,
+                    summary="external_plugin_call must be executed by Core Bridge runtime",
+                    error_code="external_executor_required",
+                    risk=EXTERNAL_RUNTIME_RISK,
+                )
             else:
                 outcome = ActionOutcome.blocked(
                     tool=req.tool,
@@ -210,7 +224,7 @@ class XinyuActionLayer:
                 error_code="tool_not_whitelisted",
                 risk=request.risk,
             )
-        if request.risk not in {READ_ONLY_RISK, DELEGATED_LOCAL_RISK}:
+        if request.risk not in {READ_ONLY_RISK, DELEGATED_LOCAL_RISK, EXTERNAL_RUNTIME_RISK}:
             return ActionOutcome.blocked(
                 tool=request.tool,
                 summary="这个风险等级第一版不接。",
@@ -252,23 +266,45 @@ class XinyuActionLayer:
         from xinyu_status import check_ports, check_qq_gateway_config, check_state, status_fields
 
         checks = []
+        reply_style = _safe_str(request.params.get("reply_style"), "casual_status")
+        technical_reply = reply_style == "technical_status"
         if bridge_snapshot:
             core_ok = bool(bridge_snapshot.get("ok")) and not bool(bridge_snapshot.get("closed"))
             version = _safe_str(bridge_snapshot.get("version"), "unknown")
             sessions = _safe_str(bridge_snapshot.get("sessions"), "unknown")
-            core_summary = f"Core Bridge 在线，version={version}，sessions={sessions}"
+            if technical_reply:
+                core_summary = f"Core Bridge 在线，version={version}，sessions={sessions}"
+            else:
+                core_summary = "我在线，core 正常" if core_ok else "core 现在还不稳"
         else:
             core_ok = True
-            core_summary = "Core Bridge 源码可读"
+            version = "unknown"
+            sessions = "unknown"
+            core_summary = "Core Bridge 源码可读" if technical_reply else "我在线，core 源码可读"
         checks.extend(check_ports())
         checks.extend(check_qq_gateway_config(self.root, self.root / "xinyu_qq_gateway.config.json"))
         checks.extend(check_state(self.root))
         warn = [check for check in checks if not check.ok and check.name != "dispatch_state"]
+        port_warn_names = {"xinyu_qq_gateway_6199", "napcat_webui_6099", "napcat_to_xinyu_qq_gateway_ws"}
+        port_warn = [check for check in warn if check.name in port_warn_names]
+        other_warn_count = len([check for check in warn if check.name not in port_warn_names])
         fields = status_fields(self.root)
-        qq_line = "QQ gateway 和 NapCat 连接正常" if not warn else f"发现 {len(warn)} 个状态警告"
+        if technical_reply:
+            qq_line = "QQ gateway 和 NapCat 连接正常" if not warn else f"发现 {len(warn)} 个状态警告"
+        elif port_warn:
+            qq_line = "QQ/NapCat 这台机器现在没接"
+            if other_warn_count:
+                qq_line += f"，另外 {other_warn_count} 个状态警告"
+        elif other_warn_count:
+            qq_line = f"发现 {other_warn_count} 个状态警告"
+        else:
+            qq_line = "QQ/NapCat 连接正常"
+        queued = fields.get("qq_outbox_queued", "missing")
+        failed = fields.get("qq_outbox_failed", "missing")
         outbox_line = (
-            f"QQ outbox queued={fields.get('qq_outbox_queued', 'missing')} "
-            f"failed={fields.get('qq_outbox_failed', 'missing')}"
+            f"QQ outbox queued={queued} failed={failed}"
+            if technical_reply
+            else f"待发队列 {queued}，失败 {failed}"
         )
         summary = [core_summary, qq_line, outbox_line]
         return ActionOutcome(
@@ -281,8 +317,11 @@ class XinyuActionLayer:
                 "checks": len(checks) + 1,
                 "warnings": len(warn),
                 "timeout": False,
+                "reply_style": reply_style,
+                "core_version": version,
+                "sessions": sessions,
             },
-            notes=["status_probe_read_only"],
+            notes=["status_probe_read_only", f"status_reply_style:{reply_style}"],
         )
 
     def _execute_log_scan(self, request: ToolRequest) -> ActionOutcome:
@@ -447,6 +486,41 @@ def codex_response_to_outcome(response: dict[str, Any], request: ToolRequest | d
         },
         error_code="" if accepted else "codex_delegate_rejected",
         notes=[_safe_str(note) for note in response.get("notes", [])[:6]],
+    ).to_dict()
+
+
+def external_response_to_outcome(response: dict[str, Any], request: ToolRequest | dict[str, Any]) -> dict[str, Any]:
+    req = request if isinstance(request, ToolRequest) else ToolRequest.from_dict(request)
+    accepted = bool(response.get("accepted") or response.get("ok"))
+    plugin_id = _safe_str(response.get("plugin_id"), req.target.alias or "external")
+    capability = _safe_str(response.get("capability"), "unknown")
+    summary_value = response.get("summary")
+    if isinstance(summary_value, list):
+        summary = [_safe_str(item) for item in summary_value if _safe_str(item)]
+    else:
+        summary = []
+    if not summary:
+        if accepted:
+            summary = [f"{plugin_id}:{capability} completed"]
+        else:
+            reason = _safe_str(response.get("error_code") or response.get("result"), "external_plugin_failed")
+            summary = [f"{plugin_id}:{capability} failed: {reason}"]
+    result = _safe_str(response.get("result"), "success" if accepted else "failure")
+    return ActionOutcome(
+        ok=accepted,
+        tool="external_plugin_call",
+        target_alias=plugin_id,
+        summary=summary,
+        risk=_safe_str(req.risk, EXTERNAL_RUNTIME_RISK),
+        result=result,
+        load={
+            "plugin_id": plugin_id,
+            "capability": capability,
+            "prepared": response.get("prepared") if isinstance(response.get("prepared"), dict) else {},
+            "execution": response.get("execution") if isinstance(response.get("execution"), dict) else {},
+        },
+        error_code="" if accepted else _safe_str(response.get("error_code"), "external_plugin_failed"),
+        notes=[_safe_str(note) for note in response.get("notes", [])[:8]],
     ).to_dict()
 
 

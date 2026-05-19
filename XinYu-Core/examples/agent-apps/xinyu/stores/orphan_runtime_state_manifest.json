@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "manifest_id": "stores/orphan_runtime_state_manifest",
+  "updated_at": "2026-05-19",
+  "privacy_note": "Metadata-only hold list for zero-reference runtime JSON files. Do not read, print, move, or delete state bodies from this manifest.",
+  "states": [
+    {
+      "path": "memory/consolidation_state.json",
+      "decision": "held_orphan_runtime_state",
+      "target_boundary": "stores/orphan_runtime_state_manifest",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until consolidation owner/archive decision is reviewed."
+    },
+    {
+      "path": "memory/initiative.json",
+      "decision": "held_orphan_runtime_state",
+      "target_boundary": "stores/orphan_runtime_state_manifest",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until initiative owner/archive decision is reviewed."
+    },
+    {
+      "path": "memory/initiative_state.json",
+      "decision": "held_orphan_runtime_state",
+      "target_boundary": "stores/orphan_runtime_state_manifest",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until initiative owner/archive decision is reviewed."
+    },
+    {
+      "path": "memory/maintenance_schedule.json",
+      "decision": "held_orphan_runtime_state",
+      "target_boundary": "stores/orphan_runtime_state_manifest",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until maintenance owner/archive decision is reviewed."
+    },
+    {
+      "path": "memory/mind_loop_state.json",
+      "decision": "held_orphan_runtime_state",
+      "target_boundary": "stores/orphan_runtime_state_manifest",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until mind loop owner/archive decision is reviewed."
+    },
+    {
+      "path": "memory/personality_change_state.json",
+      "decision": "held_orphan_runtime_state",
+      "target_boundary": "stores/orphan_runtime_state_manifest",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until personality owner/archive decision is reviewed."
+    },
+    {
+      "path": "memory/personality_self_review_state.json",
+      "decision": "held_orphan_runtime_state",
+      "target_boundary": "stores/orphan_runtime_state_manifest",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until personality self-review owner/archive decision is reviewed."
+    },
+    {
+      "path": "memory/question_pipeline.json",
+      "decision": "held_orphan_runtime_state",
+      "target_boundary": "stores/orphan_runtime_state_manifest",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until question pipeline owner/archive decision is reviewed."
+    },
+    {
+      "path": "memory/reflection/closed_loop_state.json",
+      "decision": "held_orphan_runtime_state",
+      "target_boundary": "stores/orphan_runtime_state_manifest",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until reflection owner/archive decision is reviewed."
+    },
+    {
+      "path": "memory/runtime_bridge.json",
+      "decision": "held_orphan_runtime_state",
+      "target_boundary": "stores/orphan_runtime_state_manifest",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until runtime bridge owner/archive decision is reviewed."
+    },
+    {
+      "path": "memory/runtime_bridge_state.json",
+      "decision": "held_orphan_runtime_state",
+      "target_boundary": "stores/orphan_runtime_state_manifest",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until runtime bridge state owner/archive decision is reviewed."
+    }
+  ]
+}

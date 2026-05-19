@@ -9,6 +9,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from stores.sticker_send_state import (
+    STICKER_SEND_STATE_REL,
+    read_sticker_send_state,
+    sticker_send_state_path,
+    write_sticker_send_state,
+)
 from xinyu_local_scope import default_local_scope_root, ensure_local_scope
 from xinyu_qq_outbox import enqueue_qq_outbox_image
 
@@ -21,7 +27,7 @@ AUTO_MIN_SCORE_ENV = "XINYU_STICKER_AUTO_MIN_SCORE"
 AUTO_RATE_ENV = "XINYU_STICKER_AUTO_RATE"
 EXPLICIT_ONLY_ENV = "XINYU_STICKER_EXPLICIT_ONLY"
 AUTO_COOLDOWN_MINUTES_ENV = "XINYU_STICKER_AUTO_COOLDOWN_MINUTES"
-SEND_STATE_FILE = "sticker_send_state.generated.json"
+SEND_STATE_FILE = STICKER_SEND_STATE_REL.name
 REFERENCE_DIR_NAMES = frozenset({".references", "参考图"})
 REQUEST_MARKERS = (
     "发表情",
@@ -514,7 +520,7 @@ def _manifest_paths(root: Path) -> list[tuple[Path, Path]]:
 
 
 def _send_state_path(root: Path) -> Path:
-    return root / "memory" / "context" / SEND_STATE_FILE
+    return sticker_send_state_path(root)
 
 
 def _now_iso() -> str:
@@ -531,24 +537,14 @@ def _parse_iso(value: str) -> datetime | None:
 
 
 def _load_send_state(root: Path) -> dict[str, Any]:
-    path = _send_state_path(root)
-    if not path.exists():
-        return {"version": 1, "sessions": {}}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
-        return {"version": 1, "sessions": {}}
-    if not isinstance(data, dict):
-        return {"version": 1, "sessions": {}}
+    data = read_sticker_send_state(root, default={"version": 1, "sessions": {}})
     if not isinstance(data.get("sessions"), dict):
         data["sessions"] = {}
     return data
 
 
 def _write_send_state(root: Path, data: dict[str, Any]) -> None:
-    path = _send_state_path(root)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_sticker_send_state(root, data)
 
 
 def _session_state_key(payload: dict[str, Any], session_key: str) -> str:

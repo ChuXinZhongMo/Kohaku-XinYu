@@ -4,6 +4,12 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from xinyu_storage_paths import knowledge_file_path
+
+
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
+
 
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8-sig")
@@ -198,18 +204,18 @@ def run_inner_cycle_summary(
     consolidation = read_text(root / "memory/reflection/consolidation_state.md")
     long_term_memory_gate = read_text(root / "memory/archive/long_term_memory_gate_state.md")
     personality_change = read_text(root / "memory/self/personality_change_state.md")
-    source_gate = read_text(root / "memory/knowledge/source_gate_state.md")
-    source_reliability = read_text(root / "memory/knowledge/source_reliability_state.md")
-    source_integration_gate = read_text(root / "memory/knowledge/source_integration_gate_state.md")
-    source_request_planner = read_text(root / "memory/knowledge/source_request_planner_state.md")
-    source_search_resolver = read_text(root / "memory/knowledge/source_search_resolver_state.md")
-    autonomous_search_activation = read_text(root / "memory/knowledge/autonomous_search_activation_state.md")
-    source_search_provider = read_text(root / "memory/knowledge/source_search_provider_state.md")
-    search_result_gate = read_text(root / "memory/knowledge/search_result_gate_state.md")
-    outward_source = read_text(root / "memory/knowledge/outward_source_state.md")
-    source_comparison = read_text(root / "memory/knowledge/source_comparison_state.md")
-    learner_integration = read_text(root / "memory/knowledge/learner_integration_state.md")
-    learning_quality = read_text(root / "memory/knowledge/learning_quality_state.md")
+    source_gate = read_text(_knowledge(root, "source_gate_state.md"))
+    source_reliability = read_text(_knowledge(root, "source_reliability_state.md"))
+    source_integration_gate = read_text(_knowledge(root, "source_integration_gate_state.md"))
+    source_request_planner = read_text(_knowledge(root, "source_request_planner_state.md"))
+    source_search_resolver = read_text(_knowledge(root, "source_search_resolver_state.md"))
+    autonomous_search_activation = read_text(_knowledge(root, "autonomous_search_activation_state.md"))
+    source_search_provider = read_text(_knowledge(root, "source_search_provider_state.md"))
+    search_result_gate = read_text(_knowledge(root, "search_result_gate_state.md"))
+    outward_source = read_text(_knowledge(root, "outward_source_state.md"))
+    source_comparison = read_text(_knowledge(root, "source_comparison_state.md"))
+    learner_integration = read_text(_knowledge(root, "learner_integration_state.md"))
+    learning_quality = read_text(_knowledge(root, "learning_quality_state.md"))
     ai_self_iteration = read_text(root / "memory/self/ai_self_iteration_state.md")
     retention_gate = read_text(root / "memory/archive/retention_gate_state.md")
     archive_output = read_text(root / "memory/archive/archive_output_state.md")

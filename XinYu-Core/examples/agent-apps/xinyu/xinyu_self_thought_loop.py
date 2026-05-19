@@ -9,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from custom.source_protocol_utils import split_source_requests as split_canonical_source_requests
+from xinyu_storage_paths import knowledge_file_path
 from xinyu_text_variants import readable_markers
 from xinyu_visible_text_sanitizer import sanitize_visible_text, visible_text_has_tool_artifact
 
@@ -22,6 +24,7 @@ CODEX_STATE_REL = Path("runtime/codex_presence_state.json")
 DEFAULT_MIN_INTERVAL_SECONDS = 1800
 DEFAULT_STALE_TURN_SECONDS = 300
 DEFAULT_PREVIEW_CHARS = 180
+DREAM_SHARE_MAX_CHARS = 1000
 REFLECTION_SHARE_FAMILY_COOLDOWN_SECONDS = 21600
 REFLECTION_SHARE_DISMISSAL_COOLDOWN_SECONDS = 14 * 86400
 LEARNING_LOOP_FOCUS_COOLDOWN_SECONDS = 21600
@@ -49,6 +52,11 @@ OWNER_REQUESTED_ACTIONS = {
     "owner_response_optional",
     "owner_listen",
 }
+
+
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
+
 
 GENERIC_ATTENTION_MARKERS = readable_markers(
     "are you there",
@@ -217,10 +225,10 @@ def _load_snapshot(root: Path, notes: list[str]) -> dict[str, Any]:
         "reflection_output": _read_text(root / "memory/reflection/reflection_output_state.md"),
         "thought_seeds": _read_text(root / "memory/context/thought_seeds.md"),
         "dream_log": _read_text(root / "memory/dreams/dream_log.md"),
-        "source_requests": _read_text(root / "memory/knowledge/source_requests.md"),
-        "source_search_provider": _read_text(root / "memory/knowledge/source_search_provider_state.md"),
-        "source_search_resolver": _read_text(root / "memory/knowledge/source_search_resolver_state.md"),
-        "autonomous_search_activation": _read_text(root / "memory/knowledge/autonomous_search_activation_state.md"),
+        "source_requests": _read_text(_knowledge(root, "source_requests.md")),
+        "source_search_provider": _read_text(_knowledge(root, "source_search_provider_state.md")),
+        "source_search_resolver": _read_text(_knowledge(root, "source_search_resolver_state.md")),
+        "autonomous_search_activation": _read_text(_knowledge(root, "autonomous_search_activation_state.md")),
         "learning_closed_loop": _read_text(root / "memory/self/learning_closed_loop_state.md"),
     }
 
@@ -386,6 +394,7 @@ def _select_dream_focus(snapshot: dict[str, Any], *, notes: list[str]) -> dict[s
             _dream_share_message(share),
             "owner_response_optional",
             "Owner may listen or answer; any stable memory must keep it as dream residue, not a fact.",
+            concrete_question_limit=DREAM_SHARE_MAX_CHARS,
         )
         if _proactive_focus_active_or_answered(snapshot, focus, notes):
             return None
@@ -517,8 +526,8 @@ def _recent_reflection_share_exists(snapshot: dict[str, Any], *, checked_at: str
     status = _clean_token(_extract_value(state, "status", "none"))
     if status not in ACTIVE_OR_ANSWERED_PROACTIVE_STATES:
         return False
-    created_at = _extract_value(state, "created_at", _extract_value(state, "updated_at", ""))
-    age = _age_seconds(created_at, checked_at)
+    created_time = _extract_value(state, "created_at", _extract_value(state, "updated_at", ""))
+    age = _age_seconds(created_time, checked_at)
     return age >= 0 and age < REFLECTION_SHARE_FAMILY_COOLDOWN_SECONDS
 
 
@@ -747,7 +756,8 @@ def _shareable_dream(snapshot: dict[str, Any], dream_id: str) -> dict[str, str] 
     if visible_text_has_tool_artifact(f"{raw_material} {raw_boundary}"):
         return None
     return {
-        "surface": _one_line(material, limit=100),
+        "surface": _one_line(material, limit=DREAM_SHARE_MAX_CHARS),
+        "fragments": _one_line(fragments, limit=DREAM_SHARE_MAX_CHARS),
         "boundary": _one_line(boundary, limit=120),
     }
 
@@ -764,8 +774,11 @@ def _dream_log_body(log: str, dream_id: str) -> str:
 
 
 def _dream_share_message(share: dict[str, str]) -> str:
-    surface = _one_line(share.get("surface", ""), limit=96)
-    surface = re.sub(r"[。.!！?？；;]+$", "", surface)
+    surface = _full_dream_share_surface(
+        share.get("surface", ""),
+        fragments=share.get("fragments", ""),
+        limit=DREAM_SHARE_MAX_CHARS,
+    )
     variants = (
         f"我刚才梦到一段很奇怪的画面：{surface}。",
         f"刚才梦里有个画面一直卡着：{surface}。",
@@ -776,8 +789,41 @@ def _dream_share_message(share: dict[str, str]) -> str:
     digest = hashlib.sha1(surface.encode("utf-8")).digest()
     return _one_line(
         variants[digest[0] % len(variants)],
-        limit=DEFAULT_PREVIEW_CHARS,
+        limit=DREAM_SHARE_MAX_CHARS,
     )
+
+
+def _full_dream_share_surface(value: Any, *, fragments: Any = "", limit: int = DREAM_SHARE_MAX_CHARS) -> str:
+    text = _one_line(value, limit=2000)
+    if not text or text in {"none", "unknown"}:
+        text = _one_line(fragments, limit=2000)
+    text = _strip_share_terminal_punctuation(text)
+    if not text:
+        return "有些梦里的画面醒来后还没完全散开"
+    if len(text) <= limit:
+        return text
+
+    full_unit = _bounded_dream_unit(text, limit=limit)
+    if full_unit:
+        return full_unit
+
+    return text[: max(0, limit - 3)].rstrip() + "..."
+
+
+def _bounded_dream_unit(text: str, *, limit: int) -> str:
+    best = ""
+    for match in re.finditer(r"[。！？!?；;]", text):
+        end = match.end()
+        if end > limit:
+            break
+        candidate = _strip_share_terminal_punctuation(text[:end])
+        if len(candidate) >= 8:
+            best = candidate
+    return best
+
+
+def _strip_share_terminal_punctuation(text: str) -> str:
+    return re.sub(r"(?:\.{3}|…|[。.!！?？；;，,、\s])+$", "", str(text or "")).strip()
 
 
 def _dream_share_boundary_check(text: str) -> bool:
@@ -921,26 +967,16 @@ def _low_value_pending_source_request(item: dict[str, str]) -> bool:
 
 
 def _split_source_requests(text: str) -> list[dict[str, str]]:
-    parts = re.split(r"(?m)^##\s+(request-[A-Za-z0-9_-]+)\s*$", text or "")
-    requests: list[dict[str, str]] = []
-    if len(parts) < 3:
-        return requests
-    for index in range(1, len(parts), 2):
-        request_id = parts[index].strip()
-        body = parts[index + 1]
-        if request_id == "request-none":
-            continue
-        requests.append(
-                {
-                    "request_id": request_id,
-                    "question_id": _extract_value(body, "question_id", "none"),
-                    "target": _extract_value(body, "target", "general"),
-                    "query": _extract_value(body, "query", "none"),
-                    "status": _extract_value(body, "status", "hold"),
-                    "followup_kind": _extract_value(body, "followup_kind", "none"),
-                    "reason": _extract_value(body, "reason", "none"),
-                }
-            )
+    requests = split_canonical_source_requests(
+        text or "",
+        fields=("question_id", "target", "query", "status", "followup_kind", "reason"),
+        skip_none_question=False,
+    )
+    for item in requests:
+        if item.get("target") == "unknown":
+            item["target"] = "general"
+        if item.get("reason") == "existing request":
+            item["reason"] = "none"
     return requests
 
 
@@ -1214,13 +1250,15 @@ def _focus(
     concrete_question: str,
     requested_action: str,
     after_owner_replies: str,
+    *,
+    concrete_question_limit: int = DEFAULT_PREVIEW_CHARS,
 ) -> dict[str, str]:
     return {
         "kind": _clean_token(kind),
         "label": _one_line(label, limit=80) or "none",
         "evidence_label": _one_line(evidence_label, limit=120) or "none",
         "intention": _clean_token(intention or "none"),
-        "concrete_question": _one_line(concrete_question, limit=DEFAULT_PREVIEW_CHARS) or "none",
+        "concrete_question": _one_line(concrete_question, limit=concrete_question_limit) or "none",
         "requested_action": _clean_token(requested_action or "none"),
         "after_owner_replies": _one_line(after_owner_replies, limit=DEFAULT_PREVIEW_CHARS) or "none",
     }

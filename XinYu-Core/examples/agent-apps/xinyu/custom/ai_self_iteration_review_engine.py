@@ -4,6 +4,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from xinyu_storage_paths import knowledge_ref
+
 
 def read_text(path: Path) -> str:
     if not path.exists():
@@ -114,16 +116,16 @@ def render_review_state(
                     [
                         "memory/context/initiative_policy.md",
                         "memory/archive/retention_model.md",
-                        "memory/knowledge/integration_policy.md",
+                        knowledge_ref("integration_policy.md"),
                     ],
                     source_materials,
                     "Which mechanism should be strengthened without making Xinyu a tool-only identity?",
                     "strengthen XinYu's memory/reflection/tool/source architecture without collapsing her into a task bot",
                     "too much architecture pressure could make ordinary chat sound technical again",
                     [
-                        "validate_inner_framework.py",
-                        "ai_domain_source_smoke.py",
-                        "ai_self_iteration_gate_smoke.py",
+                        "ops/validation/validate_inner_framework.py",
+                        "tests/smoke/learning/integration/ai_domain_source_smoke.py",
+                        "tests/smoke/initiative/integration/ai_self_iteration_gate_smoke.py",
                     ],
                 ),
                 _proposal(
@@ -140,9 +142,9 @@ def render_review_state(
                     "let repeated lived evidence create reviewable personality pressure without immediate self-rewrite",
                     "single-turn frustration could be mistaken for stable personality change",
                     [
-                        "personality_growth_gate_smoke.py",
-                        "personality_detail_smoke.py",
-                        "phase3_lived_session_smoke.py",
+                        "tests/smoke/voice/integration/personality_growth_gate_smoke.py",
+                        "tests/smoke/voice/integration/personality_detail_smoke.py",
+                        "tests/smoke/dialogue/integration/phase3_lived_session_smoke.py",
                     ],
                 ),
                 _proposal(
@@ -156,9 +158,9 @@ def render_review_state(
                     "reduce technical-manual drift and preserve ordinary Chinese private-chat speech",
                     "overcorrection could hide useful technical clarity when owner asks for code/design work",
                     [
-                        "chinese_voice_guard_smoke.py",
-                        "real_conversation_quality_smoke.py",
-                        "persona_runtime_smoke.py",
+                        "tests/smoke/voice/chinese_voice_guard_smoke.py",
+                        "tests/smoke/voice/integration/real_conversation_quality_smoke.py",
+                        "tests/smoke/voice/persona_runtime_smoke.py",
                     ],
                 ),
                 _proposal(
@@ -168,7 +170,7 @@ def render_review_state(
                     "high",
                     [
                         "memory/self/boundaries.md",
-                        "memory/knowledge/integration_policy.md",
+                        knowledge_ref("integration_policy.md"),
                         "memory/context/real_life_input_adapter_policy.md",
                     ],
                     source_materials,
@@ -176,9 +178,9 @@ def render_review_state(
                     "keep computer access, source learning, and self-mutation bounded while allowing growth",
                     "too loose boundaries could expose private files or silently mutate stable memory",
                     [
-                        "autonomous_search_activation_smoke.py",
-                        "social_inquiry_policy_smoke.py",
-                        "real_life_input_adapter_smoke.py",
+                        "tests/smoke/learning/integration/autonomous_search_activation_smoke.py",
+                        "tests/smoke/dialogue/integration/social_inquiry_policy_smoke.py",
+                        "tests/smoke/dialogue/integration/real_life_input_adapter_smoke.py",
                     ],
                 ),
             ]

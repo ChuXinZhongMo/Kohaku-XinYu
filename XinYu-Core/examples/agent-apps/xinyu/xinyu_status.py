@@ -13,7 +13,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from xinyu_runtime_security import bridge_source_version, source_file_digest, source_files_digest
+from xinyu_runtime_security import (
+    bridge_source_version,
+    runtime_source_paths,
+    source_file_digest,
+    source_files_digest,
+)
 from xinyu_text_variants import legacy_mojibake_variants
 
 
@@ -28,6 +33,11 @@ TEXT_HEALTH_FILES = (
     "memory/context/memory_braid_state.md",
     "memory/context/turn_coherence_state.md",
     "memory/context/initiative_spine_state.md",
+    "memory/context/self_chosen_goal_ecology_state.md",
+    "memory/context/self_action_gateway_state.md",
+    "memory/context/self_action_gateway_execution_handoff.md",
+    "memory/context/self_action_patch_executor_state.md",
+    "memory/context/self_action_patch_executor_task.md",
     "memory/context/self_thought_state.md",
     "memory/context/emotion_council_state.md",
     "memory/context/impulse_soup_state.md",
@@ -462,19 +472,7 @@ def main() -> int:
 
     expected_core_version = bridge_source_version(root / "xinyu_core_bridge.py")
     expected_core_digest = source_file_digest(root / "xinyu_core_bridge.py")
-    expected_runtime_digest = source_files_digest(
-        (
-            root / "xinyu_core_bridge.py",
-            root / "xinyu_bridge_turn_pipeline.py",
-            root / "xinyu_bridge_action_routes.py",
-            root / "xinyu_runtime_context.py",
-            root / "xinyu_memory_braid.py",
-            root / "xinyu_turn_coherence.py",
-            root / "xinyu_initiative_spine.py",
-            root / "xinyu_emotion_council.py",
-            root / "xinyu_speech_controller.py",
-        )
-    )
+    expected_runtime_digest = source_files_digest(runtime_source_paths(root))
     core_checks, core_data = check_core(
         args.core_url,
         expected_core_version,

@@ -63,7 +63,7 @@ def record_v1_shadow_observation(
     """
 
     root = Path(root)
-    observed = observed_at or _now_iso()
+    observed = _timestamp_or_now_iso(observed_at)
     thresholds = _thresholds_from_env()
     event = {
         "event_kind": "v1_shadow_observation",
@@ -294,7 +294,7 @@ def _write_state(path: Path, state: dict[str, Any]) -> None:
         "subject_ids: [xinyu, xinyu_v1]",
         "protected: true",
         "source: xinyu_v1_canary_readiness",
-        f"updated_at: {_compact(state.get('updated_at'), default='unknown')}",
+        f"updated_at: {_timestamp_or_now_iso(state.get('updated_at'))}",
         "status: active",
         "tags: [runtime, v1, shadow, canary]",
         "---",
@@ -555,6 +555,18 @@ def _as_bool(value: Any, default: bool = False) -> bool:
 
 def _now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def _timestamp_or_now_iso(value: Any) -> str:
+    text = _safe_str(value).strip()
+    if text:
+        try:
+            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            parsed = None
+        if parsed is not None:
+            return parsed.astimezone().isoformat(timespec="seconds")
+    return _now_iso()
 
 
 def _safe_str(value: Any, default: str = "") -> str:

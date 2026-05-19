@@ -16,6 +16,11 @@ from xinyu_runtime_failure_freshness import (
     parse_inline_fields as _parse_inline_fields,
     runtime_failure_counts_active as _runtime_failure_counts_active,
 )
+from xinyu_proactive_contract import (
+    PROACTIVE_SOURCE_TYPES,
+    PROACTIVE_URGENT_SOURCE_TYPES,
+    should_surface_runtime_error,
+)
 
 
 TRACE_REL = Path("memory/context/proactive_decision_trace.jsonl")
@@ -25,15 +30,7 @@ CONTEXT_REL = Path("memory/context/proactive_decision_context.md")
 DEFAULT_EXPIRES_SECONDS = 86400
 RECENT_TRACE_SCAN_LINES = 200
 
-SOURCE_TYPES = {
-    "task_done",
-    "task_failed",
-    "runtime_error",
-    "reflection_question",
-    "dream_residue",
-    "style_repair",
-    "owner_long_idle",
-}
+SOURCE_TYPES = set(PROACTIVE_SOURCE_TYPES)
 
 THRESHOLDS: dict[str, tuple[int, int | None]] = {
     "task_failed": (45, 70),
@@ -114,7 +111,7 @@ FLAVOR_PENALTY = {
     "reflection_question": 6,
 }
 
-URGENT_TYPES = {"task_failed", "runtime_error"}
+URGENT_TYPES = set(PROACTIVE_URGENT_SOURCE_TYPES)
 EMOTION_OR_DREAM_TYPES = {"dream_residue", "style_repair", "owner_long_idle"}
 FINAL_PROACTIVE_REQUEST_STATUSES = {
     "answered",
@@ -212,7 +209,7 @@ def run_proactivity_scorer_shadow(
     max_candidates: int = 8,
 ) -> dict[str, Any]:
     root = root.resolve()
-    checked_at = checked_at or _now_iso()
+    checked_at = _timestamp_or_now_iso(checked_at)
     candidates = collect_proactive_candidates(root, checked_at=checked_at)
     if not candidates:
         _write_state(root, checked_at=checked_at, decisions=[], notes=["no_candidates"])
@@ -266,7 +263,7 @@ def run_proactivity_scorer_shadow(
 
 def collect_proactive_candidates(root: Path, *, checked_at: str | None = None) -> list[ProactiveCandidate]:
     root = root.resolve()
-    checked_at = checked_at or _now_iso()
+    checked_at = _timestamp_or_now_iso(checked_at)
     candidates: list[ProactiveCandidate] = []
 
     _extend(candidates, _candidate_from_proactive_request(root, checked_at=checked_at))
@@ -523,7 +520,7 @@ def _candidates_from_runtime_program_awareness(root: Path, *, checked_at: str) -
                         novelty_hint=detail,
                         confidence=82,
                         risk_flags=(),
-                        created_at=checked_at,
+                        created_at=_timestamp_or_now_iso(checked_at),
                         checked_at=checked_at,
                     )
                 )
@@ -543,7 +540,7 @@ def _candidates_from_runtime_program_awareness(root: Path, *, checked_at: str) -
                         novelty_hint=detail,
                         confidence=84,
                         risk_flags=(),
-                        created_at=checked_at,
+                        created_at=_timestamp_or_now_iso(checked_at),
                         checked_at=checked_at,
                     )
                 )
@@ -561,14 +558,14 @@ def _candidates_from_runtime_program_awareness(root: Path, *, checked_at: str) -
                         novelty_hint=detail,
                         confidence=72,
                         risk_flags=("emotional_or_style",),
-                        created_at=checked_at,
+                        created_at=_timestamp_or_now_iso(checked_at),
                         checked_at=checked_at,
                     )
                 )
         elif "status=error" in lowered or "last_error=" in lowered or "adapter_error=" in lowered:
             if "last_error=none" in lowered or "adapter_error=none" in lowered:
                 continue
-            if label == "watched_source" and "read_only=true" in lowered:
+            if not should_surface_runtime_error(label=label, detail=detail):
                 continue
             candidates.append(
                 _make_candidate(
@@ -582,7 +579,7 @@ def _candidates_from_runtime_program_awareness(root: Path, *, checked_at: str) -
                     novelty_hint=detail,
                     confidence=76,
                     risk_flags=(),
-                    created_at=checked_at,
+                    created_at=_timestamp_or_now_iso(checked_at),
                     checked_at=checked_at,
                 )
             )
@@ -602,7 +599,7 @@ def _candidates_from_runtime_program_awareness(root: Path, *, checked_at: str) -
                     novelty_hint=detail,
                     confidence=75,
                     risk_flags=(),
-                    created_at=checked_at,
+                    created_at=_timestamp_or_now_iso(checked_at),
                     checked_at=checked_at,
                 )
             )
@@ -748,7 +745,7 @@ def _candidate_from_owner_long_idle(root: Path, *, checked_at: str) -> Proactive
         novelty_hint=fields.get("last_owner_private_at", ""),
         confidence=65,
         risk_flags=("owner_long_idle_send_blocked_v0", "emotional_or_style"),
-        created_at=checked_at,
+        created_at=_timestamp_or_now_iso(checked_at),
         checked_at=checked_at,
     )
 
@@ -791,7 +788,7 @@ def _make_candidate(
         novelty_hint=_clip(novelty_hint, 120),
         confidence=_clamp(confidence),
         risk_flags=tuple(dict.fromkeys(_clean_token(flag) for flag in risk_flags if _clean_token(flag))),
-        created_at=created,
+        created_at=_timestamp_or_now_iso(created),
         expires_at=_plus_seconds(created, DEFAULT_EXPIRES_SECONDS),
     )
 
@@ -1014,7 +1011,7 @@ def _write_state(root: Path, *, checked_at: str, decisions: list[ProactiveDecisi
         "subject_ids: [xinyu, owner]",
         "protected: true",
         "source: xinyu_proactivity_scorer",
-        f"updated_at: {checked_at}",
+        f"updated_at: {_timestamp_or_now_iso(checked_at)}",
         "status: active",
         "tags: [proactive, shadow, scorer, decision]",
         "---",
@@ -1026,7 +1023,7 @@ def _write_state(root: Path, *, checked_at: str, decisions: list[ProactiveDecisi
     if latest is None:
         lines.extend(
             [
-                f"- checked_at: {checked_at}",
+                f"- checked_at: {_timestamp_or_now_iso(checked_at)}",
                 "- candidate_id: none",
                 "- source_type: none",
                 "- preview: none",
@@ -1046,7 +1043,7 @@ def _write_state(root: Path, *, checked_at: str, decisions: list[ProactiveDecisi
     else:
         lines.extend(
             [
-                f"- checked_at: {latest.checked_at}",
+                f"- checked_at: {_timestamp_or_now_iso(latest.checked_at)}",
                 f"- decision_id: {latest.decision_id}",
                 f"- candidate_id: {latest.candidate_id}",
                 f"- source_type: {latest.source_type}",
@@ -1081,7 +1078,7 @@ def _write_state(root: Path, *, checked_at: str, decisions: list[ProactiveDecisi
                 "- "
                 + " ".join(
                     [
-                        f"checked_at={decision.checked_at}",
+                        f"checked_at={_timestamp_or_now_iso(decision.checked_at)}",
                         f"source_type={decision.source_type}",
                         f"total_score={decision.total_score}",
                         f"recommendation={decision.recommendation}",
@@ -1116,7 +1113,7 @@ def _append_trace(root: Path, decision: ProactiveDecision) -> None:
 def _decision_to_json(decision: ProactiveDecision) -> dict[str, Any]:
     data = {
         "event_kind": "proactive_decision",
-        "observed_at": decision.checked_at,
+        "observed_at": _timestamp_or_now_iso(decision.checked_at),
         "status": decision.recommendation,
         "reason": ",".join(decision.reasons_positive[:3]),
         "notes": list(decision.hard_blocks),
@@ -1386,6 +1383,10 @@ def _plus_seconds(value: str, seconds: int) -> str:
 
 def _now_iso() -> str:
     return datetime.now().astimezone().isoformat()
+
+
+def _timestamp_or_now_iso(value: Any) -> str:
+    return _normalize_iso(value) or _now_iso()
 
 
 def _timestamp_id(value: str) -> str:

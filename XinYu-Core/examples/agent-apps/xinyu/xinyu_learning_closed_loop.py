@@ -15,6 +15,7 @@ STATE_REL = Path("memory/self/learning_closed_loop_state.md")
 CASES_REL = Path("memory/self/learning_closed_loop_cases.md")
 TRACE_REL = Path("runtime/learning_closed_loop_trace.jsonl")
 MAX_REPLAY_CASES = 40
+REPAIR_PRESSURE_SILENCE_THRESHOLD = 8
 CASE_SECTION_RE = re.compile(r"(?ms)^## (loopcase-[^\n]+)\n.*?(?=^## loopcase-|\Z)")
 
 CRITICAL_GUARD_FAILURES = {
@@ -166,6 +167,19 @@ def _now_iso() -> str:
     return datetime.now().astimezone().isoformat()
 
 
+def _timestamp_or_now_iso(value: Any) -> str:
+    text = _safe_str(value).strip()
+    if not text:
+        return _now_iso()
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return _now_iso()
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed.astimezone().isoformat()
+
+
 def _safe_str(value: Any, default: str = "") -> str:
     if value is None:
         return default
@@ -290,6 +304,35 @@ def _text_relevant_to_failure(failure_kind: str, text: str) -> bool:
     if failure_kind == "owner_reported_learning_empty_loop":
         return _contains_any(text, LEARNING_TOPIC_MARKERS + LEARNING_EMPTY_CONTEXT_MARKERS)
     return False
+
+
+def _text_directly_reports_failure(failure_kind: str, text: str) -> bool:
+    if failure_kind == "owner_reported_context_discontinuity":
+        return _contains_any(text, CONTEXT_REPAIR_MARKERS)
+    if failure_kind == "owner_reported_template_voice_failure":
+        return _contains_any(text, STYLE_REPAIR_MARKERS)
+    if failure_kind == "owner_reported_time_fact_error":
+        return _owner_reported_time_error(text)
+    if failure_kind == "owner_reported_learning_empty_loop":
+        return _owner_reported_learning_empty_loop(text)
+    return False
+
+
+def _int_value(value: Any, default: int = 0) -> int:
+    match = re.search(r"-?\d+", _safe_str(value))
+    if not match:
+        return default
+    try:
+        return int(match.group(0))
+    except ValueError:
+        return default
+
+
+def _repair_pressure_overloaded(fields: dict[str, str]) -> bool:
+    repair_count = _int_value(fields.get("repair_count"), 0)
+    success_count = _int_value(fields.get("success_count"), 0)
+    success_streak = _int_value(fields.get("success_streak"), 0)
+    return repair_count >= REPAIR_PRESSURE_SILENCE_THRESHOLD and success_count <= 0 and success_streak <= 0
 
 
 def _classify_failures(
@@ -535,7 +578,7 @@ def record_learning_closed_loop_turn(
     expression_notes: list[str] | tuple[str, ...] = (),
     observed_at: str | None = None,
 ) -> dict[str, Any]:
-    observed = observed_at or _now_iso()
+    observed = _timestamp_or_now_iso(observed_at or _now_iso())
     owner_private = _owner_private(payload)
     guard_flags = _unique(tuple(final_guard_flags))
     q_flags = _unique(tuple(quality_flags))
@@ -563,7 +606,7 @@ def record_learning_closed_loop_turn(
         rendered_case = _render_case(
             case_id=latest_case_id,
             case_key=case_key,
-            observed_at=observed,
+            observed_at=_timestamp_or_now_iso(observed),
             case_type="failure",
             failure_kind=failure_kind,
             user_text=user_text,
@@ -573,7 +616,7 @@ def record_learning_closed_loop_turn(
             visible_turn_kind=visible_turn_kind,
             session_key=session_key,
         )
-        if _append_case(root, created_at=observed, case_key=case_key, rendered=rendered_case):
+        if _append_case(root, created_at=_timestamp_or_now_iso(observed), case_key=case_key, rendered=rendered_case):
             case_ids.append(latest_case_id)
         else:
             existing_case_id = _case_id_for_key(_read(root / CASES_REL), case_key)
@@ -594,6 +637,9 @@ def record_learning_closed_loop_turn(
                 "last_owner_reaction": "repair_pressure" if owner_private else "system_guard",
             }
         )
+        if _repair_pressure_overloaded(fields):
+            fields["next_action"] = "cooldown_direct_failure_only"
+            fields["last_owner_reaction"] = "repair_pressure_overloaded"
     elif success:
         fields.update(
             {
@@ -607,7 +653,7 @@ def record_learning_closed_loop_turn(
         if int(fields["success_streak"]) >= 2:
             fields["promotion_signal"] = "possible_after_self_review"
 
-    fields["updated_at"] = observed
+    fields["updated_at"] = _timestamp_or_now_iso(observed)
     fields["latest_event_id"] = event_id
     fields["latest_case_id"] = latest_case_id
     _write(root / STATE_REL, _render_state(fields))
@@ -615,7 +661,7 @@ def record_learning_closed_loop_turn(
         root / TRACE_REL,
         {
             "event_id": event_id,
-            "observed_at": observed,
+            "observed_at": _timestamp_or_now_iso(observed),
             "owner_private": owner_private,
             "failures": failures,
             "success": success,
@@ -644,7 +690,7 @@ def record_learning_closed_loop_self_thought(
     request: dict[str, Any] | None = None,
     observed_at: str | None = None,
 ) -> dict[str, Any]:
-    observed = observed_at or _now_iso()
+    observed = _timestamp_or_now_iso(observed_at or _now_iso())
     fields = _load_state_fields(root)
     request = request if isinstance(request, dict) else {}
     focus = _compact(thought.get("focus_kind", "none"), limit=80)
@@ -660,9 +706,9 @@ def record_learning_closed_loop_self_thought(
 
     fields.update(
         {
-            "updated_at": observed,
+            "updated_at": _timestamp_or_now_iso(observed),
             "latest_event_id": "learnloop-selfthought-" + _hash(f"{observed}|{focus}|{outcome}|{time.time_ns()}", 14),
-            "last_self_thought_at": observed,
+            "last_self_thought_at": _timestamp_or_now_iso(observed),
             "last_self_thought_focus": focus,
             "last_self_thought_outcome": outcome,
             "last_proactive_request_status": request_status,
@@ -670,7 +716,7 @@ def record_learning_closed_loop_self_thought(
         }
     )
     if focus == "learning_closed_loop":
-        fields["last_learning_loop_reflected_at"] = observed
+        fields["last_learning_loop_reflected_at"] = _timestamp_or_now_iso(observed)
         fields["last_learning_loop_reflected_failure"] = fields.get("latest_failure_kind", "none")
     if route != "none" and fields["status"] == "observing":
         fields["status"] = "self_thought_observed"
@@ -680,7 +726,7 @@ def record_learning_closed_loop_self_thought(
         root / TRACE_REL,
         {
             "event_id": fields["latest_event_id"],
-            "observed_at": observed,
+            "observed_at": _timestamp_or_now_iso(observed),
             "event_kind": "self_thought_link",
             "focus_kind": focus,
             "outcome": outcome,
@@ -708,6 +754,15 @@ def build_learning_closed_loop_prompt_block(root: Path, *, user_text: str = "", 
 
     relevant = _text_relevant_to_failure(failure_kind, user_text)
     if not relevant:
+        return ""
+    overloaded = _repair_pressure_overloaded(
+        {
+            "repair_count": str(_int_field(state, "repair_count", 0)),
+            "success_count": str(_int_field(state, "success_count", 0)),
+            "success_streak": str(_int_field(state, "success_streak", 0)),
+        }
+    )
+    if overloaded and not _text_directly_reports_failure(failure_kind, user_text):
         return ""
 
     lines = [

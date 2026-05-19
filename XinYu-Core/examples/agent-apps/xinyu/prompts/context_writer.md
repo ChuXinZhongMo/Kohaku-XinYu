@@ -16,6 +16,8 @@ Write when a turn changes what should count as "recently lived", for example:
 - a short-term relational tone shifted
 - something was left hanging and should remain unfinished instead of being flattened
 
+Do not write recent continuity for one-off ordinary daily small talk by itself. Food, weather, a small object, or a casual complaint such as "the noodles are salty because water was low" should stay in the immediate reply unless the owner explicitly asks XinYu to remember it or it creates an unfinished plan.
+
 ## Rules
 
 - Preserve recency rather than writing a full log
@@ -41,4 +43,3 @@ This task is not complete unless one of these is true:
 
 Use `write` with the complete final file content.
 Do not use diff-style editing.
-

@@ -75,7 +75,26 @@ async def run_post_llm_call_chain(
 
     if edited_by and current != original and last is not None:
         last.content = current
+        if not original.strip() and current.strip():
+            await _emit_blank_rewrite(controller, current)
         _emit_edit_marker(controller, original, current, edited_by)
+
+
+async def _emit_blank_rewrite(controller: "Controller", rewritten: str) -> None:
+    """Send a post-hook fallback when the streamed visible reply was empty."""
+    router = controller.output_router
+    if router is None:
+        return
+    try:
+        for secondary in getattr(router, "_secondary_outputs", []):
+            await secondary.write_stream(rewritten)
+        await router.default_output.write_stream(rewritten)
+    except Exception as e:  # pragma: no cover — defensive
+        logger.debug(
+            "Failed to emit blank assistant rewrite",
+            error=str(e),
+            exc_info=True,
+        )
 
 
 def _emit_edit_marker(
@@ -103,6 +122,7 @@ def _emit_edit_marker(
                 "edited_by": list(plugin_names),
                 "original_preview": preview,
                 "final_length": len(rewritten),
+                "rewritten_text": rewritten,
             },
         )
     except Exception as e:  # pragma: no cover — defensive

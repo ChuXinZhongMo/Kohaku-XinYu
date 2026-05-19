@@ -153,8 +153,11 @@ class StreamParser:
             logger.warning(
                 "Unclosed block at end of stream", block_name=self.current_name
             )
-            raw = self._build_raw_open() + self.block_buffer
-            events.append(TextEvent(raw))
+            if self._current_block_is_known_action():
+                events.extend(self._complete_block())
+            else:
+                raw = self._build_raw_open() + self.block_buffer
+                events.append(TextEvent(raw))
         elif self.state == ParserState.MAYBE_CLOSE:
             self.block_buffer += sc
             raw = self._build_raw_open() + self.block_buffer
@@ -173,6 +176,18 @@ class StreamParser:
 
         self._reset()
         return events
+
+    def _current_block_is_known_action(self) -> bool:
+        """Known action blocks should not be emitted as visible raw text."""
+        if not self.current_name:
+            return False
+        is_output, _ = is_output_tag(self.current_name, self.config.known_outputs)
+        return (
+            is_output
+            or is_tool_tag(self.current_name, self.config.known_tools)
+            or is_subagent_tag(self.current_name, self.config.known_subagents)
+            or is_command_tag(self.current_name, self.config.known_commands)
+        )
 
     def _process_char(self, char: str) -> list[ParseEvent]:
         """Process a single character."""

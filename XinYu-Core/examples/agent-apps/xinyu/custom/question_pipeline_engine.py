@@ -4,6 +4,36 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from xinyu_storage_paths import knowledge_file_path
+
+
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
+
+
+def _now_iso() -> str:
+    return datetime.now().astimezone().isoformat()
+
+
+def _timestamp_or_now_iso(value: object) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return _now_iso()
+    return parsed.astimezone().isoformat()
+
+
+def _parse_iso(value: object) -> datetime | None:
+    text = "" if value is None else str(value).strip()
+    if not text or text == "none":
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
+
 
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8-sig")
@@ -129,9 +159,9 @@ time_scope: short_term
 subject_ids: [xinyu]
 protected: true
 source: system
-created_at: 2026-04-24T00:00:00+08:00
-updated_at: {checked_at}
-last_confirmed_at: {checked_at}
+created_at: {_timestamp_or_now_iso('2026-04-24T00:00:00+08:00')}
+updated_at: {_timestamp_or_now_iso(checked_at)}
+last_confirmed_at: {_timestamp_or_now_iso(checked_at)}
 importance_score: 82
 impact_score: 82
 confidence_score: 100
@@ -190,9 +220,9 @@ time_scope: short_term
 subject_ids: [xinyu]
 protected: false
 source: system
-created_at: 2026-04-22T00:00:00+08:00
-updated_at: {checked_at}
-last_confirmed_at: {checked_at}
+created_at: {_timestamp_or_now_iso('2026-04-22T00:00:00+08:00')}
+updated_at: {_timestamp_or_now_iso(checked_at)}
+last_confirmed_at: {_timestamp_or_now_iso(checked_at)}
 importance_score: 84
 impact_score: 83
 confidence_score: 82
@@ -261,9 +291,9 @@ time_scope: short_term
 subject_ids: [xinyu]
 protected: false
 source: system
-created_at: 2026-04-22T00:00:00+08:00
-updated_at: {checked_at}
-last_confirmed_at: {checked_at}
+created_at: {_timestamp_or_now_iso('2026-04-22T00:00:00+08:00')}
+updated_at: {_timestamp_or_now_iso(checked_at)}
+last_confirmed_at: {_timestamp_or_now_iso(checked_at)}
 importance_score: 82
 impact_score: 80
 confidence_score: 81
@@ -294,9 +324,9 @@ time_scope: mid_term
 subject_ids: [xinyu]
 protected: false
 source: system
-created_at: 2026-04-22T00:00:00+08:00
-updated_at: {checked_at}
-last_confirmed_at: {checked_at}
+created_at: {_timestamp_or_now_iso('2026-04-22T00:00:00+08:00')}
+updated_at: {_timestamp_or_now_iso(checked_at)}
+last_confirmed_at: {_timestamp_or_now_iso(checked_at)}
 importance_score: 70
 impact_score: 56
 confidence_score: 74
@@ -346,7 +376,7 @@ def update_question_states_preserving_resolved(
                 f"### {qid}\n"
                 "- state: partially_answered\n"
                 "- reason: learner integration already created knowledge-only entries; keep it out of fresh exploration unless reopened.\n"
-                f"- updated_at: {checked_at}\n"
+                f"- updated_at: {_timestamp_or_now_iso(checked_at)}\n"
             )
             continue
         existing = existing_records.get(qid, {})
@@ -369,9 +399,9 @@ time_scope: short_term
 subject_ids: [xinyu]
 protected: false
 source: system
-created_at: 2026-04-22T00:00:00+08:00
-updated_at: {checked_at}
-last_confirmed_at: {checked_at}
+created_at: {_timestamp_or_now_iso('2026-04-22T00:00:00+08:00')}
+updated_at: {_timestamp_or_now_iso(checked_at)}
+last_confirmed_at: {_timestamp_or_now_iso(checked_at)}
 importance_score: 84
 impact_score: 83
 confidence_score: 82
@@ -405,7 +435,7 @@ def update_source_notes_preserving(path: Path, checked_at: str, external_ids: li
     )
     if path.exists():
         text = read_text(path).rstrip()
-        text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {checked_at}", text)
+        text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {_timestamp_or_now_iso(checked_at)}", text)
         text = re.sub(r"(?m)^last_confirmed_at:\s*.+$", f"last_confirmed_at: {checked_at}", text)
         section = f"## Current Source-Gate Candidates\n{note_lines}"
         if "## Current Source-Gate Candidates" in text:
@@ -426,12 +456,12 @@ def run_question_pipeline(
     checked_at: str | None = None,
     mode: str = "runtime_question_pipeline",
 ) -> dict[str, object]:
-    checked_at = checked_at or datetime.now().astimezone().isoformat()
+    checked_at = _timestamp_or_now_iso(checked_at)
 
     questions_text = read_text(root / "memory/context/active_questions.md")
     questions = extract_question_blocks(questions_text)
     existing_records = extract_question_state_records(read_text(root / "memory/context/question_states.md"))
-    learned_qids = learned_question_ids(read_text(root / "memory/knowledge/general.md"))
+    learned_qids = learned_question_ids(read_text(_knowledge(root, "general.md")))
     active_questions = [
         q for q in questions if not question_is_resolved(q, existing_records, learned_qids)
     ]
@@ -472,7 +502,7 @@ def run_question_pipeline(
         classifications,
     )
     update_source_notes_preserving(
-        root / "memory/knowledge/source_notes.md",
+        _knowledge(root, "source_notes.md"),
         checked_at,
         external_ids,
     )

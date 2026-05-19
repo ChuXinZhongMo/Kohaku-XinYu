@@ -11,13 +11,17 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from stores.impulse_soup_state import (
+    IMPULSE_SOUP_STATE_REL as STATE_JSON_REL,
+    read_impulse_soup_state,
+    write_impulse_soup_state,
+)
 from xinyu_runtime_failure_freshness import (
     codex_delegate_failure_active as _codex_delegate_failure_active,
     runtime_failure_detail_active as _runtime_failure_detail_active,
 )
 
 
-STATE_JSON_REL = Path("memory/context/impulse_soup_state.json")
 STATE_MD_REL = Path("memory/context/impulse_soup_state.md")
 TRACE_REL = Path("memory/context/impulse_soup_trace.jsonl")
 
@@ -159,7 +163,7 @@ def run_impulse_soup(
     max_thoughtlets: int = MAX_THOUGHTLETS,
 ) -> dict[str, Any]:
     root = root.resolve()
-    checked_at = checked_at or _now_iso()
+    checked_at = _timestamp_or_now_iso(checked_at or _now_iso())
     state = _load_state(root)
     seeds = collect_impulse_seeds(root, checked_at=checked_at)[: max(1, int(max_new))]
     active_seed_signatures = {seed.source_signature for seed in seeds}
@@ -203,7 +207,7 @@ def run_impulse_soup(
     summary = _summarize(thoughtlets)
     next_state = {
         "schema_version": SCHEMA_VERSION,
-        "updated_at": checked_at,
+        "updated_at": _timestamp_or_now_iso(checked_at),
         "status": "active",
         "boundaries": {
             "local_json_only": True,
@@ -216,11 +220,11 @@ def run_impulse_soup(
         "summary": summary,
         "thoughtlets": [asdict(item) for item in thoughtlets],
     }
-    _write_json_atomic(root / STATE_JSON_REL, next_state)
+    write_impulse_soup_state(root, next_state)
     _write_state_markdown(root, checked_at=checked_at, thoughtlets=thoughtlets, summary=summary, notes=notes)
     event = {
         "event_kind": "impulse_soup_cycle",
-        "observed_at": checked_at,
+        "observed_at": _timestamp_or_now_iso(checked_at),
         "status": "active",
         "seed_count": len(seeds),
         "created_count": len(created),
@@ -354,7 +358,7 @@ def _seeds_from_reflection_queue(root: Path, *, checked_at: str) -> list[Impulse
             evidence_preview=topic,
             initial_energy=energy,
             risk_flags=_risk_flags_for(desire_shape, ()),
-            observed_at=checked_at,
+            observed_at=_timestamp_or_now_iso(checked_at),
         )
     ]
 
@@ -382,7 +386,7 @@ def _seeds_from_runtime_awareness(root: Path, *, checked_at: str) -> list[Impuls
                     evidence_preview=detail,
                     initial_energy=72,
                     risk_flags=(),
-                    observed_at=checked_at,
+                    observed_at=_timestamp_or_now_iso(checked_at),
                 )
             )
     return seeds
@@ -478,9 +482,9 @@ def _new_thoughtlet(seed: ImpulseSeed, *, checked_at: str) -> Thoughtlet:
         risk_flags=list(seed.risk_flags),
         evidence_preview=seed.evidence_preview,
         status="active",
-        created_at=checked_at,
-        updated_at=checked_at,
-        last_triggered_at=checked_at,
+        created_at=_timestamp_or_now_iso(checked_at),
+        updated_at=_timestamp_or_now_iso(checked_at),
+        last_triggered_at=_timestamp_or_now_iso(checked_at),
         last_spawned_at="",
         expires_at=_plus_seconds(checked_at, _ttl_seconds_for(seed.desire_shape)),
     )
@@ -495,8 +499,8 @@ def _refresh_thoughtlet(thoughtlet: Thoughtlet, seed: ImpulseSeed, *, checked_at
     thoughtlet.activation_count += 1
     thoughtlet.risk_flags = list(dict.fromkeys([*thoughtlet.risk_flags, *seed.risk_flags]))
     thoughtlet.evidence_preview = seed.evidence_preview or thoughtlet.evidence_preview
-    thoughtlet.updated_at = checked_at
-    thoughtlet.last_triggered_at = checked_at
+    thoughtlet.updated_at = _timestamp_or_now_iso(checked_at)
+    thoughtlet.last_triggered_at = _timestamp_or_now_iso(checked_at)
 
 
 def _decay_thoughtlet(thoughtlet: Thoughtlet, *, checked_at: str) -> None:
@@ -508,7 +512,7 @@ def _decay_thoughtlet(thoughtlet: Thoughtlet, *, checked_at: str) -> None:
     if thoughtlet.desire_shape in SOFT_DESIRE_SHAPES:
         decay += 1
     thoughtlet.energy = _cap_energy(thoughtlet.desire_shape, thoughtlet.energy - decay)
-    thoughtlet.updated_at = checked_at
+    thoughtlet.updated_at = _timestamp_or_now_iso(checked_at)
 
 
 def _cool_stale_transient_failure(thoughtlet: Thoughtlet, *, active_seed_signatures: set[str]) -> bool:
@@ -587,15 +591,15 @@ def _maybe_spawn_child(thoughtlet: Thoughtlet, thoughtlets: list[Thoughtlet], *,
         risk_flags=list(thoughtlet.risk_flags),
         evidence_preview=thoughtlet.evidence_preview,
         status="active",
-        created_at=checked_at,
-        updated_at=checked_at,
+        created_at=_timestamp_or_now_iso(checked_at),
+        updated_at=_timestamp_or_now_iso(checked_at),
         last_triggered_at="",
         last_spawned_at="",
         expires_at=_plus_seconds(checked_at, _ttl_seconds_for(thoughtlet.desire_shape)),
     )
     thoughtlet.energy = _cap_energy(thoughtlet.desire_shape, thoughtlet.energy - 10)
-    thoughtlet.last_spawned_at = checked_at
-    thoughtlet.updated_at = checked_at
+    thoughtlet.last_spawned_at = _timestamp_or_now_iso(checked_at)
+    thoughtlet.updated_at = _timestamp_or_now_iso(checked_at)
     return child
 
 
@@ -675,7 +679,7 @@ def _write_state_markdown(
         "subject_ids: [xinyu]",
         "protected: true",
         "source: xinyu_impulse_soup",
-        f"updated_at: {checked_at}",
+        f"updated_at: {_timestamp_or_now_iso(checked_at)}",
         "status: active",
         "tags: [impulse, ecology, thoughtlet, shadow]",
         "---",
@@ -737,12 +741,7 @@ def _write_state_markdown(
 
 
 def _load_state(root: Path) -> dict[str, Any]:
-    try:
-        data = json.loads((root / STATE_JSON_REL).read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
-        return {"schema_version": SCHEMA_VERSION, "thoughtlets": []}
-    if not isinstance(data, dict):
-        return {"schema_version": SCHEMA_VERSION, "thoughtlets": []}
+    data = read_impulse_soup_state(root, default={"schema_version": SCHEMA_VERSION, "thoughtlets": []})
     if not isinstance(data.get("thoughtlets"), list):
         data["thoughtlets"] = []
     return data
@@ -911,10 +910,6 @@ def _read_text(path: Path) -> str:
         return ""
 
 
-def _write_json_atomic(path: Path, data: dict[str, Any]) -> None:
-    _write_text_atomic(path, json.dumps(_clean_json(data), ensure_ascii=False, indent=2, sort_keys=True))
-
-
 def _write_text_atomic(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
@@ -1050,6 +1045,10 @@ def _plus_seconds(value: str, seconds: int) -> str:
 
 def _now_iso() -> str:
     return datetime.now().astimezone().isoformat()
+
+
+def _timestamp_or_now_iso(value: Any) -> str:
+    return _normalize_iso(value) or _now_iso()
 
 
 def _timestamp_id(value: str) -> str:

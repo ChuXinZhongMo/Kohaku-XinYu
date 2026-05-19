@@ -11,34 +11,24 @@ from typing import Any
 from xinyu_runtime.modules.plugin.base import BasePlugin, PluginContext
 
 from dream_output_engine import has_unconsumed_dream_seed
+from maintenance_bridge_utils import append_trace, read_text as _read, resolve_root
 from turn_mode_utils import read_turn_mode
-
-
-def _default_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
-def _resolve_root(ctx: PluginContext | None) -> Path:
-    candidate = Path(ctx.working_dir) if ctx else _default_root()
-    if (candidate / "memory").exists():
-        return candidate
-    return _default_root()
-
-
-def _read(path: Path) -> str:
-    return path.read_text(encoding="utf-8-sig")
+from xinyu_storage_paths import knowledge_file_path
 
 
 def _write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+TRACE_REL = "memory/context/automation_trace.log"
+
+
 def _trace(root: Path, line: str) -> None:
-    trace_path = root / "memory/context/automation_trace.log"
-    trace_path.parent.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now().astimezone().isoformat()
-    with trace_path.open("a", encoding="utf-8") as fh:
-        fh.write(f"{stamp} {line}\n")
+    append_trace(root, TRACE_REL, line)
+
+
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
 
 
 def _owner_ready_followthrough_granted(root: Path) -> bool:
@@ -153,13 +143,13 @@ def _infer_suggestions(root: Path) -> dict[str, str]:
     dream_weight = _read(root / "memory/dreams/dream_weight_state.md")
     retention_gate = _read(root / "memory/archive/retention_gate_state.md")
     reflection_out = _read(root / "memory/reflection/reflection_output_state.md")
-    source_gate = _read(root / "memory/knowledge/source_gate_state.md")
-    source_integration = _read(root / "memory/knowledge/source_integration_gate_state.md")
-    source_materials = _read(root / "memory/knowledge/source_materials.md")
-    source_requests = _read(root / "memory/knowledge/source_requests.md")
-    source_search_results = _read(root / "memory/knowledge/source_search_results.md")
-    general_knowledge = _read(root / "memory/knowledge/general.md")
-    learning_quality = _read(root / "memory/knowledge/learning_quality_state.md")
+    source_gate = _read(_knowledge(root, "source_gate_state.md"))
+    source_integration = _read(_knowledge(root, "source_integration_gate_state.md"))
+    source_materials = _read(_knowledge(root, "source_materials.md"))
+    source_requests = _read(_knowledge(root, "source_requests.md"))
+    source_search_results = _read(_knowledge(root, "source_search_results.md"))
+    general_knowledge = _read(_knowledge(root, "general.md"))
+    learning_quality = _read(_knowledge(root, "learning_quality_state.md"))
     capability = _read(root / "memory/context/capability_zones_state.md")
     owner_grants = _read(root / "memory/context/owner_permission_grants.md")
     archive_queue = _read(root / "memory/archive/archive_queue.md")
@@ -238,7 +228,7 @@ def _infer_suggestions(root: Path) -> dict[str, str]:
         else "hold",
         "suggest_source_integration_gate": "yes"
         if (
-            "- q-" in _read(root / "memory/knowledge/source_reliability_state.md")
+            "- q-" in _read(_knowledge(root, "source_reliability_state.md"))
             or owner_ai_followthrough_waiting
             or has_quality_followup_candidate
         )
@@ -363,21 +353,21 @@ def _extract_mapping_pairs(text: str) -> list[str]:
 
 def _render_runtime_bridge_text(root: Path, evaluated_at: str, suggestions: dict[str, str], mode: str) -> str:
     dream_output_state = _read(root / "memory/dreams/dream_output_state.md")
-    source_gate_state = _read(root / "memory/knowledge/source_gate_state.md")
-    source_reliability_state = _read(root / "memory/knowledge/source_reliability_state.md")
-    source_integration_gate_state = _read(root / "memory/knowledge/source_integration_gate_state.md")
-    source_request_planner_state = _read(root / "memory/knowledge/source_request_planner_state.md")
-    source_search_resolver_state = _read(root / "memory/knowledge/source_search_resolver_state.md")
-    autonomous_search_activation_state = _read(root / "memory/knowledge/autonomous_search_activation_state.md")
-    source_search_provider_state = _read(root / "memory/knowledge/source_search_provider_state.md")
-    search_result_gate_state = _read(root / "memory/knowledge/search_result_gate_state.md")
-    outward_source_state = _read(root / "memory/knowledge/outward_source_state.md")
-    source_comparison_state = _read(root / "memory/knowledge/source_comparison_state.md")
-    learner_integration_state = _read(root / "memory/knowledge/learner_integration_state.md")
-    learning_quality_state = _read(root / "memory/knowledge/learning_quality_state.md")
+    source_gate_state = _read(_knowledge(root, "source_gate_state.md"))
+    source_reliability_state = _read(_knowledge(root, "source_reliability_state.md"))
+    source_integration_gate_state = _read(_knowledge(root, "source_integration_gate_state.md"))
+    source_request_planner_state = _read(_knowledge(root, "source_request_planner_state.md"))
+    source_search_resolver_state = _read(_knowledge(root, "source_search_resolver_state.md"))
+    autonomous_search_activation_state = _read(_knowledge(root, "autonomous_search_activation_state.md"))
+    source_search_provider_state = _read(_knowledge(root, "source_search_provider_state.md"))
+    search_result_gate_state = _read(_knowledge(root, "search_result_gate_state.md"))
+    outward_source_state = _read(_knowledge(root, "outward_source_state.md"))
+    source_comparison_state = _read(_knowledge(root, "source_comparison_state.md"))
+    learner_integration_state = _read(_knowledge(root, "learner_integration_state.md"))
+    learning_quality_state = _read(_knowledge(root, "learning_quality_state.md"))
     ai_self_iteration_state = _read(root / "memory/self/ai_self_iteration_state.md")
-    source_requests = _read(root / "memory/knowledge/source_requests.md")
-    source_materials = _read(root / "memory/knowledge/source_materials.md")
+    source_requests = _read(_knowledge(root, "source_requests.md"))
+    source_materials = _read(_knowledge(root, "source_materials.md"))
     active_questions = _read(root / "memory/context/active_questions.md")
     archive_output_state = _read(root / "memory/archive/archive_output_state.md")
     archive_commit_state = _read(root / "memory/archive/archive_commit_state.md")
@@ -863,7 +853,7 @@ class AutomationBridgePlugin(BasePlugin):
     async def on_agent_start(self) -> None:
         if not self._enabled or not self._ctx:
             return
-        root = _resolve_root(self._ctx)
+        root = resolve_root(self._ctx)
         try:
             now = datetime.now().astimezone().isoformat()
             suggestions = _infer_suggestions(root)
@@ -878,7 +868,7 @@ class AutomationBridgePlugin(BasePlugin):
     async def pre_llm_call(self, messages: list[dict], **kwargs: Any) -> list[dict] | None:
         if not self._enabled or not self._ctx:
             return None
-        root = _resolve_root(self._ctx)
+        root = resolve_root(self._ctx)
         try:
             turn_mode = read_turn_mode(root)
             if turn_mode != "maintenance_schedule_turn":
@@ -900,7 +890,7 @@ class AutomationBridgePlugin(BasePlugin):
     ) -> None:
         if not self._enabled or not self._ctx:
             return
-        root = _resolve_root(self._ctx)
+        root = resolve_root(self._ctx)
         try:
             turn_mode = read_turn_mode(root)
             user_message = ""

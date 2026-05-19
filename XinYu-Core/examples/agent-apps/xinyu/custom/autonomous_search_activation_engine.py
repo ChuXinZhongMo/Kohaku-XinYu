@@ -8,6 +8,7 @@ from pathlib import Path
 from source_request_planner_engine import split_requests
 from source_search_provider_engine import SUPPORTED_PROVIDERS, provider_name
 from source_search_resolver_engine import split_existing_results
+from xinyu_storage_paths import knowledge_file_path
 
 
 READY_PERMISSIONS = {"prepare_only", "integrate_ready"}
@@ -65,6 +66,10 @@ def owner_high_autonomy_granted(root: Path) -> bool:
         "grant_high_autonomy_learning_search: "
         "approved_budgeted_ai_domain_and_quality_followup_search_through_gates"
     ) in grants or "grant_autonomous_source_collect: approved_bounded_candidate_material_only" in grants
+
+
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
 
 
 def render_state(
@@ -134,18 +139,18 @@ def run_autonomous_search_activation(
     evaluated_at = evaluated_at or datetime.now().astimezone().isoformat()
     activation = activation_mode(root)
     provider = provider_name(root)
-    requests = split_requests(read_text(root / "memory/knowledge/source_requests.md"))
+    requests = split_requests(read_text(_knowledge(root, "source_requests.md")))
     pending = [item for item in requests if item.get("status") == "pending_url"]
     pending_request_ids = {item.get("request_id") for item in pending}
-    results = split_existing_results(read_text(root / "memory/knowledge/source_search_results.md"))
+    results = split_existing_results(read_text(_knowledge(root, "source_search_results.md")))
     candidates = [
         item
         for item in results
         if item.get("status") == "candidate" and item.get("request_id") in pending_request_ids
     ]
-    integration_text = read_text(root / "memory/knowledge/source_integration_gate_state.md")
+    integration_text = read_text(_knowledge(root, "source_integration_gate_state.md"))
     integration_permission = extract_value(integration_text, "integration_permission", "hold")
-    quality_text = read_text(root / "memory/knowledge/learning_quality_state.md")
+    quality_text = read_text(_knowledge(root, "learning_quality_state.md"))
     quality_grade = extract_value(quality_text, "quality_grade", "unknown")
     quality_warnings = extract_value(quality_text, "warning_count", "0")
     learned_entries = extract_value(quality_text, "learned_entries", "0")
@@ -185,7 +190,7 @@ def run_autonomous_search_activation(
         allowed_queries = min(len(pending), max_queries_per_pass())
 
     write_text(
-        root / "memory/knowledge/autonomous_search_activation_state.md",
+        _knowledge(root, "autonomous_search_activation_state.md"),
         render_state(
             evaluated_at,
             mode,

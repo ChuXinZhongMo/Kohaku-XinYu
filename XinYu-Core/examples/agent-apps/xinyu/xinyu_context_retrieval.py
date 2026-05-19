@@ -1,3 +1,10 @@
+"""Implementation layer for living memory recall.
+
+The canonical public owner is ``xinyu_living_memory_recall``. Keep this module
+focused on candidate collection, routing, reranking, rendering, and compatibility
+for older tests/tools while the live path migrates to the owner surface.
+"""
+
 from __future__ import annotations
 
 import hashlib
@@ -17,8 +24,16 @@ from xinyu_dialogue_archive import (
     search_dialogue_archive,
     search_temporal_traces,
 )
+from xinyu_retrieval_envelope import RetrievalCandidateEnvelope, safe_envelope_trace
+from xinyu_retrieval_need_reranker import build_retrieval_need_profile, rerank_recalled_items_with_report
+from xinyu_sparse_memory_router import SparseMemoryRoutePlan, apply_sparse_memory_route, build_sparse_memory_route
+from xinyu_storage_paths import knowledge_file_path, knowledge_ref
 from xinyu_text_variants import readable_markers
 
+
+CANONICAL_RECALL_OWNER = "xinyu_living_memory_recall.run_living_memory_recall_algorithm"
+CONTEXT_RETRIEVAL_ROLE = "provider/compatibility"
+CONTEXT_RETRIEVAL_PUBLIC_ENTRYPOINT = "xinyu_context_retrieval.retrieve_recalled_context"
 
 RECALL_MARKERS = readable_markers(
     "刚才",
@@ -113,17 +128,29 @@ STABLE_MEMORY_TARGETS: tuple[str, ...] = (
     "memory/context/codex_delegation_policy.md",
     "memory/context/life_month_slots.md",
     "memory/context/current_life_month_context.md",
+    "memory/creative/planning/novel_profile.md",
+    "memory/creative/planning/novel_state.md",
+    "memory/creative/planning/novel_outline.md",
+    "memory/creative/planning/publication_state.md",
+    "memory/creative/planning/publication_log.md",
     "memory/self/personality_profile.md",
     "memory/self/voice_profile_zh.md",
     "memory/self/personality_change_state.md",
     "memory/relationships/index.md",
     "memory/people/owner.md",
     "memory/emotions/current_state.md",
-    "memory/knowledge/general.md",
-    "memory/knowledge/source_materials.md",
-    "memory/knowledge/source_notes.md",
-    "memory/knowledge/learning_quality_state.md",
+    knowledge_ref("general.md"),
+    knowledge_ref("source_materials.md"),
+    knowledge_ref("source_notes.md"),
+    knowledge_ref("learning_quality_state.md"),
 )
+
+_KNOWLEDGE_MEMORY_REF_FILENAMES: dict[str, str] = {
+    knowledge_ref("general.md"): "general.md",
+    knowledge_ref("source_materials.md"): "source_materials.md",
+    knowledge_ref("source_notes.md"): "source_notes.md",
+    knowledge_ref("learning_quality_state.md"): "learning_quality_state.md",
+}
 
 SELF_CORE_CONTEXT_TARGETS: tuple[str, ...] = (
     "project-plans/XINYU-LOCAL-TINY-SELF-CORE-BACKUP.md",
@@ -157,6 +184,8 @@ class RecalledContextResult:
     prompt_block: str
     items: tuple[RecalledContextItem, ...]
     notes: tuple[str, ...] = ()
+    envelopes: tuple[RetrievalCandidateEnvelope, ...] = ()
+    route_plan: SparseMemoryRoutePlan | None = None
 
 
 def _safe_str(value: Any, default: str = "") -> str:
@@ -398,8 +427,11 @@ def _trace_item(row: dict[str, Any], *, query_terms: list[str]) -> RecalledConte
 
 
 def _read_stable_memory(root: Path, rel_path: str, *, limit: int = 12000) -> str:
+    normalized_ref = rel_path.replace("\\", "/").strip()
+    filename = _KNOWLEDGE_MEMORY_REF_FILENAMES.get(normalized_ref)
+    path = knowledge_file_path(root, filename) if filename else root / normalized_ref
     try:
-        text = (root / rel_path).read_text(encoding="utf-8-sig", errors="replace").strip()
+        text = path.read_text(encoding="utf-8-sig", errors="replace").strip()
     except OSError:
         return ""
     if text.startswith("content:---"):
@@ -429,9 +461,17 @@ def _snippet(text: str, terms: list[str], *, limit: int = 220) -> str:
     return prefix + normalized[start:end].strip() + suffix
 
 
-def _stable_memory_items(root: Path, *, query_terms: list[str]) -> list[RecalledContextItem]:
+def _stable_memory_items(
+    root: Path,
+    *,
+    query_terms: list[str],
+    rel_paths: tuple[str, ...] | None = None,
+) -> list[RecalledContextItem]:
     items: list[RecalledContextItem] = []
-    for rel_path in STABLE_MEMORY_TARGETS:
+    targets = STABLE_MEMORY_TARGETS if rel_paths is None else tuple(
+        rel_path for rel_path in rel_paths if rel_path in STABLE_MEMORY_TARGETS
+    )
+    for rel_path in targets:
         text = _read_stable_memory(root, rel_path)
         if not text:
             continue
@@ -555,6 +595,15 @@ def retrieve_recalled_context(
     self_core_topic = _contains_any(query_text, SELF_CORE_ARCHITECTURE_MARKERS)
     scopes = _scopes_for_payload(payload, user_text)
     current_scope = scope.scope
+    route_plan = build_sparse_memory_route(
+        query_text=query_text,
+        query_terms=query_terms,
+        user_text=user_text,
+        visible_turn=visible_turn,
+        direct_recall=recall_requested,
+        self_core_topic=self_core_topic,
+        payload=payload,
+    )
 
     items: list[RecalledContextItem] = []
     items.extend(
@@ -589,19 +638,43 @@ def retrieve_recalled_context(
         or _contains_any(query_text, PROJECT_MARKERS)
         or self_core_topic
     ):
-        items.extend(_stable_memory_items(root, query_terms=query_terms))
-    if self_core_topic:
+        stable_targets = tuple(rel_path for rel_path in STABLE_MEMORY_TARGETS if route_plan.allows_memory_ref(rel_path))
+        if route_plan.allows_source("stable_memory") and stable_targets:
+            items.extend(_stable_memory_items(root, query_terms=query_terms, rel_paths=stable_targets))
+    if self_core_topic and route_plan.allows_source("self_core_architecture_context"):
         items.extend(_self_core_architecture_items(root, query_terms=query_terms))
 
-    selected = _dedupe_items([item for item in items if item.score > 0])[: retrieval_max_items()]
+    need_profile = build_retrieval_need_profile(
+        query_text=query_text,
+        query_terms=query_terms,
+        user_text=user_text,
+        visible_turn=visible_turn,
+        direct_recall=recall_requested,
+        self_core_topic=self_core_topic,
+    )
+    routed_items = apply_sparse_memory_route(
+        _dedupe_items([item for item in items if item.score > 0]),
+        route_plan,
+    )
+    rerank_result = rerank_recalled_items_with_report(
+        list(routed_items.items),
+        need_profile,
+        limit=retrieval_max_items(),
+    )
+    selected = list(rerank_result.items)
     prompt_block = render_recalled_context(selected)
     notes = ["recalled_context_active"] if selected else ["recalled_context_no_matches"]
+    notes.extend(route_plan.notes)
+    notes.extend(routed_items.notes)
+    notes.extend(rerank_result.note_lines())
     return RecalledContextResult(
         turn_id=turn_id,
         query_text=query_text,
         prompt_block=prompt_block,
         items=tuple(selected),
         notes=tuple(notes),
+        envelopes=rerank_result.envelopes,
+        route_plan=route_plan,
     )
 
 
@@ -616,5 +689,20 @@ def log_recalled_context(root: Path, result: RecalledContextResult) -> bool:
         query_text=result.query_text,
         selected_message_ids=message_ids,
         selected_memory_refs=memory_refs,
-        notes={"item_count": len(result.items), "sources": [item.source for item in result.items]},
+        notes={
+            "item_count": len(result.items),
+            "sources": [item.source for item in result.items],
+            "candidate_envelopes": safe_envelope_trace(tuple(getattr(result, "envelopes", ()) or ())[:12]),
+            "memory_route": _memory_route_log_notes(getattr(result, "route_plan", None)),
+        },
     )
+
+
+def _memory_route_log_notes(route_plan: Any | None) -> dict[str, Any]:
+    if route_plan is None:
+        return {}
+    return {
+        "selected_experts": list(getattr(route_plan, "selected_experts", ()) or ())[:8],
+        "current_turn_facts": list(getattr(route_plan, "current_turn_facts", ()) or ())[:8],
+        "allowed_sources": list(getattr(route_plan, "allowed_sources", ()) or ())[:8],
+    }

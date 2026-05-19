@@ -4,7 +4,15 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from xinyu_tool_protocol import DELEGATED_LOCAL_RISK, READ_ONLY_RISK, ToolIntent, ToolRequest, ToolTarget, new_turn_id
+from xinyu_tool_protocol import (
+    DELEGATED_LOCAL_RISK,
+    EXTERNAL_RUNTIME_RISK,
+    READ_ONLY_RISK,
+    ToolIntent,
+    ToolRequest,
+    ToolTarget,
+    new_turn_id,
+)
 from xinyu_tool_targets import TargetRegistry
 
 
@@ -208,6 +216,7 @@ class ToolIntentRouter:
                     intent=ToolIntent("status_probe", 0.99, ["explicit_status_command"]),
                     tool="status_probe",
                     risk=READ_ONLY_RISK,
+                    params={"reply_style": "technical_status"},
                 ),
                 notes=["explicit_status"],
             )
@@ -221,8 +230,36 @@ class ToolIntentRouter:
                     intent=ToolIntent("status_probe", 0.82, ["status_object", "owner_action_verb"]),
                     tool="status_probe",
                     risk=READ_ONLY_RISK,
+                    params={"reply_style": "casual_status"},
                 ),
                 notes=["natural_status"],
+            )
+
+        kohaku_call = self._extract_kohaku_call(user_text)
+        if kohaku_call:
+            return RouteDecision(
+                "action_request",
+                request=ToolRequest(
+                    turn_id=routed_turn_id,
+                    source="qq_owner_private",
+                    intent=ToolIntent("external_plugin_call", 0.95, ["explicit_kohaku_command"]),
+                    tool="external_plugin_call",
+                    target=ToolTarget(alias="kohaku_terrarium", time_hint="now"),
+                    risk=EXTERNAL_RUNTIME_RISK,
+                    params={
+                        "plugin_id": "kohaku_terrarium",
+                        "capability": "chat_creature",
+                        "args": kohaku_call,
+                        "context": {
+                            "source": "qq_owner_private_action_layer",
+                            "owner_private": True,
+                            "reason": "owner explicit /kohaku command",
+                            "proactive": False,
+                            "approved": True,
+                        },
+                    },
+                ),
+                notes=["external_plugin_call", "kohaku_terrarium"],
             )
 
         codex_task = self._extract_codex_task(user_text)
@@ -266,6 +303,20 @@ class ToolIntentRouter:
 
     def _looks_like_status_request(self, text: str) -> bool:
         return _has_any(text, STATUS_OBJECT_MARKERS) and _has_any(text, STATUS_ACTION_MARKERS)
+
+    def _extract_kohaku_call(self, text: str) -> dict[str, str]:
+        stripped = text.strip()
+        match = re.match(r"(?is)^/(?:kohaku|kt)\s+(\S+)\s+(\S+)\s+(.+)$", stripped)
+        if not match:
+            return {}
+        message = re.sub(r"\s+", " ", match.group(3)).strip()
+        if not message:
+            return {}
+        return {
+            "session_id": match.group(1).strip(),
+            "creature_id": match.group(2).strip(),
+            "message": message,
+        }
 
     def _extract_codex_task(self, text: str) -> str:
         stripped = text.strip()

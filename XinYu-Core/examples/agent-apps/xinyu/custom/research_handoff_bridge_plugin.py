@@ -8,31 +8,20 @@ from typing import Any
 
 from xinyu_runtime.modules.plugin.base import BasePlugin, PluginContext
 
+from maintenance_bridge_utils import (
+    append_trace,
+    cooldown_ready,
+    maintenance_preflight,
+    read_text_optional,
+    resolve_root,
+)
 from research_handoff_engine import run_research_handoff_loop
-from turn_mode_utils import read_turn_mode
 
-
-def _default_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
-def _resolve_root(ctx: PluginContext | None) -> Path:
-    candidate = Path(ctx.working_dir) if ctx else _default_root()
-    if (candidate / "memory").exists():
-        return candidate
-    return _default_root()
-
-
-def _read(path: Path) -> str:
-    return path.read_text(encoding="utf-8-sig", errors="replace")
+TRACE_REL = "runtime/research_handoff_bridge_trace.log"
 
 
 def _trace(root: Path, line: str) -> None:
-    trace_path = root / "runtime/research_handoff_bridge_trace.log"
-    trace_path.parent.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now().astimezone().isoformat()
-    with trace_path.open("a", encoding="utf-8") as fh:
-        fh.write(f"{stamp} {line}\n")
+    append_trace(root, TRACE_REL, line)
 
 
 class ResearchHandoffBridgePlugin(BasePlugin):
@@ -50,32 +39,26 @@ class ResearchHandoffBridgePlugin(BasePlugin):
 
     async def on_load(self, context: PluginContext) -> None:
         self._ctx = context
-        _trace(_resolve_root(context), "on_load ok")
+        _trace(resolve_root(context), "on_load ok")
 
     def _should_run(self, root: Path) -> tuple[bool, str]:
-        if not self._ctx:
-            return False, "no_context"
-        turn_mode = read_turn_mode(root)
-        if turn_mode != "maintenance_schedule_turn":
-            return False, f"turn_mode:{turn_mode or 'unknown'}"
-        state = _read(root / "memory/context/self_thought_state.md")
+        should_continue, reason = maintenance_preflight(self._ctx, root)
+        if not should_continue:
+            return False, reason
+
+        state = read_text_optional(root / "memory/context/self_thought_state.md")
         if "- research_needed: true" not in state:
             return False, "research_not_needed"
-        last_run = self._ctx.get_state("research_handoff_last_run")
-        if last_run:
-            try:
-                last_dt = datetime.fromisoformat(str(last_run))
-                delta = (datetime.now().astimezone() - last_dt).total_seconds()
-                if delta < self._min_interval_seconds:
-                    return False, f"cooldown:{int(delta)}"
-            except Exception:
-                pass
-        return True, "ready"
+        return cooldown_ready(
+            self._ctx,
+            state_key="research_handoff_last_run",
+            min_interval_seconds=self._min_interval_seconds,
+        )
 
     async def post_llm_call(self, messages: list[dict], response: str, usage: dict, **kwargs: Any) -> None:
         if not self._enabled or not self._ctx:
             return
-        root = _resolve_root(self._ctx)
+        root = resolve_root(self._ctx)
         try:
             should_run, reason = self._should_run(root)
             _trace(root, f"post_llm_call should_run={should_run} reason={reason}")

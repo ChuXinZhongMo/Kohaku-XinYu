@@ -71,11 +71,24 @@ def _stable_hash(text: str, length: int = 12) -> str:
 
 
 def _timestamp(value: Any = None) -> str:
+    return _timestamp_or_now_iso(value)
+
+
+def _timestamp_or_now_iso(value: Any = None) -> str:
     if isinstance(value, (int, float)):
-        return datetime.fromtimestamp(float(value)).astimezone().isoformat()
+        try:
+            return datetime.fromtimestamp(float(value)).astimezone().isoformat()
+        except (OSError, OverflowError, ValueError):
+            return datetime.now().astimezone().isoformat()
     text = _safe_str(value).strip()
     if text:
-        return text
+        try:
+            parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            return datetime.now().astimezone().isoformat()
+        if parsed.tzinfo is None:
+            parsed = parsed.astimezone()
+        return parsed.astimezone().isoformat()
     return datetime.now().astimezone().isoformat()
 
 
@@ -154,7 +167,7 @@ def _raw_event(
     metadata = _payload_metadata(payload)
     return {
         "event_id": _raw_event_id(payload, text, source_channel),
-        "timestamp": timestamp,
+        "timestamp": _timestamp_or_now_iso(timestamp),
         "source_channel": source_channel,
         "actor_scope": actor_scope,
         "raw_text": text,

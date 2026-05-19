@@ -13,6 +13,30 @@ STATE_MD_REL = Path("memory/context/initiative_spine_state.md")
 TRACE_REL = Path("runtime/initiative_spine_trace.jsonl")
 
 
+def _now_iso() -> str:
+    return datetime.now().astimezone().isoformat()
+
+
+def _timestamp_or_now_iso(value: Any) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return _now_iso()
+    return parsed.astimezone().isoformat()
+
+
+def _parse_iso(value: Any) -> datetime | None:
+    text = _one_line(value)
+    if not text or text.lower() in {"none", "unknown", "null", "n/a", "na"}:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
+
+
 @dataclass(frozen=True, slots=True)
 class InitiativeSpineSnapshot:
     checked_at: str
@@ -94,7 +118,7 @@ def build_initiative_spine_snapshot(
     max_chars: int = 1800,
 ) -> InitiativeSpineSnapshot:
     root = root.resolve()
-    checked_at = checked_at or datetime.now().astimezone().isoformat()
+    checked_at = _timestamp_or_now_iso(checked_at)
     state = _read_source_state(root)
     self_fields = _fields(state["self_thought"])
     emotion_fields = _fields(state["emotion_council"])
@@ -180,7 +204,7 @@ def write_initiative_spine_state(root: Path, snapshot: InitiativeSpineSnapshot) 
         "subject_ids: [xinyu, owner]",
         "protected: true",
         "source: xinyu_initiative_spine",
-        f"updated_at: {snapshot.checked_at}",
+        f"updated_at: {_timestamp_or_now_iso(snapshot.checked_at)}",
         f"status: {snapshot.status}",
         "tags: [initiative, autonomy, self-thought, emotion, action, feedback]",
         "---",
@@ -215,7 +239,7 @@ def append_initiative_spine_trace(root: Path, snapshot: InitiativeSpineSnapshot)
     event = asdict(snapshot)
     event.pop("prompt_block", None)
     event["event_kind"] = "initiative_spine_synthesized"
-    event["observed_at"] = snapshot.checked_at
+    event["observed_at"] = _timestamp_or_now_iso(snapshot.checked_at)
     path = root / TRACE_REL
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8", newline="\n") as handle:
@@ -341,6 +365,8 @@ def _emergence_level(*, internal_pressure: str, action_permission: str, proactiv
         return "feedback_absorption"
     if "send_now" in proactive_lane and "shadow" in action_permission:
         return "shadow_initiative_pressure"
+    if "cooldown_direct_failure_only" in feedback_lane:
+        return "inner_pressure_only"
     if "trial_active" in feedback_lane or "repair" in feedback_lane:
         return "inner_learning_pressure"
     return "inner_pressure_only"
@@ -363,6 +389,8 @@ def _next_step(
         source = decision_fields.get("source_type") or "unknown"
         return f"convert shadow pressure from {source} into request gate or keep silent"
     next_action = learning_fields.get("next_action") or ""
+    if next_action == "cooldown_direct_failure_only":
+        return "keep learning repair pressure quiet unless owner directly reports the same failure"
     if next_action and next_action != "none":
         return _clip(f"apply learning next_action={next_action} only when current turn matches", 220)
     return "keep initiative private until a current turn or proactive gate makes it grounded"

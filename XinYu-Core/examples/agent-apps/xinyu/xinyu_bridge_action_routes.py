@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import time
+from datetime import datetime
 from typing import Any
 
 from xinyu_action_experience_digest import compose_action_digest_followup, digest_action_experience_residue
-from xinyu_action_layer import codex_response_to_outcome
+from xinyu_action_layer import codex_response_to_outcome, external_response_to_outcome
 from xinyu_action_reply_composer import compose_action_reply
 from xinyu_codex_delegate import looks_like_owner_local_write_request
 from xinyu_experience_frame import (
@@ -34,6 +35,16 @@ def _safe_str(value: Any, default: str = "") -> str:
 def _command_id(payload: dict[str, Any]) -> str:
     metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
     return _safe_str(metadata.get("desktop_command_id") or payload.get("command_id"))
+
+
+def _timestamp_or_now_iso(value: Any) -> str:
+    text = _safe_str(value).strip()
+    if text:
+        try:
+            return datetime.fromisoformat(text.replace("Z", "+00:00")).astimezone().isoformat()
+        except ValueError:
+            pass
+    return datetime.now().astimezone().isoformat()
 
 
 async def settle_action_experience(
@@ -137,6 +148,39 @@ async def handle_action_layer_turn(
                     risk=DELEGATED_LOCAL_RISK,
                     notes=["codex_delegate_bridge_exception"],
                 ).to_dict()
+    elif request.tool == "external_plugin_call":
+        try:
+            external_payload = dict(request.params)
+            external_payload.setdefault("source", request.source)
+            external_payload.setdefault("execute", True)
+            context = external_payload.get("context")
+            if not isinstance(context, dict):
+                context = {}
+            context.setdefault("source", request.source)
+            context.setdefault("owner_private", True)
+            context.setdefault("reason", "owner explicit external plugin request")
+            external_payload["context"] = context
+            external_response = await runtime.external_plugin_call(external_payload)
+            outcome = external_response_to_outcome(external_response, request)
+        except Exception as exc:
+            if bridge_request_error_type is not None and isinstance(exc, bridge_request_error_type):
+                status = getattr(exc, "status", None)
+                status_value = getattr(status, "value", status)
+                outcome = ActionOutcome.failed(
+                    tool="external_plugin_call",
+                    summary=_safe_str(getattr(exc, "message", str(exc))),
+                    error_code=f"bridge_request_error:{status_value}",
+                    risk=request.risk,
+                    notes=["external_plugin_bridge_rejected"],
+                ).to_dict()
+            else:
+                outcome = ActionOutcome.failed(
+                    tool="external_plugin_call",
+                    summary=f"external plugin call did not start: {type(exc).__name__}",
+                    error_code=type(exc).__name__,
+                    risk=request.risk,
+                    notes=["external_plugin_bridge_exception"],
+                ).to_dict()
     else:
         outcome = await asyncio.to_thread(
             runtime.action_layer.execute,
@@ -192,7 +236,7 @@ async def handle_action_layer_turn(
         reply=reply,
         session_key=session_key,
         turn_id=turn_id,
-        started_at=turn_started_wall,
+        started_at=_timestamp_or_now_iso(turn_started_wall),
         elapsed_ms=elapsed_ms,
         status="ok",
         notes=notes,
@@ -279,7 +323,7 @@ async def handle_recent_action_followup_turn(
         reply=reply,
         session_key=session_key,
         turn_id=turn_id,
-        started_at=turn_started_wall,
+        started_at=_timestamp_or_now_iso(turn_started_wall),
         elapsed_ms=elapsed_ms,
         status="ok",
         notes=notes,
@@ -370,7 +414,7 @@ async def handle_action_digest_followup_turn(
         reply=reply,
         session_key=session_key,
         turn_id=turn_id,
-        started_at=turn_started_wall,
+        started_at=_timestamp_or_now_iso(turn_started_wall),
         elapsed_ms=elapsed_ms,
         status="ok",
         notes=notes,

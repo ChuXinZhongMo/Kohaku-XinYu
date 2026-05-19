@@ -9,30 +9,18 @@ from typing import Any
 from xinyu_runtime.modules.plugin.base import BasePlugin, PluginContext
 
 from learner_integration_engine import run_learner_integration
-from turn_mode_utils import read_turn_mode
+from maintenance_bridge_utils import append_trace, cooldown_ready, maintenance_preflight, read_text, resolve_root
+from xinyu_storage_paths import knowledge_file_path
+
+TRACE_REL = "memory/knowledge/learner_integration_trace.log"
 
 
-def _default_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
-def _resolve_root(ctx: PluginContext | None) -> Path:
-    candidate = Path(ctx.working_dir) if ctx else _default_root()
-    if (candidate / "memory").exists():
-        return candidate
-    return _default_root()
-
-
-def _read(path: Path) -> str:
-    return path.read_text(encoding="utf-8-sig")
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
 
 
 def _trace(root: Path, line: str) -> None:
-    trace_path = root / "memory/knowledge/learner_integration_trace.log"
-    trace_path.parent.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now().astimezone().isoformat()
-    with trace_path.open("a", encoding="utf-8") as fh:
-        fh.write(f"{stamp} {line}\n")
+    append_trace(root, TRACE_REL, line)
 
 
 class LearnerIntegrationBridgePlugin(BasePlugin):
@@ -47,40 +35,31 @@ class LearnerIntegrationBridgePlugin(BasePlugin):
 
     async def on_load(self, context: PluginContext) -> None:
         self._ctx = context
-        _trace(_resolve_root(context), "on_load ok")
+        _trace(resolve_root(context), "on_load ok")
 
     def _should_run(self, root: Path) -> tuple[bool, str]:
-        if not self._ctx:
-            return False, "no_context"
-        turn_mode = read_turn_mode(root)
-        if turn_mode != "maintenance_schedule_turn":
-            return False, f"turn_mode:{turn_mode or 'unknown'}"
-
-        recommendations = _read(root / "memory/context/maintenance_recommendations.md")
-        if "- learner_integration: yes" not in recommendations:
-            return False, "recommendation_not_yes"
-
-        source_materials = _read(root / "memory/knowledge/source_materials.md")
+        should_continue, reason = maintenance_preflight(
+            self._ctx,
+            root,
+            recommendation_markers=("- learner_integration: yes",),
+        )
+        if not should_continue:
+            return False, reason
+        source_materials = read_text(_knowledge(root, "source_materials.md"))
         if "- status: ready" not in source_materials:
             return False, "no_ready_material"
-
-        last_run = self._ctx.get_state("learner_integration_last_run")
-        if last_run:
-            try:
-                last_dt = datetime.fromisoformat(str(last_run))
-                delta = (datetime.now().astimezone() - last_dt).total_seconds()
-                if delta < self._min_interval_seconds:
-                    return False, f"cooldown:{int(delta)}"
-            except Exception:
-                pass
-        return True, "ready"
+        return cooldown_ready(
+            self._ctx,
+            state_key="learner_integration_last_run",
+            min_interval_seconds=self._min_interval_seconds,
+        )
 
     async def post_llm_call(
         self, messages: list[dict], response: str, usage: dict, **kwargs: Any
     ) -> None:
         if not self._enabled or not self._ctx:
             return
-        root = _resolve_root(self._ctx)
+        root = resolve_root(self._ctx)
         try:
             _trace(root, "post_llm_call entered")
             should_run, reason = self._should_run(root)

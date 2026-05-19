@@ -1,11 +1,20 @@
 from __future__ import annotations
 
-import hashlib
 import re
 from pathlib import Path
 from typing import Any
 
 from xinyu_qq_outbox import enqueue_qq_outbox_image, enqueue_qq_outbox_message
+from xinyu_visible_persona_voice import (
+    compose_codex_background_error_message,
+    compose_codex_completion_message,
+    compose_codex_image_caption,
+    compose_codex_started_reply,
+    compose_codex_status_reply,
+    visible_codex_owner_task_text,
+    visible_codex_reply_variant,
+    visible_codex_task_subject,
+)
 
 
 CODEX_GENERATED_IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".webp"})
@@ -25,106 +34,25 @@ def codex_status_reply(
     exit_code: int | None = None,
     task_text: str = "",
 ) -> str:
-    report_path = _safe_str(paths.get("report_path")).strip()
-    request_path = _safe_str(paths.get("request_path")).strip()
-    report_label = Path(report_path).name if report_path else "Codex Outbox"
-    request_label = Path(request_path).name if request_path else "Codex Requests"
-    task_subject = codex_task_subject(task_text)
-    variant_seed = "|".join(part for part in (task_subject, report_label, request_label, status) if part)
-    if status == "started":
-        return codex_reply_variant(
-            variant_seed,
-            (
-                codex_started_reply(task_subject, 0),
-                codex_started_reply(task_subject, 1),
-                codex_started_reply(task_subject, 2),
-            ),
-        )
-    if status == "done":
-        return codex_reply_variant(
-            variant_seed,
-            (
-                f"{task_subject}有结果了。报告名：{report_label}。",
-                f"{task_subject}那边结束了。报告名：{report_label}。",
-                f"{task_subject}跑完了。报告名：{report_label}。",
-            ),
-        )
-    if status == "timeout_staged":
-        return f"它卡住了，这次不算完整跑完；链接我先收进学习暂存。报告名：{report_label}。"
-    if status == "timeout":
-        return f"它卡住了，不算完成。请求我留着了：{request_label}。"
-    if exit_code is not None:
-        return f"这次没跑顺，退出码 {exit_code}。报告名：{report_label}。"
-    return f"这次没正常跑起来。报告名：{report_label}。"
+    return compose_codex_status_reply(
+        status,
+        paths=paths,
+        auto_study=auto_study,
+        exit_code=exit_code,
+        task_text=task_text,
+    )
 
 def codex_reply_variant(seed: str, options: tuple[str, ...]) -> str:
-    if not options:
-        return ""
-    digest = hashlib.sha256(seed.encode("utf-8", errors="ignore")).digest()
-    return options[digest[0] % len(options)]
+    return visible_codex_reply_variant(seed, options)
 
 def codex_owner_task_text(text: str) -> str:
-    task = _safe_str(text).strip()
-    current_match = re.search(r"(?is)Current owner Codex task:\s*(.+)$", task)
-    if current_match:
-        task = current_match.group(1).strip()
-    task = re.sub(r"(?is)^Use Codex auxiliary brain for this owner-approved task:\s*", "", task).strip()
-    task = task.split("Recent QQ context before this Codex request:", 1)[0].strip()
-    task = re.sub(r"\s+", " ", task).strip()
-    return task[:160]
+    return visible_codex_owner_task_text(text)
 
 def codex_task_subject(task_text: str) -> str:
-    task = codex_owner_task_text(task_text)
-    compact = re.sub(r"\s+", "", task).lower()
-    titles = re.findall(r"《([^》]{1,32})》", task)
-    if titles:
-        named = "和".join(f"《{title}》" for title in titles[:2])
-        if len(titles) > 2:
-            named += "这些"
-        return named
-    if any(marker in compact for marker in ("搜索", "搜", "查", "了解", "联网", "资料", "番茄小说", "小说")):
-        return "这轮检索"
-    if any(marker in compact for marker in ("修", "改", "代码", "脚本", "测试", "报错", "配置")):
-        return "代码那块"
-    if any(marker in compact for marker in ("图片", "图像", "头像", "海报", "插画", "生成图", "做图")):
-        return "图片那件事"
-    if any(marker in compact for marker in ("没动", "没看见codex", "信任", "权限")):
-        return "Codex 启动这块"
-    return "这件事"
+    return visible_codex_task_subject(task_text)
 
 def codex_started_reply(task_subject: str, variant: int) -> str:
-    subject = task_subject or "这件事"
-    if subject.startswith("《"):
-        options = (
-            f"我去查{subject}，已经开跑。结果我接回来。",
-            f"{subject}这轮检索交给 Codex 了，跑完我回你。",
-            f"我让 Codex 去摸{subject}的资料了，先等它跑完。",
-        )
-    elif subject == "这轮检索":
-        options = (
-            "我去搜，已经开跑。结果出来我直接接着聊。",
-            "检索开了，先让它跑；跑完我把重点拿回来。",
-            "我把搜索交给 Codex 了，不在这儿念流程，等结果。",
-        )
-    elif subject == "代码那块":
-        options = (
-            "我让 Codex 看代码了，跑完我接结果。",
-            "代码那块已经交给它查，等它跑完。",
-            "我开了代码检查，结果回来我再说具体改了什么。",
-        )
-    elif subject == "Codex 启动这块":
-        options = (
-            "我去核 Codex 启动这块，已经开跑。",
-            "我让它查启动问题了，跑完看结果。",
-            "启动这块我交给 Codex 复查，结果回来再对。",
-        )
-    else:
-        options = (
-            f"{subject}我交给 Codex 了，跑完我回你。",
-            f"{subject}已经开跑，结果我接回来。",
-            f"我让 Codex 处理{subject}，先等它跑完。",
-        )
-    return options[variant % len(options)]
+    return compose_codex_started_reply(task_subject, variant)
 
 def codex_completion_summary(xinyu_dir: Path, result: Any, *, limit: int = 220) -> str:
     candidates: list[str] = []
@@ -146,6 +74,8 @@ def codex_completion_summary(xinyu_dir: Path, result: Any, *, limit: int = 220) 
             lower_line = line.lower()
             if line.startswith(("#", "title:", "status:", "generated_at:", "## Stdout", "## Stderr")):
                 continue
+            line = re.sub(r"(?i)^summary:\s*", "", line).strip()
+            lower_line = line.lower()
             if lower_line.startswith(
                 ("request:", "created:", "owner task:", "report:", "report name:", "generated image path:")
             ):
@@ -176,64 +106,19 @@ def codex_completion_outbox_message(
     auto_study: bool,
     handoff_notes: list[str],
 ) -> str:
-    report_path = _safe_str(getattr(result, "report_path", ""))
-    report_label = Path(report_path).name if report_path else "Codex Outbox"
-    report_file = Path(report_path) if report_path else None
-    if report_file is not None and not report_file.is_absolute():
-        report_file = xinyu_dir / report_file
-    report_exists = bool(report_file and report_file.exists())
     exit_code = getattr(result, "exit_code", None)
     timed_out = bool(getattr(result, "timed_out", False))
     accepted = bool(getattr(result, "accepted", False))
     summary = codex_completion_summary(xinyu_dir, result)
-    if timed_out:
-        return "那边超时了，这次不算完成。"
-    if exit_code is not None and not accepted:
-        return f"Codex 没跑顺，退出码 {exit_code}。"
-    if accepted and summary:
-        return re.sub(r"\s+", " ", f"查完了。{summary}").strip()
-    if accepted:
-        return "查完了，但没有提炼出能直接转述的结论。"
-    if handoff_notes:
-        return "这次没正常完成，我先不把它当结果讲。"
-    return "这次没有正常完成。"
-
-    variant_seed = report_label or _safe_str(getattr(result, "request_path", "")) or text
-    if timed_out:
-        head = codex_reply_variant(
-            variant_seed,
-            (
-                "Codex 卡住了，这次不算完成。",
-                "它那边超时了，先不算跑完。",
-                "Codex 没等到结果，我先把这事留住。",
-            ),
-        )
-    elif accepted:
-        head = codex_reply_variant(
-            variant_seed,
-            (
-                "Codex 回来了。",
-                "它那边跑完了。",
-                "结果出来了。",
-            ),
-        )
-    elif exit_code is not None:
-        head = f"Codex 没跑顺，退出码 {exit_code}。"
-    else:
-        head = "Codex 这次没有正常完成。"
-
-    parts = [head]
-    if summary:
-        parts.append(summary)
-    if timed_out or handoff_notes:
-        parts.append("我先把这件事留住，后面继续查。")
-    elif accepted and auto_study:
-        parts.append("后面的学习整合我放后台。")
-    if report_exists:
-        parts.append(f"报告名：{report_label}。")
-    else:
-        parts.append("这次没有写出报告，trace 我留在本地。")
-    return re.sub(r"\s+", " ", "".join(parts)).strip()
+    return compose_codex_completion_message(
+        summary=summary,
+        accepted=accepted,
+        timed_out=timed_out,
+        exit_code=exit_code,
+        auto_study=auto_study,
+        handoff_notes=handoff_notes,
+        text=text,
+    )
 
 def enqueue_codex_completion_if_needed(
     xinyu_dir: Path,
@@ -258,7 +143,7 @@ def enqueue_codex_completion_if_needed(
         job_id = Path(_safe_str(getattr(result, "report_path", ""))).stem or "codex-qq"
 
     if error:
-        message = f"Codex 辅助脑这次在后台报错了：{error}。我没有把它当成完成，会留在本地日志里继续查。"
+        message = compose_codex_background_error_message(error)
     elif result is not None:
         message = codex_completion_outbox_message(
             xinyu_dir,
@@ -288,7 +173,7 @@ def enqueue_codex_completion_if_needed(
             xinyu_dir,
             user_id=user_id,
             image_path=str(image_file),
-            caption=f"Codex 生成的图片：{image_file.name}",
+            caption=compose_codex_image_caption(image_file.name),
             source="codex_generated_image",
             dedupe_key=f"codex_generated_image:{job_id or text[:80]}:{image_file.name}",
             metadata={

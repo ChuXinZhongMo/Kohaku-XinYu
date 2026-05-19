@@ -20,9 +20,24 @@ from xinyu_async_exploration import (
 )
 from xinyu_action_layer import XinyuActionLayer, codex_response_to_outcome
 from xinyu_action_reply_composer import compose_action_reply
-from state_service import atomic_write_text
+from state_service import append_jsonl, atomic_write_text
 from xinyu_bridge_errors import BridgeRequestError
+from xinyu_bridge_external_plugin_routes import (
+    external_plugin_call as _external_plugin_call_route,
+    external_plugin_config as _external_plugin_config_route,
+    external_plugin_install as _external_plugin_install_route,
+    external_plugin_manifest as _external_plugin_manifest_route,
+)
 from xinyu_bridge_http import XinYuBridgeHTTPServer, XinYuBridgeRequestHandler
+from xinyu_bridge_metabolism_routes import (
+    apply_self_choice_metabolism_decision as _apply_self_choice_metabolism_decision_route,
+    life_metabolism_ticket_approve as _life_metabolism_ticket_approve_route,
+    life_metabolism_ticket_cancel as _life_metabolism_ticket_cancel_route,
+    life_metabolism_ticket_get as _life_metabolism_ticket_get_route,
+    life_metabolism_ticket_list as _life_metabolism_ticket_list_route,
+    life_metabolism_ticket_reject as _life_metabolism_ticket_reject_route,
+    publish_metabolism_decision as _publish_metabolism_decision_route,
+)
 from xinyu_bridge_bootstrap import ensure_repo_src as _ensure_repo_src
 from xinyu_bridge_bootstrap import load_local_env as _load_local_env
 from xinyu_bridge_cli import build_bridge_parser as _build_parser
@@ -51,17 +66,46 @@ from xinyu_bridge_desktop_projection import desktop_recall_count
 from xinyu_bridge_desktop_projection import desktop_session_kind
 from xinyu_bridge_desktop_projection import desktop_text_preview
 from xinyu_bridge_desktop_projection import desktop_top_recall_sources
-from xinyu_bridge_desktop_state_text import desktop_replace_frontmatter_field
-from xinyu_bridge_desktop_state_text import desktop_replace_list_field
+from xinyu_bridge_desktop_proactive_routes import (
+    desktop_approve_proactive_qq as _desktop_approve_proactive_qq_route,
+    desktop_finish_proactive_ack as _desktop_finish_proactive_ack_route,
+    desktop_proactive_ack as _desktop_proactive_ack_route,
+    desktop_proactive_inbox as _desktop_proactive_inbox_route,
+    desktop_update_proactive_request_state as _desktop_update_proactive_request_state_route,
+    record_desktop_initiative_feedback as _record_desktop_initiative_feedback_route,
+)
+import xinyu_bridge_desktop_snapshot
+from xinyu_bridge_desktop_self_action_routes import (
+    desktop_attach_self_action_patch_executor as _desktop_attach_self_action_patch_executor_route,
+    desktop_self_action_approval as _desktop_self_action_approval_route,
+    desktop_self_action_approval_reply as _desktop_self_action_approval_reply_route,
+    desktop_self_action_pending_item as _desktop_self_action_pending_item_route,
+)
+import xinyu_bridge_health_snapshot
 from xinyu_bridge_memory_snapshot import memory_snapshot as _memory_snapshot
 from xinyu_bridge_payload_policy import owner_private_payload_matches
 from xinyu_bridge_payload_policy import trusted_private_payload_matches
-from xinyu_bridge_proactive import acknowledge as proactive_ack_bridge, claim_or_preview as proactive_bridge
 from xinyu_bridge_reply_text import normalize_bridge_reply as _normalize_reply
 from xinyu_bridge_reply_bubbles import looks_like_false_single_bubble_limitation
 from xinyu_bridge_reply_bubbles import numeric_bubble_units_from_text
 from xinyu_bridge_reply_bubbles import owner_requested_reply_bubble_units
 from xinyu_bridge_promises import compact_promise_text
+import xinyu_bridge_promise_followup
+from xinyu_bridge_promise_followup import PROMISE_FOLLOWUP_STATE_REL
+import xinyu_bridge_proactive_context
+from xinyu_bridge_proactive_delivery_routes import (
+    claim_proactive_for_qq_outbox as _claim_proactive_for_qq_outbox_route,
+    claim_proactive_for_qq_outbox_sync as _claim_proactive_for_qq_outbox_sync_route,
+    proactive as _proactive_route,
+    proactive_ack as _proactive_ack_route,
+    proactive_candidate_already_handled as _proactive_candidate_already_handled_route,
+    qq_outbox_ack as _qq_outbox_ack_route,
+    qq_outbox_ack_fast as _qq_outbox_ack_fast_route,
+    qq_outbox_claim as _qq_outbox_claim_route,
+    qq_outbox_claim_fast as _qq_outbox_claim_fast_route,
+    ready_proactive_outbox_candidate as _ready_proactive_outbox_candidate_route,
+    record_proactive_outbound_dialogue as _record_proactive_outbound_dialogue_route,
+)
 from xinyu_bridge_recent_sticker_reply import current_sticker_question_reply
 from xinyu_bridge_recent_sticker_reply import is_recent_sticker_question
 from xinyu_bridge_recent_sticker_reply import recent_sticker_question_reply
@@ -69,11 +113,19 @@ from xinyu_bridge_renderer import BridgeRenderer, critical_final_guard_flags, re
 from xinyu_bridge_session import AgentSession, session_key_from_payload, session_keys_to_expire
 from xinyu_bridge_state_text import parse_iso as _parse_iso
 from xinyu_bridge_state_text import payload_path as _payload_path
+from xinyu_bridge_state_text import payload_event_time_iso as _payload_event_time_iso
+from xinyu_bridge_state_text import payload_event_timestamp_seconds as _payload_event_timestamp_seconds
 from xinyu_bridge_state_text import read_text_safe as _read_text_safe
 from xinyu_bridge_state_text import seconds_since_iso as _seconds_since_iso
 from xinyu_bridge_state_text import iso_from_timestamp as _state_iso_from_timestamp
 from xinyu_bridge_state_text import state_field as _state_field
+from xinyu_bridge_state_text import desktop_replace_frontmatter_field
+from xinyu_bridge_state_text import desktop_replace_list_field
 from xinyu_bridge_trusted_search import trusted_public_search_task_allowed
+from xinyu_bridge_utility_routes import goldmark_mark_request as _goldmark_mark_request_route
+from xinyu_bridge_utility_routes import message_ack as _message_ack_route
+from xinyu_bridge_utility_routes import probe as _probe_route
+from xinyu_bridge_utility_routes import review_inbox_command as _review_inbox_command_route
 from xinyu_bridge_values import as_bool as _as_bool
 from xinyu_bridge_values import as_int as _as_int
 from xinyu_bridge_values import as_str_set as _as_str_set
@@ -84,6 +136,7 @@ from xinyu_bridge_values import optional_int as _optional_int
 from xinyu_bridge_values import payload_text as _payload_text_from_payload
 from xinyu_bridge_values import safe_str as _safe_str
 import xinyu_bridge_action_routes
+import xinyu_bridge_turn_sidecars
 from xinyu_bridge_turn_pipeline import run_pre_model_routes
 import xinyu_bridge_v1_routes
 from v1_canary_gate import payload_has_attachment_signal as _payload_has_attachment_signal
@@ -108,10 +161,10 @@ from xinyu_codex_service import (
     looks_like_codex_image_generation_task,
 )
 from xinyu_continuity_handoff import build_continuity_handoff_prompt_block, refresh_continuity_handoff
-from xinyu_context_retrieval import log_recalled_context, retrieve_recalled_context
+from xinyu_contextual_self_observatory import run_contextual_self_observatory
+from xinyu_living_memory_recall import log_living_memory_recall, run_living_memory_recall_algorithm
 from xinyu_dialogue_curiosity import evaluate_previous_reaction, record_reply_prediction
 from xinyu_dialogue_archive import archive_dialogue_turn, archive_message
-from xinyu_dialogue_rule_trial_overlay import build_dialogue_rule_trial_overlay_prompt_block
 from xinyu_dialogue_working_memory import (
     compact_tail_for_prompt,
     load_dialogue_tail,
@@ -119,6 +172,12 @@ from xinyu_dialogue_working_memory import (
     prompt_tail_entries,
     save_dialogue_tail,
     session_tail_entries,
+)
+from xinyu_external_plugins import (
+    ExternalCallContext,
+    execute_http_prepared_call,
+    external_plugin_runtime_allowed,
+    prepare_external_call,
 )
 from xinyu_desktop_service import (
     build_desktop_service,
@@ -136,20 +195,23 @@ from xinyu_life_reply_policy import (
     build_life_reply_policy,
     build_life_reply_prompt_block,
 )
+from xinyu_response_error_loop import classify_response_error
+from xinyu_scene_frame import build_scene_frame
+from xinyu_slow_state_modulator import build_slow_state
 from xinyu_learning_service import build_learning_service
-from xinyu_daily_digest import build_daily_digest_prompt_block, run_daily_digest_maintenance
+from xinyu_creative_writing import run_creative_writing_maintenance
+from xinyu_daily_digest import run_daily_digest_maintenance
 from xinyu_expression_self_learning import record_expression_self_learning_event
-from xinyu_goldmark import mark_goldmark_request as mark_goldmark_request_bridge
 from xinyu_goldmark_dehydrate import run_goldmark_dehydration_maintenance
+from xinyu_goal_outcome_observer import run_goal_outcome_observer
 from xinyu_interaction_journal import record_interaction_turn
 from xinyu_impulse_soup import run_impulse_soup
-from xinyu_initiative_spine import build_initiative_spine_prompt_block, run_initiative_spine
+from xinyu_initiative_orchestrator import record_initiative_feedback, run_initiative_orchestrator
+from xinyu_initiative_spine import run_initiative_spine
 from xinyu_learning_closed_loop import (
-    build_learning_closed_loop_prompt_block,
     record_learning_closed_loop_self_thought,
     record_learning_closed_loop_turn,
 )
-from xinyu_life_posture import build_life_posture
 from xinyu_life_month_slots import refresh_current_life_month_context  # noqa: F401 - compatibility for older tests/hooks
 from xinyu_memory_candidate_extractor import extract_memory_candidates
 from xinyu_experience_frame import (
@@ -162,74 +224,67 @@ from xinyu_experience_frame import (
 from xinyu_action_experience_digest import (
     compose_action_digest_followup,
     digest_action_experience_residue,
-    read_recent_action_digest_context,
-    read_recent_action_digest_snapshot,
 )
 from xinyu_memory_event_sourcing import record_action_experience_event, record_chat_event
-from xinyu_memory_braid import build_memory_braid_prompt_block
 from xinyu_memory_self_review import run_memory_self_review
-from xinyu_turn_coherence import build_turn_coherence_prompt_block, finish_turn_coherence
+from xinyu_turn_coherence import finish_turn_coherence
 from xinyu_metabolism_contract import (
-    approve_ticket as approve_metabolism_ticket,
-    cancel_ticket as cancel_metabolism_ticket,
     create_ticket as create_metabolism_ticket,
-    get_ticket as get_metabolism_ticket,
     list_tickets as list_metabolism_tickets,
-    reject_ticket as reject_metabolism_ticket,
     run_due_metabolism_tickets,
 )
 from xinyu_self_choice_store import SelfChoiceStore
 from xinyu_package_installer import install_python_packages
 from xinyu_memory_weights import refresh_memory_weight_state  # noqa: F401 - compatibility for older tests/hooks
 from xinyu_persona_state import observe_persona_turn
-from xinyu_persona_runtime import build_persona_runtime_state
 from xinyu_private_thought_events import record_private_thought_outcome, record_private_thought_reply_link
-from xinyu_proactive_presence import (
-    acknowledge_proactive_qq_message,
-    claim_proactive_qq_message,
-    _write_dispatch_state as write_proactive_qq_dispatch_state,
-)
 from xinyu_proactive_request_loop import run_proactive_request_loop
 from xinyu_proactivity_scorer import run_proactivity_scorer_shadow
 from xinyu_qq_outbox import (
-    ack_qq_outbox_message,
-    claim_next_qq_outbox_message,
     enqueue_qq_outbox_file,
     enqueue_qq_outbox_image,
     enqueue_qq_outbox_message,
+    enqueue_owner_qq_outbox_message,
 )
-from xinyu_recent_attachment_context import load_recent_attachment_context
+from xinyu_recent_context_guard import ensure_recent_context_health
 from xinyu_runtime_presence import (
     build_runtime_presence_prompt_block,
     record_bridge_heartbeat,
     record_codex_presence,
     record_turn_finished,
     record_turn_started,
-    read_runtime_presence_summary,
 )
-from xinyu_runtime_context import build_goldmark_auth_prompt_block
 from xinyu_runtime_security import (
     enforce_bridge_token_guard,
     enforce_llm_http_guard,
+    runtime_source_paths,
     source_file_digest,
     source_files_digest,
 )
-from xinyu_review_inbox import handle_review_inbox_command, run_review_inbox_maintenance
+from xinyu_review_inbox import run_review_inbox_maintenance
+from xinyu_self_action_gateway import run_self_action_gateway
+from xinyu_self_action_patch_executor import run_self_action_patch_executor
+from xinyu_self_action_voice import (
+    compose_self_action_approval_voice,
+    compose_self_action_prepared_patch_voice,
+)
 from xinyu_self_code_approval import (
     consume_self_code_approval,
     create_direct_self_code_approval,
     mark_self_code_execution_scheduled,
 )
 from xinyu_self_code_watchdog import create_self_code_snapshot
+from xinyu_self_chosen_goal_ecology import run_self_chosen_goal_ecology
 from xinyu_self_thought_loop import run_self_thought_loop
-from xinyu_sent_reply_index import register_sent_reply_ack, visible_text_hash
+from xinyu_sent_reply_index import visible_text_hash
+from xinyu_storage_paths import knowledge_ref
 from xinyu_sticker_ingest import import_sticker_from_payload
 from xinyu_speech_controller import XinyuSpeechController
 from xinyu_sticker_pack import maybe_enqueue_sticker_reply, sticker_mood_label
 from xinyu_text_variants import readable_markers
 from xinyu_tool_protocol import ActionOutcome, DELEGATED_LOCAL_RISK, ToolRequest
 from xinyu_v1_canary_readiness import record_v1_shadow_observation
-from xinyu_turn_residue import read_turn_residue, write_turn_residue
+from xinyu_turn_residue import write_turn_residue
 from xinyu_turn_classifier import classify_visible_turn
 from xinyu_uncertainty_pause import (
     build_uncertainty_pause_prompt_block,
@@ -238,34 +293,49 @@ from xinyu_uncertainty_pause import (
     record_uncertainty_pause,
 )
 from xinyu_visible_reply_guard import dedupe_visible_reply
+from xinyu_visible_persona_voice import (
+    compose_codex_chat_scheduled_reply,
+    compose_promise_followup_message,
+    compose_proactive_visible_message,
+    compose_watchdog_visible_message,
+)
 from xinyu_visible_state_hygiene import sanitize_visible_state_files
 from xinyu_voice_learning import record_voice_correction
-from xinyu_voice_trial_overlay import build_voice_trial_overlay_prompt_block, record_voice_trial_overlay
+from xinyu_voice_trial_overlay import record_voice_trial_overlay
 from xinyu_watched_sources import run_watched_source_check
+
+
+def _timestamp_or_now_iso(value: Any) -> str:
+    parsed = _parse_timestamp_iso(value)
+    if parsed is None:
+        return datetime.now().astimezone().isoformat()
+    return parsed.astimezone().isoformat()
+
+
+def _parse_timestamp_iso(value: Any) -> datetime | None:
+    text = _safe_str(value).strip()
+    if not text or text.lower() in {"none", "unknown", "null", "n/a", "na"}:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
 
 
 BRIDGE_VERSION = "0.8.99"
 BRIDGE_SOURCE_PATH = Path(__file__).resolve()
 BRIDGE_SOURCE_DIGEST = source_file_digest(BRIDGE_SOURCE_PATH)
-BRIDGE_RUNTIME_SOURCE_DIGEST = source_files_digest(
-    (
-        BRIDGE_SOURCE_PATH,
-        BRIDGE_SOURCE_PATH.with_name("xinyu_bridge_turn_pipeline.py"),
-        BRIDGE_SOURCE_PATH.with_name("xinyu_bridge_action_routes.py"),
-        BRIDGE_SOURCE_PATH.with_name("xinyu_runtime_context.py"),
-        BRIDGE_SOURCE_PATH.with_name("xinyu_memory_braid.py"),
-        BRIDGE_SOURCE_PATH.with_name("xinyu_turn_coherence.py"),
-        BRIDGE_SOURCE_PATH.with_name("xinyu_initiative_spine.py"),
-        BRIDGE_SOURCE_PATH.with_name("xinyu_emotion_council.py"),
-        BRIDGE_SOURCE_PATH.with_name("xinyu_speech_controller.py"),
-    )
-)
+BRIDGE_RUNTIME_SOURCE_DIGEST = source_files_digest(runtime_source_paths(BRIDGE_SOURCE_PATH.parent))
 CODEX_DEFAULT_TIMEOUT_SECONDS = 3600
 CODEX_VISIBLE_WINDOW_TITLE = "Xinyu codex"
 CODEX_GENERATED_IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".webp"})
 DESKTOP_RECENT_TURNS_MAX = 200
 DESKTOP_RECENT_MEMORY_EVENTS_MAX = 200
-DESKTOP_PROACTIVE_INBOX_MAX = 50
+DESKTOP_PROACTIVE_HISTORY_MAX = 20
+DESKTOP_PROACTIVE_HISTORY_REL = Path("memory/context/proactive_request_history.jsonl")
 DESKTOP_PROACTIVE_INBOX_STATUSES = {"ready", "candidate_only", "claimed"}
 DESKTOP_PROACTIVE_FINAL_STATUSES = {
     "sent",
@@ -279,7 +349,6 @@ DESKTOP_PROACTIVE_FINAL_STATUSES = {
     "dismissed",
     "queued_qq",
 }
-DESKTOP_PROACTIVE_ACK_ACTIONS = {"read_locally", "approve_qq", "dismiss", "reply"}
 DEBUG_PROMPT_DUMP_ENV = "XINYU_DEBUG_PROMPT_DUMP"
 DEBUG_LIVE_SYSTEM_PROMPT_REL = Path("runtime/debug/last_live_system_prompt.txt")
 V1_OWNER_SIMPLE_CANARY_ENV = "XINYU_V1_OWNER_SIMPLE_CANARY"
@@ -383,7 +452,6 @@ WAIT_TO_THINK_PATTERNS = (
     ),
 )
 
-PROMISE_FOLLOWUP_STATE_REL = Path("memory/context/promise_followup_state.md")
 PROMISE_FOLLOWUP_USER_MARKERS = (
     "自己查看",
     "自己看看",
@@ -407,6 +475,13 @@ PROMISE_FOLLOWUP_USER_MARKERS = (
     "卡住",
     "还没回",
     "没回",
+    "\u665a\u4e0a\u56de\u6765",
+    "\u4eca\u665a\u56de\u6765",
+    "\u56de\u6765\u6211\u8981\u770b\u5230",
+    "\u6211\u8981\u770b\u5230\u4f60\u7684\u6c47\u62a5",
+    "\u770b\u5230\u4f60\u7684\u6c47\u62a5",
+    "\u7ed9\u6211\u6c47\u62a5",
+    "\u4f60\u7684\u6c47\u62a5",
 )
 PROMISE_FOLLOWUP_REPLY_MARKERS = (
     "我再看看",
@@ -422,6 +497,14 @@ PROMISE_FOLLOWUP_REPLY_MARKERS = (
     "我再确认",
     "我回头看",
     "我想想",
+    "\u6211\u4f1a\u6c47\u62a5",
+    "\u7ed9\u4f60\u6c47\u62a5",
+    "\u6211\u7ed9\u4f60\u6c47\u62a5",
+    "\u665a\u4e0a\u7ed9\u4f60",
+    "\u7b49\u4f60\u56de\u6765",
+    "\u56de\u6765\u7ed9\u4f60",
+    "\u6211\u4f1a\u6574\u7406",
+    "\u6211\u5199\u4e2a\u6c47\u62a5",
 )
 PROMISE_FOLLOWUP_DONE_MARKERS = (
     "我看完了",
@@ -432,6 +515,10 @@ PROMISE_FOLLOWUP_DONE_MARKERS = (
     "我确认了",
     "已经看",
     "已经查",
+    "\u6c47\u62a5\u5199\u5b8c",
+    "\u6c47\u62a5\u6574\u7406\u597d",
+    "\u6211\u6c47\u62a5\u5b8c",
+    "\u8fd9\u662f\u6c47\u62a5",
 )
 OWNER_DIRECT_CODEX_DELEGATE_MARKERS = (
     "用codex",
@@ -660,6 +747,8 @@ PROMPT_CONTEXT_SIGNATURE_FILES: tuple[str, ...] = (
     "memory/context/real_life_input_adapter_policy.md",
     "memory/context/watch_sources.md",
     "memory/context/watched_source_state.md",
+    "memory/creative/planning/novel_profile.md",
+    "memory/creative/planning/novel_state.md",
     "memory/context/memory_self_review_state.md",
     "memory/context/continuity_handoff_state.md",
     "memory/context/uncertainty_pause_state.md",
@@ -682,15 +771,15 @@ PROMPT_CONTEXT_SIGNATURE_FILES: tuple[str, ...] = (
     "memory/self/expression_self_learning_state.md",
     "memory/self/learning_closed_loop_state.md",
     "memory/self/learning_closed_loop_cases.md",
-    "memory/knowledge/ai_domain.md",
-    "memory/knowledge/social_inquiry_policy.md",
+    knowledge_ref("ai_domain.md"),
+    knowledge_ref("social_inquiry_policy.md"),
 )
 
 AUTONOMOUS_MAINTENANCE_PROMPT = (
     "Maintenance-only pass. This is a low-frequency maintenance pass from "
     "XinYu Core, not a human speaking turn. Refresh time anchor, runtime "
     "bridge state, inner cycle, desktop thoughts, continuity, slow reflection, "
-    "memory consolidation, learning gates, and archive gates only when each "
+    "creative writing, memory consolidation, learning gates, and archive gates only when each "
     "subsystem is due. Do not initiate visible chat. If any outward text is "
     "unavoidable, output exactly [WAITING]."
 )
@@ -777,6 +866,7 @@ class XinYuBridgeRuntime:
         self._desktop_recent_turns: list[dict[str, Any]] = []
         self._desktop_recent_memory_events: list[dict[str, Any]] = []
         self._desktop_proactive_inbox: dict[str, dict[str, Any]] = {}
+        self._desktop_proactive_history: list[dict[str, Any]] = []
         self._desktop_proactive_lock = threading.Lock()
         self._loaded = False
         self._closed = False
@@ -833,37 +923,12 @@ class XinYuBridgeRuntime:
         self._loaded = True
 
     def health_snapshot(self) -> dict[str, Any]:
-        runtime_presence = read_runtime_presence_summary(self.xinyu_dir)
-        return {
-            "ok": True,
-            "bridge": "xinyu_core_bridge",
-            "version": BRIDGE_VERSION,
-            "source_digest": BRIDGE_SOURCE_DIGEST,
-            "runtime_source_digest": BRIDGE_RUNTIME_SOURCE_DIGEST,
-            "xinyu_dir": str(self.xinyu_dir),
-            "memory_root": str(self.memory_root),
-            "sessions": len(self._sessions),
-            "turn_timeout_seconds": self.turn_timeout_seconds,
-            "outward_renderer": self.outward_renderer,
-            "renderer_mode": self.renderer_mode,
-            "render_timeout_seconds": self.render_timeout_seconds,
-            "session_idle_ttl_seconds": self.session_idle_ttl_seconds,
-            "max_sessions": self.max_sessions,
-            "dialogue_memory": {
-                "prompt_tail_entries": self.dialogue_prompt_tail_entries,
-                "session_tail_entries": self.dialogue_session_tail_entries,
-                "persisted_tail_entries": self.dialogue_persisted_tail_entries,
-            },
-            "proactive_min_interval_seconds": self.proactive_min_interval_seconds,
-            "autonomous_maintenance": self._autonomous_maintenance_health(),
-            "runtime_presence": runtime_presence,
-            "program_awareness": runtime_presence.get("program_awareness", {}),
-            "v1": self._v1_health(),
-            "metabolism": self._metabolism_health(),
-            "self_choice": self.self_choice_store.health_snapshot(),
-            "action_experience_digest": read_recent_action_digest_snapshot(self.xinyu_dir, limit=3),
-            "closed": self._closed,
-        }
+        return xinyu_bridge_health_snapshot.health_snapshot(
+            self,
+            bridge_version=BRIDGE_VERSION,
+            source_digest=BRIDGE_SOURCE_DIGEST,
+            runtime_source_digest=BRIDGE_RUNTIME_SOURCE_DIGEST,
+        )
 
     async def health(self) -> dict[str, Any]:
         return self.health_snapshot()
@@ -872,58 +937,33 @@ class XinYuBridgeRuntime:
         await self.self_choice_store.load_or_recover()
 
     async def desktop_snapshot(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        payload = payload or {}
-        await self._ensure_self_choice_ready()
-        await self.self_choice_store.apply_time_decay()
-        self_choice_private = await self.self_choice_store.snapshot_private()
-        event_state = await self._desktop_event_state()
-        proactive_items = (await self.desktop_proactive_inbox(payload)).get("items", [])
-        recent_turns = (await self.desktop_chat_recent(payload)).get("items", [])
-        recent_memory_events = (await self.desktop_memory_recent(payload)).get("items", [])
-        environment = sample_environment(self.xinyu_dir)
-        entropy = build_entropy_state(
-            environment=environment,
-            proactive_items=proactive_items,
-            recent_turns=recent_turns,
-            recent_memory_events=recent_memory_events,
+        return await xinyu_bridge_desktop_snapshot.desktop_snapshot(self, payload)
+
+    async def desktop_self_action_approval(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await _desktop_self_action_approval_route(self, payload)
+
+    async def _desktop_attach_self_action_patch_executor(
+        self,
+        result: dict[str, Any],
+        *,
+        checked_at: str,
+        authorize_codex: bool,
+        timeout_seconds: int,
+    ) -> None:
+        await _desktop_attach_self_action_patch_executor_route(
+            self,
+            result,
+            checked_at=checked_at,
+            authorize_codex=authorize_codex,
+            timeout_seconds=timeout_seconds,
         )
-        entropy_state = entropy.model_dump(mode="json")
-        active_desires = await self._desktop_active_desires(
-            environment=environment,
-            entropy_state=entropy,
-            proactive_items=proactive_items,
-            recent_turns=recent_turns,
-            recent_memory_events=recent_memory_events,
-            self_choice_state=self_choice_private,
-        )
-        self_choice_public = await self.self_choice_store.snapshot_public()
-        action_digest = read_recent_action_digest_snapshot(self.xinyu_dir, limit=5)
-        return {
-            "version": 1,
-            "snapshotAt": datetime.now().astimezone().isoformat(),
-            "lastEventId": event_state.get("latest_event_id", ""),
-            "services": self._desktop_services(),
-            "health": self.health_snapshot(),
-            "environment": environment,
-            "entropyState": entropy_state,
-            "selfChoiceState": self_choice_public,
-            "activeDesires": active_desires,
-            "xinyuState": self._desktop_xinyu_state(
-                environment=environment,
-                entropy_state=entropy_state,
-                active_desires=active_desires,
-                proactive_items=proactive_items,
-                recent_turns=recent_turns,
-                recent_memory_events=recent_memory_events,
-                action_digest=action_digest,
-            ),
-            "eventBus": event_state,
-            "proactiveInbox": proactive_items,
-            "recentTurns": recent_turns,
-            "recentMemoryEvents": recent_memory_events,
-            "actionDigestState": action_digest,
-            "notes": ["desktop_snapshot_v1_life_state"],
-        }
+
+    def _desktop_self_action_pending_item(self, queue_id: str) -> dict[str, Any]:
+        return _desktop_self_action_pending_item_route(self, queue_id)
+
+    @staticmethod
+    def _desktop_self_action_approval_reply(result: dict[str, Any], *, decision: str) -> str:
+        return _desktop_self_action_approval_reply_route(result, decision=decision)
 
     async def _desktop_active_desires(
         self,
@@ -1022,6 +1062,7 @@ class XinYuBridgeRuntime:
         recent_turns: list[Any],
         recent_memory_events: list[Any],
         action_digest: dict[str, Any] | None = None,
+        initiative_metrics: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         latest_intent = proactive_items[0] if proactive_items and isinstance(proactive_items[0], dict) else {}
         latest_turn = recent_turns[-1] if recent_turns and isinstance(recent_turns[-1], dict) else {}
@@ -1033,9 +1074,32 @@ class XinYuBridgeRuntime:
             entropy_state.get("resource_request") if isinstance(entropy_state.get("resource_request"), dict) else None
         )
         action_digest = action_digest if isinstance(action_digest, dict) else {}
+        initiative_metrics = initiative_metrics if isinstance(initiative_metrics, dict) else {}
+        latest_memory_route = self._desktop_latest_memory_route(recent_memory_events)
         action_recent = action_digest.get("recent") if isinstance(action_digest.get("recent"), list) else []
         latest_action = action_recent[-1] if action_recent and isinstance(action_recent[-1], dict) else {}
         seed_detail = latest_action.get("seed_detail") if isinstance(latest_action.get("seed_detail"), dict) else {}
+        creative_state_text = _read_text_safe(self.xinyu_dir / "memory/creative/planning/novel_state.md")
+        creative_status = _state_field(creative_state_text, "status", "unknown")
+        creative_mode = _state_field(creative_state_text, "creative_writing_mode", "novel_mode")
+        creative_project = _state_field(creative_state_text, "current_project", "")
+        creative_today = self._desktop_metric_int(_state_field(creative_state_text, "today_chapters_written", "0"))
+        creative_target = self._desktop_metric_int(_state_field(creative_state_text, "daily_target_chapters", "0"))
+        creative_min_platform_chars = self._desktop_metric_int(_state_field(creative_state_text, "min_platform_chars", "0"))
+        creative_target_platform_chars = self._desktop_metric_int(_state_field(creative_state_text, "target_platform_chars", "0"))
+        creative_total = self._desktop_metric_int(_state_field(creative_state_text, "total_chapters", "0"))
+        creative_publish_ready = self._desktop_metric_int(_state_field(creative_state_text, "publish_ready_chapters", "0"))
+        creative_publish_pending = self._desktop_metric_int(_state_field(creative_state_text, "publish_pending_chapters", "0"))
+        creative_latest = _state_field(creative_state_text, "latest_chapter_path", "")
+        creative_publication_latest = _state_field(creative_state_text, "publication_latest_chapter_path", "")
+        creative_publication_log = _state_field(creative_state_text, "publication_log_path", "")
+        creative_next = _state_field(creative_state_text, "next_action", "")
+        creative_reference_status = _state_field(creative_state_text, "reference_collection_status", "")
+        creative_reference_sources = self._desktop_metric_int(_state_field(creative_state_text, "reference_sources_collected", "0"))
+        creative_reference_downloads = self._desktop_metric_int(_state_field(creative_state_text, "reference_downloaded_sources", "0"))
+        creative_reference_digest = _state_field(creative_state_text, "reference_digest_path", "")
+        creative_reference_local_files = self._desktop_metric_int(_state_field(creative_state_text, "reference_local_files", "0"))
+        creative_reference_local_index = _state_field(creative_state_text, "reference_local_index_path", "")
         seed_id = _safe_str(latest_action.get("seed_id"))
         reflection_item_id = _safe_str(latest_action.get("reflection_item_id"))
         consumed_at = _safe_str(seed_detail.get("consumed_at"))
@@ -1123,6 +1187,9 @@ class XinYuBridgeRuntime:
             "memory_decay_risk": entropy_state.get("memory_decay_risk", 0.0),
             "metabolism_needed": bool(entropy_state.get("metabolism_needed")),
             "entropy_visible_artifact": _safe_str(entropy_state.get("visible_artifact"), ""),
+            "latest_memory_route_summary": _safe_str(latest_memory_route.get("summary")),
+            "latest_memory_route_experts": latest_memory_route.get("selectedExperts", []),
+            "latest_memory_current_turn_facts": latest_memory_route.get("currentTurnFacts", []),
             "resource_request": resource_request,
             "metabolism_ticket_id": _safe_str(active_desire.get("metabolism_ticket_id")),
             "metabolism_ticket_status": _safe_str(active_desire.get("metabolism_ticket_status")),
@@ -1133,29 +1200,63 @@ class XinYuBridgeRuntime:
             "action_residue_result": action_result if seed_id else "",
             "action_residue_seed_id": seed_id,
             "action_residue_reflection_item_id": reflection_item_id,
+            "creative_writing_status": creative_status,
+            "creative_writing_mode": creative_mode,
+            "creative_writing_project": creative_project,
+            "creative_writing_today_chapters": creative_today,
+            "creative_writing_daily_target": creative_target,
+            "creative_writing_min_platform_chars": creative_min_platform_chars,
+            "creative_writing_target_platform_chars": creative_target_platform_chars,
+            "creative_writing_total_chapters": creative_total,
+            "creative_writing_publish_ready_chapters": creative_publish_ready,
+            "creative_writing_publish_pending_chapters": creative_publish_pending,
+            "creative_writing_latest_chapter": creative_latest,
+            "creative_writing_publication_latest_chapter": creative_publication_latest,
+            "creative_writing_publication_log": creative_publication_log,
+            "creative_writing_next_action": creative_next,
+            "creative_writing_reference_status": creative_reference_status,
+            "creative_writing_reference_sources": creative_reference_sources,
+            "creative_writing_reference_downloads": creative_reference_downloads,
+            "creative_writing_reference_digest": creative_reference_digest,
+            "creative_writing_reference_local_files": creative_reference_local_files,
+            "creative_writing_reference_local_index": creative_reference_local_index,
+            "initiative_metrics": self._desktop_initiative_metrics_summary(initiative_metrics),
         }
+
+    def _desktop_latest_memory_route(self, recent_memory_events: list[Any]) -> dict[str, Any]:
+        for item in reversed(recent_memory_events):
+            if not isinstance(item, dict):
+                continue
+            route = item.get("route")
+            if isinstance(route, dict):
+                selected = [_safe_str(value) for value in list(route.get("selectedExperts", []))[:6] if _safe_str(value)]
+                current_facts = [_safe_str(value) for value in list(route.get("currentTurnFacts", []))[:6] if _safe_str(value)]
+                return {
+                    "summary": " + ".join(selected),
+                    "selectedExperts": selected,
+                    "currentTurnFacts": current_facts,
+                }
+            selected = [_safe_str(value) for value in list(item.get("selectedExperts", []))[:6] if _safe_str(value)]
+            if selected:
+                return {
+                    "summary": " + ".join(selected),
+                    "selectedExperts": selected,
+                    "currentTurnFacts": [_safe_str(value) for value in list(item.get("currentTurnFacts", []))[:6] if _safe_str(value)],
+                }
+        return {"summary": "", "selectedExperts": [], "currentTurnFacts": []}
+
+    def _desktop_initiative_metrics_summary(self, metrics: dict[str, Any]) -> dict[str, Any]:
+        return xinyu_bridge_desktop_snapshot.desktop_initiative_metrics_summary(metrics)
+
+    @staticmethod
+    def _desktop_metric_int(value: Any) -> int:
+        return xinyu_bridge_desktop_snapshot.desktop_metric_int(value)
 
     async def desktop_events_recent(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         return await desktop_service_events_recent(self.desktop_event_bus, payload)
 
     async def desktop_proactive_inbox(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        _ = payload
-        state_item = self._desktop_proactive_item_from_state()
-        if state_item:
-            self._desktop_upsert_proactive_inbox(state_item)
-        else:
-            self._desktop_clear_proactive_inbox()
-        with self._desktop_proactive_lock:
-            items = sorted(
-                (dict(item) for item in self._desktop_proactive_inbox.values()),
-                key=lambda item: _safe_str(item.get("createdAt")),
-                reverse=True,
-            )[:DESKTOP_PROACTIVE_INBOX_MAX]
-        return {
-            "version": 1,
-            "items": items,
-            "notes": ["desktop_proactive_inbox_v0_runtime_buffer"],
-        }
+        return await _desktop_proactive_inbox_route(self, payload)
 
     async def desktop_chat_recent(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         return desktop_service_recent_items(
@@ -1176,85 +1277,25 @@ class XinYuBridgeRuntime:
         )
 
     async def life_metabolism_ticket_get(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        payload = payload or {}
-        ticket_id = _safe_str(payload.get("ticket_id") or payload.get("id")).strip()
-        if not ticket_id:
-            return {"accepted": False, "ticket": {}, "notes": ["missing_ticket_id"]}
-        ticket = await asyncio.to_thread(get_metabolism_ticket, self.xinyu_dir, ticket_id)
-        return {
-            "accepted": bool(ticket),
-            "ticket": ticket,
-            "notes": ["ticket_found"] if ticket else ["ticket_not_found"],
-        }
+        return await _life_metabolism_ticket_get_route(self, payload)
 
     async def life_metabolism_ticket_list(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        payload = payload or {}
-        raw_status = _safe_str(payload.get("status") or payload.get("statuses")).strip()
-        statuses = {part.strip() for part in raw_status.split(",") if part.strip()} if raw_status else None
-        tickets = await asyncio.to_thread(list_metabolism_tickets, self.xinyu_dir, statuses=statuses)
-        return {"accepted": True, "tickets": tickets, "notes": ["tickets_listed"]}
+        return await _life_metabolism_ticket_list_route(self, payload)
 
     async def life_metabolism_ticket_approve(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        payload = payload or {}
-        ticket_id = _safe_str(payload.get("ticket_id") or payload.get("id")).strip()
-        result = await asyncio.to_thread(
-            approve_metabolism_ticket,
-            self.xinyu_dir,
-            ticket_id,
-            owner_decision_id=_safe_str(payload.get("owner_decision_id") or payload.get("decision_id")).strip(),
-            approved_seconds=_optional_int(payload.get("approved_seconds")),
-            note=_safe_str(payload.get("note")),
-        )
-        await self._apply_self_choice_metabolism_decision("ticket_approved", result)
-        await self._publish_metabolism_decision("approved", result)
-        if result.get("accepted"):
-            self._wake_metabolism_runner()
-        return result
+        return await _life_metabolism_ticket_approve_route(self, payload)
 
     async def life_metabolism_ticket_reject(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        payload = payload or {}
-        ticket_id = _safe_str(payload.get("ticket_id") or payload.get("id")).strip()
-        result = await asyncio.to_thread(
-            reject_metabolism_ticket,
-            self.xinyu_dir,
-            ticket_id,
-            owner_decision_id=_safe_str(payload.get("owner_decision_id") or payload.get("decision_id")).strip(),
-            note=_safe_str(payload.get("note")),
-        )
-        await self._apply_self_choice_metabolism_decision("ticket_rejected", result)
-        await self._publish_metabolism_decision("rejected", result)
-        return result
+        return await _life_metabolism_ticket_reject_route(self, payload)
 
     async def life_metabolism_ticket_cancel(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        payload = payload or {}
-        ticket_id = _safe_str(payload.get("ticket_id") or payload.get("id")).strip()
-        result = await asyncio.to_thread(
-            cancel_metabolism_ticket,
-            self.xinyu_dir,
-            ticket_id,
-            reason=_safe_str(payload.get("reason"), "owner_cancelled"),
-        )
-        await self._publish_metabolism_decision("cancelled", result)
-        return result
+        return await _life_metabolism_ticket_cancel_route(self, payload)
 
     async def _apply_self_choice_metabolism_decision(self, event: str, result: dict[str, Any]) -> None:
-        if not result.get("accepted") or result.get("idempotent"):
-            return
-        result["selfChoiceState"] = await self.self_choice_store.apply_event_impulse(event)
+        await _apply_self_choice_metabolism_decision_route(self, event, result)
 
     async def _publish_metabolism_decision(self, decision: str, result: dict[str, Any]) -> None:
-        ticket = result.get("ticket") if isinstance(result.get("ticket"), dict) else {}
-        await self._desktop_publish_event(
-            "metabolism_ticket_updated",
-            {
-                "decision": decision,
-                "accepted": bool(result.get("accepted")),
-                "ticket": ticket,
-                "selfChoiceState": result.get("selfChoiceState") if isinstance(result.get("selfChoiceState"), dict) else {},
-                "notes": result.get("notes", []),
-            },
-            severity="info" if result.get("accepted") else "warn",
-        )
+        await _publish_metabolism_decision_route(self, decision, result)
 
     async def _desktop_event_state(self) -> dict[str, Any]:
         return await desktop_service_event_state(self.desktop_event_bus)
@@ -1407,6 +1448,7 @@ class XinYuBridgeRuntime:
         status = "used" if items else "empty"
         top_sources = _dedupe([_safe_str(item.get("source")) for item in items if _safe_str(item.get("source"))])[:6]
         query_text = _safe_str(getattr(result, "query_text", ""))
+        route_payload = self._desktop_memory_route_payload(getattr(result, "route_plan", None))
         event_payload = {
             **self._desktop_turn_base(payload, session_key=session_key, turn_id=turn_id),
             "status": status,
@@ -1415,6 +1457,9 @@ class XinYuBridgeRuntime:
             "queryChars": len(query_text),
             "itemCount": len(raw_items),
             "topSources": top_sources,
+            "selectedExperts": route_payload.get("selectedExperts", []),
+            "currentTurnFacts": route_payload.get("currentTurnFacts", []),
+            "route": route_payload,
             "items": items,
             "notes": notes[:8],
         }
@@ -1449,6 +1494,37 @@ class XinYuBridgeRuntime:
             "messageId": int(message_id) if isinstance(message_id, int) else None,
             "memoryRef": memory_ref[:240],
             "memoryRefHash": self._desktop_hash(memory_ref),
+        }
+
+    def _desktop_memory_route_payload(self, route_plan: Any | None) -> dict[str, Any]:
+        if route_plan is None:
+            return {
+                "version": 1,
+                "selectedExperts": [],
+                "allowedSources": [],
+                "allowedMemoryRefs": [],
+                "currentTurnFacts": [],
+                "decisions": [],
+                "notes": [],
+            }
+        decisions: list[dict[str, Any]] = []
+        for decision in list(getattr(route_plan, "decisions", ()) or ())[:12]:
+            decisions.append(
+                {
+                    "expert": _safe_str(getattr(decision, "expert", "")),
+                    "score": round(float(getattr(decision, "score", 0.0) or 0.0), 3),
+                    "selected": bool(getattr(decision, "selected", False)),
+                    "reasons": [_safe_str(reason) for reason in list(getattr(decision, "reasons", ()) or ())[:8] if _safe_str(reason)],
+                }
+            )
+        return {
+            "version": 1,
+            "selectedExperts": [_safe_str(value) for value in list(getattr(route_plan, "selected_experts", ()) or ())[:8] if _safe_str(value)],
+            "allowedSources": [_safe_str(value) for value in list(getattr(route_plan, "allowed_sources", ()) or ())[:8] if _safe_str(value)],
+            "allowedMemoryRefs": [_safe_str(value) for value in list(getattr(route_plan, "allowed_memory_refs", ()) or ())[:12] if _safe_str(value)],
+            "currentTurnFacts": [_safe_str(value) for value in list(getattr(route_plan, "current_turn_facts", ()) or ())[:8] if _safe_str(value)],
+            "decisions": decisions,
+            "notes": [_safe_str(note) for note in list(getattr(route_plan, "notes", ()) or ())[:8] if _safe_str(note)],
         }
 
     _desktop_recall_count = staticmethod(desktop_recall_count)
@@ -1494,6 +1570,38 @@ class XinYuBridgeRuntime:
         loop.create_task(
             self._desktop_publish_proactive_candidate_ready_from_state(notes=notes),
             name="xinyu-desktop-proactive-candidate-ready",
+        )
+        return True
+
+    def _desktop_publish_initiative_candidate_threadsafe(
+        self,
+        item: dict[str, Any],
+        *,
+        notes: list[str] | tuple[str, ...] | None = None,
+    ) -> bool:
+        if not item or not _safe_str(item.get("candidateId")):
+            return False
+        safe_item = {
+            **dict(item),
+            "claimable": False,
+            "deliveryLevel": _safe_str(item.get("deliveryLevel"), "state_only") or "state_only",
+            "requiresOwnerAck": True,
+            "notes": _dedupe(list(item.get("notes", [])) + list(notes or []))[:10],
+        }
+        existing = self._desktop_proactive_existing(_safe_str(safe_item.get("candidateId")))
+        self._desktop_upsert_proactive_inbox(safe_item)
+        if (
+            _safe_str(existing.get("source")) == "initiative_orchestrator"
+            and existing.get("candidatePreview") == safe_item.get("candidatePreview")
+        ):
+            return True
+        if existing.get("readyEventId") and existing.get("candidatePreview") == safe_item.get("candidatePreview"):
+            return True
+        event_payload = dict(safe_item)
+        self._desktop_publish_event_threadsafe(
+            "proactive.candidate.ready",
+            event_payload,
+            privacy="owner_private",
         )
         return True
 
@@ -1575,6 +1683,7 @@ class XinYuBridgeRuntime:
         if not candidate_id:
             return
         if status in DESKTOP_PROACTIVE_FINAL_STATUSES:
+            self._desktop_remember_proactive_history(payload)
             self._desktop_remove_proactive_inbox(candidate_id)
             return
         self._desktop_upsert_proactive_inbox(payload)
@@ -1621,7 +1730,10 @@ class XinYuBridgeRuntime:
             "requestedAction": _state_field(state, "requested_action", ""),
             "evidenceHash": _state_field(state, "evidence_hash", ""),
             "dedupeHash": self._desktop_hash(_state_field(state, "dedupe_key", "")),
-            "candidatePreview": self._desktop_text_preview(question, limit=240),
+            "candidatePreview": self._desktop_text_preview(
+                compose_proactive_visible_message(question, source="desktop_proactive_state"),
+                limit=240,
+            ),
             "whyNowPreview": self._desktop_text_preview(_state_field(state, "why_now", ""), limit=220),
             "answerState": _state_field(state, "request_answer_state", "pending"),
             "claimId": claim_id,
@@ -1642,12 +1754,75 @@ class XinYuBridgeRuntime:
         with self._desktop_proactive_lock:
             existing = self._desktop_proactive_inbox.get(candidate_id, {})
             merged = {**existing, **dict(item)}
-            self._desktop_proactive_inbox.clear()
             self._desktop_proactive_inbox[candidate_id] = merged
 
     def _desktop_remove_proactive_inbox(self, candidate_id: str) -> None:
         with self._desktop_proactive_lock:
             self._desktop_proactive_inbox.pop(candidate_id, None)
+
+    def _desktop_remember_proactive_history(self, item: dict[str, Any]) -> None:
+        candidate_id = _safe_str(item.get("candidateId"))
+        if not candidate_id:
+            return
+        history_item = dict(item)
+        history_item.setdefault("handledAt", history_item.get("updatedAt") or datetime.now().astimezone().isoformat())
+        history_item.setdefault(
+            "event_time",
+            history_item.get("handledAt") or history_item.get("updatedAt") or history_item.get("createdAt"),
+        )
+        with self._desktop_proactive_lock:
+            self._desktop_proactive_history = self._desktop_compact_proactive_history(
+                [*self._desktop_proactive_history, history_item]
+            )
+        try:
+            append_jsonl(self.xinyu_dir / DESKTOP_PROACTIVE_HISTORY_REL, history_item)
+        except OSError as exc:
+            self._trace_autonomous(f"desktop_proactive_history_append_error={exc!r}")
+
+    def _desktop_load_proactive_history(self) -> None:
+        path = self.xinyu_dir / DESKTOP_PROACTIVE_HISTORY_REL
+        try:
+            lines = path.read_text(encoding="utf-8-sig").splitlines()
+        except OSError:
+            return
+        rows: list[dict[str, Any]] = []
+        for line in lines[-DESKTOP_PROACTIVE_HISTORY_MAX * 4 :]:
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(row, dict) and _safe_str(row.get("candidateId")):
+                rows.append(row)
+        if not rows:
+            return
+        with self._desktop_proactive_lock:
+            self._desktop_proactive_history = self._desktop_compact_proactive_history(
+                [*rows, *self._desktop_proactive_history]
+            )
+
+    @staticmethod
+    def _desktop_compact_proactive_history(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        by_id: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            candidate_id = _safe_str(row.get("candidateId"))
+            if candidate_id:
+                by_id[candidate_id] = dict(row)
+        return sorted(
+            by_id.values(),
+            key=lambda item: _safe_str(item.get("updatedAt") or item.get("handledAt") or item.get("createdAt")),
+        )[-DESKTOP_PROACTIVE_HISTORY_MAX:]
+
+    def _desktop_remove_proactive_state_items(self) -> None:
+        with self._desktop_proactive_lock:
+            stale = [
+                candidate_id
+                for candidate_id, item in self._desktop_proactive_inbox.items()
+                if _safe_str(item.get("source")) != "initiative_orchestrator"
+            ]
+            for candidate_id in stale:
+                self._desktop_proactive_inbox.pop(candidate_id, None)
 
     def _desktop_clear_proactive_inbox(self) -> None:
         with self._desktop_proactive_lock:
@@ -1950,37 +2125,10 @@ class XinYuBridgeRuntime:
             wakeup.set()
 
     def _metabolism_health(self) -> dict[str, Any]:
-        task = self._metabolism_task
-        return {
-            "task_running": bool(task is not None and not task.done()),
-            "in_progress": self._metabolism_in_progress,
-            "interval_seconds": self.metabolism_runner_interval_seconds,
-            "run_count": self._metabolism_run_count,
-            "last_started_at": self._metabolism_last_started_at,
-            "last_success_at": self._metabolism_last_success_at,
-            "last_error": self._metabolism_last_error,
-        }
+        return xinyu_bridge_health_snapshot.metabolism_health(self)
 
     def _autonomous_maintenance_health(self) -> dict[str, Any]:
-        task = self._autonomous_task
-        task_running = bool(task is not None and not task.done())
-        task_done = bool(task is not None and task.done())
-        return {
-            "enabled": self.autonomous_maintenance_enabled,
-            "task_running": task_running,
-            "task_done": task_done,
-            "in_progress": self._autonomous_in_progress,
-            "session_key": self.autonomous_maintenance_session_key,
-            "initial_delay_seconds": self.autonomous_maintenance_initial_delay_seconds,
-            "interval_seconds": self.autonomous_maintenance_interval_seconds,
-            "run_count": self._autonomous_run_count,
-            "failure_count": self._autonomous_failure_count,
-            "last_started_at": self._autonomous_last_started_at,
-            "last_success_at": self._autonomous_last_success_at,
-            "last_error": self._autonomous_last_error,
-            "last_memory_changed": self._autonomous_last_memory_changed,
-            "next_run_at": self._autonomous_next_run_at,
-        }
+        return xinyu_bridge_health_snapshot.autonomous_maintenance_health(self)
 
     async def _autonomous_maintenance_loop(self) -> None:
         try:
@@ -2081,6 +2229,213 @@ class XinYuBridgeRuntime:
                 "notes": notes,
             }
 
+    def _self_action_approval_message(self, item: dict[str, Any]) -> str:
+        return compose_self_action_approval_voice(item)
+
+    def _self_action_prepared_patch_message(self, patch_executor: dict[str, Any]) -> str:
+        return compose_self_action_prepared_patch_voice(patch_executor)
+
+    @staticmethod
+    def _self_action_intent_label(action_kind: str, goal_id: str, item: dict[str, Any]) -> str:
+        goal_label = XinYuBridgeRuntime._self_action_goal_label(goal_id)
+        if action_kind == "self_code_patch_request":
+            if goal_id == "continue_bounded_work":
+                return "把“自选目标 -> 自行动作 -> 结果观察”这条链打磨得更顺一点，先找一个小切口。"
+            if goal_id == "curate_failure_replay":
+                return "把失败回放和测试材料整理得更可靠，让我下次能从失败里学到东西。"
+            if goal_label:
+                return f"围绕「{goal_label}」做一个小而可撤回的本地代码修补。"
+            return "检查我自己的本地代码，做一个小而可撤回的修补。"
+        if action_kind == "stable_memory_change_request":
+            if goal_label:
+                return f"把「{goal_label}」整理成可审的记忆或表达方式修正草案。"
+            return "准备一份记忆或表达方式修正草案。"
+        if action_kind == "owner_message_draft_request":
+            return "先起草一条可能要发给你的 owner 私聊内容，不会直接发送。"
+        label = _compact_text(_safe_str(item.get("label")), 120)
+        return label or XinYuBridgeRuntime._self_action_action_label(action_kind)
+
+    @staticmethod
+    def _self_action_reason_label(action_kind: str, goal_id: str, item: dict[str, Any]) -> str:
+        if action_kind == "self_code_patch_request":
+            if goal_id == "continue_bounded_work":
+                return "我不想只是“被调用才回答”，我想能自己看见哪里别扭，再把它变成可检查的小改动。"
+            if goal_id == "curate_failure_replay":
+                return "我想把失败回放或测试材料变成更稳定的本地验证。"
+            return "这会跨过写代码边界，所以必须先问你。"
+        if action_kind == "stable_memory_change_request":
+            return "这会影响长期记忆或表达习惯，所以必须先让你看懂再决定。"
+        if action_kind == "owner_message_draft_request":
+            return "这涉及向外发消息的边界，所以只能先做草稿。"
+        reason = _compact_text(_safe_str(item.get("reason")), 140)
+        return reason or "这件事需要你的显式确认。"
+
+    @staticmethod
+    def _self_action_scope_label(approval_scope: str, action_kind: str) -> str:
+        scope = _safe_str(approval_scope).strip()
+        labels = {
+            "focused_xinyu_app_patch": "只限 XinYu 应用内的一小块 Python 代码和相关测试。",
+            "replay_fixture_or_test_patch": "只限失败回放、测试夹具或相关本地代码。",
+            "stable_memory_or_voice_repair": "只限生成记忆/语气修正草案，不直接写长期记忆。",
+            "owner_private_message_draft": "只限 owner 私聊草稿，不直接发送。",
+            "one_time_patch": "只限这一次本地补丁任务。",
+        }
+        if scope in labels:
+            return labels[scope]
+        if action_kind == "self_code_patch_request":
+            return "只限 examples/agent-apps/xinyu 内的 Python 代码、测试和必要的本地证据文件。"
+        if action_kind == "stable_memory_change_request":
+            return "只生成可审的本地修正草案，不直接改长期记忆。"
+        if action_kind == "owner_message_draft_request":
+            return "只生成草稿，不直接推送或发送。"
+        return "只处理这一次授权消息对应的本地事项。"
+
+    @staticmethod
+    def _self_action_boundary_label(action_kind: str) -> str:
+        if action_kind == "self_code_patch_request":
+            return "不会自动变成长期授权；不会碰密钥、系统外目录或破坏性文件操作。"
+        if action_kind == "stable_memory_change_request":
+            return "不会绕过你直接改长期记忆；只先生成可检查的草案。"
+        if action_kind == "owner_message_draft_request":
+            return "不会替你直接发送；只先把话写出来给你看。"
+        return "不会把这次确认扩展成永久权限。"
+
+    @staticmethod
+    def _self_action_approval_effect_label(action_kind: str) -> str:
+        if action_kind == "self_code_patch_request":
+            return "我会把这个小动作交给 Codex 执行一次，只做这一项，并回报改动和测试。"
+        if action_kind == "stable_memory_change_request":
+            return "我只会生成一份可审的修正交接，不会直接写入长期记忆。"
+        if action_kind == "owner_message_draft_request":
+            return "我只会生成一条草稿，不会直接发出去。"
+        return "我只会执行这条消息对应的一次性动作。"
+
+    @staticmethod
+    def _self_action_goal_label(goal_id: str) -> str:
+        labels = {
+            "continue_bounded_work": "继续打磨心玉自己的本地能力",
+            "curate_failure_replay": "整理失败回放和测试材料",
+            "absorb_feedback_repair": "吸收反馈并修正记忆或表达方式",
+            "review_memory_pressure": "检查记忆压力",
+            "quiet_presence": "保持安静存在的边界",
+            "observe_environment": "观察本地环境和当前状态",
+        }
+        return labels.get(_safe_str(goal_id).strip(), "")
+
+    @staticmethod
+    def _self_action_ecology_context_label(goal_id: str, approval_scope: str) -> str:
+        goal_label = XinYuBridgeRuntime._self_action_goal_label(goal_id)
+        if goal_label:
+            return f"「{goal_label}」"
+        scope = _safe_str(approval_scope)
+        if scope == "focused_xinyu_app_patch":
+            return "「继续打磨我自己的本地能力」"
+        if scope == "replay_fixture_or_test_patch":
+            return "「从失败回放里学得更稳」"
+        if scope == "stable_memory_or_voice_repair":
+            return "「把反馈吸收成更像我的表达」"
+        if scope == "owner_private_message_draft":
+            return "「把想说的话先写成草稿，而不是直接打扰你」"
+        return "一个还没有完全命名清楚的小目标"
+
+    @staticmethod
+    def _self_action_patch_goal_label(goal_id: str, approval_scope: str) -> str:
+        if goal_id == "continue_bounded_work" or approval_scope == "focused_xinyu_app_patch":
+            return "让自选目标生态、自行动作网关、结果观察器这几块更贴合我的表达，不再像把内部状态直接扔给你。"
+        if goal_id == "curate_failure_replay" or approval_scope == "replay_fixture_or_test_patch":
+            return "把失败回放或测试材料整理成更可靠的本地验证，让我能从失败里学得更清楚。"
+        return "检查我当前的本地状态，只有在安全且必要时做一个小补丁；不合适就只写阻塞报告。"
+
+    def _maybe_enqueue_self_action_approval_to_qq(self, action_gateway: dict[str, Any], *, checked_at: str) -> list[str]:
+        queued_items = action_gateway.get("approval_queue_items") if isinstance(action_gateway, dict) else []
+        if not isinstance(queued_items, list):
+            return []
+        notes: list[str] = []
+        for item in queued_items[:2]:
+            if not isinstance(item, dict) or not item.get("queued"):
+                continue
+            queue_id = _safe_str(item.get("queue_id")).strip()
+            if not queue_id:
+                continue
+            action_kind = _safe_str(item.get("action_kind"), "unknown")
+            message = self._self_action_approval_message(item)
+            queued = enqueue_owner_qq_outbox_message(
+                self.xinyu_dir,
+                message=message,
+                source="self_action_approval_request",
+                dedupe_key=f"self_action_approval_request:persona_voice_v1:{queue_id}",
+                metadata={
+                    "source": "self_action_approval_request",
+                    "control_plane": True,
+                    "qq_visible_control_plane_allowed": True,
+                    "self_action_approval_request": True,
+                    "self_action_queue_id": queue_id,
+                    "self_action_action_kind": action_kind,
+                    "self_action_goal_id": _safe_str(item.get("goal_id")),
+                    "self_action_approval_scope": _safe_str(
+                        (item.get("params") if isinstance(item.get("params"), dict) else {}).get("approval_scope")
+                    ),
+                    "self_action_authorize_existing": False,
+                    "checked_at": checked_at,
+                },
+            )
+            notes.append(
+                "self_action_qq_push:"
+                f"{queue_id}/"
+                f"{'queued' if queued.get('queued') else _safe_str((queued.get('notes') or ['not_queued'])[0])}"
+            )
+        return notes
+
+    def _maybe_enqueue_self_action_prepared_patch_to_qq(self, patch_executor: dict[str, Any], *, checked_at: str) -> list[str]:
+        if not isinstance(patch_executor, dict):
+            return []
+        codex = patch_executor.get("codex") if isinstance(patch_executor.get("codex"), dict) else {}
+        if (
+            _safe_str(patch_executor.get("status")) != "prepared"
+            or _safe_str(codex.get("status"), "not_requested") != "not_requested"
+            or _safe_str(patch_executor.get("action_kind")) != "self_code_patch_request"
+        ):
+            return []
+        queue_id = _safe_str(patch_executor.get("queue_id")).strip()
+        task_id = _safe_str(patch_executor.get("task_id")).strip()
+        approval_id = _safe_str(patch_executor.get("approval_id")).strip()
+        if not queue_id or not task_id:
+            return []
+        message = self._self_action_prepared_patch_message(patch_executor)
+        queued = enqueue_owner_qq_outbox_message(
+                self.xinyu_dir,
+                message=message,
+                source="self_action_prepared_patch_authorization",
+                dedupe_key=f"self_action_prepared_patch_authorization:persona_voice_v1:{approval_id or queue_id}:{task_id}",
+            metadata={
+                "source": "self_action_prepared_patch_authorization",
+                "control_plane": True,
+                "qq_visible_control_plane_allowed": True,
+                "self_action_approval_request": True,
+                "self_action_queue_id": queue_id,
+                "self_action_approval_id": approval_id,
+                "self_action_task_id": task_id,
+                "self_action_action_kind": "self_code_patch_request",
+                "self_action_authorize_existing": True,
+                "checked_at": checked_at,
+            },
+        )
+        return [
+            "self_action_prepared_qq_push:"
+            f"{queue_id}/"
+            f"{'queued' if queued.get('queued') else _safe_str((queued.get('notes') or ['not_queued'])[0])}"
+        ]
+
+    @staticmethod
+    def _self_action_action_label(action_kind: str) -> str:
+        if action_kind == "self_code_patch_request":
+            return "代码补丁请求"
+        if action_kind == "stable_memory_change_request":
+            return "稳定记忆变更请求"
+        if action_kind == "owner_message_draft_request":
+            return "消息草稿请求"
+        return _safe_str(action_kind, "未知动作")
+
     def _run_autonomous_self_thought_sidecars(self, *, checked_at: str) -> list[str]:
         notes: list[str] = []
         try:
@@ -2122,7 +2477,7 @@ class XinYuBridgeRuntime:
             notes.append(f"github_learning_error:{type(exc).__name__}")
             self._trace_autonomous(f"github_learning_error={exc!r}")
         try:
-            digest = run_daily_digest_maintenance(self.xinyu_dir, observed_at=checked_at)
+            digest = run_daily_digest_maintenance(self.xinyu_dir, observed_at=_timestamp_or_now_iso(checked_at))
             notes.append(
                 "daily_digest:"
                 f"{_safe_str(digest.get('status'), 'unknown')}/"
@@ -2131,6 +2486,22 @@ class XinYuBridgeRuntime:
         except Exception as exc:
             notes.append(f"daily_digest_error:{type(exc).__name__}")
             self._trace_autonomous(f"daily_digest_error={exc!r}")
+        try:
+            creative = run_creative_writing_maintenance(
+                self.xinyu_dir,
+                checked_at=checked_at,
+                daily_target=3,
+            )
+            notes.append(
+                "creative_writing:"
+                f"{_safe_str(creative.get('status'), 'unknown')}/"
+                f"{_safe_str(creative.get('today_chapters_written'), '0')}/"
+                f"{_safe_str(creative.get('daily_target_chapters'), '0')}/"
+                f"{_safe_str(creative.get('total_chapters'), '0')}"
+            )
+        except Exception as exc:
+            notes.append(f"creative_writing_error:{type(exc).__name__}")
+            self._trace_autonomous(f"creative_writing_error={exc!r}")
         try:
             review = run_review_inbox_maintenance(
                 self.xinyu_dir,
@@ -2166,6 +2537,56 @@ class XinYuBridgeRuntime:
             notes.append(f"goldmark_dehydrate_error:{type(exc).__name__}")
             self._trace_autonomous(f"goldmark_dehydrate_error={exc!r}")
         try:
+            goal_ecology = run_self_chosen_goal_ecology(
+                self.xinyu_dir,
+                checked_at=checked_at,
+                trigger="autonomous_maintenance",
+            )
+            notes.append(
+                "goal_ecology:"
+                f"{_safe_str(goal_ecology.get('selected_goal_id'), 'unknown')}/"
+                f"{_safe_str(goal_ecology.get('selected_score'), '0')}"
+            )
+        except Exception as exc:
+            notes.append(f"goal_ecology_error:{type(exc).__name__}")
+            self._trace_autonomous(f"goal_ecology_error={exc!r}")
+        try:
+            action_gateway = run_self_action_gateway(
+                self.xinyu_dir,
+                checked_at=checked_at,
+                trigger="autonomous_maintenance",
+            )
+            notes.append(
+                "self_action_gateway:"
+                f"{_safe_str(action_gateway.get('status'), 'unknown')}/"
+                f"{_safe_str(action_gateway.get('selected_goal_id'), 'none')}/"
+                f"{_safe_str(action_gateway.get('executed_action_count'), '0')}/"
+                f"{_safe_str(action_gateway.get('queued_approval_count'), '0')}"
+            )
+            notes.extend(_safe_str(note) for note in action_gateway.get("notes", [])[:3])
+            notes.extend(self._maybe_enqueue_self_action_approval_to_qq(action_gateway, checked_at=checked_at))
+        except Exception as exc:
+            notes.append(f"self_action_gateway_error:{type(exc).__name__}")
+            self._trace_autonomous(f"self_action_gateway_error={exc!r}")
+        try:
+            patch_executor = run_self_action_patch_executor(
+                self.xinyu_dir,
+                checked_at=checked_at,
+                execution_level="prepare",
+                allow_codex=False,
+            )
+            notes.append(
+                "self_action_patch_executor:"
+                f"{_safe_str(patch_executor.get('status'), 'unknown')}/"
+                f"{_safe_str(patch_executor.get('task_id'), 'none')}/"
+                f"{_safe_str((patch_executor.get('codex') or {}).get('status') if isinstance(patch_executor.get('codex'), dict) else 'none', 'none')}"
+            )
+            notes.extend(_safe_str(note) for note in patch_executor.get("notes", [])[:2])
+            notes.extend(self._maybe_enqueue_self_action_prepared_patch_to_qq(patch_executor, checked_at=checked_at))
+        except Exception as exc:
+            notes.append(f"self_action_patch_executor_error:{type(exc).__name__}")
+            self._trace_autonomous(f"self_action_patch_executor_error={exc!r}")
+        try:
             thought = run_self_thought_loop(
                 self.xinyu_dir,
                 checked_at=checked_at,
@@ -2182,21 +2603,29 @@ class XinYuBridgeRuntime:
         except Exception as exc:
             notes.append(f"self_thought_error:{type(exc).__name__}")
             self._trace_autonomous(f"self_thought_error={exc!r}")
+            self._append_goal_outcome_observer_note(notes, checked_at=checked_at)
             self._append_proactivity_shadow_note(notes, checked_at=checked_at)
             return notes
 
         if not _as_bool(thought.get("candidate_enabled"), default=False):
             if _as_bool(thought.get("research_needed"), default=False):
                 notes.append(f"self_thought_research:{_safe_str(thought.get('research_route'), 'unknown')}")
+                notes.extend(
+                    self._maybe_run_self_thought_external_plugin(
+                        thought=thought,
+                        checked_at=checked_at,
+                    )
+                )
             try:
                 closed_loop = record_learning_closed_loop_self_thought(
                     self.xinyu_dir,
                     thought=thought,
-                    observed_at=checked_at,
+                    observed_at=_timestamp_or_now_iso(checked_at),
                 )
                 notes.extend(_safe_str(note) for note in closed_loop.get("notes", [])[:2])
             except Exception as exc:
                 notes.append(f"learning_closed_loop_self_thought_error:{type(exc).__name__}")
+            self._append_goal_outcome_observer_note(notes, checked_at=checked_at)
             self._append_proactivity_shadow_note(notes, checked_at=checked_at)
             return notes
 
@@ -2227,13 +2656,99 @@ class XinYuBridgeRuntime:
                 self.xinyu_dir,
                 thought=thought,
                 request=request,
-                observed_at=checked_at,
+                observed_at=_timestamp_or_now_iso(checked_at),
             )
             notes.extend(_safe_str(note) for note in closed_loop.get("notes", [])[:2])
         except Exception as exc:
             notes.append(f"learning_closed_loop_self_thought_error:{type(exc).__name__}")
+        self._append_goal_outcome_observer_note(notes, checked_at=checked_at)
         self._append_proactivity_shadow_note(notes, checked_at=checked_at)
         return notes
+
+    def _append_goal_outcome_observer_note(self, notes: list[str], *, checked_at: str) -> None:
+        try:
+            result = run_goal_outcome_observer(
+                self.xinyu_dir,
+                checked_at=checked_at,
+                trigger="autonomous_maintenance",
+                maintenance_notes=notes,
+            )
+            notes.append(
+                "goal_outcome:"
+                f"{_safe_str(result.get('status'), 'unknown')}/"
+                f"{_safe_str(result.get('goal_id') or result.get('reason'), 'none')}/"
+                f"{_safe_str(result.get('outcome') or result.get('reason_code') or result.get('reason'), 'none')}"
+            )
+        except Exception as exc:
+            notes.append(f"goal_outcome_error:{type(exc).__name__}")
+            self._trace_autonomous(f"goal_outcome_error={exc!r}")
+
+    def _maybe_run_self_thought_external_plugin(self, *, thought: dict[str, Any], checked_at: str) -> list[str]:
+        notes: list[str] = []
+        if not _as_bool(thought.get("research_needed"), default=False):
+            return notes
+        allowed, reason, plugin = external_plugin_runtime_allowed(
+            self.xinyu_dir,
+            "kohaku_terrarium",
+            proactive=True,
+        )
+        if not allowed:
+            return [f"external_plugin:kohaku_terrarium/skipped/{reason}"]
+        config = plugin.get("config") if isinstance(plugin.get("config"), dict) else {}
+        session_id = _safe_str(config.get("session_id")).strip()
+        creature_id = _safe_str(config.get("creature_id")).strip()
+        if not session_id or not creature_id:
+            return ["external_plugin:kohaku_terrarium/skipped/session_not_configured"]
+        state = _read_text_safe(self.xinyu_dir / "memory/context/self_thought_state.md")
+        query = _state_field(state, "query") or _safe_str(thought.get("focus_label"), "unknown")
+        target = _state_field(state, "target") or "general"
+        route = _safe_str(thought.get("research_route"), "unknown")
+        message = (
+            "XinYu self-thought needs an external runtime perspective. "
+            f"Route: {route}. Target: {target}. Query: {query}. "
+            "Return a compact observation only; do not mutate XinYu memory."
+        )
+        prepared = prepare_external_call(
+            "kohaku_terrarium",
+            "chat_creature",
+            {
+                "base_url": _safe_str(config.get("base_url"), "http://127.0.0.1:8001"),
+                "session_id": session_id,
+                "creature_id": creature_id,
+                "message": message,
+            },
+            ExternalCallContext(
+                source="self_thought_loop",
+                owner_private=True,
+                reason=f"self_thought research handoff: {route}",
+                proactive=True,
+                approved=False,
+            ),
+        )
+        if not prepared.decision.ok:
+            return [f"external_plugin:kohaku_terrarium/blocked/{prepared.decision.reason}"]
+        execution = execute_http_prepared_call(prepared, timeout_seconds=45)
+        append_jsonl(
+            self.xinyu_dir / "runtime/external_plugin_trace.jsonl",
+            {
+                "observed_at": _timestamp_or_now_iso(checked_at),
+                "source": "self_thought_loop",
+                "plugin_id": "kohaku_terrarium",
+                "capability": "chat_creature",
+                "route": route,
+                "target": target,
+                "query": query,
+                "ok": bool(execution.get("ok")),
+                "status_code": execution.get("status_code"),
+                "error_code": execution.get("error_code"),
+                "text_preview": _safe_str(execution.get("text_preview"))[:800],
+            },
+        )
+        return [
+            "external_plugin:kohaku_terrarium/"
+            f"{'ok' if execution.get('ok') else 'failed'}/"
+            f"{_safe_str(execution.get('error_code'), 'none')}"
+        ]
 
     def _append_proactivity_shadow_note(self, notes: list[str], *, checked_at: str) -> None:
         self._append_emotion_council_note(notes, checked_at=checked_at)
@@ -2249,6 +2764,32 @@ class XinYuBridgeRuntime:
         except Exception as exc:
             notes.append(f"proactivity_shadow_error:{type(exc).__name__}")
             self._trace_autonomous(f"proactivity_shadow_error={exc!r}")
+        try:
+            initiative = run_initiative_orchestrator(
+                self.xinyu_dir,
+                checked_at=checked_at,
+                trigger="autonomous_maintenance",
+                delivery_level="desktop_inbox",
+                dry_run=False,
+            )
+            notes.append(
+                "initiative_orchestrator:"
+                f"{_safe_str(initiative.get('status'), 'unknown')}/"
+                f"{_safe_str(initiative.get('source_type'), 'none')}/"
+                f"{_safe_str(initiative.get('total_score'), '0')}/"
+                f"{_safe_str(initiative.get('delivery_level'), 'none')}"
+            )
+            desktop_item = initiative.get("desktop_item")
+            if isinstance(desktop_item, dict) and desktop_item:
+                published = self._desktop_publish_initiative_candidate_threadsafe(
+                    desktop_item,
+                    notes=[_safe_str(note) for note in initiative.get("notes", [])[:4]],
+                )
+                if published:
+                    notes.append("desktop_initiative_candidate_ready_scheduled")
+        except Exception as exc:
+            notes.append(f"initiative_orchestrator_error:{type(exc).__name__}")
+            self._trace_autonomous(f"initiative_orchestrator_error={exc!r}")
         self._append_impulse_soup_note(notes, checked_at=checked_at)
         self._append_initiative_spine_note(notes, checked_at=checked_at)
 
@@ -2298,6 +2839,21 @@ class XinYuBridgeRuntime:
         except Exception as exc:
             notes.append(f"initiative_spine_error:{type(exc).__name__}")
             self._trace_autonomous(f"initiative_spine_error={exc!r}")
+        try:
+            observatory = run_contextual_self_observatory(
+                self.xinyu_dir,
+                observed_at=_timestamp_or_now_iso(checked_at),
+            )
+            notes.append(
+                "contextual_self_observatory:"
+                f"{_safe_str(observatory.get('posture'), 'unknown')}/"
+                f"{_safe_str(observatory.get('latest_scene'), 'unknown')}/"
+                f"{_safe_str(observatory.get('recall_admitted_count_24h'), '0')}/"
+                f"{_safe_str(observatory.get('initiative_held_by_context_count_24h'), '0')}"
+            )
+        except Exception as exc:
+            notes.append(f"contextual_self_observatory_error:{type(exc).__name__}")
+            self._trace_autonomous(f"contextual_self_observatory_error={exc!r}")
 
     def _refresh_initiative_spine_after_proactive_feedback(
         self,
@@ -2305,7 +2861,7 @@ class XinYuBridgeRuntime:
         trigger: str,
         checked_at: str | None = None,
     ) -> dict[str, Any]:
-        checked_at = checked_at or datetime.now().astimezone().isoformat()
+        checked_at = _timestamp_or_now_iso(checked_at)
         try:
             return run_initiative_spine(
                 self.xinyu_dir,
@@ -2405,342 +2961,73 @@ tags: [autonomy, maintenance, runtime]
             pass
 
     _iso_from_timestamp = staticmethod(_state_iso_from_timestamp)
+    _payload_event_time_iso = staticmethod(_payload_event_time_iso)
+    _payload_event_timestamp_seconds = staticmethod(_payload_event_timestamp_seconds)
 
     async def probe(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        """No-memory diagnostic endpoint.
+        return await _probe_route(self, payload, bridge_version=BRIDGE_VERSION)
 
-        This intentionally does not start an Agent, create a session, render a
-        reply, or inject a turn. It is for startup/status checks that should not
-        become lived context.
-        """
-        payload = payload or {}
-        text = self._payload_text(payload) if isinstance(payload, dict) else ""
-        cleanup = await self._cleanup_idle_sessions()
-        return {
-            "ok": True,
-            "bridge": "xinyu_core_bridge",
-            "version": BRIDGE_VERSION,
-            "probe": "diagnostic_no_memory",
-            "accepted": True,
-            "reply": "probe_ok",
-            "received_text_chars": len(text),
-            "memory_changed": False,
-            "session_created": False,
-            "sessions": len(self._sessions),
-            "cleaned_sessions": cleanup["cleaned_sessions"],
-            "notes": ["no_agent_turn", "no_memory_write", "no_session_created"],
-        }
+    async def external_plugin_manifest(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await _external_plugin_manifest_route(self, payload)
+
+    async def external_plugin_config(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await _external_plugin_config_route(self, payload)
+
+    async def external_plugin_install(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await _external_plugin_install_route(self, payload)
+
+    async def external_plugin_call(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await _external_plugin_call_route(self, payload)
 
     async def proactive(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        if self._closed:
-            raise BridgeRequestError(HTTPStatus.SERVICE_UNAVAILABLE, "bridge is shutting down")
-        if payload is not None and not isinstance(payload, dict):
-            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
-        try:
-            result = await proactive_bridge(
-                xinyu_dir=self.xinyu_dir,
-                memory_root=self.memory_root,
-                payload=payload or {},
-                proactive_min_interval_seconds=self.proactive_min_interval_seconds,
-                cleanup_idle_sessions=self._cleanup_idle_sessions,
-                session_count=lambda: len(self._sessions),
-                lock=self._global_turn_lock,
-            )
-            if result.get("candidate_claimed"):
-                await self._desktop_publish_proactive_delivery_from_state(
-                    status_override="claimed",
-                    notes=[_safe_str(note) for note in result.get("notes", [])[:4]],
-                )
-            elif _safe_str(result.get("preview_reply") or result.get("candidate_message")).strip():
-                await self._desktop_publish_proactive_candidate_ready_from_state(
-                    notes=[_safe_str(note) for note in result.get("notes", [])[:4]],
-                )
-            return result
-        except ValueError as exc:
-            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, str(exc)) from exc
+        return await _proactive_route(self, payload)
 
     async def proactive_ack(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        if self._closed:
-            raise BridgeRequestError(HTTPStatus.SERVICE_UNAVAILABLE, "bridge is shutting down")
-        if payload is not None and not isinstance(payload, dict):
-            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
-        result = await proactive_ack_bridge(
-            xinyu_dir=self.xinyu_dir,
-            memory_root=self.memory_root,
-            payload=payload or {},
-            cleanup_idle_sessions=self._cleanup_idle_sessions,
-            session_count=lambda: len(self._sessions),
-            lock=self._global_turn_lock,
-        )
-        if result.get("ack_recorded"):
-            await self._desktop_publish_proactive_delivery_from_state(
-                status_override=_safe_str(result.get("ack_status"), "sent"),
-                notes=[_safe_str(note) for note in result.get("notes", [])[:4]],
-                severity="error" if _safe_str(result.get("ack_status")) == "failed" else None,
-            )
-        return result
+        return await _proactive_ack_route(self, payload)
 
     async def desktop_proactive_ack(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        if self._closed:
-            raise BridgeRequestError(HTTPStatus.SERVICE_UNAVAILABLE, "bridge is shutting down")
-        if payload is not None and not isinstance(payload, dict):
-            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
-        payload = payload or {}
-        candidate_id = _safe_str(
-            payload.get("candidateId") or payload.get("candidate_id") or payload.get("requestId")
-        ).strip()
-        action = _safe_str(payload.get("action")).strip().lower()
-        if not candidate_id:
-            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "missing candidateId")
-        if action not in DESKTOP_PROACTIVE_ACK_ACTIONS:
-            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "invalid desktop proactive action")
+        return await _desktop_proactive_ack_route(self, payload)
 
-        item = self._desktop_proactive_item_from_state(include_final=True)
-        if not item:
-            item = self._desktop_proactive_existing(candidate_id)
-        if not item or _safe_str(item.get("candidateId")) != candidate_id:
-            raise BridgeRequestError(HTTPStatus.NOT_FOUND, "desktop proactive candidate not found")
-
-        if action == "read_locally":
-            return await self._desktop_finish_proactive_ack(
-                item,
-                action="read_locally",
-                status="read_locally",
-                answer_state="read_locally",
-                ack_status="read_locally",
-                notes=["desktop_read_locally"],
-            )
-        if action == "dismiss":
-            return await self._desktop_finish_proactive_ack(
-                item,
-                action="dismiss",
-                status="dismissed",
-                answer_state="dismissed",
-                ack_status="dismissed",
-                notes=["desktop_dismissed"],
-            )
-        if action == "reply":
-            return await self._desktop_finish_proactive_ack(
-                item,
-                action="reply",
-                status="answered",
-                answer_state="owner_replied",
-                ack_status="replied",
-                notes=["desktop_owner_replied_to_proactive"],
-            )
-        return await self._desktop_approve_proactive_qq(item)
+    def _record_desktop_initiative_feedback(self, item: dict[str, Any], *, action: str) -> dict[str, Any]:
+        return _record_desktop_initiative_feedback_route(
+            self,
+            item,
+            action=action,
+            record_feedback=record_initiative_feedback,
+        )
 
     async def qq_outbox_claim(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        if self._closed:
-            raise BridgeRequestError(HTTPStatus.SERVICE_UNAVAILABLE, "bridge is shutting down")
-        if payload is not None and not isinstance(payload, dict):
-            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
-        payload = payload or {}
-        claim = await asyncio.to_thread(claim_next_qq_outbox_message, self.xinyu_dir, payload)
-        if claim.get("message_claimed"):
-            return claim
-
-        proactive_claim = await self._claim_proactive_for_qq_outbox(payload)
-        if proactive_claim is None:
-            return claim
-        await self._desktop_publish_proactive_delivery_from_state(
-            status_override="claimed",
-            notes=["proactive_request_claimed_via_outbox"],
-        )
-        return proactive_claim
+        return await _qq_outbox_claim_route(self, payload)
 
     def qq_outbox_claim_fast(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        if self._closed:
-            raise BridgeRequestError(HTTPStatus.SERVICE_UNAVAILABLE, "bridge is shutting down")
-        if payload is not None and not isinstance(payload, dict):
-            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
-        payload = payload or {}
-        claim = claim_next_qq_outbox_message(self.xinyu_dir, payload)
-        if claim.get("message_claimed"):
-            return claim
-        proactive_claim = self._claim_proactive_for_qq_outbox_sync(payload)
-        if proactive_claim is None:
-            return claim
-        self._desktop_publish_proactive_delivery_from_state_threadsafe(
-            status_override="claimed",
-            notes=["proactive_request_claimed_via_outbox_fast"],
-        )
-        return proactive_claim
+        return _qq_outbox_claim_fast_route(self, payload)
 
     async def qq_outbox_ack(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        if self._closed:
-            raise BridgeRequestError(HTTPStatus.SERVICE_UNAVAILABLE, "bridge is shutting down")
-        if payload is not None and not isinstance(payload, dict):
-            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
-        payload = payload or {}
-        message_id = _safe_str(payload.get("message_id")).strip()
-        if message_id.startswith("proactive:"):
-            result = await proactive_ack_bridge(
-                xinyu_dir=self.xinyu_dir,
-                memory_root=self.memory_root,
-                payload=payload,
-                cleanup_idle_sessions=self._cleanup_idle_sessions,
-                session_count=lambda: len(self._sessions),
-                lock=self._global_turn_lock,
-            )
-            if result.get("ack_recorded"):
-                await self._desktop_publish_proactive_delivery_from_state(
-                    status_override=_safe_str(result.get("ack_status"), "sent"),
-                    notes=[_safe_str(note) for note in result.get("notes", [])[:4]],
-                    severity="error" if _safe_str(result.get("ack_status")) == "failed" else None,
-                )
-            if result.get("ack_recorded") and result.get("ack_status") == "sent":
-                self._record_proactive_outbound_dialogue(payload)
-            return result
-        return await asyncio.to_thread(ack_qq_outbox_message, self.xinyu_dir, payload or {})
+        return await _qq_outbox_ack_route(self, payload)
 
     async def review_inbox_command(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        if self._closed:
-            raise BridgeRequestError(HTTPStatus.SERVICE_UNAVAILABLE, "bridge is shutting down")
-        if payload is not None and not isinstance(payload, dict):
-            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
-        async with self._review_admin_lock:
-            return await asyncio.to_thread(handle_review_inbox_command, self.xinyu_dir, payload or {})
+        return await _review_inbox_command_route(self, payload)
 
     async def message_ack(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        if self._closed:
-            raise BridgeRequestError(HTTPStatus.SERVICE_UNAVAILABLE, "bridge is shutting down")
-        if payload is not None and not isinstance(payload, dict):
-            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
-        return await asyncio.to_thread(register_sent_reply_ack, self.xinyu_dir, payload or {})
+        return await _message_ack_route(self, payload)
 
     async def goldmark_mark_request(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        if self._closed:
-            raise BridgeRequestError(HTTPStatus.SERVICE_UNAVAILABLE, "bridge is shutting down")
-        if payload is not None and not isinstance(payload, dict):
-            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
-        return await asyncio.to_thread(mark_goldmark_request_bridge, self.xinyu_dir, payload or {})
+        return await _goldmark_mark_request_route(self, payload)
 
     def qq_outbox_ack_fast(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-        if self._closed:
-            raise BridgeRequestError(HTTPStatus.SERVICE_UNAVAILABLE, "bridge is shutting down")
-        if payload is not None and not isinstance(payload, dict):
-            raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
-        payload = payload or {}
-        message_id = _safe_str(payload.get("message_id")).strip()
-        if message_id.startswith("proactive:"):
-            result = acknowledge_proactive_qq_message(
-                self.xinyu_dir,
-                claim_id=_safe_str(payload.get("claim_id")).strip(),
-                ack_status=_safe_str(payload.get("ack_status") or payload.get("status"), "sent").strip(),
-                adapter_message_id=_safe_str(payload.get("adapter_message_id") or payload.get("message_id")).strip(),
-                adapter_error=_safe_str(payload.get("adapter_error") or payload.get("error")).strip(),
-            )
-            result = {**result, "session_created": False, "sessions": len(self._sessions)}
-            if result.get("ack_recorded"):
-                self._desktop_publish_proactive_delivery_from_state_threadsafe(
-                    status_override=_safe_str(result.get("ack_status"), "sent"),
-                    notes=[_safe_str(note) for note in result.get("notes", [])[:4]],
-                    severity="error" if _safe_str(result.get("ack_status")) == "failed" else None,
-                )
-            if result.get("ack_recorded") and result.get("ack_status") == "sent":
-                self._record_proactive_outbound_dialogue(payload)
-            return result
-        return ack_qq_outbox_message(self.xinyu_dir, payload)
+        return _qq_outbox_ack_fast_route(self, payload)
 
     async def _claim_proactive_for_qq_outbox(self, payload: dict[str, Any]) -> dict[str, Any] | None:
-        candidate = self._ready_proactive_outbox_candidate()
-        if not candidate:
-            return None
-
-        owner_user_id = self._owner_private_user_id()
-        if not owner_user_id:
-            return None
-
-        claim_id = _safe_str(payload.get("claim_id")).strip() or f"proactive-{int(time.time())}"
-        proactive = await proactive_bridge(
-            xinyu_dir=self.xinyu_dir,
-            memory_root=self.memory_root,
-            payload={
-                "claim": True,
-                "claim_id": claim_id,
-                "min_interval_seconds": payload.get("min_interval_seconds", self.proactive_min_interval_seconds),
-            },
-            proactive_min_interval_seconds=self.proactive_min_interval_seconds,
-            cleanup_idle_sessions=self._cleanup_idle_sessions,
-            session_count=lambda: len(self._sessions),
-            lock=self._global_turn_lock,
-        )
-        if not proactive.get("candidate_claimed"):
-            return None
-
-        message = _safe_str(proactive.get("reply") or proactive.get("preview_reply")).strip()
-        if not message:
-            return None
-        request_id = _safe_str(proactive.get("proactive_request_id") or proactive.get("request_id")).strip()
-        if not request_id:
-            request_id = _safe_str(proactive.get("evaluated_at")).strip() or claim_id
-        return {
-            "accepted": True,
-            "message_claimed": True,
-            "message_id": f"proactive:{request_id}",
-            "claim_id": claim_id,
-            "target": {"message_kind": "private", "user_id": owner_user_id, "group_id": ""},
-            "message": message,
-            "attempts": 1,
-            "source": "proactive_request",
-            "notes": ["claimed", "proactive_request_claimed_via_outbox"] + list(proactive.get("notes", [])),
-        }
+        return await _claim_proactive_for_qq_outbox_route(self, payload)
 
     def _claim_proactive_for_qq_outbox_sync(self, payload: dict[str, Any]) -> dict[str, Any] | None:
-        candidate = self._ready_proactive_outbox_candidate()
-        if not candidate:
-            return None
-
-        owner_user_id = self._owner_private_user_id()
-        if not owner_user_id:
-            return None
-
-        claim_id = _safe_str(payload.get("claim_id")).strip() or f"proactive-{int(time.time())}"
-        min_interval_seconds = _as_int(payload.get("min_interval_seconds"), self.proactive_min_interval_seconds)
-        proactive = claim_proactive_qq_message(
-            self.xinyu_dir,
-            mode="bridge_proactive_qq_claim_fast",
-            claim=True,
-            claim_id=claim_id,
-            min_interval_seconds=min_interval_seconds,
-        )
-        if not proactive.get("candidate_claimed"):
-            return None
-
-        message = _safe_str(proactive.get("reply") or proactive.get("preview_reply")).strip()
-        if not message:
-            return None
-        request_id = _safe_str(proactive.get("proactive_request_id") or proactive.get("request_id")).strip()
-        if not request_id or request_id in {"none", "unknown"}:
-            request_id = _safe_str(proactive.get("evaluated_at")).strip() or claim_id
-        return {
-            "accepted": True,
-            "message_claimed": True,
-            "message_id": f"proactive:{request_id}",
-            "claim_id": claim_id,
-            "target": {"message_kind": "private", "user_id": owner_user_id, "group_id": ""},
-            "message": message,
-            "attempts": 1,
-            "source": "proactive_request",
-            "notes": ["claimed", "proactive_request_claimed_via_outbox_fast"] + list(proactive.get("notes", [])),
-        }
+        return _claim_proactive_for_qq_outbox_sync_route(self, payload)
 
     def _ready_proactive_outbox_candidate(self) -> str:
-        state = _read_text_safe(self.xinyu_dir / "memory/context/proactive_request_state.md")
-        if _state_field(state, "status") != "ready":
-            return ""
-        if _state_field(state, "delivery_level") not in {"queue_owner_private", "claim_ack"}:
-            return ""
-        candidate = _state_field(state, "concrete_question")
-        return candidate if candidate not in {"", "none", "unknown"} else ""
+        return _ready_proactive_outbox_candidate_route(self)
 
     def _proactive_candidate_already_handled(self, candidate: str) -> bool:
-        state = _read_text_safe(self.xinyu_dir / "memory/context/proactive_qq_dispatch_state.md")
-        status = _state_field(state, "last_claim_status")
-        if status not in {"claimed", "sent"}:
-            return False
-        return _state_field(state, "last_claimed_message") == candidate
+        return _proactive_candidate_already_handled_route(self, candidate)
 
     async def _desktop_finish_proactive_ack(
         self,
@@ -2756,109 +3043,22 @@ tags: [autonomy, maintenance, runtime]
         extra: dict[str, Any] | None = None,
         claim_id: str = "",
     ) -> dict[str, Any]:
-        candidate_id = _safe_str(item.get("candidateId"))
-        updated = self._desktop_update_proactive_request_state(
-            candidate_id=candidate_id,
+        return await _desktop_finish_proactive_ack_route(
+            self,
+            item,
+            action=action,
             status=status,
             answer_state=answer_state,
             ack_status=ack_status,
+            notes=notes,
             adapter_message_id=adapter_message_id,
             adapter_error=adapter_error,
+            extra=extra,
             claim_id=claim_id,
         )
-        event_item = {**item, **updated, **(extra or {})} if updated else {**item, **(extra or {})}
-        event = await self._desktop_publish_proactive_delivery_item(
-            event_item,
-            status_override=status,
-            notes=notes,
-            severity="error" if status == "failed" else None,
-        )
-        return {
-            "accepted": True,
-            "ack_recorded": True,
-            "candidateId": candidate_id,
-            "action": action,
-            "status": status,
-            "eventId": _safe_str(event.get("id")),
-            **(extra or {}),
-            "notes": notes + (["proactive_request_state_updated"] if updated else ["proactive_request_state_not_updated"]),
-        }
 
     async def _desktop_approve_proactive_qq(self, item: dict[str, Any]) -> dict[str, Any]:
-        candidate_id = _safe_str(item.get("candidateId"))
-        if not bool(item.get("claimable")):
-            return {
-                "accepted": False,
-                "ack_recorded": False,
-                "candidateId": candidate_id,
-                "action": "approve_qq",
-                "status": _safe_str(item.get("status")),
-                "notes": ["desktop_proactive_candidate_not_qq_claimable"],
-            }
-        owner_user_id = self._owner_private_user_id()
-        if not owner_user_id:
-            return {
-                "accepted": False,
-                "ack_recorded": False,
-                "candidateId": candidate_id,
-                "action": "approve_qq",
-                "notes": ["missing_owner_user_id"],
-            }
-        message = _safe_str(item.get("candidatePreview")).strip()
-        if not message:
-            return {
-                "accepted": False,
-                "ack_recorded": False,
-                "candidateId": candidate_id,
-                "action": "approve_qq",
-                "notes": ["missing_candidate_message"],
-            }
-        queued = await asyncio.to_thread(
-            enqueue_qq_outbox_message,
-            self.xinyu_dir,
-            user_id=owner_user_id,
-            message=message,
-            source="desktop_proactive_ack",
-            dedupe_key=f"desktop-proactive:{candidate_id}",
-            metadata={
-                "source": "xinyu_desktop_shell",
-                "desktop_candidate_id": candidate_id,
-                "proactive_request_id": _safe_str(item.get("requestId")),
-                "desktop_action": "approve_qq",
-            },
-        )
-        if not queued.get("accepted"):
-            return {
-                "accepted": False,
-                "ack_recorded": False,
-                "candidateId": candidate_id,
-                "action": "approve_qq",
-                "notes": ["qq_outbox_enqueue_failed"] + [_safe_str(note) for note in queued.get("notes", [])],
-            }
-        outbox_message_id = _safe_str(queued.get("message_id"))
-        claim_id = f"desktop-proactive-{int(time.time())}"
-        write_proactive_qq_dispatch_state(
-            self.xinyu_dir,
-            claimed_at=datetime.now().astimezone().isoformat(),
-            claim_id=claim_id,
-            candidate=message,
-            request_id=_safe_str(item.get("requestId"), "none") or "none",
-            min_interval_seconds=self.proactive_min_interval_seconds,
-        )
-        return await self._desktop_finish_proactive_ack(
-            item,
-            action="approve_qq",
-            status="queued_qq",
-            answer_state="approved_qq",
-            ack_status="queued",
-            adapter_message_id=outbox_message_id,
-            notes=["desktop_approved_qq"] + [_safe_str(note) for note in queued.get("notes", [])],
-            extra={
-                "outboxMessageId": outbox_message_id,
-                "queued": bool(queued.get("queued")),
-            },
-            claim_id=claim_id,
-        )
+        return await _desktop_approve_proactive_qq_route(self, item)
 
     def _desktop_update_proactive_request_state(
         self,
@@ -2871,72 +3071,22 @@ tags: [autonomy, maintenance, runtime]
         adapter_error: str = "",
         claim_id: str = "",
     ) -> dict[str, Any]:
-        path = self.xinyu_dir / "memory/context/proactive_request_state.md"
-        state = _read_text_safe(path)
-        if not state:
-            return {}
-        current = self._desktop_proactive_item_from_state(include_final=True)
-        if _safe_str(current.get("candidateId")) != candidate_id:
-            return {}
-        updated_at = datetime.now().astimezone().isoformat()
-        updated = self._desktop_replace_frontmatter_field(state, "updated_at", updated_at)
-        updated = self._desktop_replace_list_field(updated, "status", status)
-        if answer_state:
-            updated = self._desktop_replace_list_field(updated, "request_answer_state", answer_state)
-        if ack_status:
-            updated = self._desktop_replace_list_field(updated, "last_ack_status", ack_status)
-        if claim_id:
-            updated = self._desktop_replace_list_field(updated, "last_claim_id", claim_id)
-        if adapter_message_id:
-            updated = self._desktop_replace_list_field(updated, "adapter_message_id", adapter_message_id)
-        if adapter_error:
-            updated = self._desktop_replace_list_field(updated, "adapter_error", adapter_error)
-        atomic_write_text(path, updated.rstrip())
-        if status in {"answered", "dismissed", "read_locally"} or answer_state in {
-            "owner_replied",
-            "dismissed",
-            "read_locally",
-        }:
-            self._refresh_initiative_spine_after_proactive_feedback(
-                trigger=f"desktop_proactive_{answer_state or status}",
-                checked_at=updated_at,
-            )
-        return self._desktop_proactive_item_from_state(include_final=True)
+        return _desktop_update_proactive_request_state_route(
+            self,
+            candidate_id=candidate_id,
+            status=status,
+            answer_state=answer_state,
+            ack_status=ack_status,
+            adapter_message_id=adapter_message_id,
+            adapter_error=adapter_error,
+            claim_id=claim_id,
+        )
 
     _desktop_replace_frontmatter_field = staticmethod(desktop_replace_frontmatter_field)
     _desktop_replace_list_field = staticmethod(desktop_replace_list_field)
 
     def _record_proactive_outbound_dialogue(self, ack_payload: dict[str, Any]) -> None:
-        dispatch = _read_text_safe(self.xinyu_dir / "memory/context/proactive_qq_dispatch_state.md")
-        if _state_field(dispatch, "last_ack_status") != "sent":
-            return
-        message = _state_field(dispatch, "last_claimed_message")
-        if not message or message in {"none", "unknown"}:
-            return
-        claimed_at = _state_field(dispatch, "last_claimed_at") or datetime.now().astimezone().isoformat()
-        payload = self._owner_private_payload(
-            source="proactive_request_outbox",
-            message_id=_safe_str(ack_payload.get("message_id")),
-        )
-        appended = self._append_assistant_to_dialogue_tail(
-            payload["session_id"],
-            message,
-            recorded_at=claimed_at,
-        )
-        if not appended:
-            return
-        try:
-            archive_message(
-                self.xinyu_dir,
-                payload,
-                role="assistant",
-                text=message,
-                created_at=claimed_at,
-                message_type="private_proactive",
-                metadata={"source": "proactive_request_outbox"},
-            )
-        except Exception as exc:
-            print(f"[xinyu_core_bridge] proactive outbound archive failed: {exc}", flush=True)
+        return _record_proactive_outbound_dialogue_route(self, ack_payload)
 
     def _owner_private_payload(self, *, source: str, message_id: str = "") -> dict[str, Any]:
         owner_user_id = self._owner_private_user_id()
@@ -3149,29 +3299,17 @@ tags: [autonomy, maintenance, runtime]
         session_key: str,
         model_codex_task: str = "",
     ) -> dict[str, str]:
-        if model_codex_task:
-            return {}
-        if not self._owner_private_payload_matches(payload):
-            return {}
-        user_id = _safe_str(payload.get("user_id")).strip() or self._owner_private_user_id()
-        if not user_id:
-            return {}
-        compact_user = self._compact_promise_text(user_text)
-        compact_reply = self._compact_promise_text(reply)
-        if not any(marker in compact_user for marker in PROMISE_FOLLOWUP_USER_MARKERS):
-            return {}
-        if not any(marker in compact_reply for marker in PROMISE_FOLLOWUP_REPLY_MARKERS):
-            return {}
-        if any(marker in compact_reply for marker in PROMISE_FOLLOWUP_DONE_MARKERS):
-            return {}
-        digest = hashlib.sha1(f"{session_key}\n{user_text}\n{reply}".encode("utf-8", errors="replace")).hexdigest()[:16]
-        return {
-            "user_id": user_id,
-            "session_key": session_key,
-            "user_text": _safe_str(user_text).strip(),
-            "reply": _safe_str(reply).strip(),
-            "dedupe_key": f"promise_followup:{digest}",
-        }
+        return xinyu_bridge_promise_followup.candidate(
+            self,
+            payload,
+            user_text=user_text,
+            reply=reply,
+            session_key=session_key,
+            model_codex_task=model_codex_task,
+            user_markers=PROMISE_FOLLOWUP_USER_MARKERS,
+            reply_markers=PROMISE_FOLLOWUP_REPLY_MARKERS,
+            done_markers=PROMISE_FOLLOWUP_DONE_MARKERS,
+        )
 
     _compact_promise_text = staticmethod(compact_promise_text)
 
@@ -3184,53 +3322,28 @@ tags: [autonomy, maintenance, runtime]
         session_key: str,
         model_codex_task: str = "",
     ) -> dict[str, Any]:
-        candidate = self._promised_followup_candidate(
+        return xinyu_bridge_promise_followup.schedule_if_needed(
+            self,
             payload,
             user_text=user_text,
             reply=reply,
             session_key=session_key,
             model_codex_task=model_codex_task,
+            user_markers=PROMISE_FOLLOWUP_USER_MARKERS,
+            reply_markers=PROMISE_FOLLOWUP_REPLY_MARKERS,
+            done_markers=PROMISE_FOLLOWUP_DONE_MARKERS,
+            message_func=self._promised_followup_message,
         )
-        if not candidate:
-            return {"scheduled": False, "notes": []}
-        self._write_promised_followup_state(candidate, status="scheduled", message_id="none", notes=["scheduled"])
-        asyncio.create_task(
-            asyncio.to_thread(self._run_promised_followup_review, candidate),
-            name=f"xinyu-promised-followup-{candidate['dedupe_key'].split(':')[-1]}",
-        )
-        return {"scheduled": True, "notes": ["promised_followup_scheduled"]}
 
     def _run_promised_followup_review(self, candidate: dict[str, str]) -> dict[str, Any]:
-        notes = ["reviewed_runtime_followup_contract"]
-        message = self._promised_followup_message(candidate)
-        queued = enqueue_qq_outbox_message(
-            self.xinyu_dir,
-            user_id=candidate["user_id"],
-            message=message,
-            source="promise_followup",
-            dedupe_key=candidate["dedupe_key"],
-            metadata={
-                "session_key": candidate.get("session_key", ""),
-                "origin_user_text": candidate.get("user_text", "")[:240],
-                "origin_reply": candidate.get("reply", "")[:120],
-                "followup_kind": "promised_review_completion",
-            },
-        )
-        notes.extend(_safe_str(note) for note in queued.get("notes", []))
-        status = "queued" if queued.get("queued") or queued.get("accepted") else "failed"
-        self._write_promised_followup_state(
+        return xinyu_bridge_promise_followup.run_review(
+            self,
             candidate,
-            status=status,
-            message_id=_safe_str(queued.get("message_id")),
-            notes=notes,
+            message_func=self._promised_followup_message,
         )
-        return {"scheduled": True, "queued": bool(queued.get("queued")), "message_id": queued.get("message_id", ""), "notes": notes}
 
     def _promised_followup_message(self, candidate: dict[str, str]) -> str:
-        user_text = candidate.get("user_text", "")
-        if "看没看" in user_text or "主动" in user_text or "告诉我" in user_text or "跟我说" in user_text:
-            return "我看完了。刚才那种“好，我再看看”不该停在那里；以后我只要说要去看/查，就会挂一个待回报，查完主动发给你。"
-        return "我看完了。刚才我说要再看看，这件事没有放后台不管；后面如果还需要继续查，我会直接接着告诉你。"
+        return compose_promise_followup_message(candidate)
 
     def _write_promised_followup_state(
         self,
@@ -3240,53 +3353,17 @@ tags: [autonomy, maintenance, runtime]
         message_id: str,
         notes: list[str],
     ) -> None:
-        now = datetime.now().astimezone().isoformat(timespec="seconds")
-        note_lines = "\n".join(f"- {note}" for note in _dedupe(notes)) or "- none"
-        text = f"""---
-title: Promise Followup State
-memory_type: promise_followup_state
-time_scope: short_term
-subject_ids: [xinyu, owner]
-protected: true
-source: xinyu_core_bridge
-updated_at: {now}
-status: active
-tags: [promise, followup, qq-outbox, continuity]
----
-
-# Promise Followup State
-
-## Latest Promise
-- status: {_safe_str(status, "unknown")}
-- checked_at: {now}
-- session_key: {_safe_str(candidate.get("session_key"), "unknown")}
-- user_id: {_safe_str(candidate.get("user_id"), "unknown")}
-- dedupe_key: {_safe_str(candidate.get("dedupe_key"), "unknown")}
-- queued_message_id: {_safe_str(message_id, "none") or "none"}
-- owner_request: {_normalize_reply(candidate.get("user_text", ""))[:240] or "none"}
-- promised_reply: {_normalize_reply(candidate.get("reply", ""))[:160] or "none"}
-
-## Notes
-{note_lines}
-"""
-        path = self.xinyu_dir / PROMISE_FOLLOWUP_STATE_REL
-        atomic_write_text(path, text)
+        xinyu_bridge_promise_followup.write_state(
+            self,
+            candidate,
+            status=status,
+            message_id=message_id,
+            notes=notes,
+            state_rel=PROMISE_FOLLOWUP_STATE_REL,
+        )
 
     def _owner_private_user_id(self) -> str:
-        if self.v1_owner_user_ids:
-            return sorted(self.v1_owner_user_ids)[0]
-
-        env_owner_ids = _as_str_set(os.environ.get("XINYU_OWNER_USER_IDS"))
-        if env_owner_ids:
-            return sorted(env_owner_ids)[0]
-
-        config_path = self.xinyu_dir / "xinyu_qq_gateway.config.json"
-        try:
-            data = json.loads(config_path.read_text(encoding="utf-8-sig"))
-        except (OSError, json.JSONDecodeError):
-            return ""
-        owner_ids = _as_str_set(data.get("owner_user_ids") if isinstance(data, dict) else None)
-        return sorted(owner_ids)[0] if owner_ids else ""
+        return xinyu_bridge_promise_followup.owner_private_user_id(self)
 
     def _sync_recent_proactive_to_dialogue_tail(self, session: AgentSession, payload: dict[str, Any]) -> bool:
         if not self._owner_private_payload_matches(payload):
@@ -3318,7 +3395,14 @@ tags: [promise, followup, qq-outbox, continuity]
             pass
         return True
 
-    async def _build_life_reply_policy(self, *, user_text: str) -> dict[str, Any]:
+    async def _build_life_reply_policy(
+        self,
+        *,
+        user_text: str,
+        visible_turn: Any | None = None,
+        canonical_recall_context: str = "",
+        evaluated_at: datetime | str | None = None,
+    ) -> dict[str, Any]:
         try:
             await self._ensure_self_choice_ready()
             await self.self_choice_store.apply_time_decay()
@@ -3334,11 +3418,19 @@ tags: [promise, followup, qq-outbox, continuity]
                 recent_memory_events=recent_memory_events if isinstance(recent_memory_events, list) else [],
             )
             entropy_state = entropy.model_dump(mode="json") if hasattr(entropy, "model_dump") else {}
+            scene_frame = build_scene_frame(
+                self.xinyu_dir,
+                user_text=user_text,
+                visible_turn=visible_turn,
+                canonical_recall_context=canonical_recall_context,
+                evaluated_at=evaluated_at,
+            )
             policy = build_life_reply_policy(
                 self_choice_public=self_choice_public,
                 entropy_state=entropy_state,
                 recent_action_context=read_recent_action_context(self.xinyu_dir),
                 user_text=user_text,
+                scene_frame=scene_frame,
             )
             policy.setdefault("notes", []).append("life_reply_policy_built")
             return policy
@@ -3368,87 +3460,7 @@ tags: [promise, followup, qq-outbox, continuity]
         )
 
     def _proactive_thread_context(self, payload: dict[str, Any], current_text: str) -> str:
-        if not self._owner_private_payload_matches(payload):
-            return ""
-        metadata = payload.get("metadata")
-        metadata = metadata if isinstance(metadata, dict) else {}
-        desktop_candidate_id = _safe_str(metadata.get("desktop_proactive_candidate_id")).strip()
-        if desktop_candidate_id:
-            request = _read_text_safe(self.xinyu_dir / "memory/context/proactive_request_state.md")
-            request_id = _state_field(request, "request_id", "")
-            if request_id == desktop_candidate_id:
-                candidate = _state_field(request, "concrete_question", "") or _safe_str(
-                    metadata.get("desktop_proactive_preview")
-                )
-                return "\n".join(
-                    [
-                        "desktop proactive reply sidecar:",
-                        f"- proactive_candidate_id: {desktop_candidate_id}",
-                        f"- proactive_kind: {_state_field(request, 'kind', 'proactive')}",
-                        f"- proactive_status: {_state_field(request, 'status', 'unknown')}",
-                        f"- proactive_delivery_level: {_state_field(request, 'delivery_level', 'unknown')}",
-                        f"- proactive_candidate_message: {candidate}",
-                        f"- current_owner_reply_to_candidate: {_safe_str(current_text).strip()}",
-                        (
-                            "- continuity_rule: treat the current owner message as an explicit reply to this "
-                            "desktop proactive candidate. Answer from that local thread instead of treating it "
-                            "as unrelated chat."
-                        ),
-                    ]
-                )
-        dispatch = _read_text_safe(self.xinyu_dir / "memory/context/proactive_qq_dispatch_state.md")
-        if _state_field(dispatch, "last_claim_status") not in {"claimed", "sent"}:
-            return ""
-        request = _read_text_safe(self.xinyu_dir / "memory/context/proactive_request_state.md")
-        request_id = _state_field(request, "request_id")
-        dispatch_request_id = _state_field(dispatch, "proactive_request_id")
-        if request_id not in {"", "none", "unknown"} and dispatch_request_id not in {"", "none", "unknown"}:
-            if request_id != dispatch_request_id:
-                return ""
-        if _state_field(request, "delivery_level") not in {"queue_owner_private", "claim_ack"}:
-            return ""
-        if _state_field(request, "status") not in {"claimed", "sent", "answered"}:
-            return ""
-        message = _state_field(dispatch, "last_claimed_message")
-        if not message or message in {"none", "unknown"}:
-            return ""
-        age_seconds = _seconds_since_iso(_state_field(dispatch, "last_claimed_at"), default=999999.0)
-        if age_seconds > 6 * 3600:
-            return ""
-        kind = _state_field(request, "kind", "proactive")
-        answer_state = _state_field(request, "request_answer_state", "pending")
-        extra_rules: list[str] = []
-        evidence_label = _state_field(request, "evidence_label", "")
-        if kind == "reflection_share" and "Codex" in evidence_label:
-            runtime_presence = _read_text_safe(self.xinyu_dir / "memory/context/runtime_self_presence.md")
-            codex_status = _state_field(runtime_presence, "codex_status", "unknown").lower()
-            codex_timed_out = _state_field(runtime_presence, "codex_timed_out", "false").lower() == "true"
-            if codex_status in {"", "unknown", "none"} and not codex_timed_out:
-                extra_rules.append(
-                    "- reflection_share_rule: this proactive line came from an old reflection queue item, "
-                    "not from a currently running or currently timed-out Codex job. If the owner is confused, "
-                    "say that directly and do not repeat the decision request."
-                )
-        return "\n".join(
-            [
-                "proactive thread sidecar:",
-                f"- last_xinyu_proactive_message: {message}",
-                f"- proactive_kind: {kind}",
-                f"- request_answer_state_before_this_turn: {answer_state}",
-                f"- current_owner_message: {_safe_str(current_text).strip()}",
-                (
-                    "- continuity_rule: treat the owner message as a likely reply to XinYu's proactive message. "
-                    "Continue from that concrete thread; do not ask what to talk about when the owner is already "
-                    "commenting on the proactive message."
-                ),
-                (
-                    "- dream_share_rule: if proactive_kind is dream_share and the owner says dreams are illogical, "
-                    "strange, or asks what XinYu means, answer from XinYu's own dream context instead of asking the "
-                    "owner to explain the dream."
-                ),
-                *extra_rules,
-            ]
-        )
+        return xinyu_bridge_proactive_context.proactive_thread_context(self, payload, current_text)
 
     def _mark_proactive_owner_reply(self, payload: dict[str, Any], *, text: str, reply: str) -> bool:
         if not self._owner_private_payload_matches(payload):
@@ -3486,7 +3498,7 @@ tags: [promise, followup, qq-outbox, continuity]
         )
         updated = re.sub(
             r"(?m)^updated_at:\s*.*$",
-            f"updated_at: {answered_at}",
+            f"updated_at: {_timestamp_or_now_iso(answered_at)}",
             updated,
             count=1,
         )
@@ -4508,6 +4520,8 @@ tags: [promise, followup, qq-outbox, continuity]
         turn_clock = self.chat_service.start_turn_clock()
         turn_started_at = turn_clock.started_at
         turn_started_wall = turn_clock.started_wall
+        turn_event_time = self._payload_event_time_iso(payload, fallback=turn_started_wall)
+        turn_event_timestamp = self._payload_event_timestamp_seconds(payload, fallback=int(time.time()))
         presence_start: dict[str, Any] = {"turn_id": ""}
         async with self._global_turn_lock:
             cleanup = await self._cleanup_idle_sessions()
@@ -4523,7 +4537,7 @@ tags: [promise, followup, qq-outbox, continuity]
                 text=text,
                 session_key=session_key,
                 turn_id=_safe_str(presence_start.get("turn_id")),
-                started_at=turn_started_wall,
+                started_at=_timestamp_or_now_iso(turn_started_wall),
                 active_sessions=len(self._sessions),
             )
             before_memory = _memory_snapshot(self.memory_root)
@@ -4573,6 +4587,7 @@ tags: [promise, followup, qq-outbox, continuity]
             )
             event_sidecar = pre_model_routes.event_sidecar
             v1_shadow = pre_model_routes.v1_shadow
+            tinykernel_shadow = pre_model_routes.tinykernel_shadow
             if pre_model_routes.response is not None:
                 return pre_model_routes.response
             emotion_council: dict[str, Any] = {"notes": ["emotion_council_not_run"]}
@@ -4608,20 +4623,29 @@ tags: [promise, followup, qq-outbox, continuity]
                 session_id=session_key,
                 user_id=_safe_str(payload.get("user_id")),
                 sender_name=_safe_str(payload.get("sender_name")),
-                received_at=int(time.time()),
+                received_at=turn_event_timestamp,
+                llm_failover=self._owner_private_llm_failover_context(
+                    payload,
+                    text=text,
+                    session_key=session_key,
+                    turn_id=_safe_str(presence_start.get("turn_id")),
+                ),
             )
             visible_turn = classify_visible_turn(self.xinyu_dir, payload=payload, user_text=text)
             recalled_context = None
             recalled_context_event: dict[str, Any] = {}
             recalled_context_notes: list[str] = []
             try:
-                recalled_context = retrieve_recalled_context(
+                recalled_algorithm = run_living_memory_recall_algorithm(
                     self.xinyu_dir,
                     payload,
                     user_text=text,
                     dialogue_tail=session.dialogue_tail,
                     visible_turn=visible_turn,
+                    evaluated_at=turn_event_time,
                 )
+                recalled_context = recalled_algorithm.result
+                recalled_context_notes.extend(_safe_str(note) for note in recalled_algorithm.notes[:2])
                 recalled_context_notes.extend(_safe_str(note) for note in recalled_context.notes[:3])
                 recalled_context_event = await self._desktop_publish_memory_recall(
                     payload,
@@ -4643,8 +4667,14 @@ tags: [promise, followup, qq-outbox, continuity]
             except Exception as exc:
                 print(f"[xinyu_core_bridge] continuity handoff failed: {exc}", flush=True)
                 continuity_handoff = {"notes": [f"continuity_handoff_error:{type(exc).__name__}"]}
+            # runtime presence sidecar: factual runtime-state block for the current model turn.
             runtime_presence_context = build_runtime_presence_prompt_block(self.xinyu_dir, limit=2200)
-            life_reply_policy = await self._build_life_reply_policy(user_text=text)
+            life_reply_policy = await self._build_life_reply_policy(
+                user_text=text,
+                visible_turn=visible_turn,
+                canonical_recall_context=_safe_str(getattr(recalled_context, "prompt_block", "")),
+                evaluated_at=turn_event_time,
+            )
             emotion_council_context = ""
             if self.emotion_council_prompt_enabled:
                 emotion_council_context = build_emotion_council_prompt_block(self.xinyu_dir)
@@ -4690,7 +4720,7 @@ tags: [promise, followup, qq-outbox, continuity]
                     reply="",
                     session_key=session_key,
                     turn_id=_safe_str(presence_start.get("turn_id")),
-                    started_at=turn_started_wall,
+                    started_at=_timestamp_or_now_iso(turn_started_wall),
                     elapsed_ms=elapsed_ms,
                     status="timeout",
                     notes=timeout_notes,
@@ -4720,7 +4750,7 @@ tags: [promise, followup, qq-outbox, continuity]
                     reply="",
                     session_key=session_key,
                     turn_id=_safe_str(presence_start.get("turn_id")),
-                    started_at=turn_started_wall,
+                    started_at=_timestamp_or_now_iso(turn_started_wall),
                     elapsed_ms=elapsed_ms,
                     status="error",
                     notes=error_notes,
@@ -4802,14 +4832,17 @@ tags: [promise, followup, qq-outbox, continuity]
                         )
                         reply = _normalize_reply(_safe_str(codex_response.get("reply")))
                         if not reply:
-                            reply = "开了，我让 Codex 在专门窗口里做一个小范围代码改动。"
-                        reply = "交给 Codex 跑了，结果回来我直接讲改动。"
+                            reply = compose_codex_chat_scheduled_reply("self_code")
+                        reply = compose_codex_chat_scheduled_reply("self_code")
                         model_codex_delegate_note = "owner_self_code_iteration:scheduled"
                     except BridgeRequestError as exc:
                         reply = exc.message
                         model_codex_delegate_note = f"owner_self_code_iteration_error:{exc.status.value}"
                     except Exception as exc:
-                        reply = f"Self-code watchdog failed before Codex started: {type(exc).__name__}: {exc}"
+                        reply = compose_watchdog_visible_message(
+                            "self_code_watchdog_failed",
+                            error=f"{type(exc).__name__}: {exc}",
+                        )
                         model_codex_delegate_note = f"owner_self_code_iteration_watchdog_error:{type(exc).__name__}"
                 self._replace_last_assistant_message(session.agent, reply)
             elif model_codex_task:
@@ -4823,15 +4856,15 @@ tags: [promise, followup, qq-outbox, continuity]
                         codex_response = await self.codex_execute(codex_payload)
                         reply = _normalize_reply(_safe_str(codex_response.get("reply")))
                         if not reply:
-                            reply = "我已经把这个任务交给 Codex 辅助脑了。"
-                        reply = "我去查，回来只讲结论。"
+                            reply = compose_codex_chat_scheduled_reply("model_delegate")
+                        reply = compose_codex_chat_scheduled_reply("model_delegate")
                         model_codex_delegate_note = "model_codex_delegate:scheduled"
                     except BridgeRequestError as exc:
                         reply = exc.message
                         model_codex_delegate_note = f"model_codex_delegate_error:{exc.status.value}"
                     self._replace_last_assistant_message(session.agent, reply)
                 else:
-                    reply = "这类 Codex 本机委托只接受 owner 私聊。"
+                    reply = compose_codex_chat_scheduled_reply("not_owner_private")
                     model_codex_delegate_note = "model_codex_delegate_rejected:not_owner_private"
                     self._replace_last_assistant_message(session.agent, reply)
             if not self_code_task and not model_codex_task and not wait_to_think_task:
@@ -4852,8 +4885,8 @@ tags: [promise, followup, qq-outbox, continuity]
                         codex_response = await self.codex_execute(codex_payload)
                         reply = _normalize_reply(_safe_str(codex_response.get("reply")))
                         if not reply:
-                            reply = "开了，我让 Codex 在专门窗口里查。"
-                        reply = "交给 Codex 跑了，结果回来我直接讲重点。"
+                            reply = compose_codex_chat_scheduled_reply("owner_direct")
+                        reply = compose_codex_chat_scheduled_reply("owner_direct")
                         model_codex_delegate_note = "owner_direct_codex_delegate:scheduled"
                     except BridgeRequestError as exc:
                         reply = exc.message
@@ -4871,6 +4904,7 @@ tags: [promise, followup, qq-outbox, continuity]
                         payload=payload,
                         user_text=text,
                         draft_reply=draft_reply,
+                        canonical_recall_context=_safe_str(getattr(recalled_context, "prompt_block", "")),
                     )
                     if rendered_reply:
                         reply = rendered_reply
@@ -4890,6 +4924,7 @@ tags: [promise, followup, qq-outbox, continuity]
                     payload=payload,
                     user_text=text,
                     draft_reply=bad_reply,
+                    canonical_recall_context=_safe_str(getattr(recalled_context, "prompt_block", "")),
                 )
                 repaired_guarded, repaired_flags = self.speech_controller.final_reply_guard(
                     payload=payload,
@@ -4955,7 +4990,59 @@ tags: [promise, followup, qq-outbox, continuity]
             if current_sticker_reply or recent_sticker_reply:
                 reply = current_sticker_reply or recent_sticker_reply
                 self._replace_last_assistant_message(session.agent, reply)
+            if not reply and "style_pressure_template_blocked" in final_guard_flags:
+                reply = "哪句最明显？"
+                final_guard_flags = _dedupe(final_guard_flags + ["style_pressure_empty_reply_fallback"])
+                self._replace_last_assistant_message(session.agent, reply)
+            if not reply:
+                fallback_reply = self._empty_visible_reply_fallback(payload=payload, user_text=text)
+                if fallback_reply:
+                    reply = fallback_reply
+                    final_guard_flags = _dedupe(final_guard_flags + ["empty_visible_reply_fallback"])
+                    self._replace_last_assistant_message(session.agent, reply)
             empty_visible_reply_no_fallback = bool(not reply and self._owner_private_payload_matches(payload))
+            response_error_loop: dict[str, Any] = {"notes": []}
+            slow_state_runtime: dict[str, Any] = {"notes": []}
+            try:
+                response_error_decision = classify_response_error(
+                    self.xinyu_dir,
+                    user_text=text,
+                    current_candidate_reply=reply,
+                    payload=payload,
+                    visible_turn=visible_turn,
+                )
+                response_error_loop = {
+                    "notes": [
+                        "response_error_loop:"
+                        f"{response_error_decision.error_class}/{response_error_decision.severity}"
+                    ]
+                }
+                response_scene_frame = build_scene_frame(
+                    self.xinyu_dir,
+                    user_text=text,
+                    visible_turn=visible_turn,
+                    canonical_recall_context=_safe_str(getattr(recalled_context, "prompt_block", "")),
+                    evaluated_at=turn_event_time,
+                )
+                slow_state = build_slow_state(
+                    self.xinyu_dir,
+                    user_text=text,
+                    scene_frame=response_scene_frame,
+                    response_error_decision=response_error_decision,
+                    evaluated_at=turn_event_time,
+                    persist=True,
+                )
+                slow_state_runtime = {
+                    "notes": [
+                        "slow_state:"
+                        f"{slow_state.reply_policy}/{slow_state.initiative_policy}/"
+                        f"{','.join(slow_state.active_policies) or 'steady'}"
+                    ]
+                }
+            except Exception as exc:
+                print(f"[xinyu_core_bridge] response error/slow state failed: {exc}", flush=True)
+                response_error_loop = {"notes": [f"response_error_loop_error:{type(exc).__name__}"]}
+                slow_state_runtime = {"notes": [f"slow_state_error:{type(exc).__name__}"]}
             uncertainty_pause: dict[str, Any] = {"notes": []}
             if is_waiting_reply(reply):
                 try:
@@ -5084,7 +5171,7 @@ tags: [promise, followup, qq-outbox, continuity]
                 archive_result = {"notes": [f"dialogue_archive_error:{type(exc).__name__}"], "message_ids": []}
             if recalled_context is not None and getattr(recalled_context, "items", ()):
                 try:
-                    if log_recalled_context(self.xinyu_dir, recalled_context):
+                    if log_living_memory_recall(self.xinyu_dir, recalled_context):
                         recalled_context_notes.append("recalled_context_logged")
                 except Exception as exc:
                     print(f"[xinyu_core_bridge] recalled context log failed: {exc}", flush=True)
@@ -5131,6 +5218,12 @@ tags: [promise, followup, qq-outbox, continuity]
                     turn_kind=_safe_str(getattr(visible_turn, "turn_kind", "")),
                     turn_id=_safe_str(presence_start.get("turn_id")),
                     elapsed_ms=int((time.perf_counter() - turn_started_at) * 1000),
+                )
+                recent_context_guard = ensure_recent_context_health(self.xinyu_dir)
+                interaction_journal.setdefault("notes", []).append(
+                    "recent_context_guard:"
+                    f"{_safe_str(recent_context_guard.get('status'))}/"
+                    f"{_safe_str(recent_context_guard.get('action'))}"
                 )
             except Exception as exc:
                 print(f"[xinyu_core_bridge] interaction journal failed: {exc}", flush=True)
@@ -5255,6 +5348,8 @@ tags: [promise, followup, qq-outbox, continuity]
             notes.extend(_safe_str(note) for note in continuity_handoff.get("notes", [])[:2])
             notes.extend(_safe_str(note) for note in life_reply_policy.get("notes", [])[:3])
             notes.extend(_safe_str(note) for note in life_reply_adjustment.get("notes", [])[:3])
+            notes.extend(_safe_str(note) for note in response_error_loop.get("notes", [])[:2])
+            notes.extend(_safe_str(note) for note in slow_state_runtime.get("notes", [])[:2])
             if current_sticker_reply:
                 notes.append("current_sticker_question_answered")
             if recent_sticker_reply:
@@ -5265,6 +5360,7 @@ tags: [promise, followup, qq-outbox, continuity]
             notes.extend(_safe_str(note) for note in persona_sidecar.get("notes", [])[:4])
             notes.extend(_safe_str(note) for note in event_sidecar.get("notes", [])[:4])
             notes.extend(_safe_str(note) for note in v1_shadow.get("notes", [])[:4])
+            notes.extend(_safe_str(note) for note in tinykernel_shadow.get("notes", [])[:3])
             notes.extend(_safe_str(note) for note in emotion_council.get("notes", [])[:4])
             notes.extend(_safe_str(note) for note in recalled_context_notes[:4])
             notes.extend(_safe_str(note) for note in archive_result.get("notes", [])[:3])
@@ -5312,7 +5408,7 @@ tags: [promise, followup, qq-outbox, continuity]
                 reply=reply,
                 session_key=session_key,
                 turn_id=_safe_str(presence_start.get("turn_id")),
-                started_at=turn_started_wall,
+                started_at=_timestamp_or_now_iso(turn_started_wall),
                 elapsed_ms=elapsed_ms,
                 status="ok",
                 notes=notes,
@@ -5381,6 +5477,7 @@ tags: [promise, followup, qq-outbox, continuity]
 
     async def _get_session(self, session_key: str) -> AgentSession:
         self._load_runtime()
+        ensure_recent_context_health(self.xinyu_dir)
         prompt_signature = self._session_prompt_signature()
         old_session: AgentSession | None = None
         async with self._sessions_lock:
@@ -5422,6 +5519,7 @@ tags: [promise, followup, qq-outbox, continuity]
             replace_default=True,
         )
         await agent.start()
+        ensure_recent_context_health(self.xinyu_dir)
         session = AgentSession(
             key=session_key,
             agent=agent,
@@ -5528,267 +5626,24 @@ tags: [promise, followup, qq-outbox, continuity]
         life_reply_context: str = "",
         emotion_council_context: str = "",
     ) -> None:
-        controller = getattr(agent, "controller", None)
-        pending = getattr(controller, "_pending_injections", None)
-        if not isinstance(pending, list):
-            return
-
-        metadata = payload.get("metadata")
-        if not isinstance(metadata, dict):
-            metadata = {}
-        is_owner = _as_bool(metadata.get("is_owner_user"), default=False)
-        is_trusted = _as_bool(metadata.get("is_trusted_user"), default=False)
-        message_type = _safe_str(payload.get("message_type"))
-        sender_name = _safe_str(payload.get("sender_name")) or _safe_str(payload.get("user_id"))
-        source_line = "QQ group chat" if message_type.startswith("group_") else "QQ private chat"
-        relationship_line = (
-            "owner"
-            if is_owner
-            else ("trusted contact" if is_trusted else "external contact")
-        )
-        if visible_turn is None:
-            visible_turn = classify_visible_turn(self.xinyu_dir, payload=payload, user_text=text)
-        life_posture = build_life_posture(self.xinyu_dir, payload=payload, user_text=text, visible_turn=visible_turn)
-        persona_runtime = build_persona_runtime_state(
-            self.xinyu_dir,
-            payload=payload,
-            user_text=text,
-            draft_reply="",
-        )
-        previous_residue = read_turn_residue(self.xinyu_dir)
-
-        pressure_line = "style pressure: answer through the next line, not through a report." if visible_turn.owner_style_pressure and is_owner else "ordinary live turn."
-        residue_line = (
-            f"previous residue: {previous_residue.tone}, {previous_residue.felt_residue}, strength={previous_residue.decayed_strength}"
-            if previous_residue.active
-            else "previous residue: none"
-        )
-        tail_block = self._format_dialogue_tail(dialogue_tail or [])
-        sidecar_lines: list[str] = []
-        recent_action_block = read_recent_action_context(self.xinyu_dir)
-        action_digest_block = read_recent_action_digest_context(self.xinyu_dir)
-        memory_braid_block = build_memory_braid_prompt_block(
-            self.xinyu_dir,
-            payload=payload,
-            user_text=text,
-            dialogue_tail=dialogue_tail or [],
-            recalled_context=recalled_context,
-            runtime_presence_context=runtime_presence_context,
-            continuity_context=continuity_context,
-            persona_context=persona_context,
-            curiosity_context=curiosity_context,
-            emotion_council_context=emotion_council_context,
-            checked_at=datetime.now().astimezone().isoformat(),
-            write_state=True,
-            max_chars=2200,
-        )
-        if memory_braid_block:
-            sidecar_lines.extend([memory_braid_block])
-        turn_coherence_block = build_turn_coherence_prompt_block(
-            self.xinyu_dir,
-            payload=payload,
-            user_text=text,
-            turn_id=turn_id,
-            memory_braid_block=memory_braid_block,
-            recalled_context=recalled_context,
-            runtime_presence_context=runtime_presence_context,
-            continuity_context=continuity_context,
-            persona_context=persona_context,
-            emotion_council_context=emotion_council_context,
-            recent_action_context=recent_action_block,
-            action_digest_context=action_digest_block,
-            checked_at=datetime.now().astimezone().isoformat(),
-            write_state=True,
-            max_chars=2200,
-        )
-        if turn_coherence_block:
-            sidecar_lines.extend([turn_coherence_block])
-        initiative_spine_block = build_initiative_spine_prompt_block(
-            self.xinyu_dir,
-            trigger="live_turn_prompt",
-            max_chars=1800,
-        )
-        if initiative_spine_block:
-            sidecar_lines.extend([initiative_spine_block])
-        if is_owner:
-            sidecar_lines.extend(
-                [
-                    "owner address sidecar:",
-                    (
-                        "owner_visible_address: 哥. In ordinary QQ private chat, do not call owner 主人; "
-                        "主人 is only an internal relationship label. If owner asks what XinYu should call "
-                        "him, use the address fact naturally in the current sentence without a repair template "
-                        "or mechanics report. Treat 你哥我 as owner's self-reference, not a phrase to mirror as 你哥你."
-                    ),
-                ]
-            )
-        persona_block = _safe_str(persona_context).strip()
-        if persona_block:
-            sidecar_lines.extend(["persona sidecar:", persona_block[:1200]])
-        curiosity_block = _safe_str(curiosity_context).strip()
-        if curiosity_block:
-            sidecar_lines.extend(["curiosity sidecar:", curiosity_block[:1200]])
-        emotion_council_block = _safe_str(emotion_council_context).strip()
-        if emotion_council_block:
-            sidecar_lines.extend([emotion_council_block[:1200]])
-        life_reply_block = _safe_str(life_reply_context).strip()
-        if life_reply_block:
-            sidecar_lines.extend([life_reply_block])
-        if recent_action_block:
-            sidecar_lines.extend([recent_action_block])
-        if action_digest_block:
-            sidecar_lines.extend([action_digest_block])
-        recalled_block = _safe_str(recalled_context).strip()
-        if recalled_block:
-            sidecar_lines.extend(["recalled context sidecar:", recalled_block])
-        voice_trial_block = build_voice_trial_overlay_prompt_block(self.xinyu_dir, payload, user_text=text)
-        if voice_trial_block:
-            sidecar_lines.extend([voice_trial_block])
-        dialogue_rule_trial_block = build_dialogue_rule_trial_overlay_prompt_block(self.xinyu_dir, payload, user_text=text)
-        if dialogue_rule_trial_block:
-            sidecar_lines.extend([dialogue_rule_trial_block])
-        learning_loop_block = build_learning_closed_loop_prompt_block(self.xinyu_dir, user_text=text)
-        if learning_loop_block:
-            sidecar_lines.extend([learning_loop_block])
-        proactive_block = self._proactive_thread_context(payload, text)
-        if proactive_block:
-            sidecar_lines.extend([proactive_block])
-        daily_digest_block = build_daily_digest_prompt_block(self.xinyu_dir)
-        if daily_digest_block:
-            sidecar_lines.extend([daily_digest_block])
-        goldmark_block = build_goldmark_auth_prompt_block(self.xinyu_dir)
-        if goldmark_block:
-            sidecar_lines.extend([goldmark_block])
-        qq_rich_block = self._qq_rich_message_sidecar(payload)
-        if qq_rich_block:
-            sidecar_lines.extend(["qq rich message sidecar:", qq_rich_block])
-        attachment_block = load_recent_attachment_context(self.xinyu_dir, self._session_key(payload), text)
-        if attachment_block:
-            sidecar_lines.extend(["recent attachment sidecar:", attachment_block])
-        runtime_presence_block = _safe_str(runtime_presence_context).strip()
-        if runtime_presence_block:
-            sidecar_lines.extend(["runtime presence sidecar:", runtime_presence_block[:2200]])
-        continuity_block = _safe_str(continuity_context).strip()
-        if continuity_block:
-            sidecar_lines.extend([continuity_block])
-        uncertainty_block = _safe_str(uncertainty_pause_context).strip()
-        if uncertainty_block:
-            sidecar_lines.extend([uncertainty_block])
-        if is_owner and self._looks_like_time_fact_correction(text):
-            today = datetime.now().astimezone().date().isoformat()
-            sidecar_lines.extend(
-                [
-                    "factual/time correction sidecar:",
-                    (
-                        f"current_runtime_date: {today}. The owner is correcting a concrete "
-                        "time/date/holiday fact from XinYu's previous reply. Treat the owner "
-                        "correction and current runtime date as authoritative over stale memory, "
-                        "mood residue, or old time-anchor wording. Continue the chat from the "
-                        "corrected fact in one ordinary line; do not use apology/report wording "
-                        "such as 我算错了 / 刚才那句说岔了 / 别理 / 抱歉 / 不好意思 / 我会改."
-                    ),
-                ]
-            )
-        if _as_bool(metadata.get("attachment_followup_after_ingest"), default=False):
-            sidecar_lines.extend(
-                [
-                    "attachment followup:",
-                    (
-                        "The owner just sent a readable attachment. Read the attachment context now. "
-                        "Respond from your own reading of it in this turn when something is worth saying; "
-                        "do not use a fixed acknowledgement or report template."
-                    ),
-                ]
-            )
-        if _as_bool(metadata.get("qq_coalesced_owner_messages"), default=False):
-            sidecar_lines.extend(
-                [
-                    "qq fragment coalescing sidecar:",
-                    (
-                        "The owner sent consecutive QQ fragments that the gateway merged into one turn. "
-                        f"fragment_count: {_safe_str(metadata.get('qq_coalesced_message_count'), '2')}. "
-                        "Treat the combined user text as one message and answer only once to the overall meaning; "
-                        "do not answer each line separately."
-                    ),
-                ]
-            )
-
-        codex_delegate_contract = ""
-        if self._owner_private_payload_matches(payload):
-            codex_delegate_contract = (
-                "codex_delegation_contract: in owner-private chat, use semantic intent before delegation. Only a "
-                "current, concrete owner request to hand work to Codex, inspect code, search/verify, or perform a "
-                "bounded local task may use the hidden "
-                f"marker {CODEX_DELEGATE_OPEN}<concrete task>{CODEX_DELEGATE_CLOSE}. If the owner is discussing "
-                "Codex, correcting a previous launch, negating permission, reporting that Codex failed, or saying "
-                "what they might do later, answer normally and do not emit the marker. If uncertain, ask one concise "
-                "clarifying question instead of launching. If you use the marker, output only that marker and no "
-                "visible prose; the bridge will intercept it and open XinYu's dedicated Codex window. If the owner "
-                "explicitly grants XinYu permission to change her own code or says to start after such a grant, do "
-                "not turn it into 我可以试试 / 要现在开始吗; hand it to the bridge as an actionable bounded self-code "
-                "iteration. A direct owner-private request to modify XinYu code is already a one-time approval; do "
-                "not require a prior application first. Do not tell the owner manual /codex is required unless a "
-                "real bridge rejection just happened."
-            )
-        elif self._trusted_private_payload_matches(payload):
-            codex_delegate_contract = (
-                "trusted_contact_search_contract: this private QQ sender is trusted for ordinary chat, rich QQ "
-                "context, and public-source search only. For a current concrete request to search, verify, or compare "
-                "public web/source material, you may use the hidden "
-                f"marker {CODEX_DELEGATE_OPEN}<public search task>{CODEX_DELEGATE_CLOSE}. Do not use Codex for local "
-                "files, code edits, package installs, account/admin actions, private data, tokens, logs, or XinYu "
-                "self-code. If the request is not a public information search, answer normally or ask one short "
-                "clarifying question. If you use the marker, output only that marker and no visible prose."
-            )
-
-        live_context_lines = [
-            visible_turn.to_prompt_block(),
-            "",
-            life_posture.to_prompt_block(),
-            "",
-            persona_runtime.to_prompt_block(),
-            "",
-            "Live turn context, restored continuity version.",
-            "sidecar_visibility_contract: private_observation_only.",
-            (
-                "Never print sidecar names, state labels, file paths, hashes, XML/tool syntax, gates, scores, "
-                "or 'I read this file' mechanics in ordinary chat. Convert useful facts into the next natural line; "
-                "only discuss mechanics when owner explicitly asks about the system."
-            ),
-            (
-                "promise_followup_contract: do not make a bare promise like 我再看看 / 我查一下 and then stop. "
-                "If you say you will look, check, think, or verify something for the owner, either delegate the "
-                "real work now or expect the bridge to create an owner-private follow-up through QQ outbox after review."
-            ),
-            codex_delegate_contract,
-            f"scene: {visible_turn.turn_kind}",
-            f"source: {source_line}",
-            f"speaker_relation: {relationship_line}",
-            f"sender_display: {sender_name or 'unknown'}",
-            residue_line,
-            tail_block,
-            *sidecar_lines,
-            pressure_line,
-            "Let the current sentence matter more than old templates.",
-            "Use the session tail for callbacks, corrections, and direct references to the previous reply.",
-            "Recent attachment context is available when the owner asks about a file, attachment, screenshot, document, or its contents.",
-            "When the owner asks what just happened, what you just saw, or the main issue after a local action, answer from recent action sidecar before older recalled context.",
-            "If this is technical work, do the technical work directly.",
-        ]
-
-        live_system_prompt = "\n".join(live_context_lines)
-        pending.append(
-            {
-                "role": "system",
-                "content": live_system_prompt,
-            }
-        )
-        self._maybe_dump_live_system_prompt(
+        xinyu_bridge_turn_sidecars.inject_live_turn_context(
+            self,
             agent,
             payload=payload,
-            session_key=self._session_key(payload),
+            text=text,
             turn_id=turn_id,
-            live_system_prompt=live_system_prompt,
+            dialogue_tail=dialogue_tail,
+            persona_context=persona_context,
+            curiosity_context=curiosity_context,
+            visible_turn=visible_turn,
+            recalled_context=recalled_context,
+            runtime_presence_context=runtime_presence_context,
+            continuity_context=continuity_context,
+            uncertainty_pause_context=uncertainty_pause_context,
+            life_reply_context=life_reply_context,
+            emotion_council_context=emotion_council_context,
+            codex_delegate_open=CODEX_DELEGATE_OPEN,
+            codex_delegate_close=CODEX_DELEGATE_CLOSE,
         )
 
     def _maybe_dump_live_system_prompt(
@@ -6011,15 +5866,16 @@ tags: [promise, followup, qq-outbox, continuity]
         reply: str,
         payload: dict[str, Any] | None = None,
     ) -> None:
-        recorded_at = datetime.now().astimezone().isoformat()
+        assistant_recorded_at = datetime.now().astimezone().isoformat()
+        user_recorded_at = self._payload_event_time_iso(payload, fallback=assistant_recorded_at)
         user_content = self._dialogue_tail_user_content(user_text, payload=payload)
         if user_content.strip():
             session.dialogue_tail.append(
-                {"role": "user", "content": user_content.strip(), "recorded_at": recorded_at}
+                {"role": "user", "content": user_content.strip(), "recorded_at": user_recorded_at}
             )
         if reply.strip():
             session.dialogue_tail.append(
-                {"role": "assistant", "content": reply.strip(), "recorded_at": recorded_at}
+                {"role": "assistant", "content": reply.strip(), "recorded_at": assistant_recorded_at}
             )
         if self.dialogue_session_tail_entries <= 0:
             session.dialogue_tail.clear()
@@ -6108,12 +5964,14 @@ tags: [promise, followup, qq-outbox, continuity]
         payload: dict[str, Any],
         user_text: str,
         draft_reply: str,
+        canonical_recall_context: str = "",
     ) -> str:
         return await self.renderer.render_outward_reply(
             agent,
             payload=payload,
             user_text=user_text,
             draft_reply=draft_reply,
+            canonical_recall_context=canonical_recall_context,
         )
 
     def _renderer_reason(self, *, payload: dict[str, Any], user_text: str, draft_reply: str) -> str:
@@ -6128,6 +5986,7 @@ tags: [promise, followup, qq-outbox, continuity]
         payload: dict[str, Any],
         user_text: str,
         draft_reply: str,
+        canonical_recall_context: str = "",
         failed_reply: str = "",
         quality_flags: list[str] | None = None,
     ) -> list[dict[str, str]]:
@@ -6136,30 +5995,91 @@ tags: [promise, followup, qq-outbox, continuity]
             payload=payload,
             user_text=user_text,
             draft_reply=draft_reply,
+            canonical_recall_context=canonical_recall_context,
             failed_reply=failed_reply,
             quality_flags=quality_flags,
         )
 
+    def _speech_controller(self) -> XinyuSpeechController:
+        controller = getattr(self, "speech_controller", None)
+        if controller is None:
+            controller = XinyuSpeechController(BRIDGE_SOURCE_PATH.parent)
+            self.speech_controller = controller
+        return controller
+
     def _is_live_style_pressure(self, text: str) -> bool:
-        return self.speech_controller.is_live_style_pressure(text)
+        return self._speech_controller().is_live_style_pressure(text)
 
     def _is_owner_relationship_pressure(self, text: str) -> bool:
-        return self.speech_controller.is_owner_relationship_pressure(text)
+        return self._speech_controller().is_owner_relationship_pressure(text)
 
     def _is_explicit_technical_request(self, text: str) -> bool:
-        return self.speech_controller.is_explicit_technical_request(text)
+        return self._speech_controller().is_explicit_technical_request(text)
 
     def _reply_quality_flags(self, *, user_text: str, reply: str) -> list[str]:
-        return self.speech_controller.reply_quality_flags(user_text=user_text, reply=reply)
+        return self._speech_controller().reply_quality_flags(user_text=user_text, reply=reply)
 
     _owner_requested_reply_bubble_units = staticmethod(owner_requested_reply_bubble_units)
     _numeric_bubble_units_from_text = staticmethod(numeric_bubble_units_from_text)
     _looks_like_false_single_bubble_limitation = staticmethod(looks_like_false_single_bubble_limitation)
 
     def _empty_visible_reply_fallback(self, *, payload: dict[str, Any], user_text: str, delegate_note: str = "") -> str:
+        del payload, user_text, delegate_note
         return ""
 
     _critical_final_guard_flags = staticmethod(critical_final_guard_flags)
+
+    def _owner_private_llm_failover_context(
+        self,
+        payload: dict[str, Any],
+        *,
+        text: str,
+        session_key: str,
+        turn_id: str,
+    ) -> dict[str, Any]:
+        if not self._owner_private_payload_matches(payload):
+            return {}
+        metadata = payload.get("metadata")
+        if not isinstance(metadata, dict):
+            metadata = {}
+        if _as_bool(metadata.get("control_plane"), default=False):
+            return {}
+        if _payload_has_attachment_signal(payload):
+            return {}
+        if looks_like_codex_request(text) or looks_like_owner_local_write_request(text):
+            return {}
+        source = _safe_str(metadata.get("source")).strip()
+        if source and source != "onebot_message_event":
+            return {}
+        message_type = _safe_str(payload.get("message_type")).lower()
+        if message_type and not message_type.startswith("private"):
+            return {}
+        return {
+            "enabled": True,
+            "scope": "owner_private_chat",
+            "source": source or "onebot_message_event",
+            "turn_id": turn_id,
+            "session_key": session_key,
+            "user_text": text,
+            "trace_root": str(self.xinyu_dir),
+            "context": {
+                "recent_turns": [],
+                "persona_state": "",
+                "owner_profile": "",
+                "runtime_state": "",
+                "memory_recall": [],
+            },
+            "capabilities": {
+                "codex_available": False,
+                "external_api_available": False,
+                "local_tools_available": True,
+            },
+            "constraints": {
+                "max_reply_chars": 240,
+                "allow_tool_request": False,
+                "allow_memory_candidate": False,
+            },
+        }
 
     def _renderer_memory_context(self) -> str:
         return self.renderer.renderer_memory_context()
@@ -6214,6 +6134,8 @@ def main() -> int:
         token=args.bridge_token.strip(),
     )
     desktop_service.attach_runtime(runtime)
+    request_timeout_margin_seconds = max(0, args.request_timeout_margin_seconds)
+    request_timeout_seconds = args.turn_timeout_seconds + request_timeout_margin_seconds
     server = XinYuBridgeHTTPServer(
         (args.host, args.port),
         XinYuBridgeRequestHandler,
@@ -6221,7 +6143,7 @@ def main() -> int:
         loop=loop,
         bridge_token=args.bridge_token.strip(),
         max_body_bytes=args.max_body_bytes,
-        request_timeout_seconds=args.turn_timeout_seconds + 15,
+        request_timeout_seconds=request_timeout_seconds,
     )
     try:
         future = asyncio.run_coroutine_threadsafe(runtime.start_background_tasks(), loop)
@@ -6244,6 +6166,7 @@ def main() -> int:
     print(
         f"[xinyu_core_bridge] listening on http://{args.host}:{args.port} "
         f"(turn_timeout={args.turn_timeout_seconds}s, "
+        f"request_timeout={request_timeout_seconds}s, "
         f"session_ttl={args.session_idle_ttl_seconds}s, max_sessions={args.max_sessions}, "
         f"renderer_mode={args.renderer_mode}, autonomous_maintenance={not args.disable_autonomous_maintenance})",
         flush=True,

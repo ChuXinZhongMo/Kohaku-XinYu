@@ -7,6 +7,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from xinyu_text_variants import looks_like_legacy_mojibake
+from xinyu_storage_paths import knowledge_file_path
 
 
 def read_text(path: Path) -> str:
@@ -37,6 +38,34 @@ def extract_value(text: str, field: str, default: str = "unknown") -> str:
 
 
 from xinyu_state_io import extract_value as extract_value, read_text as read_text, write_text as write_text
+
+
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
+
+
+def _now_iso() -> str:
+    return datetime.now().astimezone().isoformat()
+
+
+def _timestamp_or_now_iso(value: object) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return _now_iso()
+    return parsed.astimezone().isoformat()
+
+
+def _parse_iso(value: object) -> datetime | None:
+    text = "" if value is None else str(value).strip()
+    if not text or text == "none":
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
 
 
 def host_of(url: str) -> str:
@@ -212,9 +241,9 @@ time_scope: mid_term
 subject_ids: [xinyu]
 protected: true
 source: system
-created_at: 2026-04-24T00:00:00+08:00
-updated_at: {evaluated_at}
-last_confirmed_at: {evaluated_at}
+created_at: {_timestamp_or_now_iso('2026-04-24T00:00:00+08:00')}
+updated_at: {_timestamp_or_now_iso(evaluated_at)}
+last_confirmed_at: {_timestamp_or_now_iso(evaluated_at)}
 importance_score: 83
 impact_score: 82
 confidence_score: 100
@@ -255,10 +284,14 @@ tags: [knowledge, learning, quality]
 def append_quality_notes(root: Path, evaluated_at: str, warnings: list[dict[str, str]]) -> None:
     if not warnings:
         return
-    path = root / "memory/knowledge/source_notes.md"
+    path = _knowledge(root, "source_notes.md")
     text = read_text(path).rstrip()
-    text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {evaluated_at}", text)
-    text = re.sub(r"(?m)^last_confirmed_at:\s*.+$", f"last_confirmed_at: {evaluated_at}", text)
+    text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {_timestamp_or_now_iso(evaluated_at)}", text)
+    text = re.sub(
+        r"(?m)^last_confirmed_at:\s*.+$",
+        f"last_confirmed_at: {_timestamp_or_now_iso(evaluated_at)}",
+        text,
+    )
     lines: list[str] = []
     for item in warnings:
         marker = f"- {item['kind']}::{item['target']}:"
@@ -274,7 +307,7 @@ def append_quality_notes(root: Path, evaluated_at: str, warnings: list[dict[str,
 
 
 def update_current_quality_notes(root: Path, evaluated_at: str, quality: str, warnings: list[dict[str, str]]) -> None:
-    path = root / "memory/knowledge/source_notes.md"
+    path = _knowledge(root, "source_notes.md")
     text = read_text(path).rstrip()
     warning_lines = [
         f"- {item['kind']}: severity={item['severity']}; target={item['target']}; detail={item['detail']}"
@@ -306,9 +339,9 @@ def run_learning_quality(
     evaluated_at: str | None = None,
     mode: str = "runtime_learning_quality",
 ) -> dict[str, object]:
-    evaluated_at = evaluated_at or datetime.now().astimezone().isoformat()
-    materials = split_blocks(read_text(root / "memory/knowledge/source_materials.md"), "material")
-    learned = split_blocks(read_text(root / "memory/knowledge/general.md"), "learned")
+    evaluated_at = _timestamp_or_now_iso(evaluated_at)
+    materials = split_blocks(read_text(_knowledge(root, "source_materials.md")), "material")
+    learned = split_blocks(read_text(_knowledge(root, "general.md")), "learned")
     enriched = enriched_learned_entries(learned, materials)
     warnings = build_warnings(enriched, materials)
 
@@ -349,7 +382,7 @@ def run_learning_quality(
         "uncompared_ready_materials": uncompared_ready,
     }
     write_text(
-        root / "memory/knowledge/learning_quality_state.md",
+        _knowledge(root, "learning_quality_state.md"),
         render_state(evaluated_at, mode, metrics, warnings),
     )
     update_current_quality_notes(root, evaluated_at, str(metrics["quality_grade"]), warnings)

@@ -18,6 +18,9 @@ DESKTOP_GET_ROUTES = {
     "/desktop/chat/recent",
     "/desktop/memory/recent",
 }
+EXTERNAL_GET_ROUTES = {
+    "/external/plugins",
+}
 LIFE_TICKET_PREFIX = "/life/metabolism/tickets"
 
 
@@ -51,14 +54,18 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         route = parsed.path
-        if route not in {"/health", "/probe", "/proactive"} and route not in DESKTOP_GET_ROUTES and not route.startswith(
-            LIFE_TICKET_PREFIX
+        if (
+            route not in {"/health", "/probe", "/proactive"}
+            and route not in DESKTOP_GET_ROUTES
+            and route not in EXTERNAL_GET_ROUTES
+            and not route.startswith(LIFE_TICKET_PREFIX)
         ):
             self._send_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
             return
         if (
             route in {"/probe", "/proactive"}
             or route in DESKTOP_GET_ROUTES
+            or route in EXTERNAL_GET_ROUTES
             or route.startswith(LIFE_TICKET_PREFIX)
         ) and not self._is_authorized():
             self._send_json(HTTPStatus.UNAUTHORIZED, {"ok": False, "error": "unauthorized"})
@@ -85,6 +92,8 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
                 data = self._run_on_loop(self.server.runtime.desktop_proactive_inbox(payload), timeout=5)
             elif route == "/desktop/chat/recent":
                 data = self._run_on_loop(self.server.runtime.desktop_chat_recent(payload), timeout=5)
+            elif route == "/external/plugins":
+                data = self._run_on_loop(self.server.runtime.external_plugin_manifest(payload), timeout=5)
             elif route == LIFE_TICKET_PREFIX:
                 data = self._run_on_loop(self.server.runtime.life_metabolism_ticket_list(payload), timeout=5)
             elif route.startswith(f"{LIFE_TICKET_PREFIX}/"):
@@ -115,6 +124,7 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
             "/proactive",
             "/proactive/ack",
             "/desktop/proactive/ack",
+            "/desktop/self-action/approval",
             "/qq/outbox/claim",
             "/qq/outbox/ack",
             "/internal/message/ack",
@@ -126,6 +136,9 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
             "/sticker/import",
             "/package/install",
             "/codex/execute",
+            "/external/call",
+            "/external/plugins/config",
+            "/external/plugins/install",
         }
         if route not in post_routes and not self._is_life_ticket_action_route(route):
             self._send_json(HTTPStatus.NOT_FOUND, {"ok": False, "error": "not_found"})
@@ -140,6 +153,9 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
             "/review/inbox/command",
             "/review/goldmark/mark_request",
             "/sticker/import",
+            "/external/call",
+            "/external/plugins/config",
+            "/external/plugins/install",
         } and not self.server.bridge_token:
             self._send_json(
                 HTTPStatus.UNAUTHORIZED,
@@ -174,6 +190,8 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
                 result = self._run_on_loop(self.server.runtime.proactive_ack(payload), timeout=10)
             elif route == "/desktop/proactive/ack":
                 result = self._run_on_loop(self.server.runtime.desktop_proactive_ack(payload), timeout=10)
+            elif route == "/desktop/self-action/approval":
+                result = self._run_on_loop(self.server.runtime.desktop_self_action_approval(payload), timeout=10)
             elif route == "/qq/outbox/claim":
                 fast_claim = getattr(self.server.runtime, "qq_outbox_claim_fast", None)
                 if callable(fast_claim):
@@ -224,6 +242,21 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
             elif route == "/codex/execute":
                 result = self._run_on_loop(
                     self.server.runtime.codex_execute(payload),
+                    timeout=self.server.request_timeout_seconds,
+                )
+            elif route == "/external/call":
+                result = self._run_on_loop(
+                    self.server.runtime.external_plugin_call(payload),
+                    timeout=self.server.request_timeout_seconds,
+                )
+            elif route == "/external/plugins/config":
+                result = self._run_on_loop(
+                    self.server.runtime.external_plugin_config(payload),
+                    timeout=10,
+                )
+            elif route == "/external/plugins/install":
+                result = self._run_on_loop(
+                    self.server.runtime.external_plugin_install(payload),
                     timeout=self.server.request_timeout_seconds,
                 )
             else:

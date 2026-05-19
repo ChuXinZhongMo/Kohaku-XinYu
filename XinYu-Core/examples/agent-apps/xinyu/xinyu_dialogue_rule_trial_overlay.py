@@ -38,6 +38,26 @@ def _now() -> datetime:
     return datetime.now().astimezone()
 
 
+def _timestamp_or_now_iso(value: Any) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return _now().isoformat(timespec="seconds")
+    return parsed.astimezone().isoformat(timespec="seconds")
+
+
+def _parse_iso(value: Any) -> datetime | None:
+    text = _safe_str(value).strip()
+    if not text or text.lower() in {"none", "unknown", "null", "n/a", "na"}:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
+
+
 def _as_bool(value: Any, default: bool = False) -> bool:
     if isinstance(value, bool):
         return value
@@ -118,7 +138,7 @@ def activate_dialogue_rule_trial_overlay(
     cards_path = default_cards_path(root)
     cards = parse_owner_rule_cards(cards_path)
     now_dt = _now()
-    activated_at = activated_at or now_dt.isoformat(timespec="seconds")
+    activated_at = _timestamp_or_now_iso(activated_at or now_dt.isoformat(timespec="seconds"))
     applications = max(1, min(24, int(applications)))
     max_rules_per_turn = max(1, min(5, int(max_rules_per_turn)))
     state = {
@@ -128,8 +148,8 @@ def activate_dialogue_rule_trial_overlay(
         "source": source,
         "cards_path": str(cards_path),
         "approved_rule_count": len(cards),
-        "activated_at": activated_at,
-        "updated_at": activated_at,
+        "activated_at": _timestamp_or_now_iso(activated_at),
+        "updated_at": _timestamp_or_now_iso(activated_at),
         "remaining_applications": applications,
         "initial_applications": applications,
         "max_rules_per_turn": max_rules_per_turn,
@@ -181,7 +201,7 @@ def build_dialogue_rule_trial_overlay_prompt_block(
     if _expired(state, now_dt):
         if _safe_str(state.get("status")) == "active":
             state["status"] = "expired"
-            state["updated_at"] = now_dt.isoformat(timespec="seconds")
+            state["updated_at"] = _timestamp_or_now_iso(now_dt.isoformat(timespec="seconds"))
             _write_state(path, state)
         return ""
 
@@ -207,8 +227,8 @@ def build_dialogue_rule_trial_overlay_prompt_block(
     remaining_after = max(0, remaining_before - 1) if consume_application else remaining_before
     if consume_application:
         state["remaining_applications"] = remaining_after
-        state["updated_at"] = now_dt.isoformat(timespec="seconds")
-        state["last_applied_at"] = now_dt.isoformat(timespec="seconds")
+        state["updated_at"] = _timestamp_or_now_iso(now_dt.isoformat(timespec="seconds"))
+        state["last_applied_at"] = _timestamp_or_now_iso(now_dt.isoformat(timespec="seconds"))
         state["last_owner_text"] = _trim(user_text, limit=180)
         state["last_matched_rules"] = [match.rule_key for match in selected]
         if remaining_after <= 0:
@@ -252,7 +272,7 @@ def clear_dialogue_rule_trial_overlay(root: Path) -> bool:
     state = _read_state(path)
     state["status"] = "cleared"
     state["remaining_applications"] = 0
-    state["updated_at"] = _now().isoformat(timespec="seconds")
+    state["updated_at"] = _timestamp_or_now_iso(_now().isoformat(timespec="seconds"))
     _write_state(path, state)
     return True
 

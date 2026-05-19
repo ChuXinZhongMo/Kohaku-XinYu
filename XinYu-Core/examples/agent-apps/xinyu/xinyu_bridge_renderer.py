@@ -91,12 +91,19 @@ class BridgeRenderer:
         payload: dict[str, Any],
         user_text: str,
         draft_reply: str,
+        canonical_recall_context: str = "",
     ) -> str:
         llm = getattr(agent, "llm", None)
         if llm is None:
             return draft_reply
 
-        messages = self.build_renderer_messages(agent, payload=payload, user_text=user_text, draft_reply=draft_reply)
+        messages = self.build_renderer_messages(
+            agent,
+            payload=payload,
+            user_text=user_text,
+            draft_reply=draft_reply,
+            canonical_recall_context=canonical_recall_context,
+        )
         try:
             response = await asyncio.wait_for(
                 llm.chat_complete(messages, temperature=0.55, max_tokens=520),
@@ -120,6 +127,7 @@ class BridgeRenderer:
                 payload=payload,
                 user_text=user_text,
                 draft_reply=draft_reply,
+                canonical_recall_context=canonical_recall_context,
                 failed_reply=rendered,
                 quality_flags=quality_flags,
             )
@@ -186,6 +194,7 @@ class BridgeRenderer:
         payload: dict[str, Any],
         user_text: str,
         draft_reply: str,
+        canonical_recall_context: str = "",
         failed_reply: str = "",
         quality_flags: list[str] | None = None,
     ) -> list[dict[str, str]]:
@@ -194,14 +203,21 @@ class BridgeRenderer:
             user_text=user_text,
             draft_reply=draft_reply,
             output_prompt=self.read_text("prompts/output.md", limit=16000),
-            memory_context=self.renderer_memory_context(user_text=user_text),
+            memory_context=self.renderer_memory_context(
+                user_text=user_text,
+                canonical_recall_context=canonical_recall_context,
+            ),
             conversation_tail=self.conversation_tail(agent, max_messages=8),
             failed_reply=failed_reply,
             quality_flags=quality_flags,
         )
 
-    def renderer_memory_context(self, *, user_text: str = "") -> str:
-        return build_renderer_memory_context(self.xinyu_dir, user_text=user_text)
+    def renderer_memory_context(self, *, user_text: str = "", canonical_recall_context: str = "") -> str:
+        return build_renderer_memory_context(
+            self.xinyu_dir,
+            user_text=user_text,
+            canonical_recall_context=canonical_recall_context,
+        )
 
     def read_text(self, rel: str, *, limit: int) -> str:
         return read_limited(self.xinyu_dir, rel, limit=limit)

@@ -109,7 +109,7 @@ def read_turn_residue(root: Path, *, at: datetime | None = None) -> TurnResidue:
     except OSError:
         return TurnResidue()
 
-    updated_at = _extract_field(text, "updated_at", "unknown")
+    updated_at = _extract_field(text, "updated_at", "")
     raw_strength = _extract_int(text, "residue_strength", 0)
     return TurnResidue(
         scene=_extract_field(text, "last_scene", "unknown"),
@@ -118,7 +118,7 @@ def read_turn_residue(root: Path, *, at: datetime | None = None) -> TurnResidue:
         tone=_extract_field(text, "last_tone", "unknown"),
         felt_residue=_extract_field(text, "last_felt_residue", "unknown"),
         reply_shape=_extract_field(text, "last_reply_shape", "unknown"),
-        updated_at=updated_at,
+        updated_at=_extract_field(text, "updated_at", ""),
         raw_strength=raw_strength,
         decayed_strength=_decay_strength(raw_strength, updated_at, at=at),
     )

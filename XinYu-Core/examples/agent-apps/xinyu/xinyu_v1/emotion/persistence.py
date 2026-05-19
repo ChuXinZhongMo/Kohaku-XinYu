@@ -5,9 +5,23 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from datetime import datetime
 from pathlib import Path
 
 from .models import EMOTION_DIMENSIONS, EmotionState, EmotionVector
+
+
+def _timestamp_or_now_iso(value: object = None) -> str:
+    text = "" if value is None else str(value).strip()
+    if not text or text.lower() in {"none", "unknown", "null", "n/a", "na"}:
+        return datetime.now().astimezone().isoformat(timespec="seconds")
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return datetime.now().astimezone().isoformat(timespec="seconds")
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed.astimezone().isoformat(timespec="seconds")
 
 
 def read_emotion_state(path: Path, *, default_timestamp: str) -> EmotionState:
@@ -53,7 +67,7 @@ def write_emotion_state(path: Path, state: EmotionState) -> None:
 
 
 def write_compat_markdown(path: Path, state: EmotionState) -> None:
-    lines = ["# XinYu Emotion State", "", f"- updated_at: {state.updated_at}", "- vector:"]
+    lines = ["# XinYu Emotion State", "", f"- updated_at: {_timestamp_or_now_iso(state.updated_at)}", "- vector:"]
     for dimension in EMOTION_DIMENSIONS:
         lines.append(f"  - {dimension}: {state.vector.get(dimension):.3f}")
     if state.residue_notes:
@@ -61,4 +75,3 @@ def write_compat_markdown(path: Path, state: EmotionState) -> None:
         lines.extend(f"- {note}" for note in state.residue_notes[-12:])
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-

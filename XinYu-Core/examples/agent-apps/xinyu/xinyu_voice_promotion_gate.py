@@ -55,9 +55,9 @@ CLUSTERS: tuple[tuple[str, tuple[str, ...], str], ...] = (
 )
 
 AFFECTED_SMOKES = (
-    "voice_learning_smoke.py",
-    "chinese_voice_guard_smoke.py",
-    "real_conversation_quality_smoke.py",
+    "tests/smoke/voice/voice_learning_smoke.py",
+    "tests/smoke/voice/chinese_voice_guard_smoke.py",
+    "tests/smoke/voice/integration/real_conversation_quality_smoke.py",
 )
 
 
@@ -70,6 +70,26 @@ def read_text(path: Path) -> str:
 def write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text.rstrip() + "\n", encoding="utf-8")
+
+
+def _timestamp_or_now_iso(value: object) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return datetime.now().astimezone().isoformat()
+    return parsed.astimezone().isoformat()
+
+
+def _parse_iso(value: object) -> datetime | None:
+    text = "" if value is None else str(value).strip()
+    if not text or text == "none":
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
 
 
 def extract_value(text: str, field: str, default: str = "unknown") -> str:
@@ -155,8 +175,8 @@ def render_review_state(
         "subject_ids: [xinyu, owner]",
         "protected: true",
         "source: voice_calibration_promotion_gate",
-        "created_at: 2026-04-27T00:00:00+08:00",
-        f"updated_at: {evaluated_at}",
+        f"created_at: {_timestamp_or_now_iso('2026-04-27T00:00:00+08:00')}",
+        f"updated_at: {_timestamp_or_now_iso(evaluated_at)}",
         "importance_score: 90",
         "impact_score: 92",
         "confidence_score: 84",
@@ -167,7 +187,7 @@ def render_review_state(
         "# XinYu Voice Profile Review State",
         "",
         "## Gate Summary",
-        f"- evaluated_at: {evaluated_at}",
+        f"- evaluated_at: {_timestamp_or_now_iso(evaluated_at)}",
         f"- review_status: {review_status}",
         f"- calibration_entry_count: {entry_count}",
         f"- candidate_count: {len(candidates)}",
@@ -223,7 +243,7 @@ def build_voice_promotion_review(
     evaluated_at: str | None = None,
     min_evidence: int = 2,
 ) -> dict[str, object]:
-    evaluated_at = evaluated_at or datetime.now().astimezone().isoformat()
+    evaluated_at = _timestamp_or_now_iso(evaluated_at)
     log_text = read_text(root / "memory/self/voice_calibration_log.md")
     entries = parse_voice_entries(log_text)
     candidates = build_candidates(entries, min_evidence=min_evidence)

@@ -11,10 +11,31 @@ from typing import Any
 
 STATE_REL = Path("memory/context/continuity_handoff_state.md")
 TRACE_REL = Path("runtime/continuity_handoff_trace.jsonl")
+REPAIR_PRESSURE_SILENCE_THRESHOLD = 8
 
 
 def _now_iso() -> str:
     return datetime.now().astimezone().isoformat()
+
+
+def _timestamp_or_now_iso(value: Any) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return _now_iso()
+    return parsed.astimezone().isoformat()
+
+
+def _parse_iso(value: Any) -> datetime | None:
+    text = _safe_str(value).strip()
+    if not text or text.lower() in {"none", "unknown", "null", "n/a", "na"}:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
 
 
 def _safe_str(value: Any, default: str = "") -> str:
@@ -63,6 +84,17 @@ def _field(text: str, name: str, default: str = "none") -> str:
     return _compact(match.group(1), limit=260, default=default)
 
 
+def _int_field(text: str, name: str, default: int = 0) -> int:
+    raw = _field(text, name, str(default))
+    match = re.search(r"-?\d+", raw)
+    if not match:
+        return default
+    try:
+        return int(match.group(0))
+    except ValueError:
+        return default
+
+
 def _active(value: str) -> bool:
     return value not in {"", "none", "unknown", "false", "0"}
 
@@ -101,6 +133,11 @@ def _proactive_thread(text: str) -> str:
 def _learning_thread(text: str) -> str:
     status = _field(text, "status", "none")
     if status not in {"trial_active", "trial_supported", "self_thought_observed"}:
+        return "none"
+    repair_count = _int_field(text, "repair_count", 0)
+    success_count = _int_field(text, "success_count", 0)
+    success_streak = _int_field(text, "success_streak", 0)
+    if repair_count >= REPAIR_PRESSURE_SILENCE_THRESHOLD and success_count <= 0 and success_streak <= 0:
         return "none"
     failure = _field(text, "latest_failure_kind", "none")
     habit = _field(text, "active_trial_habit", "none")
@@ -169,7 +206,7 @@ time_scope: short_term
 subject_ids: [xinyu]
 protected: true
 source: xinyu_continuity_handoff
-updated_at: {fields['updated_at']}
+updated_at: {_timestamp_or_now_iso(fields['updated_at'])}
 status: active
 tags: [context, continuity, handoff, working-memory]
 ---
@@ -178,7 +215,7 @@ tags: [context, continuity, handoff, working-memory]
 
 ## Latest Handoff
 - handoff_id: {fields['handoff_id']}
-- updated_at: {fields['updated_at']}
+- updated_at: {_timestamp_or_now_iso(fields['updated_at'])}
 - continuity_mode: {fields['continuity_mode']}
 - open_loop_count: {fields['open_loop_count']}
 - user_text_hash: {fields['user_text_hash']}
@@ -207,12 +244,12 @@ def refresh_continuity_handoff(
     user_text: str = "",
     observed_at: str | None = None,
 ) -> dict[str, Any]:
-    observed = observed_at or _now_iso()
+    observed = _timestamp_or_now_iso(observed_at or _now_iso())
     root = root.resolve()
     states = _read_state_files(root)
     fields = {
         "handoff_id": "handoff-" + _hash(f"{observed}|{user_text}|{time.time_ns()}", 16),
-        "updated_at": observed,
+        "updated_at": _timestamp_or_now_iso(observed),
         "user_text_hash": _hash(user_text, 18) if user_text else "none",
         "runtime_thread": _runtime_thread(states["runtime_presence"]),
         "interaction_thread": _interaction_thread(states["interaction_journal"]),
@@ -240,7 +277,7 @@ def refresh_continuity_handoff(
         root / TRACE_REL,
         {
             "handoff_id": fields["handoff_id"],
-            "observed_at": observed,
+            "observed_at": _timestamp_or_now_iso(observed),
             "continuity_mode": fields["continuity_mode"],
             "open_loop_count": open_loop_count,
             "user_text_hash": fields["user_text_hash"],

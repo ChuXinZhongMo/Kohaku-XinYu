@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "manifest_id": "stores/runtime_trace_manifest",
+  "updated_at": "2026-05-18",
+  "privacy_note": "Metadata-only runtime trace boundaries. Do not migrate, print, snapshot, or promote trace bodies into stable memory from these streams.",
+  "traces": [
+    {
+      "trace_id": "impulse_soup",
+      "path": "memory/context/impulse_soup_trace.jsonl",
+      "owner_module": "xinyu_impulse_soup",
+      "owner_symbol": "_append_trace",
+      "projection_paths": [
+        "memory/context/runtime_program_awareness.md"
+      ],
+      "allowed_raw_readers": [
+        "xinyu_impulse_soup.py",
+        "xinyu_runtime_presence.py"
+      ],
+      "privacy": "internal_runtime_trace",
+      "retention_policy": "append_only_pending_rotation",
+      "body_policy": "no_body_migration",
+      "stable_memory_policy": "runtime_trace_not_stable_memory",
+      "status": "compat_runtime_trace"
+    }
+  ]
+}

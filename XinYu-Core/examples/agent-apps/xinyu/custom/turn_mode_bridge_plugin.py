@@ -12,25 +12,15 @@ from typing import Any
 
 from xinyu_runtime.core.events import TriggerEvent
 from xinyu_runtime.modules.plugin.base import BasePlugin, PluginContext
+from maintenance_bridge_utils import append_trace, resolve_root
+from turn_mode_utils import write_external_turn_mode
 
 
-def _default_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
-def _resolve_root(ctx: PluginContext | None) -> Path:
-    candidate = Path(ctx.working_dir) if ctx else _default_root()
-    if (candidate / "memory").exists():
-        return candidate
-    return _default_root()
+TRACE_REL = "memory/context/turn_mode_trace.log"
 
 
 def _trace(root: Path, line: str) -> None:
-    trace_path = root / "memory/context/turn_mode_trace.log"
-    trace_path.parent.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now().astimezone().isoformat()
-    with trace_path.open("a", encoding="utf-8") as fh:
-        fh.write(f"{stamp} {line}\n")
+    append_trace(root, TRACE_REL, line)
 
 
 def _maintenance_prompt_like(content: str) -> bool:
@@ -183,7 +173,7 @@ def classify_resource_posture(content: str, prior_abuse_score: int = 0) -> dict[
             "aversion_signal": "aversion",
             "token_budget_hint": "low",
             "blacklist_candidate": "observe",
-            "resource_reason": "directed_insult_or_boundary_probe",
+            "resource_reason": "directed_insult_private_aversion_not_public_safety",
             "abuse_score": str(accumulated_abuse_score),
         }
     next_score = max(0, prior_abuse_score - 1)
@@ -338,7 +328,8 @@ tags: [runtime, turn_mode, maintenance]
 - If `maintenance_only` is yes, do not treat this turn as an owner confession or ordinary social chat.
 - If `social_output_allowed` is no, prefer quiet maintenance and end with [WAITING] when no human is actively waiting.
 - Maintenance prompts are support instructions, not relationship events.
-- If `resource_posture` is `blacklist_cooling`, use short refusal or minimal response and do not spend extra tokens explaining.
+- If `resource_posture` is `guarded_short`, this is private aversion, not public-assistant safety. A short, cold, annoyed, or rough line is allowed; do not smooth it into customer-service politeness.
+- If `resource_posture` is `blacklist_cooling`, use short refusal or minimal response and do not spend extra tokens explaining. This is a resource boundary for sustained abuse or malicious compute waste, not a ban on XinYu having temper.
 - Blacklist posture is behavior-based and must not be inferred from identity, disability, origin, or group labels.
 """
 
@@ -375,14 +366,14 @@ class TurnModeBridgePlugin(BasePlugin):
 
     async def on_load(self, context: PluginContext) -> None:
         self._ctx = context
-        root = _resolve_root(context)
+        root = resolve_root(context)
         _trace(root, "on_load ok")
 
     async def on_event(self, event: TriggerEvent) -> None:
         if not self._enabled or not self._ctx:
             return
 
-        root = _resolve_root(self._ctx)
+        root = resolve_root(self._ctx)
         try:
             now = datetime.now().astimezone().isoformat()
             prior_score = 0
@@ -407,6 +398,11 @@ class TurnModeBridgePlugin(BasePlugin):
             self._ctx.set_state("resource_posture", info["resource_posture"])
             self._ctx.set_state("token_budget_hint", info["token_budget_hint"])
             self._ctx.set_state("resource_abuse_score", int(info["abuse_score"]))
+            if info["mode"] != "internal_feedback_turn":
+                # Keep the last externally visible turn mode in shared
+                # session state so post-LLM writers can still recognize
+                # a live user turn after tool_complete / subagent noise.
+                write_external_turn_mode(self._ctx, info["mode"])
             _trace(
                 root,
                 "on_event "
@@ -422,7 +418,7 @@ class TurnModeBridgePlugin(BasePlugin):
         if not self._enabled or not self._ctx:
             return None
 
-        root = _resolve_root(self._ctx)
+        root = resolve_root(self._ctx)
         try:
             prompt = _build_runtime_turn_mode_prompt(root)
             if not prompt:

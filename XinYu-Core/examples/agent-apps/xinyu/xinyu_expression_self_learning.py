@@ -9,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_storage_paths import knowledge_file_path
+
 
 STATE_REL = Path("memory/self/expression_self_learning_state.md")
 TRACE_REL = Path("runtime/expression_self_learning_trace.jsonl")
@@ -29,6 +31,26 @@ def _custom_path(root: Path) -> None:
 
 def _now_iso() -> str:
     return datetime.now().astimezone().isoformat()
+
+
+def _timestamp_or_now_iso(value: Any) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return _now_iso()
+    return parsed.astimezone().isoformat()
+
+
+def _parse_iso(value: Any) -> datetime | None:
+    text = _safe_str(value).strip()
+    if not text or text.lower() in {"none", "unknown", "null", "n/a", "na"}:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
 
 
 def _hash(value: str, length: int = 16) -> str:
@@ -68,6 +90,10 @@ def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
         handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
 
 
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
+
+
 def _next_request_id(existing: list[dict[str, str]], date_part: str) -> str:
     prefix = f"request-{date_part}-expr-"
     numbers: list[int] = []
@@ -85,7 +111,8 @@ def _upsert_source_request(root: Path, *, created_at: str, reason: str) -> tuple
     _custom_path(root)
     from source_request_planner_engine import render_source_requests, split_requests
 
-    path = root / "memory/knowledge/source_requests.md"
+    created_at = _timestamp_or_now_iso(created_at)
+    path = _knowledge(root, "source_requests.md")
     existing = split_requests(_read(path))
     for item in existing:
         if item.get("question_id") == QUESTION_ID:
@@ -129,7 +156,7 @@ time_scope: short_term
 subject_ids: [xinyu]
 protected: true
 source: xinyu_expression_self_learning
-updated_at: {updated_at}
+updated_at: {_timestamp_or_now_iso(updated_at)}
 status: active
 tags: [self, expression, learning, anti-template]
 ---
@@ -138,7 +165,7 @@ tags: [self, expression, learning, anti-template]
 
 ## Latest Failure
 - event_id: {event_id}
-- observed_at: {updated_at}
+- observed_at: {_timestamp_or_now_iso(updated_at)}
 - failure_kind: {failure_kind}
 - flags: {_compact(flags_text, limit=180)}
 - owner_message_summary: {_compact(user_text, limit=180)}
@@ -171,7 +198,7 @@ def record_expression_self_learning_event(
     observed_at: str | None = None,
     failure_kind: str = "visible_expression_leak",
 ) -> dict[str, Any]:
-    observed = observed_at or _now_iso()
+    observed = _timestamp_or_now_iso(observed_at or _now_iso())
     event_id = "expr-learn-" + _hash(f"{observed}|{user_text}|{bad_reply}|{time.time_ns()}", 18)
     clean_flags = [_compact(flag, limit=80) for flag in flags if _safe_str(flag).strip()]
     request_id, created = _upsert_source_request(
@@ -180,7 +207,7 @@ def record_expression_self_learning_event(
         reason=f"{failure_kind}: XinYu visible reply exposed mechanism or template posture",
     )
     state = _render_state(
-        updated_at=observed,
+        updated_at=_timestamp_or_now_iso(observed),
         event_id=event_id,
         failure_kind=failure_kind,
         flags=clean_flags,
@@ -195,7 +222,7 @@ def record_expression_self_learning_event(
         root / TRACE_REL,
         {
             "event_id": event_id,
-            "observed_at": observed,
+            "observed_at": _timestamp_or_now_iso(observed),
             "failure_kind": failure_kind,
             "flags": clean_flags,
             "source_request_id": request_id,

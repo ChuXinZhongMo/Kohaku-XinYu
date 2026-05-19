@@ -43,9 +43,15 @@ def build_life_reply_policy(
     entropy_state: dict[str, Any] | None = None,
     recent_action_context: str = "",
     user_text: str = "",
+    scene_frame: Any | None = None,
 ) -> dict[str, Any]:
     self_choice = _as_dict(self_choice_public)
     entropy = _as_dict(entropy_state)
+    scene_reply_policy = _scene_frame_value(scene_frame, "reply_policy")
+    scene_task_mode = _scene_frame_value(scene_frame, "task_mode")
+    scene_time_context = _scene_frame_value(scene_frame, "time_context")
+    scene_owner_state = _scene_frame_value(scene_frame, "owner_state")
+    scene_memory_relation = _scene_frame_value(scene_frame, "memory_relation")
     affect = _as_dict(self_choice.get("affect_band"))
     fatigue_band = _safe_str(affect.get("fatigue"), "clear")
     closure_band = _safe_str(affect.get("closure"), "guarded")
@@ -55,7 +61,7 @@ def build_life_reply_policy(
     entropy_level = _coerce_float(entropy.get("entropy_level"), 0.0)
     entropy_band = _safe_str(entropy.get("entropy_band"), "clear")
     cues = [_safe_str(item) for item in _as_list(self_choice.get("physical_cues")) if _safe_str(item)]
-    technical = _is_technical_turn(user_text)
+    technical = _is_technical_turn(user_text) or scene_task_mode == "technical_execution"
 
     reasons: list[str] = []
     if fatigue >= 0.65:
@@ -68,6 +74,10 @@ def build_life_reply_policy(
         reasons.append("recent_action_residue")
     if cues:
         reasons.append("cue=" + cues[0])
+    if scene_reply_policy:
+        reasons.append(f"scene_frame={scene_reply_policy}")
+    if scene_memory_relation == "time_bound_recall":
+        reasons.append("scene_memory_relation=time_bound_recall")
 
     mode = "steady"
     max_sentences = 4 if technical else 3
@@ -89,6 +99,24 @@ def build_life_reply_policy(
         reply_pressure = "grounded"
         max_sentences = 5 if technical else 3
 
+    if scene_reply_policy in {"short_direct_low_burden", "short_gentle_low_burden", "warm_low_burden"}:
+        mode = "low_energy"
+        reply_pressure = "short"
+        max_sentences = min(max_sentences, 4 if technical else 2)
+        suppress_optional_question = True
+    elif scene_reply_policy == "compact_structured_answer":
+        if mode == "steady":
+            mode = "scene_structured"
+        if reply_pressure == "normal":
+            reply_pressure = "structured"
+        max_sentences = min(max_sentences, 4 if technical else 3)
+    elif scene_reply_policy == "warm_boundary_aware":
+        if mode == "steady":
+            mode = "relation_aware"
+        if reply_pressure == "normal":
+            reply_pressure = "warm_boundaried"
+        max_sentences = min(max_sentences, 3)
+
     return {
         "version": 1,
         "mode": mode,
@@ -102,6 +130,13 @@ def build_life_reply_policy(
         "entropy_band": entropy_band,
         "entropy_level": round(entropy_level, 3),
         "reasons": reasons,
+        "scene_frame": {
+            "reply_policy": scene_reply_policy,
+            "task_mode": scene_task_mode,
+            "time_context": scene_time_context,
+            "owner_state": scene_owner_state,
+            "memory_relation": scene_memory_relation,
+        },
         "notes": ["life_reply_policy_v1"],
     }
 
@@ -112,6 +147,10 @@ def build_life_reply_prompt_block(policy: dict[str, Any] | None) -> str:
         return ""
     reasons = ", ".join(_safe_str(item) for item in _as_list(policy.get("reasons")) if _safe_str(item)) or "none"
     suppress = "yes" if bool(policy.get("suppress_optional_question")) else "no"
+    scene = _as_dict(policy.get("scene_frame"))
+    scene_reply_policy = _safe_str(scene.get("reply_policy"), "none") or "none"
+    scene_time_context = _safe_str(scene.get("time_context"), "none") or "none"
+    scene_memory_relation = _safe_str(scene.get("memory_relation"), "none") or "none"
     return "\n".join(
         [
             "life reply policy sidecar:",
@@ -120,6 +159,9 @@ def build_life_reply_prompt_block(policy: dict[str, Any] | None) -> str:
             f"- technical_turn: {bool(policy.get('technical_turn'))}",
             f"- max_sentences: {_safe_str(policy.get('max_sentences'), '3')}",
             f"- suppress_optional_question: {suppress}",
+            f"- scene_reply_policy: {scene_reply_policy}",
+            f"- scene_time_context: {scene_time_context}",
+            f"- scene_memory_relation: {scene_memory_relation}",
             f"- reasons: {reasons}",
             (
                 "- behavior: let these internal conditions affect pacing and initiative. "
@@ -185,3 +227,11 @@ def _coerce_float(value: Any, default: float) -> float:
     if result > 1.0:
         return 1.0
     return result
+
+
+def _scene_frame_value(scene_frame: Any | None, key: str) -> str:
+    if scene_frame is None:
+        return ""
+    if isinstance(scene_frame, dict):
+        return _safe_str(scene_frame.get(key)).strip()
+    return _safe_str(getattr(scene_frame, key, "")).strip()

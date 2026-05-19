@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "manifest_id": "stores/event_boundary_manifest",
+  "updated_at": "2026-05-18",
+  "privacy_note": "Metadata-only event stream boundaries. Do not migrate, print, or snapshot event bodies from these streams.",
+  "streams": [
+    {
+      "stream_id": "interaction_journal",
+      "path": "memory/context/interaction_journal.jsonl",
+      "owner_module": "xinyu_interaction_journal",
+      "owner_symbol": "record_interaction_turn",
+      "projection_paths": [
+        "memory/context/interaction_journal_state.md"
+      ],
+      "allowed_raw_readers": [
+        "xinyu_interaction_journal.py"
+      ],
+      "privacy": "private_runtime_event_log",
+      "retention_policy": "bounded_rows",
+      "max_rows": 240,
+      "body_policy": "no_body_migration",
+      "stable_memory_policy": "stable_memory_write_no",
+      "status": "compat_event_stream"
+    },
+    {
+      "stream_id": "proactive_request_history",
+      "path": "memory/context/proactive_request_history.jsonl",
+      "owner_module": "xinyu_core_bridge",
+      "owner_symbol": "_desktop_remember_proactive_history",
+      "projection_paths": [],
+      "allowed_raw_readers": [
+        "xinyu_core_bridge.py"
+      ],
+      "privacy": "private_runtime_event_log",
+      "retention_policy": "bounded_rows",
+      "max_rows": 20,
+      "body_policy": "no_body_migration",
+      "stable_memory_policy": "runtime_history_not_stable_memory",
+      "status": "compat_event_stream"
+    },
+    {
+      "stream_id": "owner_recent_events",
+      "path": "memory/relationships/owner_recent_events.jsonl",
+      "owner_module": "xinyu_persona_state",
+      "owner_symbol": "_record_owner_event",
+      "projection_paths": [
+        "memory/relationships/owner_recent_events.md"
+      ],
+      "allowed_raw_readers": [
+        "xinyu_persona_state.py"
+      ],
+      "privacy": "private_relationship_event_log",
+      "retention_policy": "bounded_rows",
+      "max_rows": 24,
+      "body_policy": "no_body_migration",
+      "stable_memory_policy": "blocked_without_review",
+      "status": "compat_event_stream"
+    }
+  ]
+}

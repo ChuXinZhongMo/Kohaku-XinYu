@@ -4,6 +4,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from xinyu_storage_paths import knowledge_file_path
+
 
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8-sig")
@@ -11,6 +13,10 @@ def read_text(path: Path) -> str:
 
 def write_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
+
+
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
 
 
 def extract_candidates(text: str) -> list[tuple[str, str]]:
@@ -83,12 +89,12 @@ def run_source_reliability(
     mode: str = "runtime_source_reliability",
 ) -> dict[str, object]:
     checked_at = checked_at or datetime.now().astimezone().isoformat()
-    source_gate = read_text(root / "memory/knowledge/source_gate_state.md")
+    source_gate = read_text(_knowledge(root, "source_gate_state.md"))
     candidates = extract_candidates(source_gate)
     pairs = [(qid, target, classify_target(target)) for qid, target in candidates]
 
     write_text(
-        root / "memory/knowledge/source_reliability_state.md",
+        _knowledge(root, "source_reliability_state.md"),
         render_state(checked_at, mode, pairs),
     )
     return {

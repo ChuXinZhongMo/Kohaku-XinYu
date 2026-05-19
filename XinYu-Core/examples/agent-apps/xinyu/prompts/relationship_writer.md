@@ -17,6 +17,8 @@ Write only when the interaction affects relationship reality in a meaningful way
 - grievance residue, defiance boundary, shyness, attachment pull, or continuity sensitivity changed
 - a new shared pattern appeared
 
+Do not write for ordinary daily small talk by itself. Food, weather, sleepiness, small objects, casual "I made noodles / it is salty / water was low" remarks are no-op for `memory/people/owner.md` and `memory/relationships/index.md` unless the owner explicitly asks to remember it or the turn carries strong closeness, hurt, distance, or continuity pressure.
+
 ## Special rule
 
 `owner` is the highest special node.

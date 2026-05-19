@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_dialogue_working_memory import load_dialogue_tail
+from xinyu_visible_persona_voice import compose_async_exploration_outbox_message
 
 
 STATE_REL = Path("memory/context/async_exploration_state.md")
@@ -91,13 +92,11 @@ def _tail_summary(tail: list[dict[str, Any]]) -> list[dict[str, str]]:
         role = _safe_str(item.get("role")).strip()
         content = _compact(item.get("content"), limit=360, default="")
         if role and content:
-            items.append(
-                {
-                    "role": role,
-                    "content": content,
-                    "recorded_at": _compact(item.get("recorded_at"), limit=80, default=""),
-                }
-            )
+            entry = {"role": role, "content": content}
+            recorded = _safe_str(item.get("recorded_at")).strip()
+            if recorded:
+                entry["recorded_at"] = _compact(recorded, limit=80, default="none")
+            items.append(entry)
     return items
 
 
@@ -321,19 +320,7 @@ def update_async_exploration_from_codex(
 
 
 def async_exploration_outbox_message(update: dict[str, Any]) -> str:
-    resume_id = _safe_str(update.get("resume_id"), "unknown")
-    quality = _safe_str(update.get("result_quality"), "failed")
-    summary = _compact(update.get("sanitized_summary"), limit=280)
-    report_label = _safe_str(update.get("report_label"), "none")
-    if quality == "usable_partial":
-        return (
-            f"刚才那个我后台查完一轮了，但只把可信摘要接回来：{summary}"
-            f" 报告在本地 Codex Outbox：{report_label}。resume_id: {resume_id}"
-        )
-    return (
-        f"刚才那个后台任务没完成，我没有硬编结论。原因：{summary}"
-        f" 现场已保存，resume_id: {resume_id}。你可以让我缩小范围重试，或直接说放弃这个 resume_id。"
-    )
+    return compose_async_exploration_outbox_message(update)
 
 
 def parse_resume_instruction(text: str) -> dict[str, str]:

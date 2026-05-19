@@ -13,6 +13,30 @@ from typing import Any
 STATE_MD_REL = Path("memory/context/memory_braid_state.md")
 
 
+def _now_iso() -> str:
+    return datetime.now().astimezone().isoformat()
+
+
+def _timestamp_or_now_iso(value: Any) -> str:
+    parsed = _parse_iso(value)
+    if parsed is None:
+        return _now_iso()
+    return parsed.astimezone().isoformat()
+
+
+def _parse_iso(value: Any) -> datetime | None:
+    text = _one_line(value)
+    if not text or text.lower() in {"none", "unknown", "null", "n/a", "na"}:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed
+
+
 @dataclass(frozen=True, slots=True)
 class MemoryBraidSnapshot:
     checked_at: str
@@ -82,7 +106,7 @@ def build_memory_braid_snapshot(
     max_chars: int = 2200,
 ) -> MemoryBraidSnapshot:
     root = root.resolve()
-    checked_at = checked_at or datetime.now().astimezone().isoformat()
+    checked_at = _timestamp_or_now_iso(checked_at)
     metadata = payload.get("metadata") if isinstance(payload, dict) else {}
     if not isinstance(metadata, dict):
         metadata = {}
@@ -181,7 +205,7 @@ def write_memory_braid_state(root: Path, snapshot: MemoryBraidSnapshot) -> None:
         "subject_ids: [xinyu, owner]",
         "protected: true",
         "source: xinyu_memory_braid",
-        f"updated_at: {snapshot.checked_at}",
+        f"updated_at: {_timestamp_or_now_iso(snapshot.checked_at)}",
         "status: active",
         "tags: [memory, orchestration, continuity]",
         "---",

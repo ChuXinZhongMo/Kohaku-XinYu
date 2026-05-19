@@ -8,31 +8,14 @@ from typing import Any
 
 from xinyu_runtime.modules.plugin.base import BasePlugin, PluginContext
 
+from maintenance_bridge_utils import append_trace, maintenance_should_run, resolve_root
 from source_search_resolver_engine import run_source_search_resolver
-from turn_mode_utils import read_turn_mode
 
-
-def _default_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
-def _resolve_root(ctx: PluginContext | None) -> Path:
-    candidate = Path(ctx.working_dir) if ctx else _default_root()
-    if (candidate / "memory").exists():
-        return candidate
-    return _default_root()
-
-
-def _read(path: Path) -> str:
-    return path.read_text(encoding="utf-8-sig")
+TRACE_REL = "memory/knowledge/source_search_resolver_trace.log"
 
 
 def _trace(root: Path, line: str) -> None:
-    trace_path = root / "memory/knowledge/source_search_resolver_trace.log"
-    trace_path.parent.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now().astimezone().isoformat()
-    with trace_path.open("a", encoding="utf-8") as fh:
-        fh.write(f"{stamp} {line}\n")
+    append_trace(root, TRACE_REL, line)
 
 
 class SourceSearchResolverBridgePlugin(BasePlugin):
@@ -47,31 +30,22 @@ class SourceSearchResolverBridgePlugin(BasePlugin):
 
     async def on_load(self, context: PluginContext) -> None:
         self._ctx = context
-        _trace(_resolve_root(context), "on_load ok")
+        _trace(resolve_root(context), "on_load ok")
 
     def _should_run(self, root: Path) -> tuple[bool, str]:
-        if not self._ctx:
-            return False, "no_context"
-        if read_turn_mode(root) != "maintenance_schedule_turn":
-            return False, "not_maintenance_turn"
-        recommendations = _read(root / "memory/context/maintenance_recommendations.md")
-        if "- source_search_resolver: yes" not in recommendations:
-            return False, "recommendation_not_yes"
-        last_run = self._ctx.get_state("source_search_resolver_last_run")
-        if last_run:
-            try:
-                last_dt = datetime.fromisoformat(str(last_run))
-                delta = (datetime.now().astimezone() - last_dt).total_seconds()
-                if delta < self._min_interval_seconds:
-                    return False, f"cooldown:{int(delta)}"
-            except Exception:
-                pass
-        return True, "ready"
+        return maintenance_should_run(
+            self._ctx,
+            root,
+            state_key="source_search_resolver_last_run",
+            min_interval_seconds=self._min_interval_seconds,
+            recommendation_markers=("- source_search_resolver: yes",),
+            turn_mode_missing_reason="not_maintenance_turn",
+        )
 
     async def post_llm_call(self, messages: list[dict], response: str, usage: dict, **kwargs: Any) -> None:
         if not self._enabled or not self._ctx:
             return
-        root = _resolve_root(self._ctx)
+        root = resolve_root(self._ctx)
         try:
             should_run, reason = self._should_run(root)
             _trace(root, f"post_llm_call should_run={should_run} reason={reason}")

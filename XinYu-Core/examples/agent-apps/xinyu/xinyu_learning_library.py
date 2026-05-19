@@ -25,6 +25,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import unquote, urlparse
 from urllib.request import Request, urlopen
 
+from xinyu_storage_paths import knowledge_file_path
 from xinyu_text_variants import looks_like_legacy_mojibake, repair_legacy_mojibake
 
 
@@ -288,6 +289,19 @@ $parts -join "`n`n"
 
 def now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def _timestamp_or_now_iso(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return now_iso()
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return now_iso()
+    if parsed.tzinfo is None:
+        parsed = parsed.astimezone()
+    return parsed.astimezone().isoformat(timespec="seconds")
 
 
 def now_stamp() -> str:
@@ -1126,7 +1140,7 @@ def trace_ocr_failure(event: dict[str, object]) -> None:
     try:
         trace_dir = root_dir() / "runtime"
         trace_dir.mkdir(parents=True, exist_ok=True)
-        event = {"recorded_at": now_iso(), **event}
+        event = {"recorded_at": _timestamp_or_now_iso(now_iso()), **event}
         with (trace_dir / "learning_ocr_trace.jsonl").open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
     except OSError:
@@ -1137,7 +1151,7 @@ def trace_extraction(event: dict[str, object]) -> None:
     try:
         trace_dir = root_dir() / "runtime"
         trace_dir.mkdir(parents=True, exist_ok=True)
-        event = {"recorded_at": now_iso(), **event}
+        event = {"recorded_at": _timestamp_or_now_iso(now_iso()), **event}
         with (trace_dir / "learning_extraction_trace.jsonl").open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
     except OSError:
@@ -1362,7 +1376,7 @@ def register_downloaded_item(
         "id": item_id,
         "origin": origin,
         "kind": kind,
-        "created_at": created_at,
+        "created_at": _timestamp_or_now_iso(created_at),
         "title": title,
         "reason": reason,
         "question_id": question_id,
@@ -1708,8 +1722,12 @@ def find_manifest_item(root: Path, item_id: str) -> dict[str, object] | None:
     return None
 
 
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
+
+
 def ensure_source_materials_file(root: Path) -> Path:
-    path = root / "memory/knowledge/source_materials.md"
+    path = _knowledge(root, "source_materials.md")
     if path.exists():
         return path
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -1854,7 +1872,7 @@ def add_common_source_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--question-id", default="learning-library")
     parser.add_argument("--title", default="")
     parser.add_argument("--label", default="")
-    parser.add_argument("--stage", action="store_true", help="also stage item into memory/knowledge/source_materials.md")
+    parser.add_argument("--stage", action="store_true", help="also stage item into the source materials store")
     parser.add_argument("--curated", action="store_true", help="stage as curated even if origin is self_found")
     parser.add_argument("--root", default="")
 

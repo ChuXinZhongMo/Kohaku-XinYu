@@ -10,9 +10,15 @@ from urllib.parse import urlparse
 import html2text
 import httpx
 
-ALLOWED_SCHEMES = {"http", "https"}
+from source_protocol_utils import is_allowed_source_url
+from xinyu_storage_paths import knowledge_file_path
+
 READY_PERMISSIONS = {"prepare_only", "integrate_ready"}
 DEFAULT_MAX_FETCH_URLS = 6
+
+
+def _knowledge(root: Path, filename: str) -> Path:
+    return knowledge_file_path(root, filename)
 
 
 def read_text(path: Path) -> str:
@@ -64,7 +70,7 @@ def env_urls() -> list[tuple[str, str]]:
 
 def existing_material_urls(root: Path) -> set[str]:
     try:
-        text = read_text(root / "memory/knowledge/source_materials.md")
+        text = read_text(_knowledge(root, "source_materials.md"))
     except FileNotFoundError:
         return set()
     return set(re.findall(r"(?m)^- url:\s*(\S+)\s*$", text))
@@ -88,8 +94,7 @@ def max_fetch_urls() -> int:
 
 
 def is_allowed_url(url: str) -> bool:
-    parsed = urlparse(url)
-    return parsed.scheme in ALLOWED_SCHEMES and bool(parsed.netloc)
+    return is_allowed_source_url(url)
 
 
 def clean_text(raw: str, content_type: str) -> str:
@@ -192,7 +197,7 @@ def next_material_id(existing_text: str, date_part: str) -> str:
 
 
 def append_source_materials(root: Path, fetched_at: str, staged: list[dict[str, str]]) -> list[str]:
-    path = root / "memory/knowledge/source_materials.md"
+    path = _knowledge(root, "source_materials.md")
     text = read_text(path).rstrip()
     material_ids: list[str] = []
     for item in staged:
@@ -314,17 +319,17 @@ def run_outward_source(
     urls: list[str] | None = None,
 ) -> dict[str, object]:
     fetched_at = fetched_at or datetime.now().astimezone().isoformat()
-    integration_gate = read_text(root / "memory/knowledge/source_integration_gate_state.md")
+    integration_gate = read_text(_knowledge(root, "source_integration_gate_state.md"))
     permission = extract_value(integration_gate, "integration_permission", "hold")
     gate_reason = extract_value(integration_gate, "gate_reason", "unknown")
     ai_only = gate_reason == "owner_approved_ai_ready_followthrough"
-    source_gate = read_text(root / "memory/knowledge/source_gate_state.md")
+    source_gate = read_text(_knowledge(root, "source_gate_state.md"))
     candidates = extract_source_candidates(source_gate)
     default_qid = candidates[0][0] if candidates else "none"
 
     request_pairs = [(default_qid, url) for url in (urls or [])]
     if not request_pairs:
-        request_pairs = extract_request_urls(read_text(root / "memory/knowledge/source_requests.md"), ai_only=ai_only)
+        request_pairs = extract_request_urls(read_text(_knowledge(root, "source_requests.md")), ai_only=ai_only)
     if not request_pairs:
         request_pairs = env_urls()
     request_pairs = [(qid if qid != "none" else default_qid, url) for qid, url in request_pairs]
@@ -357,7 +362,7 @@ def run_outward_source(
             skipped_reason = "no_reliable_fetches"
 
     write_text(
-        root / "memory/knowledge/outward_source_state.md",
+        _knowledge(root, "outward_source_state.md"),
         render_state(fetched_at, mode, permission, fetched, material_ids, skipped_reason),
     )
     return {

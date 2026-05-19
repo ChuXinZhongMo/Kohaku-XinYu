@@ -64,6 +64,9 @@ class CoreBridgeClient:
     async def review_inbox_command(self, payload: dict[str, Any]) -> dict[str, Any]:
         return await asyncio.to_thread(self._post_json, self.review_inbox_command_url, payload)
 
+    async def self_action_approval(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return await asyncio.to_thread(self._post_json, self._route_url("/desktop/self-action/approval"), payload)
+
     async def goldmark_mark_request(self, payload: dict[str, Any]) -> dict[str, Any]:
         return await asyncio.to_thread(self._post_json, self.goldmark_mark_url, payload)
 
@@ -75,6 +78,12 @@ class CoreBridgeClient:
 
     async def message_ack(self, payload: dict[str, Any]) -> dict[str, Any]:
         return await asyncio.to_thread(self._post_json, self.message_ack_url, payload)
+
+    def _route_url(self, route: str) -> str:
+        trimmed = self.chat_url.rstrip("/")
+        if trimmed.endswith("/chat"):
+            return trimmed[: -len("/chat")] + route
+        return trimmed + route
 
     def _post_json(self, url: str, payload: dict[str, Any]) -> dict[str, Any]:
         if not url:

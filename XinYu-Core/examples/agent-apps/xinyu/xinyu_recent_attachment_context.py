@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from state_service import atomic_write_json
+from xinyu_bridge_session import session_key_from_payload
 from xinyu_text_variants import readable_markers
 
 
@@ -111,20 +112,6 @@ def _now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
-def _session_key_from_payload(payload: dict[str, Any]) -> str:
-    for key in ("session_id", "user_id"):
-        value = _safe_str(payload.get(key)).strip()
-        if value:
-            return value
-    metadata = payload.get("metadata")
-    if isinstance(metadata, dict):
-        for key in ("session_id", "user_id"):
-            value = _safe_str(metadata.get(key)).strip()
-            if value:
-                return value
-    return "qq:default"
-
-
 def _session_hash(session_key: str) -> str:
     normalized = _safe_str(session_key, "default").strip() or "default"
     return hashlib.sha256(normalized.encode("utf-8", errors="replace")).hexdigest()[:24]
@@ -186,7 +173,7 @@ def record_recent_attachment_context(root: Path, payload: dict[str, Any], result
     if not path.exists() or not path.is_file():
         return False
 
-    session_key = _session_key_from_payload(payload)
+    session_key = session_key_from_payload(payload)
     context_path = _context_path(root, session_key)
     data = _load_context(context_path)
     metadata = payload.get("metadata")
