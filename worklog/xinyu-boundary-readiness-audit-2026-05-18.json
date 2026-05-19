@@ -1,0 +1,97 @@
+{
+  "manifest_count": 5,
+  "manifest_failure_count": 0,
+  "manifests": [
+    {
+      "check_count": 12,
+      "failure_count": 0,
+      "failures": [],
+      "manifest_id": "memory_library_manifest",
+      "ok": true,
+      "warning_count": 0,
+      "warnings": []
+    },
+    {
+      "check_count": 3,
+      "failure_count": 0,
+      "failures": [],
+      "manifest_id": "event_boundary_manifest",
+      "ok": true,
+      "warning_count": 0,
+      "warnings": []
+    },
+    {
+      "check_count": 1,
+      "failure_count": 0,
+      "failures": [],
+      "manifest_id": "runtime_trace_manifest",
+      "ok": true,
+      "warning_count": 0,
+      "warnings": []
+    },
+    {
+      "check_count": 1,
+      "failure_count": 0,
+      "failures": [],
+      "manifest_id": "queue_boundary_manifest",
+      "ok": true,
+      "warning_count": 0,
+      "warnings": []
+    },
+    {
+      "check_count": 9,
+      "failure_count": 0,
+      "failures": [],
+      "manifest_id": "orphan_runtime_state_manifest",
+      "ok": true,
+      "warning_count": 0,
+      "warnings": []
+    }
+  ],
+  "orphan_runtime_state_audit": {
+    "held_orphan_count": 9,
+    "orphan_candidate_count": 9,
+    "status": "review"
+  },
+  "p0": {
+    "by_initial_decision": {
+      "compat_source_extract_store_exists": 1,
+      "compat_store_owner_exists": 7,
+      "held_orphan_runtime_state": 9,
+      "manifested_compat_event_log": 2,
+      "manifested_private_event_log": 1,
+      "manifested_private_runtime_queue": 1,
+      "manifested_runtime_trace_log": 1
+    },
+    "generic_decision_count": 0,
+    "generic_decisions": {},
+    "total_p0_items": 22
+  },
+  "privacy_note": "Aggregates manifest metadata, source path references, and P0 decisions only; does not read or print JSON/JSONL bodies, raw QQ payloads, tokens, or private memory bodies.",
+  "reference_audit_count": 3,
+  "reference_audits": [
+    {
+      "audit_id": "event_log_boundary_audit",
+      "item_count": 3,
+      "status": "pass",
+      "undeclared_reference_count": 0,
+      "validation_failures": []
+    },
+    {
+      "audit_id": "runtime_trace_boundary_audit",
+      "item_count": 1,
+      "status": "pass",
+      "undeclared_reference_count": 0,
+      "validation_failures": []
+    },
+    {
+      "audit_id": "queue_boundary_audit",
+      "item_count": 1,
+      "status": "pass",
+      "undeclared_reference_count": 0,
+      "validation_failures": []
+    }
+  ],
+  "reference_failure_count": 0,
+  "status": "pass"
+}

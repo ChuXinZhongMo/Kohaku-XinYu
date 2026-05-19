@@ -1,0 +1,1584 @@
+# XinYu Archive/Delete Reference Audit
+
+Generated from `git status --short` deleted cleanup candidates plus path/reference checks.
+It does not read or print private memory, runtime, QQ payloads, tokens, or data bodies.
+
+- total_candidates: 242
+
+## Decision Counts
+
+- accept_delete_no_live_refs: 7
+- accept_delete_relocated: 235
+
+## Kind Counts
+
+- cleanup_candidate: 6
+- custom_manifest: 7
+- root_diagnostic: 3
+- root_manual_runner: 14
+- root_smoke: 212
+
+## Items
+
+- `XinYu-Core/examples/agent-apps/xinyu/custom/maintenance_dispatch_manifest.py` | kind=custom_manifest | decision=accept_delete_no_live_refs | relocated=0 | refs=0
+- `XinYu-Core/examples/agent-apps/xinyu/custom/maintenance_recommendation_manifest.py` | kind=custom_manifest | decision=accept_delete_no_live_refs | relocated=0 | refs=0
+- `XinYu-Core/examples/agent-apps/xinyu/custom/memory_event_sourcing_manifest.py` | kind=custom_manifest | decision=accept_delete_no_live_refs | relocated=0 | refs=0
+- `XinYu-Core/examples/agent-apps/xinyu/custom/question_pipeline_manifest.py` | kind=custom_manifest | decision=accept_delete_no_live_refs | relocated=0 | refs=0
+- `XinYu-Core/examples/agent-apps/xinyu/custom/reflection_output_manifest.py` | kind=custom_manifest | decision=accept_delete_no_live_refs | relocated=0 | refs=0
+- `XinYu-Core/examples/agent-apps/xinyu/custom/slow_reprocess_manifest.py` | kind=custom_manifest | decision=accept_delete_no_live_refs | relocated=0 | refs=0
+- `XinYu-Core/examples/agent-apps/xinyu/custom/source_gate_manifest.py` | kind=custom_manifest | decision=accept_delete_no_live_refs | relocated=0 | refs=0
+- `XinYu-Core/examples/agent-apps/xinyu/dialogue_curiosity_review.py` | kind=cleanup_candidate | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/diagnostics/dialogue_curiosity_review.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/test_dialogue_curiosity_review.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/git_change_group_audit.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/diagnostics/README.md`
+- `XinYu-Core/examples/agent-apps/xinyu/goldmark_dehydrate.py` | kind=cleanup_candidate | decision=accept_delete_relocated | relocated=1 | refs=6
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/goldmark_dehydrate.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/test_goldmark_dehydrate.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/git_change_group_audit.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/goldmark_dehydrate.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/README.md`
+- `XinYu-Core/examples/agent-apps/xinyu/life_memory_visible_probe.py` | kind=cleanup_candidate | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/probes/life_memory_visible_probe.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/git_change_group_audit.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/probes/life_memory_visible_probe.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/probes/README.md`
+- `XinYu-Core/examples/agent-apps/xinyu/long_lived_session_harness.py` | kind=cleanup_candidate | decision=accept_delete_relocated | relocated=1 | refs=6
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/probes/long_lived_session_harness.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/git_change_group_audit.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/probes/long_lived_session_harness.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/probes/README.md`
+- `XinYu-Core/examples/agent-apps/xinyu/mark_smoke_test.py` | kind=cleanup_candidate | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/diagnostics/mark_smoke_test.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/git_change_group_audit.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/diagnostics/mark_smoke_test.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/diagnostics/README.md`
+- `XinYu-Core/examples/agent-apps/xinyu/memory_lived_pressure_arc.py` | kind=cleanup_candidate | decision=accept_delete_relocated | relocated=1 | refs=6
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/probes/memory_lived_pressure_arc.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/git_change_group_audit.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/probes/README.md`
+- `XinYu-Core/examples/agent-apps/xinyu/check_runtime_env.py` | kind=root_diagnostic | decision=accept_delete_relocated | relocated=1 | refs=6
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/diagnostics/check_runtime_env.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/CHANGELOG-XINYU.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/EXECUTION-ORDER.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/test_commit_readiness_audit.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/diagnostics/README.md`
+- `XinYu-Core/examples/agent-apps/xinyu/check_sent_index.py` | kind=root_diagnostic | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/diagnostics/check_sent_index.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/diagnostics/README.md`
+- `XinYu-Core/examples/agent-apps/xinyu/diagnose_runtime_injection.py` | kind=root_diagnostic | decision=accept_delete_relocated | relocated=1 | refs=5
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/diagnostics/diagnose_runtime_injection.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/live_voice_card_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/persona_contract_absence_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/persona_life_anchor_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/diagnostics/README.md`
+- `XinYu-Core/examples/agent-apps/xinyu/manual_archive_commit.py` | kind=root_manual_runner | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_archive_commit.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_archive_commit.py`
+- `XinYu-Core/examples/agent-apps/xinyu/manual_archive_output.py` | kind=root_manual_runner | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_archive_output.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_archive_output.py`
+- `XinYu-Core/examples/agent-apps/xinyu/manual_automation_bridge.py` | kind=root_manual_runner | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_automation_bridge.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_automation_bridge.py`
+- `XinYu-Core/examples/agent-apps/xinyu/manual_consolidation.py` | kind=root_manual_runner | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_consolidation.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_consolidation.py`
+- `XinYu-Core/examples/agent-apps/xinyu/manual_inner_cycle.py` | kind=root_manual_runner | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_inner_cycle.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_inner_cycle.py`
+- `XinYu-Core/examples/agent-apps/xinyu/manual_inner_sync.py` | kind=root_manual_runner | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_inner_sync.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_inner_cycle.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/README.md`
+- `XinYu-Core/examples/agent-apps/xinyu/manual_maintenance_recommendation.py` | kind=root_manual_runner | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_maintenance_recommendation.py`
+- `XinYu-Core/examples/agent-apps/xinyu/manual_question_pipeline.py` | kind=root_manual_runner | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_question_pipeline.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_inner_cycle.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_question_pipeline.py`
+- `XinYu-Core/examples/agent-apps/xinyu/manual_reflection_output.py` | kind=root_manual_runner | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_reflection_output.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_inner_cycle.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_reflection_output.py`
+- `XinYu-Core/examples/agent-apps/xinyu/manual_retention_gate.py` | kind=root_manual_runner | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_retention_gate.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_retention_gate.py`
+- `XinYu-Core/examples/agent-apps/xinyu/manual_slow_reprocess.py` | kind=root_manual_runner | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_slow_reprocess.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_inner_cycle.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_slow_reprocess.py`
+- `XinYu-Core/examples/agent-apps/xinyu/manual_source_gate.py` | kind=root_manual_runner | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_source_gate.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_inner_cycle.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_source_gate.py`
+- `XinYu-Core/examples/agent-apps/xinyu/manual_source_integration_gate.py` | kind=root_manual_runner | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_source_integration_gate.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_source_integration_gate.py`
+- `XinYu-Core/examples/agent-apps/xinyu/manual_source_reliability.py` | kind=root_manual_runner | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_source_reliability.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/manual/manual_source_reliability.py`
+- `XinYu-Core/examples/agent-apps/xinyu/ai_domain_source_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=6
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/ai_domain_source_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/ai_domain_source_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/custom/ai_self_iteration_review_engine.py`
+- `XinYu-Core/examples/agent-apps/xinyu/ai_self_iteration_gate_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=6
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/integration/ai_self_iteration_gate_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/integration/ai_self_iteration_gate_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/custom/ai_self_iteration_review_engine.py`
+- `XinYu-Core/examples/agent-apps/xinyu/ai_self_iteration_review_bridge_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/integration/ai_self_iteration_review_bridge_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/integration/ai_self_iteration_review_bridge_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/ai_self_iteration_review_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=6
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/integration/ai_self_iteration_review_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/integration/ai_self_iteration_review_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-ALIFE-OPEN-ENDED-DIRECTION-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/archive_commit_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/integration/archive_commit_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/integration/archive_commit_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/archive_queue_trace_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/archive_queue_trace_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/archive_queue_trace_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/async_exploration_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/async_exploration_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/async_exploration_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/automation_bridge_live_turn_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/automation_bridge_live_turn_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-RUNTIME-PRESENCE-SELF-MAP-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/autonomous_search_activation_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=5
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/autonomous_search_activation_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/autonomous_search_activation_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/custom/ai_self_iteration_review_engine.py`
+- `XinYu-Core/examples/agent-apps/xinyu/autonomous_state_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/autonomous_state_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/behavior_regression_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/behavior_regression_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/MEMORY-REDUCTION-RULES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/expression_tone_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/personality_continuity_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/personality_detail_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/personality_voice_calibration_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_auth_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_auth_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_auth_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_bootstrap_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_bootstrap_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_cli_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_cli_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_codex_aliases_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_codex_aliases_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_context_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_context_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_debug_prompt_dump_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_debug_prompt_dump_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_desktop_actions_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_desktop_actions_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_desktop_projection_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_desktop_projection_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_desktop_service_aliases_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_desktop_service_aliases_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_desktop_state_text_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_desktop_state_text_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_errors_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_errors_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_learning_ingest_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=5
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/integration/bridge_learning_ingest_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/integration/bridge_learning_ingest_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_learning_sidecars_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_learning_sidecars_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_loop_thread_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_loop_thread_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_memory_snapshot_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_memory_snapshot_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_null_input_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_null_input_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_payload_attachment_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_payload_attachment_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_payload_policy_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_payload_policy_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_probe_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=7
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/integration/bridge_probe_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNBOOK.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/xinyu_style_pressure_regression_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/integration/runtime_readiness_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/live_chat_regression_baseline.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_promises_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_promises_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_recent_sticker_reply_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_recent_sticker_reply_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_renderer_guard_flags_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_renderer_guard_flags_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-EMOTION-COUNCIL-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_reply_bubbles_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_reply_bubbles_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_reply_text_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_reply_text_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_session_cleanup_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=5
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_session_cleanup_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNBOOK.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/integration/runtime_readiness_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_session_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_session_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_state_text_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_state_text_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_trusted_search_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_trusted_search_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/bridge_values_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/bridge_values_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/test_git_change_group_audit.py`
+- `XinYu-Core/examples/agent-apps/xinyu/capability_zones_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/capability_zones_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/chat_service_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/chat_service_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/chat_service_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/chinese_voice_guard_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/chinese_voice_guard_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/PERSONA-LIVING-SURFACE-RULES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/xinyu_voice_promotion_gate.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/voice_calibration_promotion_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/competitive_benchmark_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-DIALOGUE-DATASET-SELECTION-AND-EXPERIENCE-LIBRARY-PLAN-2026-05-14.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-OWNER-PRIVATE-NEGATIVE-EXPRESSION-AUDIT-2026-05-14.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260506T192719+0800_codex-qq-20260506T191818-report.md_14a7a340/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/custom/ai_self_iteration_review_engine.py`
+- `XinYu-Core/examples/agent-apps/xinyu/codex_completion_outbox_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/codex/codex_completion_outbox_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/codex/codex_completion_outbox_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/codex_delegate_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/codex/codex_delegate_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-ALIFE-OPEN-ENDED-DIRECTION-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-RUNTIME-PRESENCE-SELF-MAP-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/codex_delegation_reality_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/codex/codex_delegation_reality_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+- `XinYu-Core/examples/agent-apps/xinyu/codex_dream_handoff_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/codex/codex_dream_handoff_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+- `XinYu-Core/examples/agent-apps/xinyu/codex_report_material_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/codex/codex_report_material_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/codex/codex_report_material_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/competitive_benchmark_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/competitive_benchmark_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/consolidation_dream_weight_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=5
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/integration/consolidation_dream_weight_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/expression_tone_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/integration/consolidation_dream_weight_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/context_retrieval_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/context_retrieval_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/test_commit_readiness_audit.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/context_retrieval_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-INTRA-INSPIRED-RETRIEVAL-V2-PLAN-2026-05-15.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/context_self_preservation_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/context_self_preservation_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/context_self_preservation_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012038+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_85c73559/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012038+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_85c73559/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/deployment_status_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/integration/deployment_status_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/DEPLOYMENT-STATUS-RUNBOOK.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/README.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNBOOK.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/dialogue_archive_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/dialogue_archive_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/dialogue_archive_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012038+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_85c73559/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012038+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_85c73559/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/dialogue_privacy_scope_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/dialogue_privacy_scope_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/dialogue_privacy_scope_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012038+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_85c73559/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012038+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_85c73559/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/dialogue_semantic_retrieval_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/dialogue_semantic_retrieval_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/dialogue_semantic_retrieval_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-INTRA-INSPIRED-RETRIEVAL-V2-PLAN-2026-05-15.md`
+- `XinYu-Core/examples/agent-apps/xinyu/dialogue_tail_retention_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/dialogue_tail_retention_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/dialogue_tail_retention_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012038+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_85c73559/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012038+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_85c73559/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/dormancy_reactivation_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/integration/dormancy_reactivation_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/MEMORY-REDUCTION-RULES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/xinyu_neuro_memory_rules.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/integration/dormancy_reactivation_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/dream_journal_export_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/dream_journal_export_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/dream_reflection_growth_cycle_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=7
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/integration/dream_reflection_growth_cycle_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/MEMORY-REDUCTION-RULES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/integration/dream_reflection_growth_cycle_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-ALIFE-OPEN-ENDED-DIRECTION-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/dream_weight_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/integration/dream_weight_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/MEMORY-REDUCTION-RULES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/NEURO-INSPIRED-ENGINEERING-RULES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/xinyu_neuro_memory_rules.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/expression_tone_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/integration/consolidation_dream_weight_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/dynamic_life_posture_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/dynamic_life_posture_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/emotion_council_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=5
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/emotion_council_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/NEURO-INSPIRED-ENGINEERING-RULES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/xinyu_neuro_memory_rules.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-EMOTION-COUNCIL-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-OWNER-PRIVATE-NEGATIVE-EXPRESSION-AUDIT-2026-05-14.md`
+- `XinYu-Core/examples/agent-apps/xinyu/emotion_vector_sync_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/integration/emotion_vector_sync_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/PROMPT-TUNING.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/xinyu_neuro_memory_rules.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/expression_tone_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-OWNER-PRIVATE-NEGATIVE-EXPRESSION-AUDIT-2026-05-14.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/environment_sensor_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/environment_sensor_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CODEX-HANDOFF-2026-05-05.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-LIFE-KERNEL-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/expression_runtime_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=7
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/integration/expression_runtime_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/PROMPT-TUNING.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/expression_tone_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/integration/expression_runtime_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/behavior_regression_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/expression_tone_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=7
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/expression_tone_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/PROMPT-TUNING.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-DIALOGUE-DATASET-SELECTION-AND-EXPERIENCE-LIBRARY-PLAN-2026-05-14.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-OWNER-PRIVATE-NEGATIVE-EXPRESSION-AUDIT-2026-05-14.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260506T192719+0800_codex-qq-20260506T191818-report.md_14a7a340/extracted_text.md`
+- `XinYu-Core/examples/agent-apps/xinyu/github_autonomous_learning_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/github_autonomous_learning_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/github_autonomous_learning_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/group_shadow_state_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/group_shadow_state_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/impulse_soup_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/impulse_soup_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-EMOTION-COUNCIL-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/initiative_loop_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=6
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/integration/initiative_loop_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/integration/initiative_loop_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-SELF-THOUGHT-IDLE-LOOP-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/initiative_spine_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/initiative_spine_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+- `XinYu-Core/examples/agent-apps/xinyu/learner_integration_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/learner_integration_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/learner_integration_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/learning_library_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/learning_library_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/bridge/integration/bridge_learning_ingest_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/learning_quality_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/learning_quality_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/learning_quality_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/learning_session_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/learning_session_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/learning_session_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/life_kernel_entropy_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/life_kernel_entropy_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CODEX-HANDOFF-2026-05-05.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-LIFE-KERNEL-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/life_kernel_self_choice_bias_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/life_kernel_self_choice_bias_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-ALIFE-OPEN-ENDED-DIRECTION-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/life_kernel_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/life_kernel_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CODEX-HANDOFF-2026-05-05.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-LIFE-KERNEL-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/life_month_context_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/life_month_context_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/life_month_slots_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/life_month_slots_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/live_voice_card_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=5
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/live_voice_card_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/STATE-OF-XINYU.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/local_scope_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/local_scope_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/long_term_memory_gate_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=7
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/integration/long_term_memory_gate_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/MEMORY-REDUCTION-RULES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/xinyu_neuro_memory_rules.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/expression_tone_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/integration/long_term_memory_gate_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/maintenance_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/integration/maintenance_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/probes/memory_lived_pressure_arc.py`
+- `XinYu-Core/examples/agent-apps/xinyu/memory_arc_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/integration/memory_arc_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/integration/memory_arc_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/memory_braid_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/memory_braid_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+- `XinYu-Core/examples/agent-apps/xinyu/memory_candidate_extractor_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/memory_candidate_extractor_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/memory_candidate_extractor_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012038+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_85c73559/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012038+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_85c73559/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/memory_event_sourcing_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=6
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/memory_event_sourcing_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/README.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/memory_event_sourcing_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-ALIFE-OPEN-ENDED-DIRECTION-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/memory_mutation_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/integration/memory_mutation_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/PROMPT-TUNING.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/personality_continuity_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/personality_detail_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/personality_growth_gate_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/personality_voice_calibration_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/real_conversation_quality_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/memory_pressure_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=5
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/integration/memory_pressure_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/MEMORY-REDUCTION-RULES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/integration/memory_pressure_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/memory_self_review_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/memory_self_review_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/memory_self_review_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/metabolism_bridge_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=5
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/metabolism_bridge_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/metabolism_bridge_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CODEX-HANDOFF-2026-05-05.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-LIFE-KERNEL-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-SELF-CHOICE-STORE-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/metabolism_contract_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/metabolism_contract_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/metabolism_contract_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CODEX-HANDOFF-2026-05-05.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-LIFE-KERNEL-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/metabolism_http_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/metabolism_http_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/metabolism_http_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CODEX-HANDOFF-2026-05-05.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-LIFE-KERNEL-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/mind_loop_state_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/mind_loop_state_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/mojibake_guard_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/mojibake_guard_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/mojibake_guard_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/integration/runtime_readiness_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/extracted_text.md`
+- `XinYu-Core/examples/agent-apps/xinyu/multi_person_live_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/multi_person_live_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/non_owner_social_world_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/multi_person_relationship_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/multi_person_relationship_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/non_owner_social_world_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/non_owner_social_world_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/non_owner_social_world_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/non_owner_social_world_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/outward_source_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/outward_source_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/autonomous_search_activation_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/outward_source_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/research_handoff_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_learning_chain_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_request_planner_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_search_provider_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/owner_relationship_lived_stress_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/owner_relationship_lived_stress_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/persona_contract_absence_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=6
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/persona_contract_absence_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/CHANGELOG-XINYU.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/persona_life_anchor_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/persona_life_anchor_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/persona_runtime_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=6
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/persona_runtime_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/PERSONA-LIVING-SURFACE-RULES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/competitive_benchmark_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-RUNTIME-PRESENCE-SELF-MAP-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/custom/ai_self_iteration_review_engine.py`
+- `XinYu-Core/examples/agent-apps/xinyu/persona_stability_layers_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/persona_stability_layers_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/persona_stability_layers_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/persona_state_flow_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/persona_state_flow_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/README.md`
+- `XinYu-Core/examples/agent-apps/xinyu/personality_continuity_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/personality_continuity_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/personality_detail_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/personality_detail_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/PROMPT-TUNING.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/expression_tone_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CLOSEOUT-AUTORUN-PLAN-2026-05-13.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-DIALOGUE-DATASET-SELECTION-AND-EXPERIENCE-LIBRARY-PLAN-2026-05-14.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-OWNER-PRIVATE-NEGATIVE-EXPRESSION-AUDIT-2026-05-14.md`
+- `XinYu-Core/examples/agent-apps/xinyu/personality_evolution_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/personality_evolution_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/personality_evolution_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/competitive_benchmark_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/personality_growth_gate_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/personality_growth_gate_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/expression_tone_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/personality_growth_gate_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CLOSEOUT-AUTORUN-PLAN-2026-05-13.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-DIALOGUE-DATASET-SELECTION-AND-EXPERIENCE-LIBRARY-PLAN-2026-05-14.md`
+- `XinYu-Core/examples/agent-apps/xinyu/personality_voice_calibration_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/personality_voice_calibration_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/PROMPT-TUNING.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/phase3_lived_session_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/phase3_lived_session_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/MEMORY-REDUCTION-RULES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/PROMPT-TUNING.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CLOSEOUT-AUTORUN-PLAN-2026-05-13.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-DIALOGUE-DATASET-SELECTION-AND-EXPERIENCE-LIBRARY-PLAN-2026-05-14.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-OWNER-PRIVATE-NEGATIVE-EXPRESSION-AUDIT-2026-05-14.md`
+- `XinYu-Core/examples/agent-apps/xinyu/pre_draft_turn_classifier_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/pre_draft_turn_classifier_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/private_thought_events_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/private_thought_events_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/competitive_benchmark_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/proactive_feedback_spine_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/proactive_feedback_spine_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+- `XinYu-Core/examples/agent-apps/xinyu/proactive_presence_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=5
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/proactive_presence_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-PROACTIVE-CONCRETE-REQUEST-LOOP-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-SELF-THOUGHT-IDLE-LOOP-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/proactive_request_loop_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/proactive_request_loop_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-ALIFE-OPEN-ENDED-DIRECTION-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-INNER-INTENTION-TO-PROACTIVE-SYSTEM-DESIGN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-PROACTIVE-CONCRETE-REQUEST-LOOP-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/proactivity_scorer_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/proactivity_scorer_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-PROACTIVITY-SCORER-SHADOW-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/programmatic_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/integration/programmatic_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/integration/programmatic_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/promise_followup_state_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/promise_followup_state_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/promise_followup_state_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_attachment_material_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_attachment_material_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_cli_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_cli_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_config_helpers_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_config_helpers_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_core_client_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_core_client_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_forward_context_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_forward_context_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_gateway_constants_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_gateway_constants_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_gateway_utils_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_gateway_utils_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_models_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_models_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_normalizer_aliases_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_normalizer_aliases_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_outbox_route_alias_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_outbox_route_alias_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_outbox_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=5
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_outbox_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_outbox_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-PROACTIVE-CONCRETE-REQUEST-LOOP-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-SELF-THOUGHT-IDLE-LOOP-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_recent_sticker_state_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/integration/qq_recent_sticker_state_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_rich_context_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_rich_context_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_runtime_trace_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/integration/qq_runtime_trace_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/integration/qq_runtime_trace_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_sticker_semantics_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_sticker_semantics_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_trust_aliases_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_trust_aliases_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_trust_config_persistence_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_trust_config_persistence_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/qq_trust_policy_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/qq_trust_policy_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/question_pipeline_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/question_pipeline_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/question_pipeline_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/real_conversation_quality_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/real_conversation_quality_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/PROMPT-TUNING.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/STATE-OF-XINYU.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/xinyu_voice_promotion_gate.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/voice_calibration_promotion_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/real_life_input_adapter_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=5
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/real_life_input_adapter_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/real_life_input_adapter_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/custom/ai_self_iteration_review_engine.py`
+- `XinYu-Core/examples/agent-apps/xinyu/recent_attachment_context_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/recent_attachment_context_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/recent_attachment_context_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/reflection_dream_residue_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=5
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/integration/reflection_dream_residue_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/expression_tone_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/integration/reflection_dream_residue_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/research_handoff_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/research_handoff_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/research_handoff_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/research_loop_dry_run_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/research_loop_dry_run_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/research_loop_dry_run_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/resource_boundary_live_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/resource_boundary_live_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-OWNER-PRIVATE-NEGATIVE-EXPRESSION-AUDIT-2026-05-14.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/resource_boundary_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=6
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/resource_boundary_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/TEST-SCENARIOS.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-ALIFE-OPEN-ENDED-DIRECTION-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-OWNER-PRIVATE-NEGATIVE-EXPRESSION-AUDIT-2026-05-14.md`
+- `XinYu-Core/examples/agent-apps/xinyu/runtime_failure_freshness_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/runtime_failure_freshness_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/runtime_presence_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/runtime_presence_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-RUNTIME-PRESENCE-SELF-MAP-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/runtime_readiness_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/integration/runtime_readiness_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/CHANGELOG-XINYU.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/CURRENT-REFACTOR-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/DEPLOYMENT-STATUS-RUNBOOK.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/README.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNBOOK.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+- `XinYu-Core/examples/agent-apps/xinyu/runtime_security_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/runtime_security_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/CHANGELOG-XINYU.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/README.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNBOOK.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/seed_memory_packaging_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/seed_memory_packaging_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/README.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/self_code_approval_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/codex/self_code_approval_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/codex/self_code_approval_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/self_code_watchdog_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/codex/self_code_watchdog_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/codex/self_code_watchdog_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/self_thought_loop_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/self_thought_loop_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-EMOTION-COUNCIL-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-INNER-INTENTION-TO-PROACTIVE-SYSTEM-DESIGN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-SELF-THOUGHT-IDLE-LOOP-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/service_boundary_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/service_boundary_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/service_boundary_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CLOSEOUT-AUTORUN-PLAN-2026-05-13.md`
+- `XinYu-Core/examples/agent-apps/xinyu/social_inquiry_policy_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=5
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/social_inquiry_policy_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/integration/social_inquiry_policy_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/custom/ai_self_iteration_review_engine.py`
+- `XinYu-Core/examples/agent-apps/xinyu/source_comparison_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_comparison_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_comparison_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/source_learning_chain_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_learning_chain_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/source_quality_followup_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_quality_followup_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_quality_followup_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/source_reliability_gate_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_reliability_gate_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_reliability_gate_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/source_request_planner_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_request_planner_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_request_planner_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/source_search_provider_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_search_provider_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_search_provider_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/source_search_resolution_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_search_resolution_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/integration/source_search_resolution_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/state_io_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=6
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/state_io_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/state_io_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/summary_coverage_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/summary_coverage_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/summary_coverage_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/system_prompt_memory_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/integration/system_prompt_memory_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/temporal_trace_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/temporal_trace_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/temporal_trace_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/thought_seeds_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/memory/thought_seeds_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+- `XinYu-Core/examples/agent-apps/xinyu/turn_coherence_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/initiative/turn_coherence_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+- `XinYu-Core/examples/agent-apps/xinyu/visible_reply_dedupe_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/visible_reply_dedupe_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/visible_reply_dedupe_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CLOSEOUT-AUTORUN-PLAN-2026-05-13.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-DIALOGUE-DATASET-SELECTION-AND-EXPERIENCE-LIBRARY-PLAN-2026-05-14.md`
+- `XinYu-Core/examples/agent-apps/xinyu/voice_calibration_promotion_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/voice_calibration_promotion_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNTIME-VALIDATION-NOTES.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012653+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_986d0e2a/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/extracted_text.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/learning/owner_supplied/20260501T012342+0800_XINYU-CONTEXT-MEMORY-LAYER-PLAN.md_48b946cb/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/voice_learning_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/voice_learning_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/xinyu_voice_promotion_gate.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/voice_calibration_promotion_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/watched_sources_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/learning/watched_sources_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_action_experience_digest_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/xinyu_action_experience_digest_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/xinyu_action_experience_digest_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-ALIFE-OPEN-ENDED-DIRECTION-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_action_experience_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/xinyu_action_experience_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/CURRENT-REFACTOR-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/xinyu_action_experience_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-ALIFE-OPEN-ENDED-DIRECTION-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_action_openended_audit_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/xinyu_action_openended_audit_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/xinyu_action_openended_audit_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_clip_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/tools/xinyu_clip_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/tools/xinyu_clip_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_daily_digest_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/tools/xinyu_daily_digest_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/tools/xinyu_daily_digest_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_desktop_events_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/desktop/xinyu_desktop_events_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_desktop_life_state_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/desktop/xinyu_desktop_life_state_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-LIFE-KERNEL-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-SELF-CHOICE-STORE-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_desktop_metabolism_ticket_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/desktop/xinyu_desktop_metabolism_ticket_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CODEX-HANDOFF-2026-05-05.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-LIFE-KERNEL-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_desktop_proactive_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/desktop/xinyu_desktop_proactive_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_desktop_rest_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/desktop/xinyu_desktop_rest_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_desktop_ws_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/desktop/xinyu_desktop_ws_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_dialogue_observation_approve_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/xinyu_dialogue_observation_approve_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/xinyu_dialogue_observation_approve_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_dialogue_observation_compile_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/xinyu_dialogue_observation_compile_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/xinyu_dialogue_observation_compile_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_dialogue_observation_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/xinyu_dialogue_observation_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/xinyu_dialogue_observation_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_dialogue_observation_synthesize_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/xinyu_dialogue_observation_synthesize_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/xinyu_dialogue_observation_synthesize_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_dialogue_rule_eval_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/xinyu_dialogue_rule_eval_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/xinyu_dialogue_rule_eval_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_dialogue_rule_trial_overlay_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/xinyu_dialogue_rule_trial_overlay_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/xinyu_dialogue_rule_trial_overlay_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_dream_engine_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/xinyu_dream_engine_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_life_reply_policy_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/xinyu_life_reply_policy_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/xinyu_life_reply_policy_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_paddle_ocr_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/tools/xinyu_paddle_ocr_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/tools/xinyu_paddle_ocr_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_config_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/xinyu_qq_config_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=7
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/integration/xinyu_qq_gateway_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/README.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/RUNBOOK.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/integration/xinyu_qq_gateway_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-EMOTION-COUNCIL-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-PROACTIVE-CONCRETE-REQUEST-LOOP-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-RUNTIME-PRESENCE-SELF-MAP-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_review_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=3
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/xinyu_qq_review_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/STATE-OF-XINYU.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_server_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/qq/xinyu_qq_server_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_reply_bubble_force_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/xinyu_reply_bubble_force_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/dialogue/xinyu_reply_bubble_force_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_review_inbox_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/tools/xinyu_review_inbox_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/tools/xinyu_review_inbox_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_self_choice_store_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=4
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/life/xinyu_self_choice_store_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-ALIFE-OPEN-ENDED-DIRECTION-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CODEX-HANDOFF-2026-05-05.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-SELF-CHOICE-STORE-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_speech_controller_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=8
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/xinyu_speech_controller_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/VALIDATION-INDEX.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CLOSEOUT-AUTORUN-PLAN-2026-05-13.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-DIALOGUE-DATASET-SELECTION-AND-EXPERIENCE-LIBRARY-PLAN-2026-05-14.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-EMOTION-COUNCIL-PLAN.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-OWNER-PRIVATE-NEGATIVE-EXPRESSION-AUDIT-2026-05-14.md`
+    - `XinYu-Core/examples/agent-apps/xinyu/ops/validation/long_run_status.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_sticker_import_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/tools/xinyu_sticker_import_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/tools/xinyu_sticker_import_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_sticker_ingest_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/tools/xinyu_sticker_ingest_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/tools/xinyu_sticker_ingest_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_sticker_pack_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/tools/xinyu_sticker_pack_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/tools/xinyu_sticker_pack_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_style_pressure_regression_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/xinyu_style_pressure_regression_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/integration/xinyu_style_pressure_regression_smoke.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-DIALOGUE-DATASET-SELECTION-AND-EXPERIENCE-LIBRARY-PLAN-2026-05-14.md`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_tool_artifact_hygiene_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/codex/xinyu_tool_artifact_hygiene_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_v1_owner_simple_canary_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/runtime/integration/xinyu_v1_owner_simple_canary_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/CURRENT-REFACTOR-PLAN.md`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_visible_state_hygiene_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=0
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/xinyu_visible_state_hygiene_smoke.py`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_visible_text_sanitizer_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=1
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/xinyu_visible_text_sanitizer_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/project-plans/XINYU-CLOSEOUT-AUTORUN-PLAN-2026-05-13.md`
+- `XinYu-Core/examples/agent-apps/xinyu/xinyu_voice_trial_overlay_smoke.py` | kind=root_smoke | decision=accept_delete_relocated | relocated=1 | refs=2
+  - relocation_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/xinyu_voice_trial_overlay_smoke.py`
+  - reference_examples:
+    - `XinYu-Core/examples/agent-apps/xinyu/xinyu_neuro_memory_rules.py`
+    - `XinYu-Core/examples/agent-apps/xinyu/tests/smoke/voice/xinyu_voice_trial_overlay_smoke.py`
+
+## Safety Rule
+
+- `accept_delete_relocated` means a same-name replacement exists under the active tree.
+- `accept_delete_no_live_refs` means the deleted path/name had no live source/doc references in this audit.
+- `hold_delete_referenced` means do not accept deletion until the listed references are reviewed.

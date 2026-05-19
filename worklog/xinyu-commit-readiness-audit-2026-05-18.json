@@ -1,0 +1,269 @@
+{
+  "archive_delete": {
+    "by_decision": {
+      "accept_delete_no_live_refs": 7,
+      "accept_delete_relocated": 235
+    },
+    "by_kind": {
+      "cleanup_candidate": 6,
+      "custom_manifest": 7,
+      "root_diagnostic": 3,
+      "root_manual_runner": 14,
+      "root_smoke": 212
+    },
+    "hold_count": 0,
+    "total_candidates": 242
+  },
+  "boundary_readiness": {
+    "held_orphan_count": 9,
+    "manifest_failure_count": 0,
+    "p0_generic_decision_count": 0,
+    "reference_failure_count": 0,
+    "status": "pass"
+  },
+  "closeout_summary": {
+    "archived": [
+      "235 cleanup deletions have relocated replacements."
+    ],
+    "deleted": [
+      "7 cleanup deletions have no live references in the audit."
+    ],
+    "hold": [],
+    "kept": [
+      "P00 docs-worklogs-plans (48 paths)",
+      "P01 ops-validation-tools (171 paths)",
+      "P02 tests-smokes-regression (96 paths)",
+      "P05 desktop-shell (16 paths)",
+      "P06 memory-data-review-only (5 paths)"
+    ],
+    "merged": [
+      "P03 core-runtime-services-stores (150 paths)",
+      "P04 adapters-bridges-io (27 paths)"
+    ]
+  },
+  "group_counts": {
+    "adapters": 27,
+    "archive/delete": 242,
+    "core": 143,
+    "desktop": 16,
+    "docs": 48,
+    "memory-data": 5,
+    "ops": 171,
+    "services": 4,
+    "stores": 3,
+    "tests": 96
+  },
+  "hold_reasons": [],
+  "package_count": 8,
+  "package_overview": [
+    {
+      "count": 48,
+      "groups": {
+        "docs": 48
+      },
+      "id": "P00",
+      "review_action": "keep_docs_review",
+      "risk": "low",
+      "status": {
+        "modified": 25,
+        "untracked": 23
+      },
+      "title": "docs-worklogs-plans"
+    },
+    {
+      "count": 171,
+      "groups": {
+        "ops": 171
+      },
+      "id": "P01",
+      "review_action": "keep_ops_validation",
+      "risk": "medium",
+      "status": {
+        "deleted": 3,
+        "modified": 6,
+        "untracked": 162
+      },
+      "title": "ops-validation-tools"
+    },
+    {
+      "count": 96,
+      "groups": {
+        "tests": 96
+      },
+      "id": "P02",
+      "review_action": "keep_regression_tests",
+      "risk": "medium",
+      "status": {
+        "modified": 10,
+        "untracked": 86
+      },
+      "title": "tests-smokes-regression"
+    },
+    {
+      "count": 150,
+      "groups": {
+        "core": 143,
+        "services": 4,
+        "stores": 3
+      },
+      "id": "P03",
+      "review_action": "merge_review_core_runtime",
+      "risk": "high",
+      "status": {
+        "deleted": 2,
+        "modified": 103,
+        "untracked": 45
+      },
+      "title": "core-runtime-services-stores"
+    },
+    {
+      "count": 27,
+      "groups": {
+        "adapters": 27
+      },
+      "id": "P04",
+      "review_action": "merge_review_adapters",
+      "risk": "high",
+      "status": {
+        "modified": 13,
+        "untracked": 14
+      },
+      "title": "adapters-bridges-io"
+    },
+    {
+      "count": 16,
+      "groups": {
+        "desktop": 16
+      },
+      "id": "P05",
+      "review_action": "keep_desktop_shell",
+      "risk": "medium",
+      "status": {
+        "modified": 15,
+        "untracked": 1
+      },
+      "title": "desktop-shell"
+    },
+    {
+      "count": 5,
+      "groups": {
+        "memory-data": 5
+      },
+      "id": "P06",
+      "review_action": "keep_memory_data_review_only",
+      "risk": "high",
+      "status": {
+        "modified": 1,
+        "untracked": 4
+      },
+      "title": "memory-data-review-only"
+    },
+    {
+      "count": 242,
+      "groups": {
+        "archive/delete": 242
+      },
+      "id": "P07",
+      "review_action": "archive_delete_review",
+      "risk": "medium",
+      "status": {
+        "deleted": 242
+      },
+      "title": "archive-delete-candidates"
+    }
+  ],
+  "privacy_note": "Generated from git status paths and existing metadata audits only; does not read or print private memory bodies, raw QQ payload bodies, tokens, or secrets.",
+  "recommended_commit_split": [
+    {
+      "count": 48,
+      "package_id": "P00",
+      "review_action": "keep_docs_review",
+      "risk": "low",
+      "title": "docs-worklogs-plans"
+    },
+    {
+      "count": 171,
+      "package_id": "P01",
+      "review_action": "keep_ops_validation",
+      "risk": "medium",
+      "title": "ops-validation-tools"
+    },
+    {
+      "count": 96,
+      "package_id": "P02",
+      "review_action": "keep_regression_tests",
+      "risk": "medium",
+      "title": "tests-smokes-regression"
+    },
+    {
+      "count": 150,
+      "package_id": "P03",
+      "review_action": "merge_review_core_runtime",
+      "risk": "high",
+      "title": "core-runtime-services-stores"
+    },
+    {
+      "count": 27,
+      "package_id": "P04",
+      "review_action": "merge_review_adapters",
+      "risk": "high",
+      "title": "adapters-bridges-io"
+    },
+    {
+      "count": 16,
+      "package_id": "P05",
+      "review_action": "keep_desktop_shell",
+      "risk": "medium",
+      "title": "desktop-shell"
+    },
+    {
+      "count": 5,
+      "package_id": "P06",
+      "review_action": "keep_memory_data_review_only",
+      "risk": "high",
+      "title": "memory-data-review-only"
+    },
+    {
+      "count": 242,
+      "package_id": "P07",
+      "review_action": "archive_delete_review",
+      "risk": "medium",
+      "title": "archive-delete-candidates"
+    }
+  ],
+  "remaining_risks": [
+    "High-risk packages need behavior review: P03 core-runtime-services-stores, P04 adapters-bridges-io, P06 memory-data-review-only.",
+    "P06 memory-data remains review-only; do not auto-delete or move private bodies.",
+    "9 orphan runtime-state paths are intentionally held for manual ownership review."
+  ],
+  "required_validation": [
+    "git diff --check",
+    ".\\.venv\\Scripts\\python.exe -m pytest tests -q",
+    ".\\.venv\\Scripts\\python.exe smoke_run.py --group quick --restore-after --timeout-seconds 300",
+    "npm run typecheck",
+    "npm run build"
+  ],
+  "review_order": [
+    "P00",
+    "P01",
+    "P02",
+    "P03",
+    "P04",
+    "P05",
+    "P06",
+    "P07"
+  ],
+  "risk_entry_counts": {
+    "high": 182,
+    "low": 48,
+    "medium": 525
+  },
+  "risk_package_counts": {
+    "high": 3,
+    "low": 1,
+    "medium": 4
+  },
+  "status": "ready_for_review",
+  "total_dirty_entries": 755,
+  "unknown_entry_count": 0
+}

@@ -1,0 +1,32 @@
+{
+  "items": [
+    {
+      "allowed_raw_readers": [
+        "start_xinyu_core_bridge.ps1",
+        "xinyu_qq_gateway.py",
+        "xinyu_qq_outbox.py",
+        "xinyu_runtime_presence.py"
+      ],
+      "decision": "pass_declared_queue_boundary",
+      "owner_module": "xinyu_qq_outbox",
+      "path": "memory/context/qq_outbox_queue.json",
+      "queue_id": "qq_outbox",
+      "reference_count": 4,
+      "reference_examples": [
+        "start_xinyu_core_bridge.ps1",
+        "xinyu_qq_gateway.py",
+        "xinyu_qq_outbox.py",
+        "xinyu_runtime_presence.py"
+      ],
+      "undeclared_reference_count": 0,
+      "undeclared_reference_examples": []
+    }
+  ],
+  "manifest_ok": true,
+  "privacy_note": "Scans source file paths and string references only; does not read queue bodies, raw QQ payloads, tokens, or private memory bodies.",
+  "queue_count": 1,
+  "status": "pass",
+  "undeclared_reference_count": 0,
+  "validation_failures": [],
+  "validation_warnings": []
+}

@@ -1,0 +1,146 @@
+# XinYu Memory/Library/Cases Boundary Audit
+
+This report scans paths and small frontmatter metadata only.
+It does not print memory bodies, QQ logs, or private content.
+
+- total_files: 2287
+
+## Zone Counts
+
+- cases: 2
+- legacy.cases: 2
+- legacy.library: 4
+- library: 5
+- memory: 307
+- memory.knowledge: 28
+- memory.runtime_or_self: 124
+- runtime: 1815
+
+## Concern Counts
+
+- legacy_fallback_review: 6
+- runtime_file_has_stable_memory_frontmatter: 284
+- structured_data_inside_memory_review: 22
+
+## Review Items
+
+- `XinYu-Core/examples/agent-apps/xinyu/memory/consolidation_state.json` | zone=memory | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/initiative_state.json` | zone=memory | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/maintenance_schedule.json` | zone=memory | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/personality_change_state.json` | zone=memory | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/personality_self_review_state.json` | zone=memory | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/question_pipeline.json` | zone=memory | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/runtime_bridge.json` | zone=memory | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/runtime_bridge_state.json` | zone=memory | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/goldmark_positive_overlay.json` | zone=memory.runtime_or_self | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/relationships/owner_recent_events.jsonl` | zone=memory | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/reflection/closed_loop_state.json` | zone=memory | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/inspiration/safe_extracts.jsonl` | zone=memory | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/daily_digest.json` | zone=memory.runtime_or_self | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/impulse_soup_state.json` | zone=memory.runtime_or_self | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/impulse_soup_trace.jsonl` | zone=memory.runtime_or_self | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/interaction_journal.jsonl` | zone=memory.runtime_or_self | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/proactive_request_history.jsonl` | zone=memory.runtime_or_self | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/qq_outbox_queue.json` | zone=memory.runtime_or_self | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/review_inbox_cursor.json` | zone=memory.runtime_or_self | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/review_inbox_decisions.json` | zone=memory.runtime_or_self | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/self_action_gateway_approval_queue.jsonl` | zone=memory.runtime_or_self | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/sticker_send_state.generated.json` | zone=memory.runtime_or_self | type=none | concern=structured_data_inside_memory_review
+- `XinYu-Core/examples/agent-apps/xinyu/data/external/chmap-dialogue-rows.json` | zone=legacy.library | type=none | concern=legacy_fallback_review
+- `XinYu-Core/examples/agent-apps/xinyu/data/external/lufy-qa-rows.json` | zone=legacy.library | type=none | concern=legacy_fallback_review
+- `XinYu-Core/examples/agent-apps/xinyu/data/external/lufy-turns-rows.json` | zone=legacy.library | type=none | concern=legacy_fallback_review
+- `XinYu-Core/examples/agent-apps/xinyu/data/external/wildchat-rows.json` | zone=legacy.library | type=none | concern=legacy_fallback_review
+- `XinYu-Core/examples/agent-apps/xinyu/data/conversation_experience/public_dataset_registry.json` | zone=legacy.cases | type=none | concern=legacy_fallback_review
+- `XinYu-Core/examples/agent-apps/xinyu/data/conversation_experience/seed_owner_cases.jsonl` | zone=legacy.cases | type=none | concern=legacy_fallback_review
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/memory_repair_backup_20260506T040156/memory/self/self_model_state.md` | zone=runtime | type=self_model_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/memory_repair_backup_20260506T040156/memory/reflection/growth_log.md` | zone=runtime | type=growth_log | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/memory_repair_backup_20260506T040156/memory/reflection/reflection_log.md` | zone=runtime | type=reflection_log | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/memory_repair_backup_20260506T040156/memory/reflection/reflection_output_state.md` | zone=runtime | type=reflection_output_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/memory_repair_backup_20260506T040156/memory/reflection/reflection_queue.md` | zone=runtime | type=reflection_queue | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/memory_repair_backup_20260506T040156/memory/emotions/current_state.md` | zone=runtime | type=emotion_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/memory_repair_backup_20260506T040156/memory/dreams/dream_log.md` | zone=runtime | type=dream_log | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/memory_repair_backup_20260506T040156/memory/dreams/dream_output_state.md` | zone=runtime | type=dream_output_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/memory_repair_backup_20260506T040156/memory/dreams/dream_seeds.md` | zone=runtime | type=dream_seeds | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/memory_repair_backup_20260506T040156/memory/dreams/dream_weight_state.md` | zone=runtime | type=dream_weight_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/initiative_research_shadow_workspace/initiative-research-20260513T083707/quiet_without_recall_holds/memory/context/initiative_lifecycle_state.md` | zone=runtime | type=initiative_lifecycle_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/initiative_research_shadow_workspace/initiative-research-20260513T083707/memory_review_holds/memory/context/initiative_lifecycle_state.md` | zone=runtime | type=initiative_lifecycle_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/initiative_research_shadow_workspace/initiative-research-20260513T083707/feedback_without_recall_holds/memory/context/initiative_lifecycle_state.md` | zone=runtime | type=initiative_lifecycle_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/initiative_research_shadow_workspace/initiative-research-20260513T083707/feedback_with_recall_can_surface_locally/memory/context/initiative_lifecycle_state.md` | zone=runtime | type=initiative_lifecycle_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/initiative_research_shadow_workspace/initiative-research-20260513T083634/quiet_without_recall_holds/memory/context/initiative_lifecycle_state.md` | zone=runtime | type=initiative_lifecycle_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/initiative_research_shadow_workspace/initiative-research-20260513T083634/memory_review_holds/memory/context/initiative_lifecycle_state.md` | zone=runtime | type=initiative_lifecycle_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/initiative_research_shadow_workspace/initiative-research-20260513T083634/feedback_without_recall_holds/memory/context/initiative_lifecycle_state.md` | zone=runtime | type=initiative_lifecycle_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/initiative_research_shadow_workspace/initiative-research-20260513T083634/feedback_with_recall_can_surface_locally/memory/context/initiative_lifecycle_state.md` | zone=runtime | type=initiative_lifecycle_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/codex-runtime-awareness-smoke-final-1777749272643967600/memory/context/runtime_program_awareness.md` | zone=runtime | type=runtime_program_awareness | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/codex-runtime-awareness-smoke-final-1777749272643967600/memory/context/runtime_self_presence.md` | zone=runtime | type=runtime_self_presence | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/codex-runtime-awareness-smoke-1777748478025211700/memory/context/runtime_program_awareness.md` | zone=runtime | type=runtime_program_awareness | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/codex-runtime-awareness-smoke-1777748478025211700/memory/context/runtime_self_presence.md` | zone=runtime | type=runtime_self_presence | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083718/project_pressure/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083718/project_pressure/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083718/medium_usable/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083718/medium_usable/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083718/high_weak/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083718/high_weak/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083718/high_usable/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083718/high_usable/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083718/high_none/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083718/high_none/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083718/casual_none/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083718/casual_none/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083255/project_pressure/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083255/project_pressure/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083255/medium_usable/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083255/medium_usable/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083255/high_weak/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083255/high_weak/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083255/high_usable/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083255/high_usable/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083255/high_none/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083255/high_none/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083255/casual_none/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/trial-20260513T083255/casual_none/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-shadow-gate-check/project_pressure/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-shadow-gate-check/project_pressure/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-shadow-gate-check/medium_usable/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-shadow-gate-check/medium_usable/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-shadow-gate-check/high_weak/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-shadow-gate-check/high_weak/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-shadow-gate-check/high_usable/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-shadow-gate-check/high_usable/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-shadow-gate-check/high_none/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-shadow-gate-check/high_none/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-shadow-gate-check/casual_none/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-shadow-gate-check/casual_none/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check-2/project_pressure/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check-2/project_pressure/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check-2/medium_usable/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check-2/medium_usable/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check-2/high_weak/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check-2/high_weak/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check-2/high_usable/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check-2/high_usable/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check-2/high_none/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check-2/high_none/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check-2/casual_none/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check-2/casual_none/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check/project_pressure/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check/project_pressure/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check/medium_usable/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check/medium_usable/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check/high_weak/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check/high_weak/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check/high_usable/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check/high_usable/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check/high_none/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check/high_none/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check/casual_none/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-safe-suite-check/casual_none/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-pack-gate-check/project_pressure/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-pack-gate-check/project_pressure/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-pack-gate-check/medium_usable/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-pack-gate-check/medium_usable/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-pack-gate-check/high_weak/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-pack-gate-check/high_weak/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-pack-gate-check/high_usable/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-pack-gate-check/high_usable/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-pack-gate-check/high_none/memory/context/contextual_recall_state.md` | zone=runtime | type=contextual_recall_state | concern=runtime_file_has_stable_memory_frontmatter
+- `XinYu-Core/examples/agent-apps/xinyu/runtime/answer_discipline_trial_workspace/local-pack-gate-check/high_none/memory/context/contextual_self_loop_state.md` | zone=runtime | type=contextual_self_loop_state | concern=runtime_file_has_stable_memory_frontmatter

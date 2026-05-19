@@ -1,0 +1,301 @@
+{
+  "total_p0_items": 22,
+  "by_category": {
+    "durable_runtime_state": 11,
+    "episodic_event_log": 2,
+    "manual_structured_memory_review": 1,
+    "persona_runtime_overlay": 1,
+    "private_relationship_event_log": 1,
+    "runtime_cursor_or_decision_store": 2,
+    "runtime_queue": 2,
+    "runtime_trace_log": 1,
+    "source_extract_log": 1
+  },
+  "by_initial_decision": {
+    "archive_candidate_after_caller_update": 1,
+    "compat_store_owner_exists": 1,
+    "keep_as_memory_event_log_pending_manifest": 1,
+    "keep_until_event_boundary_is_defined": 2,
+    "keep_until_persona_store_boundary_exists": 1,
+    "manual_review": 1,
+    "migrate_candidate": 9,
+    "migrate_candidate_after_caller_update": 6
+  },
+  "items": [
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/consolidation_state.json",
+      "zone": "memory",
+      "category": "durable_runtime_state",
+      "initial_decision": "migrate_candidate",
+      "target_boundary": "stores/runtime_state",
+      "handling": "State JSON should be owned by a store/service; keep in place until the owner module migrates.",
+      "reference_count": 0,
+      "reference_examples": [],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/context/daily_digest.json",
+      "zone": "memory.runtime_or_self",
+      "category": "durable_runtime_state",
+      "initial_decision": "migrate_candidate_after_caller_update",
+      "target_boundary": "stores/runtime_state",
+      "handling": "State JSON should be owned by a store/service; keep in place until the owner module migrates.",
+      "reference_count": 1,
+      "reference_examples": [
+        "XinYu-Core/examples/agent-apps/xinyu/services/daily_digest.py"
+      ],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/context/impulse_soup_state.json",
+      "zone": "memory.runtime_or_self",
+      "category": "durable_runtime_state",
+      "initial_decision": "migrate_candidate_after_caller_update",
+      "target_boundary": "stores/runtime_state",
+      "handling": "State JSON should be owned by a store/service; keep in place until the owner module migrates.",
+      "reference_count": 1,
+      "reference_examples": [
+        "XinYu-Core/examples/agent-apps/xinyu/xinyu_impulse_soup.py"
+      ],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/initiative_state.json",
+      "zone": "memory",
+      "category": "durable_runtime_state",
+      "initial_decision": "migrate_candidate",
+      "target_boundary": "stores/runtime_state",
+      "handling": "State JSON should be owned by a store/service; keep in place until the owner module migrates.",
+      "reference_count": 0,
+      "reference_examples": [],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/maintenance_schedule.json",
+      "zone": "memory",
+      "category": "durable_runtime_state",
+      "initial_decision": "migrate_candidate",
+      "target_boundary": "stores/runtime_state",
+      "handling": "State JSON should be owned by a store/service; keep in place until the owner module migrates.",
+      "reference_count": 0,
+      "reference_examples": [],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/personality_change_state.json",
+      "zone": "memory",
+      "category": "durable_runtime_state",
+      "initial_decision": "migrate_candidate",
+      "target_boundary": "stores/runtime_state",
+      "handling": "State JSON should be owned by a store/service; keep in place until the owner module migrates.",
+      "reference_count": 0,
+      "reference_examples": [],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/personality_self_review_state.json",
+      "zone": "memory",
+      "category": "durable_runtime_state",
+      "initial_decision": "migrate_candidate",
+      "target_boundary": "stores/runtime_state",
+      "handling": "State JSON should be owned by a store/service; keep in place until the owner module migrates.",
+      "reference_count": 0,
+      "reference_examples": [],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/question_pipeline.json",
+      "zone": "memory",
+      "category": "durable_runtime_state",
+      "initial_decision": "migrate_candidate",
+      "target_boundary": "stores/runtime_state",
+      "handling": "State JSON should be owned by a store/service; keep in place until the owner module migrates.",
+      "reference_count": 0,
+      "reference_examples": [],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/reflection/closed_loop_state.json",
+      "zone": "memory",
+      "category": "durable_runtime_state",
+      "initial_decision": "migrate_candidate",
+      "target_boundary": "stores/runtime_state",
+      "handling": "State JSON should be owned by a store/service; keep in place until the owner module migrates.",
+      "reference_count": 0,
+      "reference_examples": [],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/runtime_bridge.json",
+      "zone": "memory",
+      "category": "durable_runtime_state",
+      "initial_decision": "migrate_candidate",
+      "target_boundary": "stores/runtime_state",
+      "handling": "State JSON should be owned by a store/service; keep in place until the owner module migrates.",
+      "reference_count": 0,
+      "reference_examples": [],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/runtime_bridge_state.json",
+      "zone": "memory",
+      "category": "durable_runtime_state",
+      "initial_decision": "migrate_candidate",
+      "target_boundary": "stores/runtime_state",
+      "handling": "State JSON should be owned by a store/service; keep in place until the owner module migrates.",
+      "reference_count": 0,
+      "reference_examples": [],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/context/interaction_journal.jsonl",
+      "zone": "memory.runtime_or_self",
+      "category": "episodic_event_log",
+      "initial_decision": "keep_until_event_boundary_is_defined",
+      "target_boundary": "memory/events-or-stores",
+      "handling": "Event logs need an explicit event boundary before migration.",
+      "reference_count": 1,
+      "reference_examples": [
+        "XinYu-Core/examples/agent-apps/xinyu/xinyu_interaction_journal.py"
+      ],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/context/proactive_request_history.jsonl",
+      "zone": "memory.runtime_or_self",
+      "category": "episodic_event_log",
+      "initial_decision": "keep_until_event_boundary_is_defined",
+      "target_boundary": "memory/events-or-stores",
+      "handling": "Event logs need an explicit event boundary before migration.",
+      "reference_count": 1,
+      "reference_examples": [
+        "XinYu-Core/examples/agent-apps/xinyu/xinyu_core_bridge.py"
+      ],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/context/sticker_send_state.generated.json",
+      "zone": "memory.runtime_or_self",
+      "category": "manual_structured_memory_review",
+      "initial_decision": "manual_review",
+      "target_boundary": "manual",
+      "handling": "No path rule matched; review manually before changing boundaries.",
+      "reference_count": 1,
+      "reference_examples": [
+        "XinYu-Core/examples/agent-apps/xinyu/xinyu_sticker_pack.py"
+      ],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/self/goldmark_positive_overlay.json",
+      "zone": "memory.runtime_or_self",
+      "category": "persona_runtime_overlay",
+      "initial_decision": "keep_until_persona_store_boundary_exists",
+      "target_boundary": "stores/persona_runtime",
+      "handling": "Persona/runtime overlay should move only after persona runtime store ownership is explicit.",
+      "reference_count": 2,
+      "reference_examples": [
+        "XinYu-Core/examples/agent-apps/xinyu/xinyu_goldmark.py",
+        "XinYu-Core/examples/agent-apps/xinyu/xinyu_runtime_context.py"
+      ],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/relationships/owner_recent_events.jsonl",
+      "zone": "memory",
+      "category": "private_relationship_event_log",
+      "initial_decision": "keep_as_memory_event_log_pending_manifest",
+      "target_boundary": "memory/relationships",
+      "handling": "Private relationship events may be stable memory; keep in place until a manifest/type contract exists.",
+      "reference_count": 1,
+      "reference_examples": [
+        "XinYu-Core/examples/agent-apps/xinyu/xinyu_persona_state.py"
+      ],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/context/review_inbox_cursor.json",
+      "zone": "memory.runtime_or_self",
+      "category": "runtime_cursor_or_decision_store",
+      "initial_decision": "migrate_candidate_after_caller_update",
+      "target_boundary": "stores/review_state",
+      "handling": "Cursor/decision JSON is durable state, not recall memory; move only with the owning service.",
+      "reference_count": 1,
+      "reference_examples": [
+        "XinYu-Core/examples/agent-apps/xinyu/stores/review_state.py"
+      ],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/context/review_inbox_decisions.json",
+      "zone": "memory.runtime_or_self",
+      "category": "runtime_cursor_or_decision_store",
+      "initial_decision": "migrate_candidate_after_caller_update",
+      "target_boundary": "stores/review_state",
+      "handling": "Cursor/decision JSON is durable state, not recall memory; move only with the owning service.",
+      "reference_count": 1,
+      "reference_examples": [
+        "XinYu-Core/examples/agent-apps/xinyu/stores/review_state.py"
+      ],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/context/qq_outbox_queue.json",
+      "zone": "memory.runtime_or_self",
+      "category": "runtime_queue",
+      "initial_decision": "migrate_candidate_after_caller_update",
+      "target_boundary": "stores/queues-or-runtime",
+      "handling": "Queues are operational state; migrate only after producers and consumers are updated together.",
+      "reference_count": 4,
+      "reference_examples": [
+        "XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_outbox.py",
+        "XinYu-Core/examples/agent-apps/xinyu/xinyu_qq_gateway.py",
+        "XinYu-Core/examples/agent-apps/xinyu/xinyu_runtime_presence.py",
+        "XinYu-Core/examples/agent-apps/xinyu/start_xinyu_core_bridge.ps1"
+      ],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/context/self_action_gateway_approval_queue.jsonl",
+      "zone": "memory.runtime_or_self",
+      "category": "runtime_queue",
+      "initial_decision": "compat_store_owner_exists",
+      "target_boundary": "stores/self_action_queue",
+      "handling": "Self-action approval queue has an explicit store owner; keep the legacy path as compatibility storage while callers depend on the store boundary.",
+      "reference_count": 2,
+      "reference_examples": [
+        "XinYu-Core/examples/agent-apps/xinyu/xinyu_self_action_gateway.py",
+        "XinYu-Core/examples/agent-apps/xinyu/stores/self_action_queue.py"
+      ],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/context/impulse_soup_trace.jsonl",
+      "zone": "memory.runtime_or_self",
+      "category": "runtime_trace_log",
+      "initial_decision": "archive_candidate_after_caller_update",
+      "target_boundary": "runtime/logs-or-archive",
+      "handling": "Trace logs should not be canonical memory; archive only after caller checks.",
+      "reference_count": 2,
+      "reference_examples": [
+        "XinYu-Core/examples/agent-apps/xinyu/xinyu_runtime_presence.py",
+        "XinYu-Core/examples/agent-apps/xinyu/xinyu_impulse_soup.py"
+      ],
+      "safe_default": "keep_in_place_until_reviewed"
+    },
+    {
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/inspiration/safe_extracts.jsonl",
+      "zone": "memory",
+      "category": "source_extract_log",
+      "initial_decision": "migrate_candidate_after_caller_update",
+      "target_boundary": "library/source_extracts",
+      "handling": "Looks like source material, not live private memory; migrate only after reference checks.",
+      "reference_count": 1,
+      "reference_examples": [
+        "XinYu-Core/examples/agent-apps/xinyu/xinyu_creative_writing.py"
+      ],
+      "safe_default": "keep_in_place_until_reviewed"
+    }
+  ],
+  "privacy_note": "Generated from paths and source-code reference file names only; structured memory bodies are not read or printed."
+}

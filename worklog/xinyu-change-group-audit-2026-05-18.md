@@ -1,0 +1,122 @@
+# XinYu Change Group Audit
+
+This report is generated from `git status --short` paths only.
+It does not read or print memory file contents.
+
+- total_entries: 755
+
+## Status Counts
+
+- deleted: 247
+- modified: 173
+- untracked: 335
+
+## Group Counts
+
+### adapters
+- count: 27
+- examples:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_action_routes.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_cli.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_desktop_actions.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_desktop_state_text.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_http.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_renderer.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_session.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_bridge_state_text.py`
+
+### archive/delete
+- count: 242
+- examples:
+  - `XinYu-Core/examples/agent-apps/xinyu/ai_domain_source_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/ai_self_iteration_gate_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/ai_self_iteration_review_bridge_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/ai_self_iteration_review_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/archive_commit_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/archive_queue_trace_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/async_exploration_smoke.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/automation_bridge_live_turn_smoke.py`
+
+### core
+- count: 143
+- examples:
+  - `XinYu-Core/examples/agent-apps/xinyu/custom/ai_self_iteration_gate_bridge_plugin.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/custom/ai_self_iteration_gate_engine.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/custom/ai_self_iteration_review_bridge_plugin.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/custom/ai_self_iteration_review_engine.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/custom/archive_commit_bridge_plugin.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/custom/archive_output_bridge_plugin.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/custom/automation_bridge_plugin.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/custom/autonomous_search_activation_bridge_plugin.py`
+
+### desktop
+- count: 16
+- examples:
+  - `XinYu_Desktop/src/main/index.ts`
+  - `XinYu_Desktop/src/main/qq_environment.ts`
+  - `XinYu_Desktop/src/main/xinyu_gateway.ts`
+  - `XinYu_Desktop/src/preload/index.ts`
+  - `XinYu_Desktop/src/renderer/public/xinyu-noise.svg`
+  - `XinYu_Desktop/src/renderer/src/DesktopPanels.tsx`
+  - `XinYu_Desktop/src/renderer/src/EnvironmentValve.tsx`
+  - `XinYu_Desktop/src/renderer/src/desktopModel.ts`
+
+### docs
+- count: 48
+- examples:
+  - `XinYu-Core/examples/agent-apps/xinyu/CHANGELOG-XINYU.md`
+  - `XinYu-Core/examples/agent-apps/xinyu/CURRENT-REFACTOR-PLAN.md`
+  - `XinYu-Core/examples/agent-apps/xinyu/DEPLOYMENT-STATUS-RUNBOOK.md`
+  - `XinYu-Core/examples/agent-apps/xinyu/EXECUTION-ORDER.md`
+  - `XinYu-Core/examples/agent-apps/xinyu/IMPLEMENTATION-NEXT.md`
+  - `XinYu-Core/examples/agent-apps/xinyu/INDEX.md`
+  - `XinYu-Core/examples/agent-apps/xinyu/LONG-RUN-AUDIT.md`
+  - `XinYu-Core/examples/agent-apps/xinyu/PROMPT-TUNING.md`
+
+### memory-data
+- count: 5
+- examples:
+  - `XinYu-Core/examples/agent-apps/xinyu/memory-seeds/README.md`
+  - `XinYu-Core/examples/agent-apps/xinyu/data/`
+  - `XinYu-Core/memory/`
+  - `cases/`
+  - `library/`
+
+### ops
+- count: 171
+- examples:
+  - `.gitignore`
+  - `XinYu-Core/examples/agent-apps/xinyu/config.yaml`
+  - `XinYu-Core/examples/agent-apps/xinyu/long_run_status.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/run_local_xinyu.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/smoke_run.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/sync_memory_seeds.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/validate_inner_framework.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/validate_scaffold.py`
+
+### services
+- count: 4
+- examples:
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_chat_service.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_codex_service.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_daily_digest.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/services/`
+
+### stores
+- count: 3
+- examples:
+  - `XinYu-Core/examples/agent-apps/xinyu/state_service.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/stores/`
+  - `XinYu-Core/examples/agent-apps/xinyu/xinyu_storage_paths.py`
+
+### tests
+- count: 96
+- examples:
+  - `XinYu-Core/examples/agent-apps/xinyu/tests/conftest.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/tests/test_dialogue_curiosity_bridge_injection.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/tests/test_dialogue_curiosity_review.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/tests/test_expression_self_learning.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/tests/test_learning_closed_loop.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/tests/test_memory_sync_recent_context.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/tests/test_runtime_context.py`
+  - `XinYu-Core/examples/agent-apps/xinyu/tests/test_runtime_program_awareness.py`

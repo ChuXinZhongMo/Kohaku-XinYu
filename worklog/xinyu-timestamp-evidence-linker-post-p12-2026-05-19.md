@@ -1,0 +1,1662 @@
+# XinYu Timestamp Evidence Linker
+
+Evidence linker reads source-code paths and manifest metadata only. It skips memory, runtime, tests, ops, logs, and store bodies when building source references, and it does not read or print memory bodies, JSON/JSONL bodies, raw QQ payloads, tokens, timestamp values, or secrets.
+
+- status: evidence_linked
+- source_status: dry_run_ready
+- source_plan_item_count: 399
+- linked_item_count: 399
+
+## Action Counts
+
+- blocked_no_evidence: 95
+- manual_data_review_required: 219
+- writer_fix_candidate: 85
+
+## Evidence Status Counts
+
+- manifest_boundary_found: 7
+- no_evidence_found: 193
+- path_provenance_candidate_only: 114
+- writer_and_manifest_evidence: 6
+- writer_reference_found: 79
+
+## Items
+
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/impulse_soup_trace.jsonl` | priority=P0 | class=invalid_timestamp_manual_review | bucket=append_only_event_log | action=writer_fix_candidate | evidence=writer_and_manifest_evidence | writer_refs=2 | source_refs=2 | manifest_refs=1 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_impulse_soup.py`
+    - `xinyu_runtime_presence.py`
+  - source_reference_examples:
+    - `xinyu_impulse_soup.py`
+    - `xinyu_runtime_presence.py`
+  - manifest_reference_examples:
+    - `stores/runtime_trace_manifest`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/events/consistency_gate_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=append_only_event_log | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/archive/archive_commit_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=archive_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=3 | source_refs=3 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/archive_commit_engine.py`
+    - `custom/automation_bridge_plugin.py`
+    - `custom/inner_cycle_engine.py`
+  - source_reference_examples:
+    - `custom/archive_commit_engine.py`
+    - `custom/automation_bridge_plugin.py`
+    - `custom/inner_cycle_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/archive/archive_output_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=archive_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=6 | source_refs=6 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/archive_commit_engine.py`
+    - `custom/archive_output_engine.py`
+    - `custom/automation_bridge_plugin.py`
+    - `custom/consolidation_engine.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/summary_coverage_engine.py`
+  - source_reference_examples:
+    - `custom/archive_commit_engine.py`
+    - `custom/archive_output_engine.py`
+    - `custom/automation_bridge_plugin.py`
+    - `custom/consolidation_engine.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/summary_coverage_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/archive/archive_policy.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=archive_state | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/archive/archive_queue.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=archive_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=8 | source_refs=8 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/archive_commit_engine.py`
+    - `custom/archive_output_engine.py`
+    - `custom/automation_bridge_plugin.py`
+    - `custom/consolidation_engine.py`
+    - `custom/long_term_memory_gate_engine.py`
+    - `custom/memory_sync_plugin.py`
+  - source_reference_examples:
+    - `custom/archive_commit_engine.py`
+    - `custom/archive_output_engine.py`
+    - `custom/automation_bridge_plugin.py`
+    - `custom/consolidation_engine.py`
+    - `custom/long_term_memory_gate_engine.py`
+    - `custom/memory_sync_plugin.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/archive/long_term_memory_gate_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=archive_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=6 | source_refs=6 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/inner_cycle_engine.py`
+    - `custom/long_term_memory_gate_engine.py`
+    - `custom/retention_gate_engine.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_weights.py`
+    - `xinyu_runtime_presence.py`
+  - source_reference_examples:
+    - `custom/inner_cycle_engine.py`
+    - `custom/long_term_memory_gate_engine.py`
+    - `custom/retention_gate_engine.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_weights.py`
+    - `xinyu_runtime_presence.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/archive/retention_gate_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=archive_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=5 | source_refs=5 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/archive_commit_engine.py`
+    - `custom/archive_output_engine.py`
+    - `custom/automation_bridge_plugin.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/retention_gate_engine.py`
+  - source_reference_examples:
+    - `custom/archive_commit_engine.py`
+    - `custom/archive_output_engine.py`
+    - `custom/automation_bridge_plugin.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/retention_gate_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/archive/retention_model.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=archive_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=1 | source_refs=1 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/ai_self_iteration_review_engine.py`
+  - source_reference_examples:
+    - `custom/ai_self_iteration_review_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/active_questions.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=10 | source_refs=10 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/initiative_loop_engine.py`
+    - `custom/learner_integration_engine.py`
+    - `custom/memory_sync_plugin.py`
+    - `custom/question_pipeline_engine.py`
+    - `custom/source_comparison_engine.py`
+  - source_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/initiative_loop_engine.py`
+    - `custom/learner_integration_engine.py`
+    - `custom/memory_sync_plugin.py`
+    - `custom/question_pipeline_engine.py`
+    - `custom/source_comparison_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/automation_policy.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/codex_delegation_policy.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=5 | source_refs=5 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_self_review.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_sparse_memory_router.py`
+  - source_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_self_review.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_sparse_memory_router.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/continuity_index.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=2 | source_refs=2 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/memory_sync_plugin.py`
+    - `xinyu_visible_state_hygiene.py`
+  - source_reference_examples:
+    - `custom/memory_sync_plugin.py`
+    - `xinyu_visible_state_hygiene.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/current_life_month_context.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=6 | source_refs=6 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_life_month_slots.py`
+    - `xinyu_memory_weights.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_sparse_memory_router.py`
+  - source_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_life_month_slots.py`
+    - `xinyu_memory_weights.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_sparse_memory_router.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/current_life_posture.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=9 | source_refs=9 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_emotion_council.py`
+    - `xinyu_goal_outcome_observer.py`
+    - `xinyu_life_posture.py`
+    - `xinyu_memory_weights.py`
+    - `xinyu_proactive_presence.py`
+    - `xinyu_proactive_request_loop.py`
+  - source_reference_examples:
+    - `xinyu_emotion_council.py`
+    - `xinyu_goal_outcome_observer.py`
+    - `xinyu_life_posture.py`
+    - `xinyu_memory_weights.py`
+    - `xinyu_proactive_presence.py`
+    - `xinyu_proactive_request_loop.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/exploration_policy.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/exploration_queue.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=5 | source_refs=5 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/learner_integration_engine.py`
+    - `custom/memory_sync_plugin.py`
+    - `custom/question_pipeline_engine.py`
+    - `custom/source_comparison_engine.py`
+    - `custom/source_gate_engine.py`
+  - source_reference_examples:
+    - `custom/learner_integration_engine.py`
+    - `custom/memory_sync_plugin.py`
+    - `custom/question_pipeline_engine.py`
+    - `custom/source_comparison_engine.py`
+    - `custom/source_gate_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/github_learning_sources.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=1 | source_refs=1 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/github_autonomous_learning_engine.py`
+  - source_reference_examples:
+    - `custom/github_autonomous_learning_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/impulse_soup_state.json` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/initiative_policy.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=2 | source_refs=2 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/ai_self_iteration_review_engine.py`
+    - `xinyu_core_bridge.py`
+  - source_reference_examples:
+    - `custom/ai_self_iteration_review_engine.py`
+    - `xinyu_core_bridge.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/life_month_slots.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=4 | source_refs=4 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_life_month_slots.py`
+    - `xinyu_memory_weights.py`
+  - source_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_life_month_slots.py`
+    - `xinyu_memory_weights.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/maintenance_plan.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/maintenance_recommendations.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=3 | source_refs=3 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/maintenance_bridge_utils.py`
+    - `xinyu_core_bridge.py`
+  - source_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/maintenance_bridge_utils.py`
+    - `xinyu_core_bridge.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/maintenance_targets.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/memory_event_sourcing_policy.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/persona_life_anchors.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=2 | source_refs=2 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_memory_weights.py`
+  - source_reference_examples:
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_memory_weights.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/qq_outbox_queue.json` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_and_manifest_evidence | writer_refs=3 | source_refs=4 | manifest_refs=1 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_qq_gateway.py`
+    - `xinyu_qq_outbox.py`
+    - `xinyu_runtime_presence.py`
+  - source_reference_examples:
+    - `start_xinyu_core_bridge.ps1`
+    - `xinyu_qq_gateway.py`
+    - `xinyu_qq_outbox.py`
+    - `xinyu_runtime_presence.py`
+  - manifest_reference_examples:
+    - `stores/queue_boundary_manifest`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/question_states.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=4 | source_refs=4 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/learner_integration_engine.py`
+    - `custom/memory_sync_plugin.py`
+    - `custom/question_pipeline_engine.py`
+    - `custom/source_comparison_engine.py`
+  - source_reference_examples:
+    - `custom/learner_integration_engine.py`
+    - `custom/memory_sync_plugin.py`
+    - `custom/question_pipeline_engine.py`
+    - `custom/source_comparison_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/real_life_input_adapter_policy.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=2 | source_refs=2 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/ai_self_iteration_review_engine.py`
+    - `xinyu_core_bridge.py`
+  - source_reference_examples:
+    - `custom/ai_self_iteration_review_engine.py`
+    - `xinyu_core_bridge.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/real_life_input_events.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=1 | source_refs=1 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/real_life_input_adapter_engine.py`
+  - source_reference_examples:
+    - `custom/real_life_input_adapter_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/real_world_anchor_policy.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=2 | source_refs=2 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_weights.py`
+  - source_reference_examples:
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_weights.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/review_inbox_decisions.json` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/runtime_architecture_map.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/runtime_program_awareness.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_and_manifest_evidence | writer_refs=4 | source_refs=4 | manifest_refs=2 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_contextual_recall.py`
+    - `xinyu_impulse_soup.py`
+    - `xinyu_proactivity_scorer.py`
+    - `xinyu_runtime_presence.py`
+  - source_reference_examples:
+    - `xinyu_contextual_recall.py`
+    - `xinyu_impulse_soup.py`
+    - `xinyu_proactivity_scorer.py`
+    - `xinyu_runtime_presence.py`
+  - manifest_reference_examples:
+    - `stores/queue_boundary_manifest`
+    - `stores/runtime_trace_manifest`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/runtime_rhythm.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/runtime_self_presence.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=7 | source_refs=7 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_bridge_proactive_context.py`
+    - `xinyu_contextual_recall.py`
+    - `xinyu_continuity_handoff.py`
+    - `xinyu_proactivity_scorer.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_runtime_presence.py`
+  - source_reference_examples:
+    - `xinyu_bridge_proactive_context.py`
+    - `xinyu_contextual_recall.py`
+    - `xinyu_continuity_handoff.py`
+    - `xinyu_proactivity_scorer.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_runtime_presence.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/self_action_gateway_execution_handoff.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=4 | source_refs=4 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_bridge_desktop_snapshot.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_self_action_gateway.py`
+    - `xinyu_status.py`
+  - source_reference_examples:
+    - `xinyu_bridge_desktop_snapshot.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_self_action_gateway.py`
+    - `xinyu_status.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/self_action_patch_executor_task.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=4 | source_refs=4 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_bridge_desktop_snapshot.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_self_action_patch_executor.py`
+    - `xinyu_status.py`
+  - source_reference_examples:
+    - `xinyu_bridge_desktop_snapshot.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_self_action_patch_executor.py`
+    - `xinyu_status.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/social_inquiry_candidates.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=1 | source_refs=1 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/social_inquiry_policy_engine.py`
+  - source_reference_examples:
+    - `custom/social_inquiry_policy_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/sticker_send_state.generated.json` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/thought_seeds.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=3 | source_refs=3 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_self_thought_loop.py`
+    - `xinyu_thought_seeds.py`
+    - `xinyu_visible_state_hygiene.py`
+  - source_reference_examples:
+    - `xinyu_self_thought_loop.py`
+    - `xinyu_thought_seeds.py`
+    - `xinyu_visible_state_hygiene.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/watch_sources.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=2 | source_refs=2 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_core_bridge.py`
+    - `xinyu_watched_sources.py`
+  - source_reference_examples:
+    - `xinyu_core_bridge.py`
+    - `xinyu_watched_sources.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/chapter_cards/chapter-001.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/chapter_cards/chapter-002.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/chapter_cards/chapter-003.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/chapter_cards/chapter-004.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/chapter_cards/chapter-005.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/chapter_cards/chapter-006.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/chapter_cards/chapter-007.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/chapter_cards/chapter-008.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/chapter_cards/chapter-009.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/chapter_cards/chapter-010.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/chapter_cards/chapter-011.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/chapter_cards/chapter-012.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/creative_factory_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/editorial_reviews/chapter-001.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/editorial_reviews/chapter-002.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/editorial_reviews/chapter-003.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/editorial_reviews/chapter-004.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/editorial_reviews/chapter-005.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/editorial_reviews/chapter-006.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/editorial_reviews/chapter-007.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/editorial_reviews/chapter-008.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/editorial_reviews/chapter-009.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/editorial_reviews/chapter-010.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/editorial_reviews/chapter-011.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/editorial_reviews/chapter-012.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/foreshadow_ledger.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/inspiration/genre_benchmark.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/inspiration/local_reference_digest.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/inspiration/opening_rewrite_brief.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/inspiration/pacing_rules.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/inspiration/reference_collection_log.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/inspiration/reference_digest.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/inspiration/reference_permissions.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/inspiration/source_map.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/novel_characters.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/novel_outline.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=2 | source_refs=2 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_sparse_memory_router.py`
+  - source_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_sparse_memory_router.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/novel_profile.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=4 | source_refs=4 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_sparse_memory_router.py`
+  - source_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_sparse_memory_router.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/novel_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=4 | source_refs=4 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_sparse_memory_router.py`
+  - source_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_sparse_memory_router.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/publication_log.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=2 | source_refs=2 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_sparse_memory_router.py`
+  - source_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_sparse_memory_router.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/publication_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=3 | source_refs=3 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_sparse_memory_router.py`
+  - source_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_sparse_memory_router.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/reader_model.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/story_bible.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/xinyu_narrative_filter.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_planning_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/novel_characters.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/novel_outline.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/novel_profile.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/novel_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/publication/publication_log.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/publication/publication_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/data/conversation_experience/public_dataset_registry.json` | priority=P0 | class=invalid_timestamp_manual_review | bucket=legacy_conversation_case | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/data/conversation_experience/seed_owner_cases.jsonl` | priority=P0 | class=invalid_timestamp_manual_review | bucket=legacy_conversation_case | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/dreams/dream_seeds.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=9 | source_refs=10 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/consolidation_engine.py`
+    - `custom/dream_output_engine.py`
+    - `custom/memory_sync_plugin.py`
+    - `custom/slow_reprocess_engine.py`
+    - `xinyu_action_experience_digest.py`
+  - source_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/consolidation_engine.py`
+    - `custom/dream_output_bridge_plugin.py`
+    - `custom/dream_output_engine.py`
+    - `custom/memory_sync_plugin.py`
+    - `custom/slow_reprocess_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/emotions/taxonomy.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=1 | source_refs=1 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_core_bridge.py`
+  - source_reference_examples:
+    - `xinyu_core_bridge.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/ai_domain.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/general.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/github_learning_candidates.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/group_learning_observations.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/social_inquiry_answers.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/source_materials.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/source_requests.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/source_search_results.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/migration_backups/real_life_input_events_20260429T213235/real_life_input_events.correct.before.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/migration_backups/real_life_input_events_20260429T213235/real_life_input_events.misplaced.before.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/people/person_b01d9c1eec.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/people/person_cfadc426ac.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/people/person_d1dbd8c875.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/people/person_ea8b00e0ac.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/people/person_ef86da477f.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/reflection/reflection_queue.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=15 | source_refs=15 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/consolidation_engine.py`
+    - `custom/dream_output_engine.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/long_term_memory_gate_engine.py`
+    - `custom/memory_sync_plugin.py`
+  - source_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/consolidation_engine.py`
+    - `custom/dream_output_engine.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/long_term_memory_gate_engine.py`
+    - `custom/memory_sync_plugin.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/relationships/owner_patterns.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=3 | source_refs=3 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/memory_event_schema.py`
+    - `custom/memory_sync_plugin.py`
+    - `custom/personality_growth_gate_engine.py`
+  - source_reference_examples:
+    - `custom/memory_event_schema.py`
+    - `custom/memory_sync_plugin.py`
+    - `custom/personality_growth_gate_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/relationships/owner_recent_events.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=writer_fix_candidate | evidence=writer_and_manifest_evidence | writer_refs=1 | source_refs=1 | manifest_refs=1 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_persona_state.py`
+  - source_reference_examples:
+    - `xinyu_persona_state.py`
+  - manifest_reference_examples:
+    - `stores/event_boundary_manifest`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/relationships/vector_model.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=1 | source_refs=1 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_core_bridge.py`
+  - source_reference_examples:
+    - `xinyu_core_bridge.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/autonomy/autonomy_experience_log.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/autonomy/autonomy_queue.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/boundaries.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=1 | source_refs=1 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/ai_self_iteration_review_engine.py`
+  - source_reference_examples:
+    - `custom/ai_self_iteration_review_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/core.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=7 | source_refs=7 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_answer_discipline_trial.py`
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_braid.py`
+    - `xinyu_memory_self_review.py`
+    - `xinyu_memory_weights.py`
+  - source_reference_examples:
+    - `xinyu_answer_discipline_trial.py`
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_braid.py`
+    - `xinyu_memory_self_review.py`
+    - `xinyu_memory_weights.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/deprecated_reactions.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=1 | source_refs=1 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_personality_evolution.py`
+  - source_reference_examples:
+    - `xinyu_personality_evolution.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/narrative.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=4 | source_refs=4 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/memory_sync_plugin.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_braid.py`
+    - `xinyu_runtime_context.py`
+  - source_reference_examples:
+    - `custom/memory_sync_plugin.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_braid.py`
+    - `xinyu_runtime_context.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/personality_profile.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=10 | source_refs=10 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/ai_self_iteration_review_engine.py`
+    - `xinyu_answer_discipline_trial.py`
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_self_review.py`
+  - source_reference_examples:
+    - `custom/ai_self_iteration_review_engine.py`
+    - `xinyu_answer_discipline_trial.py`
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_self_review.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/system_prompt_memory.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=3 | source_refs=3 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_self_review.py`
+    - `xinyu_memory_weights.py`
+  - source_reference_examples:
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_self_review.py`
+    - `xinyu_memory_weights.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/voice_calibration_log.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=7 | source_refs=7 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_context_retrieval.py`
+    - `xinyu_memory_candidate_extractor.py`
+    - `xinyu_memory_weights.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_voice_learning.py`
+  - source_reference_examples:
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_context_retrieval.py`
+    - `xinyu_memory_candidate_extractor.py`
+    - `xinyu_memory_weights.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_voice_learning.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/voice_profile_zh.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=9 | source_refs=9 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_answer_discipline_trial.py`
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_braid.py`
+    - `xinyu_memory_weights.py`
+  - source_reference_examples:
+    - `xinyu_answer_discipline_trial.py`
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_memory_braid.py`
+    - `xinyu_memory_weights.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/dreams/dream_policy.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=policy_or_index_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/integration_policy.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=policy_or_index_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/social_inquiry_policy.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=policy_or_index_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/source_registry.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=policy_or_index_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/people/index.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=policy_or_index_doc | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=2 | source_refs=2 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/memory_sync_plugin.py`
+    - `xinyu_core_bridge.py`
+  - source_reference_examples:
+    - `custom/memory_sync_plugin.py`
+    - `xinyu_core_bridge.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/reflection/reflection_policy.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=policy_or_index_doc | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/mind_loop_policy.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=policy_or_index_doc | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=1 | source_refs=1 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_core_bridge.py`
+  - source_reference_examples:
+    - `xinyu_core_bridge.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/dreams/dream_output_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=6 | source_refs=6 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/dream_output_engine.py`
+    - `custom/inner_cycle_engine.py`
+    - `xinyu_impulse_soup.py`
+    - `xinyu_proactivity_scorer.py`
+    - `xinyu_visible_state_hygiene.py`
+  - source_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/dream_output_engine.py`
+    - `custom/inner_cycle_engine.py`
+    - `xinyu_impulse_soup.py`
+    - `xinyu_proactivity_scorer.py`
+    - `xinyu_visible_state_hygiene.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/dreams/dream_weight_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=11 | source_refs=11 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/consolidation_engine.py`
+    - `custom/dream_output_engine.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/long_term_memory_gate_engine.py`
+    - `custom/personality_growth_gate_engine.py`
+  - source_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/consolidation_engine.py`
+    - `custom/dream_output_engine.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/long_term_memory_gate_engine.py`
+    - `custom/personality_growth_gate_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/expression_self_learning_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/initiative_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/inner_cycle_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/autonomous_search_activation_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/learner_integration_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/learning_quality_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/outward_source_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/research_loop_dry_run_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/search_result_gate_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/social_inquiry_policy_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/source_comparison_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/source_gate_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/source_integration_gate_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/source_reliability_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/source_request_planner_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/source_search_provider_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/source_search_resolver_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/learning_closed_loop_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/mind_loop_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/persona_surface_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/personality_change_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/personality_self_review_state.json` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=manifest_boundary_found | writer_refs=0 | source_refs=0 | manifest_refs=1 | write_allowed=false
+  - manifest_reference_examples:
+    - `stores/orphan_runtime_state_manifest`
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/personality_self_review_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/reflection/consolidation_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=4 | source_refs=4 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/consolidation_engine.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/retention_gate_engine.py`
+  - source_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/consolidation_engine.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/retention_gate_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/reflection/reflection_output_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=5 | source_refs=5 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/reflection_output_engine.py`
+    - `xinyu_self_thought_loop.py`
+    - `xinyu_visible_state_hygiene.py`
+  - source_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/reflection_output_engine.py`
+    - `xinyu_self_thought_loop.py`
+    - `xinyu_visible_state_hygiene.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/reflection/reprocessing_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=3 | source_refs=3 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/slow_reprocess_engine.py`
+  - source_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/slow_reprocess_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/ai_self_iteration_review_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=3 | source_refs=4 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/ai_self_iteration_review_engine.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_status.py`
+  - source_reference_examples:
+    - `custom/ai_self_iteration_review_bridge_plugin.py`
+    - `custom/ai_self_iteration_review_engine.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_status.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/ai_self_iteration_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=6 | source_refs=7 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/ai_self_iteration_gate_engine.py`
+    - `custom/ai_self_iteration_review_engine.py`
+    - `custom/automation_bridge_plugin.py`
+    - `custom/inner_cycle_engine.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_status.py`
+  - source_reference_examples:
+    - `custom/ai_self_iteration_gate_engine.py`
+    - `custom/ai_self_iteration_review_bridge_plugin.py`
+    - `custom/ai_self_iteration_review_engine.py`
+    - `custom/automation_bridge_plugin.py`
+    - `custom/inner_cycle_engine.py`
+    - `xinyu_core_bridge.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/autonomy/interest_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/expression_self_learning_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=4 | source_refs=4 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_core_bridge.py`
+    - `xinyu_expression_self_learning.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_runtime_presence.py`
+  - source_reference_examples:
+    - `xinyu_core_bridge.py`
+    - `xinyu_expression_self_learning.py`
+    - `xinyu_runtime_context.py`
+    - `xinyu_runtime_presence.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/learning_closed_loop_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=12 | source_refs=12 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_continuity_handoff.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_goal_outcome_observer.py`
+    - `xinyu_initiative_spine.py`
+    - `xinyu_learning_closed_loop.py`
+  - source_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_continuity_handoff.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_goal_outcome_observer.py`
+    - `xinyu_initiative_spine.py`
+    - `xinyu_learning_closed_loop.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/mind_loop_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=4 | source_refs=4 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_private_thought_events.py`
+    - `xinyu_thought_seeds.py`
+  - source_reference_examples:
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_private_thought_events.py`
+    - `xinyu_thought_seeds.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/persona_experiment_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=2 | source_refs=3 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_personality_evolution.py`
+    - `xinyu_private_thought_events.py`
+  - source_reference_examples:
+    - `xinyu_persona_runtime.py`
+    - `xinyu_personality_evolution.py`
+    - `xinyu_private_thought_events.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/personality_change_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=9 | source_refs=10 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/ai_self_iteration_gate_engine.py`
+    - `custom/ai_self_iteration_review_engine.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/personality_growth_gate_engine.py`
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+  - source_reference_examples:
+    - `custom/ai_self_iteration_gate_engine.py`
+    - `custom/ai_self_iteration_review_engine.py`
+    - `custom/inner_cycle_engine.py`
+    - `custom/personality_growth_gate_engine.py`
+    - `xinyu_context_retrieval.py`
+    - `xinyu_core_bridge.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/personality_evolution_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=5 | source_refs=6 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_memory_weights.py`
+    - `xinyu_personality_evolution.py`
+    - `xinyu_personality_self_review.py`
+    - `xinyu_private_thought_events.py`
+    - `xinyu_thought_seeds.py`
+  - source_reference_examples:
+    - `xinyu_memory_weights.py`
+    - `xinyu_persona_runtime.py`
+    - `xinyu_personality_evolution.py`
+    - `xinyu_personality_self_review.py`
+    - `xinyu_private_thought_events.py`
+    - `xinyu_thought_seeds.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/personality_self_review_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=3 | source_refs=4 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_core_bridge.py`
+    - `xinyu_personality_self_review.py`
+    - `xinyu_runtime_presence.py`
+  - source_reference_examples:
+    - `xinyu_core_bridge.py`
+    - `xinyu_persona_runtime.py`
+    - `xinyu_personality_self_review.py`
+    - `xinyu_runtime_presence.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/private_thought_feedback_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=4 | source_refs=5 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_continuity_handoff.py`
+    - `xinyu_personality_self_review.py`
+    - `xinyu_private_thought_events.py`
+    - `xinyu_runtime_presence.py`
+  - source_reference_examples:
+    - `xinyu_continuity_handoff.py`
+    - `xinyu_persona_runtime.py`
+    - `xinyu_personality_self_review.py`
+    - `xinyu_private_thought_events.py`
+    - `xinyu_runtime_presence.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/private_thought_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=4 | source_refs=5 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_memory_weights.py`
+    - `xinyu_personality_self_review.py`
+    - `xinyu_private_thought_events.py`
+    - `xinyu_turn_coherence.py`
+  - source_reference_examples:
+    - `xinyu_memory_weights.py`
+    - `xinyu_persona_runtime.py`
+    - `xinyu_personality_self_review.py`
+    - `xinyu_private_thought_events.py`
+    - `xinyu_turn_coherence.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/self_model_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=4 | source_refs=5 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/dream_output_engine.py`
+    - `xinyu_memory_weights.py`
+    - `xinyu_personality_self_review.py`
+    - `xinyu_private_thought_events.py`
+  - source_reference_examples:
+    - `custom/dream_output_engine.py`
+    - `xinyu_memory_weights.py`
+    - `xinyu_persona_runtime.py`
+    - `xinyu_personality_self_review.py`
+    - `xinyu_private_thought_events.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/voice_profile_review_state.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=3 | source_refs=3 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_review_inbox.py`
+    - `xinyu_voice_promotion_gate.py`
+  - source_reference_examples:
+    - `xinyu_context_retrieval.py`
+    - `xinyu_review_inbox.py`
+    - `xinyu_voice_promotion_gate.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/source_request_planner_state_xinyu.md` | priority=P0 | class=invalid_timestamp_manual_review | bucket=state_snapshot | action=manual_data_review_required | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/events/atomic_claims.jsonl` | priority=P1 | class=human_memory_missing_event_time | bucket=append_only_event_log | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/events/structured_events.jsonl` | priority=P1 | class=human_memory_missing_event_time | bucket=append_only_event_log | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/events/summary_views.jsonl` | priority=P1 | class=human_memory_missing_event_time | bucket=append_only_event_log | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/archive/compressed.md` | priority=P1 | class=human_memory_missing_event_time | bucket=archive_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=3 | source_refs=3 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/archive_commit_engine.py`
+    - `custom/archive_output_engine.py`
+    - `custom/long_term_memory_gate_engine.py`
+  - source_reference_examples:
+    - `custom/archive_commit_engine.py`
+    - `custom/archive_output_engine.py`
+    - `custom/long_term_memory_gate_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/archive/consolidation_queue.md` | priority=P1 | class=human_memory_missing_event_time | bucket=archive_state | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/archive/dormant.md` | priority=P1 | class=human_memory_missing_event_time | bucket=archive_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=4 | source_refs=4 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/archive_commit_engine.py`
+    - `custom/archive_output_engine.py`
+    - `custom/dormant_reactivation_engine.py`
+    - `custom/long_term_memory_gate_engine.py`
+  - source_reference_examples:
+    - `custom/archive_commit_engine.py`
+    - `custom/archive_output_engine.py`
+    - `custom/dormant_reactivation_engine.py`
+    - `custom/long_term_memory_gate_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/archive/maintenance_cycles/cycle_1.md` | priority=P1 | class=human_memory_missing_event_time | bucket=archive_state | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/archive/maintenance_cycles/cycle_2.md` | priority=P1 | class=human_memory_missing_event_time | bucket=archive_state | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/daily_digest.json` | priority=P1 | class=human_memory_missing_event_time | bucket=context_runtime_state | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/interaction_journal.jsonl` | priority=P1 | class=human_memory_missing_event_time | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_and_manifest_evidence | writer_refs=1 | source_refs=1 | manifest_refs=1 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_interaction_journal.py`
+  - source_reference_examples:
+    - `xinyu_interaction_journal.py`
+  - manifest_reference_examples:
+    - `stores/event_boundary_manifest`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/owner_permission_grants.md` | priority=P1 | class=human_memory_missing_event_time | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=12 | source_refs=12 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/ai_self_iteration_review_engine.py`
+    - `custom/automation_bridge_plugin.py`
+    - `custom/autonomous_search_activation_engine.py`
+    - `custom/github_autonomous_learning_engine.py`
+    - `custom/source_integration_gate_engine.py`
+    - `custom/source_search_provider_engine.py`
+  - source_reference_examples:
+    - `custom/ai_self_iteration_review_engine.py`
+    - `custom/automation_bridge_plugin.py`
+    - `custom/autonomous_search_activation_engine.py`
+    - `custom/github_autonomous_learning_engine.py`
+    - `custom/source_integration_gate_engine.py`
+    - `custom/source_search_provider_engine.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/proactive_request_history.jsonl` | priority=P1 | class=human_memory_missing_event_time | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_and_manifest_evidence | writer_refs=1 | source_refs=1 | manifest_refs=1 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_core_bridge.py`
+  - source_reference_examples:
+    - `xinyu_core_bridge.py`
+  - manifest_reference_examples:
+    - `stores/event_boundary_manifest`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/recent_context.md` | priority=P1 | class=human_memory_missing_event_time | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=15 | source_refs=15 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/memory_sync_plugin.py`
+    - `xinyu_answer_discipline_trial.py`
+    - `xinyu_context_retrieval.py`
+    - `xinyu_contextual_recall.py`
+    - `xinyu_life_posture.py`
+    - `xinyu_memory_candidate_extractor.py`
+  - source_reference_examples:
+    - `custom/memory_sync_plugin.py`
+    - `xinyu_answer_discipline_trial.py`
+    - `xinyu_context_retrieval.py`
+    - `xinyu_contextual_recall.py`
+    - `xinyu_life_posture.py`
+    - `xinyu_memory_candidate_extractor.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/recent_context_runtime_anchor.md` | priority=P1 | class=human_memory_missing_event_time | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=2 | source_refs=2 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_owner_context_bridge.py`
+    - `xinyu_recent_context_guard.py`
+  - source_reference_examples:
+    - `xinyu_owner_context_bridge.py`
+    - `xinyu_recent_context_guard.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/recent_interaction.md` | priority=P1 | class=human_memory_missing_event_time | bucket=context_runtime_state | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/runtime_bridge.md` | priority=P1 | class=human_memory_missing_event_time | bucket=context_runtime_state | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/self_action_gateway_approval_queue.jsonl` | priority=P1 | class=human_memory_missing_event_time | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=1 | source_refs=1 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_self_action_gateway.py`
+  - source_reference_examples:
+    - `xinyu_self_action_gateway.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/time_anchor.md` | priority=P1 | class=human_memory_missing_event_time | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=4 | source_refs=4 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/memory_sync_plugin.py`
+    - `xinyu_answer_discipline_trial.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_runtime_context.py`
+  - source_reference_examples:
+    - `custom/memory_sync_plugin.py`
+    - `xinyu_answer_discipline_trial.py`
+    - `xinyu_core_bridge.py`
+    - `xinyu_runtime_context.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/context/unfinished_experiences.md` | priority=P1 | class=human_memory_missing_event_time | bucket=context_runtime_state | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=5 | source_refs=5 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/initiative_loop_engine.py`
+    - `custom/memory_sync_plugin.py`
+    - `xinyu_memory_weights.py`
+    - `xinyu_self_thought_loop.py`
+    - `xinyu_thought_seeds.py`
+  - source_reference_examples:
+    - `custom/initiative_loop_engine.py`
+    - `custom/memory_sync_plugin.py`
+    - `xinyu_memory_weights.py`
+    - `xinyu_self_thought_loop.py`
+    - `xinyu_thought_seeds.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/planning/inspiration/safe_extracts.jsonl` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_planning_doc | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/chapters/2026-05-15/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/chapters/2026-05-15/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/chapters/2026-05-15/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/chapters/2026-05-16/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/chapters/2026-05-16/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/chapters/2026-05-16/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/publication/chapters/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/publication/chapters/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/publication/chapters/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/publication/chapters/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/publication/chapters/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-layout-separation-2026-05-16T23-30-00-08-00/memory/creative/publication/chapters/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T01-00-00-08-00/memory/creative/chapters/2026-05-15/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T01-00-00-08-00/memory/creative/chapters/2026-05-15/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T01-00-00-08-00/memory/creative/chapters/2026-05-15/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T01-00-00-08-00/memory/creative/chapters/2026-05-16/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T01-00-00-08-00/memory/creative/chapters/2026-05-16/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T01-00-00-08-00/memory/creative/chapters/2026-05-16/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T01-00-00-08-00/memory/creative/publication/chapters/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T01-00-00-08-00/memory/creative/publication/chapters/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T01-00-00-08-00/memory/creative/publication/chapters/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T01-00-00-08-00/memory/creative/publication/chapters/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T01-00-00-08-00/memory/creative/publication/chapters/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T01-00-00-08-00/memory/creative/publication/chapters/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-30-00-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-30-00-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-30-00-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-30-00-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-30-00-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-30-00-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-30-00-08-00/memory/creative/manuscript/publication/chapters/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-30-00-08-00/memory/creative/manuscript/publication/chapters/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-30-00-08-00/memory/creative/manuscript/publication/chapters/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-30-00-08-00/memory/creative/manuscript/publication/chapters/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-30-00-08-00/memory/creative/manuscript/publication/chapters/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-30-00-08-00/memory/creative/manuscript/publication/chapters/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-55-00-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-55-00-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-55-00-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-55-00-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-55-00-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-55-00-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-55-00-08-00/memory/creative/manuscript/publication/chapters/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-55-00-08-00/memory/creative/manuscript/publication/chapters/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-55-00-08-00/memory/creative/manuscript/publication/chapters/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-55-00-08-00/memory/creative/manuscript/publication/chapters/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-55-00-08-00/memory/creative/manuscript/publication/chapters/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-55-00-08-00/memory/creative/manuscript/publication/chapters/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-58-00-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-58-00-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-58-00-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-58-00-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-58-00-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-58-00-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-58-00-08-00/memory/creative/manuscript/publication/chapters/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-58-00-08-00/memory/creative/manuscript/publication/chapters/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-58-00-08-00/memory/creative/manuscript/publication/chapters/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-58-00-08-00/memory/creative/manuscript/publication/chapters/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-58-00-08-00/memory/creative/manuscript/publication/chapters/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-58-00-08-00/memory/creative/manuscript/publication/chapters/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-30-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-30-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-30-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-30-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-30-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-30-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-30-08-00/memory/creative/manuscript/publication/chapters/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-30-08-00/memory/creative/manuscript/publication/chapters/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-30-08-00/memory/creative/manuscript/publication/chapters/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-30-08-00/memory/creative/manuscript/publication/chapters/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-30-08-00/memory/creative/manuscript/publication/chapters/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-30-08-00/memory/creative/manuscript/publication/chapters/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-55-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-55-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-55-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-55-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-55-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-55-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-55-08-00/memory/creative/manuscript/publication/chapters/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-55-08-00/memory/creative/manuscript/publication/chapters/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-55-08-00/memory/creative/manuscript/publication/chapters/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-55-08-00/memory/creative/manuscript/publication/chapters/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-55-08-00/memory/creative/manuscript/publication/chapters/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-55-08-00/memory/creative/manuscript/publication/chapters/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-59-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-59-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-59-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-59-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-59-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-59-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-59-08-00/memory/creative/manuscript/publication/chapters/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-59-08-00/memory/creative/manuscript/publication/chapters/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-59-08-00/memory/creative/manuscript/publication/chapters/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-59-08-00/memory/creative/manuscript/publication/chapters/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-59-08-00/memory/creative/manuscript/publication/chapters/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-16T23-59-59-08-00/memory/creative/manuscript/publication/chapters/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-17T00-10-00-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-17T00-10-00-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-17T00-10-00-08-00/memory/creative/manuscript/chapters/2026-05-15/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-17T00-10-00-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-17T00-10-00-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-17T00-10-00-08-00/memory/creative/manuscript/chapters/2026-05-16/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-17T00-10-00-08-00/memory/creative/manuscript/publication/chapters/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-17T00-10-00-08-00/memory/creative/manuscript/publication/chapters/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-17T00-10-00-08-00/memory/creative/manuscript/publication/chapters/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-17T00-10-00-08-00/memory/creative/manuscript/publication/chapters/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-17T00-10-00-08-00/memory/creative/manuscript/publication/chapters/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/revisions/before-platform-6000-2026-05-17T00-10-00-08-00/memory/creative/manuscript/publication/chapters/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=creative_revision_snapshot | action=manual_data_review_required | evidence=path_provenance_candidate_only | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/conversations.md` | priority=P1 | class=human_memory_missing_event_time | bucket=dialogue_or_conversation_memory | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/recent_context.md` | priority=P1 | class=human_memory_missing_event_time | bucket=dialogue_or_conversation_memory | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/changelog.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/core.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/chapters/2026-05-15/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/chapters/2026-05-15/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/chapters/2026-05-15/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/chapters/2026-05-16/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/chapters/2026-05-16/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/chapters/2026-05-16/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/chapters/2026-05-17/chapter-007.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/chapters/2026-05-17/chapter-008.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/chapters/2026-05-17/chapter-009.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/chapters/2026-05-18/chapter-010.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/chapters/2026-05-18/chapter-011.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/chapters/2026-05-18/chapter-012.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/publication/chapters/chapter-001.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/publication/chapters/chapter-002.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/publication/chapters/chapter-003.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/publication/chapters/chapter-004.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/publication/chapters/chapter-005.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/publication/chapters/chapter-006.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/publication/chapters/chapter-007.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/publication/chapters/chapter-008.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/publication/chapters/chapter-009.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/publication/chapters/chapter-010.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/publication/chapters/chapter-011.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/creative/manuscript/publication/chapters/chapter-012.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/dream_log.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/dream_weights.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/dreams/dream_log.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=6 | source_refs=6 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/dream_output_engine.py`
+    - `xinyu_dream_journal.py`
+    - `xinyu_proactivity_scorer.py`
+    - `xinyu_self_thought_loop.py`
+    - `xinyu_thought_seeds.py`
+    - `xinyu_visible_state_hygiene.py`
+  - source_reference_examples:
+    - `custom/dream_output_engine.py`
+    - `xinyu_dream_journal.py`
+    - `xinyu_proactivity_scorer.py`
+    - `xinyu_self_thought_loop.py`
+    - `xinyu_thought_seeds.py`
+    - `xinyu_visible_state_hygiene.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/emotions/event_log.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/emotions/lenses/attachment.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/emotions/lenses/curiosity.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/emotions/lenses/fatigue.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/emotions/lenses/guardedness.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/emotions/lenses/hurt.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/emotions/lenses/irritation.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/emotions/lenses/stability.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/gates.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/general.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/initiative.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/exploration_queue.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/source_notes.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/learning_loop.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/maintenance.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/maintenance/schedule_log.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/maintenance_dispatch.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/maintenance_evaluation.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/maintenance_findings.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/maintenance_log.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/maintenance_schedule.json` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=manual_data_review_required | evidence=manifest_boundary_found | writer_refs=0 | source_refs=0 | manifest_refs=1 | write_allowed=false
+  - manifest_reference_examples:
+    - `stores/orphan_runtime_state_manifest`
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/memory.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/memory_consolidation.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/memory_gate.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/memory_log.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/memory_structure.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/mind_loop/private_thoughts.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/owner-preferences.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/people/owner.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=13 | source_refs=13 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/memory_event_schema.py`
+    - `custom/memory_sync_plugin.py`
+    - `xinyu_answer_discipline_trial.py`
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_context_retrieval.py`
+    - `xinyu_contextual_recall.py`
+  - source_reference_examples:
+    - `custom/memory_event_schema.py`
+    - `custom/memory_sync_plugin.py`
+    - `xinyu_answer_discipline_trial.py`
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_context_retrieval.py`
+    - `xinyu_contextual_recall.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/personality.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/personality_gate.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/personality_growth_gate.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/question_pipeline.json` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=manual_data_review_required | evidence=manifest_boundary_found | writer_refs=0 | source_refs=0 | manifest_refs=1 | write_allowed=false
+  - manifest_reference_examples:
+    - `stores/orphan_runtime_state_manifest`
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/reflection/growth_log.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=6 | source_refs=6 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/long_term_memory_gate_engine.py`
+    - `custom/personality_growth_gate_engine.py`
+    - `custom/reflection_output_engine.py`
+    - `custom/slow_reprocess_engine.py`
+    - `xinyu_personality_evolution.py`
+  - source_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/long_term_memory_gate_engine.py`
+    - `custom/personality_growth_gate_engine.py`
+    - `custom/reflection_output_engine.py`
+    - `custom/slow_reprocess_engine.py`
+    - `xinyu_personality_evolution.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/reflection/reflection_log.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=5 | source_refs=5 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/personality_growth_gate_engine.py`
+    - `custom/reflection_output_engine.py`
+    - `xinyu_personality_evolution.py`
+    - `xinyu_visible_state_hygiene.py`
+  - source_reference_examples:
+    - `custom/automation_bridge_plugin.py`
+    - `custom/personality_growth_gate_engine.py`
+    - `custom/reflection_output_engine.py`
+    - `xinyu_personality_evolution.py`
+    - `xinyu_visible_state_hygiene.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/reflection_maintenance.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/relationship_vectors.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/reprocess_log.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/retention_status.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/runtime_bridge.json` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=manual_data_review_required | evidence=manifest_boundary_found | writer_refs=0 | source_refs=0 | manifest_refs=1 | write_allowed=false
+  - manifest_reference_examples:
+    - `stores/orphan_runtime_state_manifest`
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self-narrative.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/goldmark_positive_overlay.json` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/self/private_thought_log.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=1 | source_refs=1 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `xinyu_private_thought_events.py`
+  - source_reference_examples:
+    - `xinyu_private_thought_events.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/status.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/tasks.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/test_write.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/time_anchor.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/topics/问题流水线与澄清.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/user_profile.md` | priority=P1 | class=human_memory_missing_event_time | bucket=memory_note | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/ai_self_iteration_state.md` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/archive_gate_state_last_review.md` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/consolidation_state.json` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=manual_data_review_required | evidence=manifest_boundary_found | writer_refs=0 | source_refs=0 | manifest_refs=1 | write_allowed=false
+  - manifest_reference_examples:
+    - `stores/orphan_runtime_state_manifest`
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/deep_maintenance_state.md` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/emotional_state.md` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/emotions/current_state.md` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=writer_fix_candidate | evidence=writer_reference_found | writer_refs=14 | source_refs=14 | manifest_refs=0 | write_allowed=false
+  - writer_reference_examples:
+    - `custom/dream_output_engine.py`
+    - `custom/initiative_loop_engine.py`
+    - `custom/memory_sync_plugin.py`
+    - `custom/personality_growth_gate_engine.py`
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_context_retrieval.py`
+  - source_reference_examples:
+    - `custom/dream_output_engine.py`
+    - `custom/initiative_loop_engine.py`
+    - `custom/memory_sync_plugin.py`
+    - `custom/personality_growth_gate_engine.py`
+    - `xinyu_autonomy_journal.py`
+    - `xinyu_context_retrieval.py`
+  - followup: Inspect the writer and make future writes include event time; do not rewrite old bodies from this report.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/knowledge/question_states.md` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/maintenance/dispatch_state.md` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/maintenance_schedule_state.md` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/maintenance_state.md` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/personality_change_state.json` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=manual_data_review_required | evidence=manifest_boundary_found | writer_refs=0 | source_refs=0 | manifest_refs=1 | write_allowed=false
+  - manifest_reference_examples:
+    - `stores/orphan_runtime_state_manifest`
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/reflection_state.md` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/runtime_bridge_state.json` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=manual_data_review_required | evidence=manifest_boundary_found | writer_refs=0 | source_refs=0 | manifest_refs=1 | write_allowed=false
+  - manifest_reference_examples:
+    - `stores/orphan_runtime_state_manifest`
+  - followup: Review schema owner, manifest, or path provenance before any edit.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/runtime_bridge_state.md` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/runtime_state.md` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/state.md` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.
+- `XinYu-Core/examples/agent-apps/xinyu/memory/subsystem_states.md` | priority=P1 | class=human_memory_missing_event_time | bucket=state_snapshot | action=blocked_no_evidence | evidence=no_evidence_found | writer_refs=0 | source_refs=0 | manifest_refs=0 | write_allowed=false
+  - followup: Keep blocked until a source writer, manifest owner, or explicit exclusion policy is found.

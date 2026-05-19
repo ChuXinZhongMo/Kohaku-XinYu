@@ -30,6 +30,7 @@ Core then calls into `xinyu_runtime`, custom plugins/engines, memory/runtime fil
 - `XinYu-Core/examples/agent-apps/xinyu/`: live local XinYu app: bridge, QQ gateway, custom engines, prompts, tests, v1, local operational scripts.
 - `XinYu_Desktop/`: Electron desktop shell. It presents local state and sends owner interactions; it does not own core identity or long-term memory.
 - `NapCatQQ/`: local QQ/NapCat runtime environment. It is an external adapter dependency, not XinYu source.
+- `XinYu-TinyKernel/`: local TinyKernel service and training workspace. XinYu can call it through a disabled-by-default compose shadow path; it does not send QQ/Desktop output, execute tools, or write stable memory.
 - `XinYu-Autonomy/`: owner-visible autonomy exports and live junctions into core state.
 - `XinYu-Local-Scope/`: controlled local file area for Inbox, Requests, Workspace, and Outbox.
 

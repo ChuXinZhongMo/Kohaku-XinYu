@@ -1,0 +1,298 @@
+{
+  "archive_delete": {
+    "by_decision": {
+      "accept_delete_no_live_refs": 7,
+      "accept_delete_relocated": 235
+    },
+    "by_kind": {
+      "cleanup_candidate": 6,
+      "custom_manifest": 7,
+      "root_diagnostic": 3,
+      "root_manual_runner": 14,
+      "root_smoke": 212
+    },
+    "hold_count": 0,
+    "total_candidates": 242
+  },
+  "boundary_readiness": {
+    "held_orphan_count": 11,
+    "manifest_failure_count": 0,
+    "p0_generic_decision_count": 0,
+    "reference_failure_count": 0,
+    "status": "pass"
+  },
+  "closeout_summary": {
+    "archived": [
+      "235 cleanup deletions have relocated replacements."
+    ],
+    "deleted": [
+      "7 cleanup deletions have no live references in the audit."
+    ],
+    "hold": [
+      "8 dirty paths are still in P99 unknown triage."
+    ],
+    "kept": [
+      "P00 docs-worklogs-plans (49 paths)",
+      "P01 ops-validation-tools (368 paths)",
+      "P02 tests-smokes-regression (109 paths)",
+      "P05 desktop-shell (16 paths)",
+      "P06 memory-data-review-only (5 paths)"
+    ],
+    "merged": [
+      "P03 core-runtime-services-stores (169 paths)",
+      "P04 adapters-bridges-io (30 paths)"
+    ]
+  },
+  "group_counts": {
+    "adapters": 30,
+    "archive/delete": 242,
+    "core": 162,
+    "desktop": 16,
+    "docs": 49,
+    "memory-data": 5,
+    "ops": 368,
+    "services": 4,
+    "stores": 3,
+    "tests": 109,
+    "unknown": 8
+  },
+  "hold_reasons": [
+    "8 dirty paths are still in P99 unknown triage."
+  ],
+  "package_count": 9,
+  "package_overview": [
+    {
+      "count": 49,
+      "groups": {
+        "docs": 49
+      },
+      "id": "P00",
+      "review_action": "keep_docs_review",
+      "risk": "low",
+      "status": {
+        "modified": 26,
+        "untracked": 23
+      },
+      "title": "docs-worklogs-plans"
+    },
+    {
+      "count": 368,
+      "groups": {
+        "ops": 368
+      },
+      "id": "P01",
+      "review_action": "keep_ops_validation",
+      "risk": "medium",
+      "status": {
+        "deleted": 3,
+        "modified": 6,
+        "untracked": 359
+      },
+      "title": "ops-validation-tools"
+    },
+    {
+      "count": 109,
+      "groups": {
+        "tests": 109
+      },
+      "id": "P02",
+      "review_action": "keep_regression_tests",
+      "risk": "medium",
+      "status": {
+        "modified": 13,
+        "untracked": 96
+      },
+      "title": "tests-smokes-regression"
+    },
+    {
+      "count": 169,
+      "groups": {
+        "core": 162,
+        "services": 4,
+        "stores": 3
+      },
+      "id": "P03",
+      "review_action": "merge_review_core_runtime",
+      "risk": "high",
+      "status": {
+        "deleted": 2,
+        "modified": 121,
+        "untracked": 46
+      },
+      "title": "core-runtime-services-stores"
+    },
+    {
+      "count": 30,
+      "groups": {
+        "adapters": 30
+      },
+      "id": "P04",
+      "review_action": "merge_review_adapters",
+      "risk": "high",
+      "status": {
+        "modified": 16,
+        "untracked": 14
+      },
+      "title": "adapters-bridges-io"
+    },
+    {
+      "count": 16,
+      "groups": {
+        "desktop": 16
+      },
+      "id": "P05",
+      "review_action": "keep_desktop_shell",
+      "risk": "medium",
+      "status": {
+        "modified": 15,
+        "untracked": 1
+      },
+      "title": "desktop-shell"
+    },
+    {
+      "count": 5,
+      "groups": {
+        "memory-data": 5
+      },
+      "id": "P06",
+      "review_action": "keep_memory_data_review_only",
+      "risk": "high",
+      "status": {
+        "modified": 1,
+        "untracked": 4
+      },
+      "title": "memory-data-review-only"
+    },
+    {
+      "count": 242,
+      "groups": {
+        "archive/delete": 242
+      },
+      "id": "P07",
+      "review_action": "archive_delete_review",
+      "risk": "medium",
+      "status": {
+        "deleted": 242
+      },
+      "title": "archive-delete-candidates"
+    },
+    {
+      "count": 8,
+      "groups": {
+        "unknown": 8
+      },
+      "id": "P99",
+      "review_action": "hold_unknown_triage",
+      "risk": "unknown",
+      "status": {
+        "modified": 3,
+        "untracked": 5
+      },
+      "title": "unknown-triage"
+    }
+  ],
+  "privacy_note": "Generated from git status paths and existing metadata audits only; does not read or print private memory bodies, raw QQ payload bodies, tokens, or secrets.",
+  "recommended_commit_split": [
+    {
+      "count": 49,
+      "package_id": "P00",
+      "review_action": "keep_docs_review",
+      "risk": "low",
+      "title": "docs-worklogs-plans"
+    },
+    {
+      "count": 368,
+      "package_id": "P01",
+      "review_action": "keep_ops_validation",
+      "risk": "medium",
+      "title": "ops-validation-tools"
+    },
+    {
+      "count": 109,
+      "package_id": "P02",
+      "review_action": "keep_regression_tests",
+      "risk": "medium",
+      "title": "tests-smokes-regression"
+    },
+    {
+      "count": 169,
+      "package_id": "P03",
+      "review_action": "merge_review_core_runtime",
+      "risk": "high",
+      "title": "core-runtime-services-stores"
+    },
+    {
+      "count": 30,
+      "package_id": "P04",
+      "review_action": "merge_review_adapters",
+      "risk": "high",
+      "title": "adapters-bridges-io"
+    },
+    {
+      "count": 16,
+      "package_id": "P05",
+      "review_action": "keep_desktop_shell",
+      "risk": "medium",
+      "title": "desktop-shell"
+    },
+    {
+      "count": 5,
+      "package_id": "P06",
+      "review_action": "keep_memory_data_review_only",
+      "risk": "high",
+      "title": "memory-data-review-only"
+    },
+    {
+      "count": 242,
+      "package_id": "P07",
+      "review_action": "archive_delete_review",
+      "risk": "medium",
+      "title": "archive-delete-candidates"
+    },
+    {
+      "count": 8,
+      "package_id": "P99",
+      "review_action": "hold_unknown_triage",
+      "risk": "unknown",
+      "title": "unknown-triage"
+    }
+  ],
+  "remaining_risks": [
+    "High-risk packages need behavior review: P03 core-runtime-services-stores, P04 adapters-bridges-io, P06 memory-data-review-only.",
+    "P06 memory-data remains review-only; do not auto-delete or move private bodies.",
+    "11 orphan runtime-state paths are intentionally held for manual ownership review."
+  ],
+  "required_validation": [
+    "git diff --check",
+    ".\\.venv\\Scripts\\python.exe -m pytest tests -q",
+    ".\\.venv\\Scripts\\python.exe smoke_run.py --group quick --restore-after --timeout-seconds 300",
+    "npm run typecheck",
+    "npm run build"
+  ],
+  "review_order": [
+    "P00",
+    "P01",
+    "P02",
+    "P03",
+    "P04",
+    "P05",
+    "P06",
+    "P07",
+    "P99"
+  ],
+  "risk_entry_counts": {
+    "high": 204,
+    "low": 49,
+    "medium": 735,
+    "unknown": 8
+  },
+  "risk_package_counts": {
+    "high": 3,
+    "low": 1,
+    "medium": 4,
+    "unknown": 1
+  },
+  "status": "needs_triage",
+  "total_dirty_entries": 996,
+  "unknown_entry_count": 8
+}

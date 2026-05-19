@@ -1,0 +1,28 @@
+{
+  "items": [
+    {
+      "allowed_raw_readers": [
+        "xinyu_impulse_soup.py",
+        "xinyu_runtime_presence.py"
+      ],
+      "decision": "pass_declared_runtime_trace_boundary",
+      "owner_module": "xinyu_impulse_soup",
+      "path": "memory/context/impulse_soup_trace.jsonl",
+      "reference_count": 2,
+      "reference_examples": [
+        "xinyu_impulse_soup.py",
+        "xinyu_runtime_presence.py"
+      ],
+      "trace_id": "impulse_soup",
+      "undeclared_reference_count": 0,
+      "undeclared_reference_examples": []
+    }
+  ],
+  "manifest_ok": true,
+  "privacy_note": "Scans source file paths and string references only; does not read JSONL trace bodies, raw QQ payloads, tokens, or private memory bodies.",
+  "status": "pass",
+  "trace_count": 1,
+  "undeclared_reference_count": 0,
+  "validation_failures": [],
+  "validation_warnings": []
+}

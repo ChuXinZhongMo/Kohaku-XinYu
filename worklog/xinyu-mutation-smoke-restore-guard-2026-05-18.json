@@ -1,0 +1,263 @@
+{
+  "total_smokes": 22,
+  "mutation_capable_count": 19,
+  "restore_after_supported_count": 19,
+  "diff_suppression_supported_count": 19,
+  "missing_restore_count": 0,
+  "missing_diff_suppression_count": 0,
+  "entries": [
+    {
+      "path": "tests/smoke/learning/integration/ai_domain_source_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/learning/integration/autonomous_search_activation_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/learning/integration/learner_integration_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/learning/integration/learning_quality_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/learning/integration/learning_session_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/learning/integration/outward_source_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/learning/integration/question_pipeline_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/learning/integration/research_handoff_smoke.py",
+      "mutation_capable": false,
+      "supports_restore_after": false,
+      "supports_diff_lines": false,
+      "restore_default_on": false,
+      "recommended_args": []
+    },
+    {
+      "path": "tests/smoke/learning/integration/research_loop_dry_run_smoke.py",
+      "mutation_capable": false,
+      "supports_restore_after": false,
+      "supports_diff_lines": false,
+      "restore_default_on": false,
+      "recommended_args": []
+    },
+    {
+      "path": "tests/smoke/learning/integration/source_comparison_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/learning/integration/source_learning_chain_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/learning/integration/source_quality_followup_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/learning/integration/source_reliability_gate_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/learning/integration/source_request_planner_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/learning/integration/source_search_provider_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/learning/integration/source_search_resolution_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/memory/integration/archive_commit_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/memory/integration/long_term_memory_gate_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/memory/integration/memory_arc_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": true,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/memory/integration/memory_mutation_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": true,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/memory/integration/memory_pressure_smoke.py",
+      "mutation_capable": true,
+      "supports_restore_after": true,
+      "supports_diff_lines": true,
+      "restore_default_on": false,
+      "recommended_args": [
+        "--restore-after",
+        "--diff-lines",
+        "0"
+      ]
+    },
+    {
+      "path": "tests/smoke/memory/integration/system_prompt_memory_smoke.py",
+      "mutation_capable": false,
+      "supports_restore_after": false,
+      "supports_diff_lines": false,
+      "restore_default_on": false,
+      "recommended_args": []
+    }
+  ],
+  "privacy_note": "Generated from smoke source files only; does not read memory bodies, QQ payloads, tokens, or secrets."
+}

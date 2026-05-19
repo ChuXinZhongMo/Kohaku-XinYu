@@ -1,0 +1,56 @@
+{
+  "items": [
+    {
+      "allowed_raw_readers": [
+        "xinyu_interaction_journal.py"
+      ],
+      "decision": "pass_declared_boundary",
+      "owner_module": "xinyu_interaction_journal",
+      "path": "memory/context/interaction_journal.jsonl",
+      "reference_count": 1,
+      "reference_examples": [
+        "xinyu_interaction_journal.py"
+      ],
+      "stream_id": "interaction_journal",
+      "undeclared_reference_count": 0,
+      "undeclared_reference_examples": []
+    },
+    {
+      "allowed_raw_readers": [
+        "xinyu_core_bridge.py"
+      ],
+      "decision": "pass_declared_boundary",
+      "owner_module": "xinyu_core_bridge",
+      "path": "memory/context/proactive_request_history.jsonl",
+      "reference_count": 1,
+      "reference_examples": [
+        "xinyu_core_bridge.py"
+      ],
+      "stream_id": "proactive_request_history",
+      "undeclared_reference_count": 0,
+      "undeclared_reference_examples": []
+    },
+    {
+      "allowed_raw_readers": [
+        "xinyu_persona_state.py"
+      ],
+      "decision": "pass_declared_boundary",
+      "owner_module": "xinyu_persona_state",
+      "path": "memory/relationships/owner_recent_events.jsonl",
+      "reference_count": 1,
+      "reference_examples": [
+        "xinyu_persona_state.py"
+      ],
+      "stream_id": "owner_recent_events",
+      "undeclared_reference_count": 0,
+      "undeclared_reference_examples": []
+    }
+  ],
+  "manifest_ok": true,
+  "privacy_note": "Scans source file paths and string references only; does not read JSONL event bodies, raw QQ payloads, tokens, or private memory bodies.",
+  "status": "pass",
+  "stream_count": 3,
+  "undeclared_reference_count": 0,
+  "validation_failures": [],
+  "validation_warnings": []
+}

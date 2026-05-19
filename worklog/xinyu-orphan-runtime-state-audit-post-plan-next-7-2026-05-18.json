@@ -1,0 +1,81 @@
+{
+  "held_orphan_count": 9,
+  "items": [
+    {
+      "decision": "held_orphan_runtime_state",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until consolidation owner/archive decision is reviewed.",
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/consolidation_state.json",
+      "reference_count": 0,
+      "target_boundary": "stores/orphan_runtime_state_manifest"
+    },
+    {
+      "decision": "held_orphan_runtime_state",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until initiative owner/archive decision is reviewed.",
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/initiative_state.json",
+      "reference_count": 0,
+      "target_boundary": "stores/orphan_runtime_state_manifest"
+    },
+    {
+      "decision": "held_orphan_runtime_state",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until maintenance owner/archive decision is reviewed.",
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/maintenance_schedule.json",
+      "reference_count": 0,
+      "target_boundary": "stores/orphan_runtime_state_manifest"
+    },
+    {
+      "decision": "held_orphan_runtime_state",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until personality owner/archive decision is reviewed.",
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/personality_change_state.json",
+      "reference_count": 0,
+      "target_boundary": "stores/orphan_runtime_state_manifest"
+    },
+    {
+      "decision": "held_orphan_runtime_state",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until personality self-review owner/archive decision is reviewed.",
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/personality_self_review_state.json",
+      "reference_count": 0,
+      "target_boundary": "stores/orphan_runtime_state_manifest"
+    },
+    {
+      "decision": "held_orphan_runtime_state",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until question pipeline owner/archive decision is reviewed.",
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/question_pipeline.json",
+      "reference_count": 0,
+      "target_boundary": "stores/orphan_runtime_state_manifest"
+    },
+    {
+      "decision": "held_orphan_runtime_state",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until reflection owner/archive decision is reviewed.",
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/reflection/closed_loop_state.json",
+      "reference_count": 0,
+      "target_boundary": "stores/orphan_runtime_state_manifest"
+    },
+    {
+      "decision": "held_orphan_runtime_state",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until runtime bridge owner/archive decision is reviewed.",
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/runtime_bridge.json",
+      "reference_count": 0,
+      "target_boundary": "stores/orphan_runtime_state_manifest"
+    },
+    {
+      "decision": "held_orphan_runtime_state",
+      "delete_allowed": false,
+      "handling": "Zero live source references found; keep in place until runtime bridge state owner/archive decision is reviewed.",
+      "path": "XinYu-Core/examples/agent-apps/xinyu/memory/runtime_bridge_state.json",
+      "reference_count": 0,
+      "target_boundary": "stores/orphan_runtime_state_manifest"
+    }
+  ],
+  "orphan_candidate_count": 9,
+  "privacy_note": "Generated from P0 triage paths and source-code reference file names only; does not read JSON bodies, raw QQ payloads, tokens, or private memory bodies.",
+  "safety_rule": "This is a non-destructive review report. Do not delete, move, or print state bodies from this output alone.",
+  "status": "review"
+}
