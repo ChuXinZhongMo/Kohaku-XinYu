@@ -34,4 +34,3 @@ Reference:
 PyTorch official Windows pip instructions: choose a CUDA-capable Windows pip wheel suited to the machine.
 PyTorch previous versions list CUDA 12.8 pip command for torch 2.8.0.
 ```
-

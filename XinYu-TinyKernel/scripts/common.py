@@ -55,4 +55,3 @@ def compact_space(text: str) -> str:
 
 def rel_to(root: Path, value: str) -> Path:
     return root / value.replace("\\", "/")
-

@@ -12,4 +12,3 @@ Rules:
 - Keep raw extracts out of `memory/`.
 - Promote only short, reviewed, source-backed implementation notes into `library/notes/` or worklogs.
 - Do not paste long paper excerpts into prompts.
-

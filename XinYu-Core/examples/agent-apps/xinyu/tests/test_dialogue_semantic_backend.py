@@ -55,4 +55,3 @@ def test_semantic_backend_falls_back_to_hash_when_runtime_unavailable(tmp_path: 
         conn.close()
     assert model == "local_hash_v1"
     assert "Codex search was blocked" not in embedding_json
-

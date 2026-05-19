@@ -61,4 +61,3 @@ def test_memory_write_paths_preserve_payload_event_time(tmp_path: Path) -> None:
     assert {_timestamp(row["created_at"]) for row in candidates} == {event_timestamp}
     assert {_timestamp(row["created_at"]) for row in traces} == {event_timestamp}
     assert {_timestamp(row["updated_at"]) for row in traces} == {event_timestamp}
-

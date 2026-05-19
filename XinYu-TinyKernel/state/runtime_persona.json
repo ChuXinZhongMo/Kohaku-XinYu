@@ -5,4 +5,3 @@
   "memory_policy": "candidate_first_no_stable_write",
   "api_fallback": "local_persona_memory_tools_only"
 }
-

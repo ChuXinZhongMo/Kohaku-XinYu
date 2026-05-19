@@ -80,4 +80,3 @@ Turn the P07 timestamp issue classes into an actionable, non-destructive review 
   - P1 human memory missing event time: determine whether file-level frontmatter, row-level timestamp, or archive event source can safely supply time.
   - P2 metadata review: decide exclude vs normalize.
 - Still no automatic body edits.
-

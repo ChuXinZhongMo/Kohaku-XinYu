@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from _bootstrap import ensure_project_root_on_path
 
@@ -1471,4 +1471,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

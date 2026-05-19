@@ -62,4 +62,3 @@ def test_timestamp_provenance_audit_reports_counts_without_values_or_bodies(tmp_
     assert "bad-time" not in rendered
     assert "2026-05-18T13:30:00+08:00" not in rendered
     assert "secret body" not in rendered
-

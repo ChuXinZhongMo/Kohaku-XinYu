@@ -53,4 +53,3 @@ SFT rows use a chat-shaped wrapper and require strict JSON in the assistant cont
 - remove secrets and tokens
 - reject rows that leak internal tool syntax or state filenames
 - reject rows with empty or low-value assistant replies
-

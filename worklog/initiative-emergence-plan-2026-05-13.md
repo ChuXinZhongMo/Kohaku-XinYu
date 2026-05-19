@@ -549,4 +549,3 @@ The system is ready to leave shadow mode when:
 - Desktop delivery can be enabled without QQ sending.
 - Feedback changes future score in tests.
 - Status surfaces expose counts and posture without private content.
-

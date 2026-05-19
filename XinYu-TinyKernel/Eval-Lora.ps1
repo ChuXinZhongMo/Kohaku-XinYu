@@ -10,4 +10,3 @@ if (-not $env:HF_ENDPOINT) {
 
 & $Py eval\eval_lora.py
 exit $LASTEXITCODE
-

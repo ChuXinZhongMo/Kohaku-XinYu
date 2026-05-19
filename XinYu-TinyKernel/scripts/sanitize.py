@@ -9,9 +9,9 @@ from common import DATA_DIR, compact_space, read_jsonl, write_jsonl
 
 
 PATH_REPLACEMENTS = (
-    (re.compile(r"[A-Za-z]:\\XinYu(?:\\XinYu-TinyKernel|-TinyKernel)(?:\\[^\s\"'，。；;]*)?", re.I), "<tinykernel_root>"),
-    (re.compile(r"[A-Za-z]:\\XinYu(?:\\[^\s\"'，。；;]*)?", re.I), "<xinyu_root>"),
-    (re.compile(r"[A-Za-z]:\\Users\\[^\s\"'，。；;]+", re.I), "<user_path>"),
+    (re.compile(r"[A-Za-z]:\\XinYu(?:\\XinYu-TinyKernel|-TinyKernel)(?:\\[^\s\"'锛屻€傦紱;]*)?", re.I), "<tinykernel_root>"),
+    (re.compile(r"[A-Za-z]:\\XinYu(?:\\[^\s\"'锛屻€傦紱;]*)?", re.I), "<xinyu_root>"),
+    (re.compile(r"[A-Za-z]:\\Users\\[^\s\"'锛屻€傦紱;]+", re.I), "<user_path>"),
 )
 SECRET_PATTERNS = (
     re.compile(r"(?i)(api[_-]?key|token|secret|cookie)\s*[:=]\s*[A-Za-z0-9_\-\.]{8,}"),
@@ -19,7 +19,7 @@ SECRET_PATTERNS = (
 )
 LONG_ID_PATTERN = re.compile(r"\b\d{8,}\b")
 HASH_PATTERN = re.compile(r"\b[a-f0-9]{24,64}\b", re.I)
-STATE_FILE_PATTERN = re.compile(r"\b(memory|runtime|logs)\\[^\s\"'，。；;]+", re.I)
+STATE_FILE_PATTERN = re.compile(r"\b(memory|runtime|logs)\\[^\s\"'锛屻€傦紱;]+", re.I)
 
 
 def sanitize_text(text: str) -> str:
@@ -86,4 +86,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

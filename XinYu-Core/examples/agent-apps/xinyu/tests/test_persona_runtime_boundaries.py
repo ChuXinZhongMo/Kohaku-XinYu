@@ -29,4 +29,3 @@ def test_persona_runtime_prompt_includes_boundaries_without_stable_rewrite() -> 
     assert "## Runtime Boundaries" in block
     assert "they cannot rewrite stable personality" in block
     assert "repeated or owner-approved evidence" in block
-

@@ -47,4 +47,3 @@ No additional temporal recall mutation is needed before review. The next
 autonomous step should be a read-only readiness scan: refresh commit/readiness
 and boundary audits after P53-P56, then decide whether any remaining risk is
 safe to handle without human review.
-

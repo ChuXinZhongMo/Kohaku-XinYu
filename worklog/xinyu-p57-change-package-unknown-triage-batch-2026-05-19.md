@@ -48,4 +48,3 @@ Audit outputs:
 - No git commit was made.
 - No private memory bodies, raw QQ payload bodies, tokens, or secrets were read
   or printed in this worklog.
-

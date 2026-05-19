@@ -14,4 +14,3 @@ if (-not (Test-Path -LiteralPath $Py)) {
 
 & $Py train\infer_lora.py
 exit $LASTEXITCODE
-

@@ -21,7 +21,7 @@ Request:
 {
   "turn_id": "turn-xxx",
   "source": "owner_private",
-  "user_text": "用 Codex 看看这个项目",
+  "user_text": "鐢?Codex 鐪嬬湅杩欎釜椤圭洰",
   "context": {
     "recent_turns": [],
     "persona_state": "",
@@ -52,7 +52,7 @@ Response:
   "tool_request": {
     "tool": "codex_delegate",
     "risk": "delegated_local",
-    "task": "用 Codex 看看这个项目"
+    "task": "鐢?Codex 鐪嬬湅杩欎釜椤圭洰"
   },
   "memory_candidates": [],
   "style": {
@@ -68,4 +68,3 @@ Response:
 ## `POST /feedback`
 
 Stores reviewed feedback for future training rows. It does not retrain automatically.
-

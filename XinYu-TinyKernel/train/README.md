@@ -16,4 +16,3 @@ base model: Qwen/Qwen2.5-0.5B-Instruct
 method: LoRA
 precision: fp16
 ```
-

@@ -18,4 +18,3 @@ if ($PidValue) {
   }
 }
 Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
-

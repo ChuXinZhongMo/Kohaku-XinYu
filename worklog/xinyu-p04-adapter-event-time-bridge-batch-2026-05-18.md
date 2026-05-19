@@ -73,4 +73,3 @@ Carry real adapter message time into the canonical temporal recall path so time-
 
 - Resume at the next unfinished DoD item outside P04.
 - Recommended next batch: P05 recall write-path/time provenance audit, checking whether memory writes preserve event time when new memory candidates are saved.
-

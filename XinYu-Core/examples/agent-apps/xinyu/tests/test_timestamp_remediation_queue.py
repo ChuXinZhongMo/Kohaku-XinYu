@@ -60,4 +60,3 @@ def test_remediation_queue_filters_to_actionable_classes_without_bodies() -> Non
     assert queue["priority_counts"] == {"P0": 1, "P1": 1, "P2": 1}
     assert "operational_timestamp_not_human_memory" not in {item["issue_class"] for item in queue["items"]}
     assert "secret body" not in rendered
-
