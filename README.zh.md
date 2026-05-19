@@ -1,5 +1,7 @@
 # XinYu
 
+語言：[`简体中文`](README.md) · **繁體中文** · [`English`](README.en.md) · [`日本語`](README.ja.md)
+
 本頁是繁體中文入口。目前倉庫首頁已改為 XinYu 專案展示；主要內容請看 [`README.md`](README.md)。
 
 目前狀態：

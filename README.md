@@ -16,7 +16,7 @@
 </p>
 
 <p align="center">
-  <strong>简体中文</strong> · <a href="README.zh.md">繁體中文</a>
+  <strong>简体中文</strong> · <a href="README.zh.md">繁體中文</a> · <a href="README.en.md">English</a> · <a href="README.ja.md">日本語</a>
 </p>
 
 ---
@@ -90,7 +90,7 @@ NapCatQQ
 进入 XinYu app：
 
 ```powershell
-cd D:\XinYu\KohakuTerrarium-main\examples\agent-apps\xinyu
+cd D:\XinYu\XinYu-Core\examples\agent-apps\xinyu
 ```
 
 创建本地环境文件：
@@ -130,7 +130,7 @@ python -m pip install -r requirements-minimal.txt
 ## 状态检查
 
 ```powershell
-cd D:\XinYu\KohakuTerrarium-main\examples\agent-apps\xinyu
+cd D:\XinYu\XinYu-Core\examples\agent-apps\xinyu
 python xinyu_status.py
 python deployment_status_smoke.py
 python runtime_readiness_smoke.py
