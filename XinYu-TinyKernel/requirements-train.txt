@@ -1,0 +1,9 @@
+transformers
+peft
+trl
+accelerate
+datasets
+sentencepiece
+protobuf
+safetensors
+

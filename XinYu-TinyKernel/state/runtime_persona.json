@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "voice_bias": "short_direct",
+  "tool_bias": "explicit_requests_only",
+  "memory_policy": "candidate_first_no_stable_write",
+  "api_fallback": "local_persona_memory_tools_only"
+}
+

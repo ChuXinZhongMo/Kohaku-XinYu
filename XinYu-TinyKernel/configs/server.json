@@ -1,0 +1,9 @@
+{
+  "host": "127.0.0.1",
+  "port": 8877,
+  "max_reply_chars": 240,
+  "timeout_seconds": 8,
+  "rule_kernel_enabled": true,
+  "model_kernel_enabled": false
+}
+

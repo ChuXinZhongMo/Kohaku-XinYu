@@ -1,0 +1,22 @@
+{
+  "assistant_only_loss": true,
+  "base_model": "D:\\XinYu\\XinYu-TinyKernel\\models\\Qwen2.5-0.5B-Instruct",
+  "batch_size": 1,
+  "bf16": false,
+  "dataset_eval": "data/sft/main_persona_eval_v001.jsonl",
+  "dataset_train": "data/sft/main_persona_train_v001.jsonl",
+  "epochs": 2,
+  "fp16": true,
+  "gradient_accumulation_steps": 8,
+  "gradient_checkpointing": false,
+  "learning_rate": 0.00008,
+  "lora_alpha": 16,
+  "lora_dropout": 0.05,
+  "lora_r": 8,
+  "max_seq_length": 512,
+  "method": "lora_main_persona_masked",
+  "output_dir": "adapters/main_persona_v001",
+  "role": "main_persona",
+  "save_steps": 50,
+  "status": "approved_for_training"
+}

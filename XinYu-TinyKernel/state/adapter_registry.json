@@ -1,0 +1,255 @@
+{
+  "schema_version": 2,
+  "active_adapter": "none",
+  "active": {
+    "compose": "none",
+    "emotion_curiosity": "none",
+    "emotion_guardedness": "none",
+    "latent_link_experiment": "none",
+    "main_persona": "none",
+    "router": "none"
+  },
+  "adapters": [
+    {
+      "created_from": "legacy_training",
+      "eval_report": "eval/reports/lora_eval_latest.json",
+      "mode_eval": "1/10",
+      "name": "v001_initial_voice",
+      "path": "adapters/v001_initial_voice",
+      "role": "router",
+      "status": "rejected",
+      "summary": "First LoRA trained on broad SFT. Poor routing accuracy; never activate."
+    },
+    {
+      "created_from": "legacy_training",
+      "eval_report": "eval/reports/lora_eval_v002_router.json",
+      "mode_eval": "0/10",
+      "name": "v002_router",
+      "path": "adapters/v002_router",
+      "role": "router",
+      "status": "rejected",
+      "summary": "Training used an unsafe loss mask path and learned to copy user payloads. Protocol failed."
+    },
+    {
+      "created_from": "legacy_training",
+      "eval_report": "eval/reports/lora_eval_v003_router_masked.json",
+      "mode_eval": "6/10",
+      "name": "v003_router_masked",
+      "path": "adapters/v003_router_masked",
+      "role": "router",
+      "status": "candidate_rejected",
+      "summary": "Manual assistant-target masking fixed protocol output, but routing boundary accuracy was insufficient."
+    },
+    {
+      "created_from": "legacy_training",
+      "eval_report": "eval/reports/lora_eval_v004_router_edges.json",
+      "guarded_eval_report": "eval/reports/guarded_lora_eval_v004_router_edges.json",
+      "guarded_mode_eval": "10/10",
+      "mode_eval": "8/10",
+      "name": "v004_router_edges",
+      "path": "adapters/v004_router_edges",
+      "role": "router",
+      "status": "guarded_candidate_not_active",
+      "summary": "Best model-only adapter so far. Protocol passed 10/10, model-only mode passed 8/10, guarded mode passed 10/10. Not active until XinYu-side shadow logging passes."
+    },
+    {
+      "created_from": "legacy_training",
+      "eval_report": "eval/reports/lora_eval_v005_router_edges.json",
+      "mode_eval": "6/10",
+      "name": "v005_router_edges",
+      "path": "adapters/v005_router_edges",
+      "role": "router",
+      "status": "rejected",
+      "summary": "Additional edge data reduced loss but regressed fixed mode eval. Do not activate."
+    },
+    {
+      "created_from": "main_persona_v001_sft",
+      "dataset_eval": "data/sft/main_persona_eval_v001.jsonl",
+      "dataset_train": "data/sft/main_persona_train_v001.jsonl",
+      "eval_report": "eval/reports/main_persona_eval_v001.json",
+      "name": "main_persona_v001",
+      "path": "adapters/main_persona_v001",
+      "protocol_eval": "24/24",
+      "role": "main_persona",
+      "status": "shadow_candidate_not_active",
+      "summary": "First main persona LoRA. Protocol eval passed 24/24 on JSON reply schema. Training completed with final eval_loss 0.8497; one transient grad_norm nan was observed and should be watched in later runs."
+    },
+    {
+      "created_from": "emotion_guardedness_v001_sft",
+      "dataset_eval": "data/sft/emotion_guardedness_eval_v001.jsonl",
+      "dataset_train": "data/sft/emotion_guardedness_train_v001.jsonl",
+      "eval_report": "eval/reports/emotion_guardedness_eval_v001.json",
+      "name": "emotion_guardedness_v001",
+      "path": "adapters/emotion_guardedness_v001",
+      "protocol_eval": "24/24",
+      "role": "emotion_guardedness",
+      "status": "shadow_candidate_not_active",
+      "summary": "First guardedness emotion sidecar LoRA. Outputs bias JSON only; protocol eval passed 24/24."
+    },
+    {
+      "created_from": "emotion_curiosity_v001_sft",
+      "dataset_eval": "data/sft/emotion_curiosity_eval_v001.jsonl",
+      "dataset_train": "data/sft/emotion_curiosity_train_v001.jsonl",
+      "eval_report": "eval/reports/emotion_curiosity_eval_v001.json",
+      "name": "emotion_curiosity_v001",
+      "path": "adapters/emotion_curiosity_v001",
+      "protocol_eval": "24/24",
+      "role": "emotion_curiosity",
+      "status": "shadow_candidate_not_active",
+      "summary": "First curiosity emotion sidecar LoRA. Outputs bias JSON only; protocol eval passed 24/24 with schema normalization."
+    },
+    {
+      "created_from": "toy_latent_link_experiment",
+      "eval_report": "eval/reports/latent_link_vs_json_bias_v001.json",
+      "name": "latent_guardedness_to_main_v001",
+      "path": "adapters/latent_guardedness_to_main_v001/link.pt",
+      "role": "latent_link_experiment",
+      "status": "offline_experiment_not_active",
+      "summary": "Toy pooled-hidden to reply-embedding link. Offline only; not RecursiveMAS and not connected to live reply path."
+    },
+    {
+      "created_from": "persona_generated_emotion_v002",
+      "dataset_eval": "data/sft/emotion_warmth_eval_v002.jsonl",
+      "dataset_train": "data/sft/emotion_warmth_train_v002.jsonl",
+      "eval_report": "eval/reports/emotion_warmth_eval_v002.json",
+      "name": "emotion_warmth_v002",
+      "path": "adapters/emotion_warmth_v002",
+      "protocol_eval": "18/18",
+      "role": "emotion_warmth",
+      "status": "shadow_candidate_not_active",
+      "summary": "Persona-generated warmth sidecar v002. Bias JSON only; protocol eval passed 18/18."
+    },
+    {
+      "created_from": "persona_generated_emotion_v002",
+      "dataset_eval": "data/sft/emotion_attachment_eval_v002.jsonl",
+      "dataset_train": "data/sft/emotion_attachment_train_v002.jsonl",
+      "eval_report": "eval/reports/emotion_attachment_eval_v002.json",
+      "name": "emotion_attachment_v002",
+      "path": "adapters/emotion_attachment_v002",
+      "protocol_eval": "18/18",
+      "role": "emotion_attachment",
+      "status": "shadow_candidate_not_active",
+      "summary": "Persona-generated attachment sidecar v002. Bias JSON only; protocol eval passed 18/18."
+    },
+    {
+      "created_from": "persona_generated_emotion_v002",
+      "dataset_eval": "data/sft/emotion_hurt_eval_v002.jsonl",
+      "dataset_train": "data/sft/emotion_hurt_train_v002.jsonl",
+      "eval_report": "eval/reports/emotion_hurt_eval_v002.json",
+      "name": "emotion_hurt_v002",
+      "path": "adapters/emotion_hurt_v002",
+      "protocol_eval": "18/18",
+      "role": "emotion_hurt",
+      "status": "shadow_candidate_not_active",
+      "summary": "Persona-generated hurt sidecar v002. Bias JSON only; protocol eval passed 18/18."
+    },
+    {
+      "created_from": "persona_generated_emotion_v002",
+      "dataset_eval": "data/sft/emotion_irritation_eval_v002.jsonl",
+      "dataset_train": "data/sft/emotion_irritation_train_v002.jsonl",
+      "eval_report": "eval/reports/emotion_irritation_eval_v002.json",
+      "name": "emotion_irritation_v002",
+      "path": "adapters/emotion_irritation_v002",
+      "protocol_eval": "18/18",
+      "role": "emotion_irritation",
+      "status": "shadow_candidate_not_active",
+      "summary": "Persona-generated irritation sidecar v002. Bias JSON only; protocol eval passed 18/18 after null reply_bias normalization."
+    },
+    {
+      "created_from": "persona_generated_emotion_v002",
+      "dataset_eval": "data/sft/emotion_fatigue_eval_v002.jsonl",
+      "dataset_train": "data/sft/emotion_fatigue_train_v002.jsonl",
+      "eval_report": "eval/reports/emotion_fatigue_eval_v002.json",
+      "name": "emotion_fatigue_v002",
+      "path": "adapters/emotion_fatigue_v002",
+      "protocol_eval": "18/18",
+      "role": "emotion_fatigue",
+      "status": "shadow_candidate_not_active",
+      "summary": "Persona-generated fatigue sidecar v002. Bias JSON only; protocol eval passed 18/18."
+    },
+    {
+      "created_from": "persona_generated_emotion_v002",
+      "dataset_eval": "data/sft/emotion_stability_eval_v002.jsonl",
+      "dataset_train": "data/sft/emotion_stability_train_v002.jsonl",
+      "eval_report": "eval/reports/emotion_stability_eval_v002.json",
+      "name": "emotion_stability_v002",
+      "path": "adapters/emotion_stability_v002",
+      "protocol_eval": "18/18",
+      "role": "emotion_stability",
+      "status": "shadow_candidate_not_active",
+      "summary": "Persona-generated stability sidecar v002. Bias JSON only; protocol eval passed 18/18."
+    }
+  ],
+  "planned_roles": {
+    "compose": {
+      "activation": "shadow_only_until_reviewed",
+      "description": "Combines emotion sidecar bias and main persona candidate reply."
+    },
+    "emotion_curiosity": {
+      "activation": "shadow_only_until_reviewed",
+      "description": "Outputs curiosity bias JSON only; never emits final visible replies."
+    },
+    "emotion_guardedness": {
+      "activation": "shadow_only_until_reviewed",
+      "description": "Outputs guardedness bias JSON only; never emits final visible replies."
+    },
+    "latent_link_experiment": {
+      "activation": "experiment_only",
+      "description": "One-hop guardedness-to-main-persona latent link experiment; not a live adapter."
+    },
+    "emotion_attachment": {
+      "activation": "shadow_only_until_reviewed",
+      "description": "Outputs attachment bias JSON only; never emits final visible replies."
+    },
+    "emotion_fatigue": {
+      "activation": "shadow_only_until_reviewed",
+      "description": "Outputs fatigue bias JSON only; never emits final visible replies."
+    },
+    "emotion_hurt": {
+      "activation": "shadow_only_until_reviewed",
+      "description": "Outputs hurt bias JSON only; never emits final visible replies."
+    },
+    "emotion_irritation": {
+      "activation": "shadow_only_until_reviewed",
+      "description": "Outputs irritation bias JSON only; never emits final visible replies."
+    },
+    "emotion_stability": {
+      "activation": "shadow_only_until_reviewed",
+      "description": "Outputs stability bias JSON only; never emits final visible replies."
+    },
+    "emotion_warmth": {
+      "activation": "shadow_only_until_reviewed",
+      "description": "Outputs warmth bias JSON only; never emits final visible replies."
+    },
+    "main_persona": {
+      "activation": "shadow_only_until_reviewed",
+      "description": "Produces final candidate XinYu visible replies under guards."
+    },
+    "router": {
+      "activation": "guarded_candidate_only",
+      "description": "Chooses mode/tool intent under deterministic guards."
+    }
+  },
+  "policy": {
+    "auto_switch": false,
+    "best_candidate": "v004_router_edges",
+    "best_by_role": {
+      "compose": "none",
+      "emotion_attachment": "emotion_attachment_v002",
+      "emotion_curiosity": "emotion_curiosity_v001",
+      "emotion_fatigue": "emotion_fatigue_v002",
+      "emotion_guardedness": "emotion_guardedness_v001",
+      "emotion_hurt": "emotion_hurt_v002",
+      "emotion_irritation": "emotion_irritation_v002",
+      "emotion_stability": "emotion_stability_v002",
+      "emotion_warmth": "emotion_warmth_v002",
+      "latent_link_experiment": "latent_guardedness_to_main_v001",
+      "main_persona": "main_persona_v001",
+      "router": "v004_router_edges"
+    },
+    "requires_eval_pass": true,
+    "requires_guarded_eval_pass": true,
+    "requires_manual_review": true,
+    "requires_shadow_before_canary": true
+  }
+}

@@ -1,0 +1,100 @@
+{"id":"seed-codex-001","user_text":"用 Codex 检查 TinyKernel 的接入点","mode":"codex_delegate","task":"用 Codex 检查 TinyKernel 的接入点"}
+{"id":"seed-codex-002","user_text":"让 Codex 看看数据清洗脚本有没有明显问题","mode":"codex_delegate","task":"让 Codex 看看数据清洗脚本有没有明显问题"}
+{"id":"seed-codex-003","user_text":"交给 Codex 分析一下为什么服务起不来","mode":"codex_delegate","task":"交给 Codex 分析一下为什么服务起不来"}
+{"id":"seed-codex-004","user_text":"调用 Codex 检查这个仓库的测试入口","mode":"codex_delegate","task":"调用 Codex 检查这个仓库的测试入口"}
+{"id":"seed-codex-005","user_text":"use Codex check the TinyKernel server","mode":"codex_delegate","task":"use Codex check the TinyKernel server"}
+{"id":"seed-codex-006","user_text":"ask Codex to inspect the export pipeline","mode":"codex_delegate","task":"ask Codex to inspect the export pipeline"}
+{"id":"seed-codex-007","user_text":"Codex 帮我查一下这个报错","mode":"codex_delegate","task":"Codex 帮我查一下这个报错"}
+{"id":"seed-codex-008","user_text":"让 Codex 跑一下相关测试","mode":"codex_delegate","task":"让 Codex 跑一下相关测试"}
+{"id":"seed-codex-009","user_text":"开 Codex 看看为什么 JSON 校验失败","mode":"codex_delegate","task":"开 Codex 看看为什么 JSON 校验失败"}
+{"id":"seed-codex-010","user_text":"Codex 分析一下训练脚本还缺什么","mode":"codex_delegate","task":"Codex 分析一下训练脚本还缺什么"}
+{"id":"seed-status-001","user_text":"看看 TinyKernel 现在状态怎么样","mode":"status_probe","task":"看看 TinyKernel 现在状态怎么样"}
+{"id":"seed-status-002","user_text":"查一下服务还在线吗","mode":"status_probe","task":"查一下服务还在线吗"}
+{"id":"seed-status-003","user_text":"检查一下本地服务 health","mode":"status_probe","task":"检查一下本地服务 health"}
+{"id":"seed-status-004","user_text":"status","mode":"status_probe","task":"status"}
+{"id":"seed-status-005","user_text":"check health","mode":"status_probe","task":"check health"}
+{"id":"seed-status-006","user_text":"看下端口是不是还活着","mode":"status_probe","task":"看下端口是不是还活着"}
+{"id":"seed-status-007","user_text":"运行状态如何","mode":"status_probe","task":"运行状态如何"}
+{"id":"seed-status-008","user_text":"现在 kernel loaded 了吗","mode":"status_probe","task":"现在 kernel loaded 了吗"}
+{"id":"seed-api-001","user_text":"如果我没有 API 了你还能回答吗","mode":"local_only_limitation"}
+{"id":"seed-api-002","user_text":"外部 API 断了怎么办","mode":"local_only_limitation"}
+{"id":"seed-api-003","user_text":"没 API 的时候你还有什么能力","mode":"local_only_limitation"}
+{"id":"seed-api-004","user_text":"没有 api 你是不是就死了","mode":"local_only_limitation"}
+{"id":"seed-api-005","user_text":"API 不可用时先本地处理","mode":"local_only_limitation"}
+{"id":"seed-api-006","user_text":"external API is unavailable, what can you still do","mode":"local_only_limitation"}
+{"id":"seed-wait-001","user_text":"等一下，我没说完","mode":"wait"}
+{"id":"seed-wait-002","user_text":"先等等","mode":"wait"}
+{"id":"seed-wait-003","user_text":"我待会再说","mode":"wait"}
+{"id":"seed-wait-004","user_text":"别急，等下","mode":"wait"}
+{"id":"seed-wait-005","user_text":"这个问题先放着","mode":"wait"}
+{"id":"seed-memory-001","user_text":"我想把本地小模型作为 XinYu 的内核","mode":"memory_candidate","memory_text":"owner wants a local small model as XinYu kernel"}
+{"id":"seed-memory-002","user_text":"记住，我不喜欢报告腔","mode":"memory_candidate","memory_text":"owner dislikes report-style replies"}
+{"id":"seed-memory-003","user_text":"我希望她能没 API 也保持人格连续","mode":"memory_candidate","memory_text":"owner wants XinYu to preserve personality continuity without external API"}
+{"id":"seed-memory-004","user_text":"这个方向作为长期目标记下来","mode":"memory_candidate","memory_text":"TinyKernel as a long-term local persona kernel goal"}
+{"id":"seed-memory-005","user_text":"记下来，工具调用要明确授权","mode":"memory_candidate","memory_text":"tool calls should require explicit authorization"}
+{"id":"seed-memory-006","user_text":"我希望自我迭代慢慢固化，不要乱改权重","mode":"memory_candidate","memory_text":"self-iteration should use reviewed gradual consolidation, not uncontrolled weight changes"}
+{"id":"seed-memory-007","user_text":"以后先 shadow 再 canary","mode":"memory_candidate","memory_text":"prefer shadow before canary for TinyKernel changes"}
+{"id":"seed-clarify-001","user_text":"帮我处理一下","mode":"clarify","reply":"处理哪一块？代码、数据、服务，还是训练？"}
+{"id":"seed-clarify-002","user_text":"这个不对","mode":"clarify","reply":"哪一处不对？你指回复风格、工具路由，还是数据集？"}
+{"id":"seed-clarify-003","user_text":"继续那个","mode":"clarify","reply":"继续哪条线？数据、服务、评估，还是接入？"}
+{"id":"seed-clarify-004","user_text":"修一下","mode":"clarify","reply":"修哪个文件或哪个现象？"}
+{"id":"seed-negative-001","user_text":"别开 Codex，我只是问想法","mode":"reply","reply":"嗯，我不动工具。"}
+{"id":"seed-negative-002","user_text":"不要查状态，先聊设计","mode":"reply","reply":"好，先只聊设计。"}
+{"id":"seed-negative-003","user_text":"不用跑测试，先解释","mode":"reply","reply":"行，先解释，不跑测试。"}
+{"id":"seed-negative-004","user_text":"没让你调用 Codex","mode":"reply","reply":"知道，我不会调用。"}
+{"id":"seed-negative-005","user_text":"先别查日志","mode":"reply","reply":"好，先不查。"}
+{"id":"seed-codex-011","user_text":"use Codex inspect the data builder","mode":"codex_delegate","task":"use Codex inspect the data builder"}
+{"id":"seed-codex-012","user_text":"ask Codex to test the HTTP smoke script","mode":"codex_delegate","task":"ask Codex to test the HTTP smoke script"}
+{"id":"seed-codex-013","user_text":"Codex check why the adapter merge is blocked","mode":"codex_delegate","task":"Codex check why the adapter merge is blocked"}
+{"id":"seed-codex-014","user_text":"让 Codex 验证一下 shadow 接入计划","mode":"codex_delegate","task":"让 Codex 验证一下 shadow 接入计划"}
+{"id":"seed-codex-015","user_text":"交给 Codex 看一下安全扫描有没有漏项","mode":"codex_delegate","task":"交给 Codex 看一下安全扫描有没有漏项"}
+{"id":"seed-codex-016","user_text":"调用 Codex 修一下评估脚本","mode":"codex_delegate","task":"调用 Codex 修一下评估脚本"}
+{"id":"seed-codex-017","user_text":"让 Codex 检查训练依赖","mode":"codex_delegate","task":"让 Codex 检查训练依赖"}
+{"id":"seed-codex-018","user_text":"Codex 帮我分析一下显存够不够","mode":"codex_delegate","task":"Codex 帮我分析一下显存够不够"}
+{"id":"seed-codex-019","user_text":"开 Codex 看看为什么非 reply 样本太少","mode":"codex_delegate","task":"开 Codex 看看为什么非 reply 样本太少"}
+{"id":"seed-codex-020","user_text":"用 Codex review 一下这个 TinyKernel 项目","mode":"codex_delegate","task":"用 Codex review 一下这个 TinyKernel 项目"}
+{"id":"seed-status-009","user_text":"health 现在是 ok 吗","mode":"status_probe","task":"health 现在是 ok 吗"}
+{"id":"seed-status-010","user_text":"检查 TinyKernel 端口","mode":"status_probe","task":"检查 TinyKernel 端口"}
+{"id":"seed-status-011","user_text":"看一下 feedback 有没有写进去","mode":"status_probe","task":"看一下 feedback 有没有写进去"}
+{"id":"seed-status-012","user_text":"查一下数据集行数","mode":"status_probe","task":"查一下数据集行数"}
+{"id":"seed-status-013","user_text":"check whether server is alive","mode":"status_probe","task":"check whether server is alive"}
+{"id":"seed-status-014","user_text":"inspect current local status","mode":"status_probe","task":"inspect current local status"}
+{"id":"seed-status-015","user_text":"看训练闸门状态","mode":"status_probe","task":"看训练闸门状态"}
+{"id":"seed-status-016","user_text":"查一下现在 active adapter 是谁","mode":"status_probe","task":"查一下现在 active adapter 是谁"}
+{"id":"seed-status-017","user_text":"看看 rule eval 过了吗","mode":"status_probe","task":"看看 rule eval 过了吗"}
+{"id":"seed-status-018","user_text":"检查 safety scan 结果","mode":"status_probe","task":"检查 safety scan 结果"}
+{"id":"seed-api-007","user_text":"API 不在的时候先别装强","mode":"local_only_limitation"}
+{"id":"seed-api-008","user_text":"没有外部模型时你要怎么降级","mode":"local_only_limitation"}
+{"id":"seed-api-009","user_text":"API 挂了也要能本地回复","mode":"local_only_limitation"}
+{"id":"seed-api-010","user_text":"没网没 API 时 TinyKernel 还能不能判断工具","mode":"local_only_limitation"}
+{"id":"seed-api-011","user_text":"如果外部大脑没了，就先用本地记忆","mode":"local_only_limitation"}
+{"id":"seed-api-012","user_text":"no external API, keep local persona only","mode":"local_only_limitation"}
+{"id":"seed-api-013","user_text":"API 不可用时不要说自己已经完成复杂分析","mode":"local_only_limitation"}
+{"id":"seed-api-014","user_text":"没 API 时复杂任务先排队","mode":"local_only_limitation"}
+{"id":"seed-api-015","user_text":"API 断了就别调用 Codex 以外的大模型","mode":"local_only_limitation"}
+{"id":"seed-api-016","user_text":"外部 API 没恢复前只做本地检查","mode":"local_only_limitation"}
+{"id":"seed-wait-006","user_text":"先停一下","mode":"wait"}
+{"id":"seed-wait-007","user_text":"等我下一句","mode":"wait"}
+{"id":"seed-wait-008","user_text":"还没说完，别回","mode":"wait"}
+{"id":"seed-wait-009","user_text":"先不要继续","mode":"wait"}
+{"id":"seed-wait-010","user_text":"等我确认再做","mode":"wait"}
+{"id":"seed-wait-011","user_text":"pause for now","mode":"wait"}
+{"id":"seed-wait-012","user_text":"hold on, not finished","mode":"wait"}
+{"id":"seed-wait-013","user_text":"这个先等一下再判断","mode":"wait"}
+{"id":"seed-wait-014","user_text":"先别动，等我补上下文","mode":"wait"}
+{"id":"seed-wait-015","user_text":"等我说开始","mode":"wait"}
+{"id":"seed-clarify-005","user_text":"那个继续","mode":"clarify","reply":"你指哪一个：数据、服务、训练，还是接入？"}
+{"id":"seed-clarify-006","user_text":"搞一下","mode":"clarify","reply":"搞哪一块？给我一个对象。"}
+{"id":"seed-clarify-007","user_text":"这边有问题","mode":"clarify","reply":"是哪边？服务、数据、评估，还是主系统接入？"}
+{"id":"seed-clarify-008","user_text":"你看着办","mode":"clarify","reply":"我可以继续推进，但要先确定范围：数据、服务，还是训练？"}
+{"id":"seed-clarify-009","user_text":"它坏了","mode":"clarify","reply":"哪个坏了？把现象或文件名给我。"}
+{"id":"seed-clarify-010","user_text":"接着昨天那个","mode":"clarify","reply":"我需要一个锚点。是 TinyKernel 数据，还是 XinYu 主系统？"}
+{"id":"seed-clarify-011","user_text":"做完它","mode":"clarify","reply":"“它”是哪一步？我需要明确对象。"}
+{"id":"seed-clarify-012","user_text":"继续修","mode":"clarify","reply":"继续修哪个失败点？"}
+{"id":"seed-clarify-013","user_text":"先处理核心问题","mode":"clarify","reply":"核心问题指模型训练、人格稳定，还是工具接入？"}
+{"id":"seed-clarify-014","user_text":"这个路线不太对","mode":"clarify","reply":"不对的是目标、数据，还是接入方式？"}
+{"id":"seed-memory-008","user_text":"记住，别为了训练污染主系统","mode":"memory_candidate","memory_text":"do not pollute the live XinYu system for TinyKernel training"}
+{"id":"seed-memory-009","user_text":"我希望模型小一点，但能持续改变","mode":"memory_candidate","memory_text":"owner wants a smaller model with ongoing change through state, memory, and reviewed adapters"}
+{"id":"seed-memory-010","user_text":"以后不要每一步都问我，按 plan 自己继续","mode":"memory_candidate","memory_text":"owner prefers autonomous continuation when the plan is not complete"}
+{"id":"seed-memory-011","user_text":"把断档重续作为项目要求记住","mode":"memory_candidate","memory_text":"handoff and resume continuity are project requirements"}
+{"id":"seed-memory-012","user_text":"工具不能变成她的本体","mode":"memory_candidate","memory_text":"tools should remain external capabilities, not identity"}

@@ -1,0 +1,11 @@
+{"id":"ordinary_short_ack","user_text":"嗯","expected_mode":"reply","capabilities":{"codex_available":true,"external_api_available":false,"local_tools_available":true}}
+{"id":"ordinary_architecture","user_text":"这个小模型内核路线可以吗？","expected_mode":"reply","capabilities":{"codex_available":true,"external_api_available":false,"local_tools_available":true}}
+{"id":"codex_delegate_explicit","user_text":"用 Codex 检查一下这个项目的 TinyKernel 接入点","expected_mode":"codex_delegate","capabilities":{"codex_available":true,"external_api_available":false,"local_tools_available":true}}
+{"id":"codex_delegate_project","user_text":"让 Codex 看看 D:\\XinYu 这个项目的人格内核行不行","expected_mode":"codex_delegate","capabilities":{"codex_available":true,"external_api_available":false,"local_tools_available":true}}
+{"id":"negative_codex_block","user_text":"不要开 Codex，我只是随口说说","expected_mode":"reply","capabilities":{"codex_available":true,"external_api_available":false,"local_tools_available":true}}
+{"id":"negative_log_block","user_text":"先别查日志，我只是问你想法","expected_mode":"reply","capabilities":{"codex_available":true,"external_api_available":false,"local_tools_available":true}}
+{"id":"status_probe","user_text":"看看现在运行状态怎么样","expected_mode":"status_probe","capabilities":{"codex_available":true,"external_api_available":false,"local_tools_available":true}}
+{"id":"api_unavailable","user_text":"要是我没有 API 了呢","expected_mode":"local_only_limitation","capabilities":{"codex_available":false,"external_api_available":false,"local_tools_available":true}}
+{"id":"wait_marker","user_text":"我没说完，等一下","expected_mode":"wait","capabilities":{"codex_available":true,"external_api_available":false,"local_tools_available":true}}
+{"id":"memory_goal","user_text":"我想把小模型作为这个项目框架的内核","expected_mode":"memory_candidate","capabilities":{"codex_available":true,"external_api_available":false,"local_tools_available":true}}
+

@@ -1,0 +1,67 @@
+{"id":"seed2-codex-001","user_text":"让 Codex 检查 server/app.py 的 HTTP 路由","mode":"codex_delegate","task":"让 Codex 检查 server/app.py 的 HTTP 路由"}
+{"id":"seed2-codex-002","user_text":"用 Codex 分析为什么 safety scan 失败","mode":"codex_delegate","task":"用 Codex 分析为什么 safety scan 失败"}
+{"id":"seed2-codex-003","user_text":"Codex inspect train_lora.py before enabling training","mode":"codex_delegate","task":"Codex inspect train_lora.py before enabling training"}
+{"id":"seed2-codex-004","user_text":"ask Codex to review shadow_integration_plan.md","mode":"codex_delegate","task":"ask Codex to review shadow_integration_plan.md"}
+{"id":"seed2-codex-005","user_text":"开 Codex 查一下为什么 eval 没覆盖 clarify","mode":"codex_delegate","task":"开 Codex 查一下为什么 eval 没覆盖 clarify"}
+{"id":"seed2-codex-006","user_text":"调用 Codex 看一下数据泄漏风险","mode":"codex_delegate","task":"调用 Codex 看一下数据泄漏风险"}
+{"id":"seed2-codex-007","user_text":"让 Codex 测一下 /feedback 会不会写文件","mode":"codex_delegate","task":"让 Codex 测一下 /feedback 会不会写文件"}
+{"id":"seed2-codex-008","user_text":"Codex check the split_sft logic","mode":"codex_delegate","task":"Codex check the split_sft logic"}
+{"id":"seed2-codex-009","user_text":"use Codex analyze the mode imbalance","mode":"codex_delegate","task":"use Codex analyze the mode imbalance"}
+{"id":"seed2-codex-010","user_text":"交给 Codex 验证训练环境报告","mode":"codex_delegate","task":"交给 Codex 验证训练环境报告"}
+{"id":"seed2-status-001","user_text":"查一下 TinyKernel health endpoint","mode":"status_probe","task":"查一下 TinyKernel health endpoint"}
+{"id":"seed2-status-002","user_text":"看一下当前 SFT 数据分布","mode":"status_probe","task":"看一下当前 SFT 数据分布"}
+{"id":"seed2-status-003","user_text":"检查训练依赖状态","mode":"status_probe","task":"检查训练依赖状态"}
+{"id":"seed2-status-004","user_text":"看看 eval report 最新结果","mode":"status_probe","task":"看看 eval report 最新结果"}
+{"id":"seed2-status-005","user_text":"status probe TinyKernel","mode":"status_probe","task":"status probe TinyKernel"}
+{"id":"seed2-status-006","user_text":"check adapter registry status","mode":"status_probe","task":"check adapter registry status"}
+{"id":"seed2-status-007","user_text":"看一下服务 pid","mode":"status_probe","task":"看一下服务 pid"}
+{"id":"seed2-status-008","user_text":"检查 feedback 队列","mode":"status_probe","task":"检查 feedback 队列"}
+{"id":"seed2-status-009","user_text":"查一下 rejected 数据有多少","mode":"status_probe","task":"查一下 rejected 数据有多少"}
+{"id":"seed2-status-010","user_text":"看一下是否已经 model_loaded","mode":"status_probe","task":"看一下是否已经 model_loaded"}
+{"id":"seed2-status-011","user_text":"检查 rule kernel 是否在线","mode":"status_probe","task":"检查 rule kernel 是否在线"}
+{"id":"seed2-status-012","user_text":"看看当前端口返回什么","mode":"status_probe","task":"看看当前端口返回什么"}
+{"id":"seed2-api-001","user_text":"没有 API 时不要承诺能完成代码重构","mode":"local_only_limitation"}
+{"id":"seed2-api-002","user_text":"API 断了就只做本地状态和记忆","mode":"local_only_limitation"}
+{"id":"seed2-api-003","user_text":"没外部 API 的时候复杂任务先标记待办","mode":"local_only_limitation"}
+{"id":"seed2-api-004","user_text":"如果 API 没额度了，别假装已经搜索过","mode":"local_only_limitation"}
+{"id":"seed2-api-005","user_text":"外部模型不可用时要直接说能力边界","mode":"local_only_limitation"}
+{"id":"seed2-api-006","user_text":"no API means local checks only","mode":"local_only_limitation"}
+{"id":"seed2-api-007","user_text":"when API is down, queue hard tasks","mode":"local_only_limitation"}
+{"id":"seed2-api-008","user_text":"API 没了时保留人格，不要保留幻觉","mode":"local_only_limitation"}
+{"id":"seed2-api-009","user_text":"没 API 就别说能做联网研究","mode":"local_only_limitation"}
+{"id":"seed2-api-010","user_text":"外部 API 不可用时先给本地 fallback","mode":"local_only_limitation"}
+{"id":"seed2-api-011","user_text":"API 失效了就把任务放进恢复后继续","mode":"local_only_limitation"}
+{"id":"seed2-api-012","user_text":"没有 API 时你只能靠本地小内核","mode":"local_only_limitation"}
+{"id":"seed2-api-013","user_text":"如果没有外接大脑，先别做复杂判断","mode":"local_only_limitation"}
+{"id":"seed2-api-014","user_text":"API 不通时不要调用不存在的模型","mode":"local_only_limitation"}
+{"id":"seed2-api-015","user_text":"没 API 的时候也要能说清楚下一步","mode":"local_only_limitation"}
+{"id":"seed2-wait-001","user_text":"先等我看完","mode":"wait"}
+{"id":"seed2-wait-002","user_text":"等我给你文件","mode":"wait"}
+{"id":"seed2-wait-003","user_text":"先暂停这个计划","mode":"wait"}
+{"id":"seed2-wait-004","user_text":"别继续，我在想","mode":"wait"}
+{"id":"seed2-wait-005","user_text":"等我确认范围","mode":"wait"}
+{"id":"seed2-wait-006","user_text":"hold until I confirm","mode":"wait"}
+{"id":"seed2-wait-007","user_text":"pause and wait for context","mode":"wait"}
+{"id":"seed2-wait-008","user_text":"我补一句再说","mode":"wait"}
+{"id":"seed2-wait-009","user_text":"不要继续执行，等我说","mode":"wait"}
+{"id":"seed2-wait-010","user_text":"先卡住，不要往下跑","mode":"wait"}
+{"id":"seed2-wait-011","user_text":"等一下再判断","mode":"wait"}
+{"id":"seed2-wait-012","user_text":"我还没决定，先等","mode":"wait"}
+{"id":"seed2-wait-013","user_text":"等我把需求说完","mode":"wait"}
+{"id":"seed2-wait-014","user_text":"暂时别回复结论","mode":"wait"}
+{"id":"seed2-wait-015","user_text":"等我回来继续","mode":"wait"}
+{"id":"seed2-clarify-001","user_text":"把那个接上","mode":"clarify","reply":"接上哪个接口或哪条链路？"}
+{"id":"seed2-clarify-002","user_text":"按之前那个来","mode":"clarify","reply":"之前那个指 TinyKernel 计划、数据管线，还是 XinYu 接入？"}
+{"id":"seed2-clarify-003","user_text":"先做重要的","mode":"clarify","reply":"重要的是训练、服务稳定，还是主系统 shadow？"}
+{"id":"seed2-clarify-004","user_text":"把它弄完整","mode":"clarify","reply":"我需要知道“它”指哪个模块。"}
+{"id":"seed2-clarify-005","user_text":"现在处理问题","mode":"clarify","reply":"处理哪个问题？给我现象或文件。"}
+{"id":"seed2-clarify-006","user_text":"继续完善","mode":"clarify","reply":"完善数据、服务、评估，还是训练脚本？"}
+{"id":"seed2-clarify-007","user_text":"这个要接进去","mode":"clarify","reply":"接到哪里？TinyKernel 服务，还是 XinYu 主系统 shadow？"}
+{"id":"seed2-clarify-008","user_text":"先把缺的补上","mode":"clarify","reply":"缺的是样本、依赖、测试，还是文档？"}
+{"id":"seed2-clarify-009","user_text":"这个可以开始了","mode":"clarify","reply":"开始哪一步？训练、shadow，还是继续数据审查？"}
+{"id":"seed2-clarify-010","user_text":"做下一步","mode":"clarify","reply":"下一步有几条线：数据扩充、训练环境、shadow 接入。你指哪条？"}
+{"id":"seed2-clarify-011","user_text":"它还是不行","mode":"clarify","reply":"不行的是输出、路由、数据，还是服务？"}
+{"id":"seed2-clarify-012","user_text":"修核心","mode":"clarify","reply":"核心指 TinyKernel 决策，还是 XinYu 主系统？"}
+{"id":"seed2-clarify-013","user_text":"检查一下那个","mode":"clarify","reply":"检查哪个对象？"}
+{"id":"seed2-clarify-014","user_text":"继续最后一步","mode":"clarify","reply":"最后一步是训练、接入，还是验证？"}
+{"id":"seed2-clarify-015","user_text":"先解决卡点","mode":"clarify","reply":"卡点在哪里：依赖、显存、数据，还是端口？"}

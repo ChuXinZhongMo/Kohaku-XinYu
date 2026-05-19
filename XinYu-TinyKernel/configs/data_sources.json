@@ -1,0 +1,43 @@
+{
+  "xinyu_root": "D:\\XinYu\\XinYu-Core\\examples\\agent-apps\\xinyu",
+  "allowed_sources": {
+    "dialogue_archive": {
+      "type": "sqlite",
+      "path": "runtime\\dialogue_archive\\dialogue.sqlite3",
+      "tables": ["dialogue_messages", "memory_candidates", "recalled_context_log", "temporal_traces"]
+    },
+    "events_raw": {
+      "type": "jsonl",
+      "path": "memory\\events\\raw_events.jsonl"
+    },
+    "events_structured": {
+      "type": "jsonl",
+      "path": "memory\\events\\structured_events.jsonl"
+    },
+    "dialogue_curiosity_evaluations": {
+      "type": "jsonl",
+      "path": "runtime\\dialogue_curiosity\\evaluations.jsonl"
+    },
+    "dialogue_curiosity_predictions": {
+      "type": "jsonl",
+      "path": "runtime\\dialogue_curiosity\\predictions.jsonl"
+    },
+    "v1_shadow_trace": {
+      "type": "jsonl",
+      "path": "runtime\\v1_shadow_trace.jsonl"
+    },
+    "regression_baselines": {
+      "type": "directory",
+      "path": "runtime\\regression",
+      "glob": "live_chat_baseline_*.json"
+    }
+  },
+  "deny_patterns": [
+    ".env",
+    "xinyu.local.env",
+    ".xinyu_bridge_token",
+    "xinyu_qq_gateway.config.json",
+    "logs"
+  ]
+}
+
