@@ -1,4 +1,4 @@
-﻿# Xinyu Implementation Next
+# Xinyu Implementation Next
 
 This file tracks the next concrete steps from scaffold to behavior validation.
 
@@ -9,15 +9,15 @@ Phase 5 deployment, transport, ingest-scope, validation, and maintainability har
 Completed now:
 
 - The old separate persona prompt artifact is deleted; identity, voice, and reality boundaries now come from ordinary memory/policy layers.
-- Milestone 34 Deployment Truth Gate: running Core bridge `BRIDGE_VERSION`, repository source, native QQ gateway source/config, live ports, and masked target diagnostics are checked by `xinyu_status.py --json` and `deployment_status_smoke.py`.
+- Milestone 34 Deployment Truth Gate: running Core bridge `BRIDGE_VERSION`, repository source, native QQ gateway source/config, live ports, and masked target diagnostics are checked by `xinyu_status.py --json` and `tests/smoke/runtime/integration/deployment_status_smoke.py`.
 - Milestone 35 Transport And Bridge Auth Hardening: plain HTTP model endpoints with API keys now require explicit `XINYU_ALLOW_INSECURE_LLM_HTTP=1`, and non-loopback Core bridge exposure requires a non-empty bridge token.
 - Milestone 36 Learning Ingest Scope Enforcement: `/learning/ingest` local files must resolve through owner-designated read roots, approved local scope, or explicit gateway attachment directories; traversal/outside paths and internal URLs are blocked; max bytes are clamped; new local material uses redacted learning URLs.
-- Milestone 37 Validation Reality Upgrade: `runtime_readiness_smoke.py` is the current one-command live readiness gate for deployment status, bridge probe, session cleanup, mojibake guard, long-run status, and redacted sensitive sweep.
+- Milestone 37 Validation Reality Upgrade: `tests/smoke/runtime/integration/runtime_readiness_smoke.py` is the current one-command live readiness gate for deployment status, bridge probe, session cleanup, mojibake guard, long-run status, and redacted sensitive sweep.
 - Milestone 38 Bridge File Split: Core bridge responsibilities are split into `xinyu_bridge_http.py`, `xinyu_bridge_runtime.py`, `xinyu_bridge_learning.py`, `xinyu_bridge_renderer.py`, and `xinyu_bridge_proactive.py`; QQ transport now lives in the native `xinyu_qq_gateway.py`.
 - Milestone 39 Shared State IO And Smoke Consolidation: `xinyu_state_io.py` centralizes common markdown-state helpers, and `smoke_run.py` now provides grouped `deployment`, `runtime`, `voice`, `learning`, and `privacy` smoke manifests.
 - Milestone 27 Live Voice Card: `prompts/live_voice_card.md` is tracked, loaded before deeper memory context, injected into `prompts/system.md`, included in runtime renderer context, and tracked by session prompt signature.
 - Runtime and guard code now treats the live voice card as the active surface-speech guide.
-- `live_voice_card_smoke.py` validates card content, injection order, renderer context order, session signature tracking, no wrong-name/raw-secret leakage, and Persona Runtime exposure.
+- `tests/smoke/voice/integration/live_voice_card_smoke.py` validates card content, injection order, renderer context order, session signature tracking, no wrong-name/raw-secret leakage, and Persona Runtime exposure.
 - Milestone 31 Pre-Draft Turn Classifier: live QQ turns are classified before controller drafting.
 - Milestone 28 Voice Calibration Promotion Gate: repeated owner corrections become review-only voice-profile candidates.
 - Milestone 30 Dynamic Life Posture Layer: compact current-life posture is injected into runtime and renderer context.
@@ -27,29 +27,29 @@ Completed now:
 
 Next validation target:
 
-- Keep `runtime_readiness_smoke.py` green after every Core/native-gateway restart.
+- Keep `tests/smoke/runtime/integration/runtime_readiness_smoke.py` green after every Core/native-gateway restart.
 - Observe the next real QQ owner pressure turn and tune classifier/controller wording only if visible speech still self-postmortems under owner style pressure.
 - Review or fix the current q-006 semantic-mismatch hold before re-enabling broader autonomous search; current live learning quality is `review_needed` with zero warnings because held source material remains staged for semantic review.
-- After any default-persona or prompt-priority change, run `persona_contract_absence_smoke.py` and `smoke_run.py --group voice` before live QQ observation.
-- Memory event-sourcing design is now active as a sidecar-first workstream: QQ chat, passive group observation, and learning ingest write source-traceable sidecars; selective-memory archive candidates can carry source event, retained claim, and summary ids at generation time; `memory_event_sourcing_smoke.py`, `archive_queue_trace_smoke.py`, and `summary_coverage_smoke.py` validate the chain.
+- After any default-persona or prompt-priority change, run `tests/smoke/voice/integration/persona_contract_absence_smoke.py` and `smoke_run.py --group voice` before live QQ observation.
+- Memory event-sourcing design is now active as a sidecar-first workstream: QQ chat, passive group observation, and learning ingest write source-traceable sidecars; selective-memory archive candidates can carry source event, retained claim, and summary ids at generation time; `tests/smoke/memory/memory_event_sourcing_smoke.py`, `tests/smoke/memory/archive_queue_trace_smoke.py`, and `tests/smoke/memory/summary_coverage_smoke.py` validate the chain.
 
 Minimum validation loop for the active Phase 5 slice:
 
 ```powershell
-.\.venv\Scripts\python.exe runtime_readiness_smoke.py
+.\.venv\Scripts\python.exe tests/smoke/runtime/integration/runtime_readiness_smoke.py
 .\.venv\Scripts\python.exe smoke_run.py --group deployment
 .\.venv\Scripts\python.exe smoke_run.py --group privacy
 .\.venv\Scripts\python.exe smoke_run.py --group learning
 .\.venv\Scripts\python.exe smoke_run.py --group voice
-.\.venv\Scripts\python.exe persona_contract_absence_smoke.py
-.\.venv\Scripts\python.exe state_io_smoke.py
-.\.venv\Scripts\python.exe runtime_security_smoke.py
-.\.venv\Scripts\python.exe memory_event_sourcing_smoke.py
-.\.venv\Scripts\python.exe archive_queue_trace_smoke.py
-.\.venv\Scripts\python.exe summary_coverage_smoke.py
-.\.venv\Scripts\python.exe bridge_learning_ingest_smoke.py
+.\.venv\Scripts\python.exe tests/smoke/voice/integration/persona_contract_absence_smoke.py
+.\.venv\Scripts\python.exe tests/smoke/runtime/state_io_smoke.py
+.\.venv\Scripts\python.exe tests/smoke/runtime/runtime_security_smoke.py
+.\.venv\Scripts\python.exe tests/smoke/memory/memory_event_sourcing_smoke.py
+.\.venv\Scripts\python.exe tests/smoke/memory/archive_queue_trace_smoke.py
+.\.venv\Scripts\python.exe tests/smoke/memory/summary_coverage_smoke.py
+.\.venv\Scripts\python.exe tests/smoke/bridge/integration/bridge_learning_ingest_smoke.py
 .\.venv\Scripts\python.exe long_run_status.py --require-all-completed --require-no-residue
-.\.venv\Scripts\python.exe validate_scaffold.py
+.\.venv\Scripts\python.exe ops/validation/validate_scaffold.py
 ```
 
 ## Current Baseline
@@ -125,7 +125,7 @@ Already present:
 - Autonomy/source safety regression now passes after Phase 2 additions; broad search and social/real-life input remain gated.
 - Real conversation quality guard now covers Chinese-chat realism: ordinary small talk, direct call-outs, one-line relational answers, hidden residue, late-night closeness, and family-texture replies without support-bot tails or demo frames.
 - Phase 3 personality and real conversation work now has a dedicated plan at `project-plans/PERSONALITY-REAL-CONVERSATION-PLAN.md`; deeper tuning should follow that plan before further implementation.
-- Phase 3 lived-session residue guard now exists through `phase3_lived_session_smoke.py` and covers short-session memory proportionality under restore.
+- Phase 3 lived-session residue guard now exists through `tests/smoke/dialogue/integration/phase3_lived_session_smoke.py` and covers short-session memory proportionality under restore.
 - Ensure external learning does not directly overwrite self continuity
 - Move to personality-detail calibration and lived-session quality tuning now that Phase 2 framework execution is complete
 
@@ -149,40 +149,40 @@ Already present:
 7. Planner-to-fetch-to-learner chain is smoke-validated with restore
 8. Keep autonomous search disabled or dry-run while validating real sessions
 9. Move into personality/detail tuning on top of the bounded framework
-10. Use `expression_tone_smoke.py` and `expression_runtime_smoke.py` after every prompt-expression change
-11. Use `behavior_regression_smoke.py` before deeper personality tuning so changes do not regress core behavior
-12. Use `personality_detail_smoke.py` while tuning emotion granularity, family shape, choice, obedience boundaries, hidden residue, owner-private bias, non-generic closeness, absence/return residue, non-possessive jealousy, repeated-hurt return limits, negative-emotion distinctions, and active behavior choices
-13. Use `personality_continuity_smoke.py` when changing multi-turn personality continuity, repeated-hurt residue, re-approach-after-hurt residue, choice carryover, or proactive-question carryover
+10. Use `tests/smoke/voice/expression_tone_smoke.py` and `tests/smoke/runtime/integration/expression_runtime_smoke.py` after every prompt-expression change
+11. Use `tests/smoke/dialogue/integration/behavior_regression_smoke.py` before deeper personality tuning so changes do not regress core behavior
+12. Use `tests/smoke/voice/integration/personality_detail_smoke.py` while tuning emotion granularity, family shape, choice, obedience boundaries, hidden residue, owner-private bias, non-generic closeness, absence/return residue, non-possessive jealousy, repeated-hurt return limits, negative-emotion distinctions, and active behavior choices
+13. Use `tests/smoke/voice/integration/personality_continuity_smoke.py` when changing multi-turn personality continuity, repeated-hurt residue, re-approach-after-hurt residue, choice carryover, or proactive-question carryover
 14. Repeat no-restore continuity arcs in small batches, then inspect memory before triggering broader automation; current lived baseline includes one 10-turn continuity arc and one 5-turn time-span continuity arc
-15. Use `emotion_vector_sync_smoke.py` when changing deterministic emotion or relationship vector logic, especially approach-after-hurt residue handling
-16. Use `dream_weight_smoke.py` when changing dream output, dream residue, or dream/reality boundary logic
-17. Use `reflection_dream_residue_smoke.py` when changing how dream residue enters reflection or growth logs
-18. Use `consolidation_dream_weight_smoke.py` when changing archive/consolidation behavior around active dream residue
-19. Use `long_term_memory_gate_smoke.py` when changing selective retention or forgetting logic
-20. Use `personality_growth_gate_smoke.py` when changing core personality growth gates
-21. Use `question_pipeline_smoke.py` when changing active-question classification, exploration-queue routing, or source-gate handoff
-22. Use `source_reliability_gate_smoke.py` when changing source reliability or source integration gate behavior
-23. Use `learner_integration_smoke.py --single-source --require-blocked` when changing learner thresholds so single-source material cannot silently become learned knowledge
-24. Use `learner_integration_smoke.py --require-integration` to confirm corroborated material can still enter knowledge-only integration
+15. Use `tests/smoke/initiative/integration/emotion_vector_sync_smoke.py` when changing deterministic emotion or relationship vector logic, especially approach-after-hurt residue handling
+16. Use `tests/smoke/life/integration/dream_weight_smoke.py` when changing dream output, dream residue, or dream/reality boundary logic
+17. Use `tests/smoke/life/integration/reflection_dream_residue_smoke.py` when changing how dream residue enters reflection or growth logs
+18. Use `tests/smoke/life/integration/consolidation_dream_weight_smoke.py` when changing archive/consolidation behavior around active dream residue
+19. Use `tests/smoke/memory/integration/long_term_memory_gate_smoke.py` when changing selective retention or forgetting logic
+20. Use `tests/smoke/voice/integration/personality_growth_gate_smoke.py` when changing core personality growth gates
+21. Use `tests/smoke/learning/integration/question_pipeline_smoke.py` when changing active-question classification, exploration-queue routing, or source-gate handoff
+22. Use `tests/smoke/learning/integration/source_reliability_gate_smoke.py` when changing source reliability or source integration gate behavior
+23. Use `tests/smoke/learning/integration/learner_integration_smoke.py --single-source --require-blocked` when changing learner thresholds so single-source material cannot silently become learned knowledge
+24. Use `tests/smoke/learning/integration/learner_integration_smoke.py --require-integration` to confirm corroborated material can still enter knowledge-only integration
 25. Add behavior validation for extreme-aversion / blacklist-resource posture: sustained malicious behavior should receive short refusal and low token spend, while misunderstanding or low knowledge should not be misclassified.
 26. Build AI-domain learning as Xinyu's only stable professional knowledge track, then route AI knowledge into self-iteration only through reflection/growth gates.
-27. Use `resource_boundary_smoke.py` after changing blacklist/resource-boundary heuristics.
-28. Use `ai_domain_source_smoke.py` after changing AI-domain question routing, source reliability, source integration, or request planning.
-29. Use `ai_self_iteration_gate_smoke.py` after changing AI-domain self-iteration candidate routing, source traceability, risk scoring, or direct-write protections.
-30. Use `multi_person_relationship_smoke.py` after changing non-owner person extraction, person profiles, people index, or relationship index behavior.
+27. Use `tests/smoke/dialogue/integration/resource_boundary_smoke.py` after changing blacklist/resource-boundary heuristics.
+28. Use `tests/smoke/learning/integration/ai_domain_source_smoke.py` after changing AI-domain question routing, source reliability, source integration, or request planning.
+29. Use `tests/smoke/initiative/integration/ai_self_iteration_gate_smoke.py` after changing AI-domain self-iteration candidate routing, source traceability, risk scoring, or direct-write protections.
+30. Use `tests/smoke/dialogue/integration/multi_person_relationship_smoke.py` after changing non-owner person extraction, person profiles, people index, or relationship index behavior.
 31. Expand live behavior coverage for non-owner people after deterministic multi-person sync stays stable.
-32. Use `memory_pressure_smoke.py` after changing long-term memory, retention, archive, or high-preserve relationship-residue rules.
-33. Use `memory_lived_pressure_arc.py` when changing no-restore pressure handling, trivial no-memory filtering, maintenance pressure behavior, or high-preserve residue validation.
+32. Use `tests/smoke/memory/integration/memory_pressure_smoke.py` after changing long-term memory, retention, archive, or high-preserve relationship-residue rules.
+33. Use `ops/probes/memory_lived_pressure_arc.py` when changing no-restore pressure handling, trivial no-memory filtering, maintenance pressure behavior, or high-preserve residue validation.
 34. Add lived archive dormancy/reactivation validation now that no-restore pressure arc is stable.
-35. Use `initiative_loop_smoke.py` when changing proactive question behavior, silence, refusal, source-gated curiosity, settle-after-hurt, or step-back boundaries.
-36. Use `dream_reflection_growth_cycle_smoke.py` when changing background dream/reflection/growth ordering or archive behavior under active dream residue.
-37. Use `non_owner_social_world_smoke.py` when changing non-owner people, repeated familiarity, group context, real-life adapter non-owner routing, or owner-priority protection.
-38. Use `ai_self_iteration_review_smoke.py` when changing q-006 self-review proposals, affected-file audit, owner-visible review gates, or rollback paths.
+35. Use `tests/smoke/initiative/integration/initiative_loop_smoke.py` when changing proactive question behavior, silence, refusal, source-gated curiosity, settle-after-hurt, or step-back boundaries.
+36. Use `tests/smoke/life/integration/dream_reflection_growth_cycle_smoke.py` when changing background dream/reflection/growth ordering or archive behavior under active dream residue.
+37. Use `tests/smoke/dialogue/integration/non_owner_social_world_smoke.py` when changing non-owner people, repeated familiarity, group context, real-life adapter non-owner routing, or owner-priority protection.
+38. Use `tests/smoke/initiative/integration/ai_self_iteration_review_smoke.py` when changing q-006 self-review proposals, affected-file audit, owner-visible review gates, or rollback paths.
 39. Re-run the Milestone 20 autonomy/source safety regression set before enabling any broader autonomous behavior.
-40. Use `real_conversation_quality_smoke.py --require-realism --timeout-seconds 140 --settle-seconds 2` after changing prompt-expression rules, daily-chat tone, family texture, or call-out handling.
+40. Use `tests/smoke/voice/integration/real_conversation_quality_smoke.py --require-realism --timeout-seconds 140 --settle-seconds 2` after changing prompt-expression rules, daily-chat tone, family texture, or call-out handling.
 41. Follow `project-plans/PERSONALITY-REAL-CONVERSATION-PLAN.md` for the next personality-detail and lived-conversation phase.
 42. Continue personality-detail tuning through short lived sessions only after the real-conversation matrix remains passing.
-43. Use `phase3_lived_session_smoke.py --require-phase3 --timeout-seconds 140 --settle-seconds 2` after changing memory selectivity, ordinary-chat no-write rules, repeated-template-testing behavior, or small-hurt residue handling.
+43. Use `tests/smoke/dialogue/integration/phase3_lived_session_smoke.py --require-phase3 --timeout-seconds 140 --settle-seconds 2` after changing memory selectivity, ordinary-chat no-write rules, repeated-template-testing behavior, or small-hurt residue handling.
 
 ## Current Runtime Blockers Observed On This Machine
 

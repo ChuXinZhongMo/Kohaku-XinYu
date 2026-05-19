@@ -10,8 +10,8 @@ This file defines the intended order once work moves from scaffold-building into
 
 ## Phase B: Check Runtime Readiness
 
-1. run `check_runtime_env.py`
-2. run `validate_scaffold.py`
+1. run `ops/diagnostics/check_runtime_env.py`
+2. run `ops/validation/validate_scaffold.py`
 3. confirm local environment blockers
 
 ## Phase C: First Live Runtime

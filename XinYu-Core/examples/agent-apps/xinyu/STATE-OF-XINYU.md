@@ -222,9 +222,9 @@ This file is the current one-page engineering state summary for XinYu.
 - bridge diagnostics now use `/probe` for no-memory checks, and runtime sessions have idle/max-session cleanup
 - final QQ speech no longer uses the outward renderer or pressure-turn quality gate by default; XinYu's draft reply reaches QQ after only minimal wrapper/narration cleanup
 - `xinyu_speech_controller.py` still keeps diagnostic quality checks for explicit smoke tests and optional renderer experiments, but those checks are not part of the live QQ path
-- semi-automatic QQ dialogue review now has `xinyu_qq_review.py` and `xinyu_qq_review_smoke.py` for turning real owner corrections into reviewable voice-calibration candidates
+- semi-automatic QQ dialogue review now has `xinyu_qq_review.py` and `tests/smoke/qq/xinyu_qq_review_smoke.py` for turning real owner corrections into reviewable voice-calibration candidates
 - owner permission grants now enable bounded AI-domain autonomous search through `duckduckgo_html`, a three-query-per-pass budget, gated one-short-message proactive QQ, low-frequency autonomous mind-loop passes, periodic desktop autonomy notes, and non-stable AI self-iteration planning; private full-disk access, credentials, uploads, deletion, impersonation, gate bypass, and stable personality auto-apply remain blocked
-- Phase 4 Milestone 27 is complete: `prompts/live_voice_card.md` is now loaded before deeper memory context, included in session prompt signatures, available to the optional renderer path, and covered by `live_voice_card_smoke.py`.
+- Phase 4 Milestone 27 is complete: `prompts/live_voice_card.md` is now loaded before deeper memory context, included in session prompt signatures, available to the optional renderer path, and covered by `tests/smoke/voice/integration/live_voice_card_smoke.py`.
 - Phase 4 Milestones 28-33 are complete: live turns are classified before drafting, repeated corrections create review-only voice-profile candidates, compact life posture is injected into runtime/renderer context, proactive QQ candidates are shaped into concrete one-bubble messages, status checks cover Core/native-gateway deployment consistency, and portable persona seeds live under `memory-seeds/`.
 - Phase 5 Milestones 34-39 are complete: deployment truth gate, transport/auth guards, learning ingest scope enforcement, runtime readiness runner, bridge module split, shared state IO, and grouped smoke manifests are active and validated.
 - current Phase 5 long-run audit passes with 40 completed milestones, no missing docs, no missing validations, no known residue hits, deployment gate ok, `learning_quality_grade: review_needed`, and `autonomous_search_permission: blocked`.
@@ -247,7 +247,7 @@ This file is the current one-page engineering state summary for XinYu.
 
 ## 6. Next Logical Step
 
-The next major step is real QQ observation after Phase 5 hardening: check whether owner style-pressure turns like "没什么变化" now produce a short changed line instead of self-postmortem explanation, while `runtime_readiness_smoke.py` stays green.
+The next major step is real QQ observation after Phase 5 hardening: check whether owner style-pressure turns like "没什么变化" now produce a short changed line instead of self-postmortem explanation, while `tests/smoke/runtime/integration/runtime_readiness_smoke.py` stays green.
 
 The current sequence is:
 
@@ -259,7 +259,7 @@ The current sequence is:
 - keep non-owner person nodes conservative: explicit names only, lower-than-owner priority, separate profile files
 - keep autonomous search blocked while live learning quality remains `review_needed` from semantic-mismatch held source material
 - preserve completed framework gates during longer real sessions and personality-detail tuning
-- run `real_conversation_quality_smoke.py` after prompt-expression changes
+- run `tests/smoke/voice/integration/real_conversation_quality_smoke.py` after prompt-expression changes
 - prefer small no-restore lived-session batches with immediate residue inspection before changing stable personality files
 
 ## 7. Current Summary

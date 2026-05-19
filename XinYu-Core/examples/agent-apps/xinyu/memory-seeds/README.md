@@ -7,7 +7,7 @@ Rules:
 - Keep only portable concept/policy seed material here.
 - Do not store live QQ residue, emotion logs, relationship logs, runtime traces, local secrets, raw account identifiers, or private chat exports.
 - Runtime memory still lives under `memory/` and remains ignored by Git.
-- Use `sync_memory_seeds.py --apply` only when a workspace needs the seed copied into local runtime memory.
+- Use `ops/validation/sync_memory_seeds.py --apply` only when a workspace needs the seed copied into local runtime memory.
 
 Current seed files:
 

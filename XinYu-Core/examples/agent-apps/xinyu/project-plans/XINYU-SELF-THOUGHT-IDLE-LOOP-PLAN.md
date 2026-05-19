@@ -156,7 +156,7 @@ Suggested new module:
 
 Suggested new smoke:
 
-- `self_thought_loop_smoke.py`
+- `tests/smoke/initiative/self_thought_loop_smoke.py`
 
 Suggested state:
 
@@ -441,7 +441,7 @@ If the self-thought loop reads dream residue, it must preserve the reality bound
 
 ## 14. Tests
 
-Add `self_thought_loop_smoke.py`.
+Add `tests/smoke/initiative/self_thought_loop_smoke.py`.
 
 Coverage:
 
@@ -461,9 +461,9 @@ Coverage:
 
 Existing smoke to keep green:
 
-- `python proactive_presence_smoke.py`
-- `python qq_outbox_smoke.py`
-- `python initiative_loop_smoke.py --restore-after --diff-lines 0`
+- `python tests/smoke/initiative/proactive_presence_smoke.py`
+- `python tests/smoke/qq/qq_outbox_smoke.py`
+- `python tests/smoke/initiative/integration/initiative_loop_smoke.py --restore-after --diff-lines 0`
 - `python smoke_run.py --group quick`
 
 ## 15. Implementation Phases
@@ -473,7 +473,7 @@ Existing smoke to keep green:
 Create:
 
 - `xinyu_self_thought_loop.py`
-- `self_thought_loop_smoke.py`
+- `tests/smoke/initiative/self_thought_loop_smoke.py`
 
 Implement:
 
@@ -560,7 +560,7 @@ Performance:
 First patch should include only:
 
 - `xinyu_self_thought_loop.py`
-- `self_thought_loop_smoke.py`
+- `tests/smoke/initiative/self_thought_loop_smoke.py`
 
 No bridge integration.
 

@@ -17,8 +17,8 @@ It should let a reader understand what exists, what passed, and what remains ris
 
 ## Latest Validation Set
 
-- `validate_scaffold.py` passed.
-- `validate_inner_framework.py` passed with 84 files checked.
+- `ops/validation/validate_scaffold.py` passed.
+- `ops/validation/validate_inner_framework.py` passed with 84 files checked.
 - `long_run_status.py --require-all-completed --require-no-residue` passed with 22 completed milestones, no missing docs, no missing validations, and no known residue hits.
 - Latest Phase 2 safety regression passed: autonomous search activation, social inquiry policy, real-life input adapter, source comparison, and learning quality smokes.
 - Latest Phase 2 personality/framework additions passed: voice calibration, initiative loop, dream/reflection/growth cycle, non-owner social world, AI self-iteration review, and owner relationship lived stress.

@@ -57,12 +57,12 @@ v1 重构骨架：
 
 验证脚本和测试：
 
-- `xinyu_qq_gateway_smoke.py`
-- `runtime_readiness_smoke.py`
-- `deployment_status_smoke.py`
-- `runtime_security_smoke.py`
-- `memory_event_sourcing_smoke.py`
-- `persona_state_flow_smoke.py`
+- `tests/smoke/qq/integration/xinyu_qq_gateway_smoke.py`
+- `tests/smoke/runtime/integration/runtime_readiness_smoke.py`
+- `tests/smoke/runtime/integration/deployment_status_smoke.py`
+- `tests/smoke/runtime/runtime_security_smoke.py`
+- `tests/smoke/memory/memory_event_sourcing_smoke.py`
+- `tests/smoke/voice/persona_state_flow_smoke.py`
 - `tests/`
 
 本地私有运行状态：
@@ -152,7 +152,7 @@ python xinyu_status.py --json
 查看最近一轮 turn 由哪些拆分后的 live module 影响：
 
 ```powershell
-python xinyu_live_module_diagnostics.py --json
+python ops/diagnostics/xinyu_live_module_diagnostics.py --json
 ```
 
 当 QQ 发送、主动消息、Core bridge 或 NapCat 连接看起来不对时，先跑这个命令。
@@ -162,13 +162,13 @@ python xinyu_live_module_diagnostics.py --json
 改行为前后建议跑：
 
 ```powershell
-python xinyu_qq_gateway_smoke.py
-python deployment_status_smoke.py
-python runtime_readiness_smoke.py
-python runtime_security_smoke.py
-python memory_event_sourcing_smoke.py
-python persona_state_flow_smoke.py
-python seed_memory_packaging_smoke.py
+python tests/smoke/qq/integration/xinyu_qq_gateway_smoke.py
+python tests/smoke/runtime/integration/deployment_status_smoke.py
+python tests/smoke/runtime/integration/runtime_readiness_smoke.py
+python tests/smoke/runtime/runtime_security_smoke.py
+python tests/smoke/memory/memory_event_sourcing_smoke.py
+python tests/smoke/voice/persona_state_flow_smoke.py
+python tests/smoke/memory/seed_memory_packaging_smoke.py
 ```
 
 改 Python bridge / gateway 后跑：

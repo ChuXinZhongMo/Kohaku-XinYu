@@ -42,7 +42,7 @@ Full baseline:
 ```powershell
 cd D:\XinYu\XinYu-Core\examples\agent-apps\xinyu
 .\.venv\Scripts\python.exe xinyu_status.py --json
-.\.venv\Scripts\python.exe runtime_readiness_smoke.py
+.\.venv\Scripts\python.exe tests/smoke/runtime/integration/runtime_readiness_smoke.py
 .\.venv\Scripts\python.exe -m pytest tests -q
 
 cd D:\XinYu\XinYu_Desktop
@@ -54,7 +54,7 @@ Focused bridge/gateway baseline:
 ```powershell
 cd D:\XinYu\XinYu-Core\examples\agent-apps\xinyu
 .\.venv\Scripts\python.exe -m py_compile xinyu_core_bridge.py xinyu_qq_gateway.py
-.\.venv\Scripts\python.exe runtime_readiness_smoke.py
+.\.venv\Scripts\python.exe tests/smoke/runtime/integration/runtime_readiness_smoke.py
 ```
 
 Focused v1 baseline:
@@ -62,14 +62,14 @@ Focused v1 baseline:
 ```powershell
 cd D:\XinYu\XinYu-Core\examples\agent-apps\xinyu
 .\.venv\Scripts\python.exe -m pytest tests\v1 -q
-.\.venv\Scripts\python.exe xinyu_v1_owner_simple_canary_smoke.py
+.\.venv\Scripts\python.exe tests\smoke\runtime\integration\xinyu_v1_owner_simple_canary_smoke.py
 ```
 
 Focused action-layer baseline:
 
 ```powershell
 cd D:\XinYu\XinYu-Core\examples\agent-apps\xinyu
-.\.venv\Scripts\python.exe xinyu_action_experience_smoke.py
+.\.venv\Scripts\python.exe tests/smoke/life/xinyu_action_experience_smoke.py
 ```
 
 ## 3. Stage 1: Documentation And Boundaries

@@ -570,7 +570,7 @@ Add or extend smoke tests:
 
 Suggested test:
 
-- `runtime_presence_smoke.py`
+- `tests/smoke/runtime/runtime_presence_smoke.py`
 
 ### Phase 1: Runtime presence module
 
@@ -706,12 +706,12 @@ Performance:
 Tests:
 
 - `python -m py_compile xinyu_runtime_presence.py xinyu_core_bridge.py xinyu_runtime_context.py`
-- `python runtime_presence_smoke.py`
+- `python tests/smoke/runtime/runtime_presence_smoke.py`
 - existing smoke tests still pass:
-  - `python automation_bridge_live_turn_smoke.py`
-  - `python persona_runtime_smoke.py`
-  - `python codex_delegate_smoke.py`
-  - `python xinyu_qq_gateway_smoke.py`
+  - `python tests/smoke/initiative/automation_bridge_live_turn_smoke.py`
+  - `python tests/smoke/voice/persona_runtime_smoke.py`
+  - `python tests/smoke/codex/codex_delegate_smoke.py`
+  - `python tests/smoke/qq/integration/xinyu_qq_gateway_smoke.py`
 
 ## 12. Rollback Plan
 
@@ -775,7 +775,7 @@ Mitigation:
 First patch should include only:
 
 - `xinyu_runtime_presence.py`
-- `runtime_presence_smoke.py`
+- `tests/smoke/runtime/runtime_presence_smoke.py`
 - small `xinyu_core_bridge.py` integration
 - optional `xinyu_runtime_context.py` renderer inclusion, only if smoke tests show it is not noisy
 

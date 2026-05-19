@@ -5,9 +5,9 @@
 ### Phase 5: Deployment, Security, Ingest Scope, And Validation Hardening
 
 - added live deployment truth checks for Core bridge version, native QQ gateway source/config, live ports, and masked target diagnostics
-- added `runtime_security_smoke.py` and startup guards for explicit insecure HTTP LLM override and non-loopback bridge-token enforcement
+- added `tests/smoke/runtime/runtime_security_smoke.py` and startup guards for explicit insecure HTTP LLM override and non-loopback bridge-token enforcement
 - enforced scoped learning ingest paths, traversal blocking, internal URL blocking, max-byte clamping, and redacted local source URLs for new learning material
-- added `runtime_readiness_smoke.py` as the one-command live readiness gate
+- added `tests/smoke/runtime/integration/runtime_readiness_smoke.py` as the one-command live readiness gate
 - split Core bridge responsibilities into focused `xinyu_bridge_*.py` modules and added the native QQ gateway path
 - added `xinyu_state_io.py` and grouped smoke manifests in `smoke_run.py`
 
@@ -20,7 +20,7 @@
 ### Persona Contract Cleanup
 
 - deleted the old separate persona prompt artifact; identity, voice, and reality boundaries now flow through ordinary memory/policy layers
-- added `persona_contract_absence_smoke.py` and registered it in the voice smoke group
+- added `tests/smoke/voice/integration/persona_contract_absence_smoke.py` and registered it in the voice smoke group
 
 ## 2026-04-22
 
@@ -83,8 +83,8 @@
 
 ### Phase 6: Runtime Utility Scripts
 
-- added `validate_scaffold.py`
-- added `check_runtime_env.py`
+- added `ops/validation/validate_scaffold.py`
+- added `ops/diagnostics/check_runtime_env.py`
 
 ### Phase 7: Runtime Plugin
 

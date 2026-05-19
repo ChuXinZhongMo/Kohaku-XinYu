@@ -480,7 +480,7 @@ First implementation can avoid config churn and use conservative defaults:
 
 ## 12. Tests
 
-Add `proactive_request_loop_smoke.py`.
+Add `tests/smoke/initiative/proactive_request_loop_smoke.py`.
 
 Coverage:
 
@@ -500,9 +500,9 @@ Coverage:
 
 Existing smoke to keep green:
 
-- `python xinyu_qq_gateway_smoke.py`
-- `python qq_outbox_smoke.py`
-- `python proactive_presence_smoke.py`
+- `python tests/smoke/qq/integration/xinyu_qq_gateway_smoke.py`
+- `python tests/smoke/qq/qq_outbox_smoke.py`
+- `python tests/smoke/initiative/proactive_presence_smoke.py`
 - `python smoke_run.py --group quick`
 
 ## 13. Implementation Phases
@@ -512,7 +512,7 @@ Existing smoke to keep green:
 Create:
 
 - `xinyu_proactive_request_loop.py`
-- `proactive_request_loop_smoke.py`
+- `tests/smoke/initiative/proactive_request_loop_smoke.py`
 
 Implement:
 
@@ -611,7 +611,7 @@ Performance:
 First patch should include only:
 
 - `xinyu_proactive_request_loop.py`
-- `proactive_request_loop_smoke.py`
+- `tests/smoke/initiative/proactive_request_loop_smoke.py`
 - no live dispatch
 - no QQ enqueue yet
 

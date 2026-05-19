@@ -28,8 +28,8 @@ From this directory:
 
 ```powershell
 .\.venv\Scripts\python.exe xinyu_status.py
-.\.venv\Scripts\python.exe deployment_status_smoke.py
-.\.venv\Scripts\python.exe runtime_readiness_smoke.py
+.\.venv\Scripts\python.exe tests/smoke/runtime/integration/deployment_status_smoke.py
+.\.venv\Scripts\python.exe tests/smoke/runtime/integration/runtime_readiness_smoke.py
 ```
 
 Expected live checks:
@@ -63,7 +63,7 @@ If NapCat shows `ECONNREFUSED 127.0.0.1:6199`, start or restart the native gatew
 .\start_xinyu_qq_gateway.ps1
 ```
 
-If `deployment_status_smoke.py` fails on Core version, restart Core:
+If `tests/smoke/runtime/integration/deployment_status_smoke.py` fails on Core version, restart Core:
 
 ```powershell
 .\stop_xinyu_core_bridge.ps1

@@ -6,9 +6,13 @@ This is the top-level map of the XinYu runtime source tree.
 
 - `README.md`
 - `config.yaml`
+- `MEMORY-REDUCTION-RULES.md`
+- `PERSONA-LIVING-SURFACE-RULES.md`
+- `NEURO-INSPIRED-ENGINEERING-RULES.md`
 
 ## 2. Runtime Behavior
 
+- `services/`
 - `prompts/system.md`
 - `prompts/output.md`
 - `prompts/emotion_writer.md`
@@ -22,10 +26,6 @@ This is the top-level map of the XinYu runtime source tree.
 - `custom/time_context_plugin.py`
 - `custom/memory_sync_plugin.py`
 - `custom/inner_framework_manifest.py`
-- `custom/slow_reprocess_manifest.py`
-- `custom/question_pipeline_manifest.py`
-- `custom/reflection_output_manifest.py`
-- `custom/source_gate_manifest.py`
 - `custom/automation_bridge_manifest.py`
 - `custom/automation_bridge_plugin.py`
 - `xinyu_core_bridge.py`
@@ -34,9 +34,17 @@ This is the top-level map of the XinYu runtime source tree.
 - `xinyu_bridge_learning.py`
 - `xinyu_bridge_renderer.py`
 - `xinyu_bridge_proactive.py`
+- `xinyu_bridge_proactive_delivery_routes.py`
+- `xinyu_bridge_desktop_proactive_routes.py`
+- `xinyu_bridge_desktop_self_action_routes.py`
+- `xinyu_bridge_external_plugin_routes.py`
+- `xinyu_bridge_metabolism_routes.py`
+- `xinyu_bridge_utility_routes.py`
 - `xinyu_runtime_security.py`
 - `xinyu_state_io.py`
 - `xinyu_turn_residue.py`
+- `xinyu_persona_contract.py`
+- `xinyu_neuro_memory_rules.py`
 - `xinyu_life_month_slots.py`
 - `xinyu_memory_weights.py`
 - `memory/self/system_prompt_memory.md`
@@ -46,6 +54,7 @@ This is the top-level map of the XinYu runtime source tree.
 
 ## 3. Memory Structure
 
+- `stores/`
 - `memory/self/`
 - `memory/emotions/`
 - `memory/relationships/`
@@ -59,6 +68,7 @@ This is the top-level map of the XinYu runtime source tree.
 ## 4. Validation and Operation
 
 - `INNER-MEMORY-ORDER.md`
+- `EXECUTION-ORDER.md` (hold: local modifications)
 - `RUNBOOK.md`
 - `RUNTIME-PRIORITIES.md`
 - `VALIDATION-INDEX.md`
@@ -66,27 +76,41 @@ This is the top-level map of the XinYu runtime source tree.
 - `TEST-SCENARIOS.md`
 - `EXPLORATION-SCENARIOS.md`
 - `SESSION-REVIEW.md`
-- `validate_scaffold.py`
-- `validate_inner_framework.py`
-- `long_run_status.py`
-- `runtime_readiness_smoke.py`
-- `deployment_status_smoke.py`
-- `runtime_security_smoke.py`
-- `persona_contract_absence_smoke.py`
-- `persona_stability_layers_smoke.py`
-- `system_prompt_memory_smoke.py`
-- `life_month_slots_smoke.py`
-- `life_month_context_smoke.py`
-- `state_io_smoke.py`
+- `ops/archive/custom-manifests/2026-05-17/`
+- `ops/launch/run_local_xinyu.py`
+- `run_local_xinyu.py` (compatibility wrapper)
+- `ops/validation/validate_scaffold.py`
+- `ops/validation/validate_inner_framework.py`
+- `ops/validation/validate_memory_library_manifest.py`
+- `ops/validation/long_run_status.py`
+- `long_run_status.py` (compatibility wrapper)
+- `tests/smoke/runtime/integration/runtime_readiness_smoke.py`
+- `tests/smoke/runtime/integration/deployment_status_smoke.py`
+- `tests/smoke/runtime/runtime_security_smoke.py`
+- `tests/smoke/voice/integration/persona_contract_absence_smoke.py`
+- `tests/smoke/voice/persona_stability_layers_smoke.py`
+- `tests/smoke/memory/integration/system_prompt_memory_smoke.py`
+- `tests/smoke/life/life_month_slots_smoke.py`
+- `tests/smoke/life/life_month_context_smoke.py`
+- `tests/smoke/runtime/state_io_smoke.py`
 - `smoke_run.py`
-- `manual_inner_sync.py`
-- `manual_slow_reprocess.py`
-- `manual_question_pipeline.py`
-- `manual_inner_cycle.py`
-- `manual_reflection_output.py`
-- `manual_source_gate.py`
-- `manual_automation_bridge.py`
-- `check_runtime_env.py`
+- `ops/manual/manual_inner_sync.py`
+- `ops/manual/goldmark_dehydrate.py`
+- `ops/manual/manual_slow_reprocess.py`
+- `ops/manual/manual_question_pipeline.py`
+- `ops/manual/manual_inner_cycle.py`
+- `ops/manual/manual_reflection_output.py`
+- `ops/manual/manual_source_gate.py`
+- `ops/manual/manual_automation_bridge.py`
+- `ops/diagnostics/check_runtime_env.py`
+- `ops/diagnostics/diagnose_runtime_injection.py`
+- `ops/diagnostics/dialogue_curiosity_review.py`
+- `ops/diagnostics/xinyu_live_module_diagnostics.py`
+- `ops/probes/memory_lived_pressure_arc.py`
+- `ops/probes/long_lived_session_harness.py`
+- `ops/probes/xinyu_research_loop_dry_run.py`
+- `ops/validation/live_chat_regression_baseline.py`
+- `ops/validation/sync_memory_seeds.py`
 
 ## 5. Tuning and Diagnosis
 
@@ -108,8 +132,30 @@ This is the top-level map of the XinYu runtime source tree.
 - `real_life_input_adapter_policy.md`
 - `SECOND-STAGE-ROADMAP.md`
 - `OPEN-QUESTIONS.md`
+- `project-plans/README.md`
+- `project-plans/XINYU-CROSS-DOMAIN-SYNAESTHESIA-PLAN-2026-05-19.md`
+- `project-plans/XINYU-PROACTIVE-CONCRETE-REQUEST-LOOP-PLAN.md` (hold: local modifications)
+- `project-plans/XINYU-SELF-THOUGHT-IDLE-LOOP-PLAN.md` (hold: local modifications)
+- `project-plans/未完成事项-QQ接回后续接计划.md` (hold: encoding/boundary review)
 - `project-plans/XINYU-CONTEXT-MEMORY-LAYER-PLAN.md`
 - `project-plans/XINYU-RUNTIME-PRESENCE-SELF-MAP-PLAN.md`
+
+Archived design notes absorbed into this index:
+
+- Action layer v1: keep owner-triggered local actions narrow, alias-bound,
+  validator-gated, and converted into action experience instead of direct
+  long-term memory writes.
+- Public data replay: keep public dialogue datasets as local calibration
+  material only; raw datasets stay out of git, and committed replay artifacts
+  should contain hashes/counts/abstract reviewed case cards, not raw user text.
+- System direction: XinYu's tools serve the living runtime loop; tool execution
+  is not the identity layer.
+- System diagrams: current active chain remains QQ/NapCat gateway -> core
+  bridge -> runtime sidecars -> memory/runtime stores -> guarded visible reply
+  or outbox.
+- Utilization audit: every active subsystem should prove input, bounded
+  decision, output/effect, persistence or deliberate rejection, and a test path.
+- Historical originals are under `ops/archive/ops-docs/2026-05-19/`.
 
 ## 7. Change History
 

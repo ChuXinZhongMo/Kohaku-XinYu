@@ -1,35 +1,35 @@
-﻿# Xinyu Runtime Validation Notes
+# Xinyu Runtime Validation Notes
 
 This file records representative runtime checks after the conservative memory-sync tightening.
 
 ## Current Baseline
 
 - Runtime environment is available through local source and `.venv`.
-- `memory_mutation_smoke.py` validates one-turn memory mutation with optional restore.
-- `memory_arc_smoke.py` validates multi-turn emotional arcs with optional restore.
-- `expression_tone_smoke.py` validates expression prompt and injected-memory text quality before live tone checks.
-- `expression_runtime_smoke.py` validates visible expression and template rejection on a complete live emotional scenario.
-- `behavior_regression_smoke.py` validates the representative behavior matrix with restore after each scenario.
-- `resource_boundary_live_smoke.py` validates rolling live-style blacklist/resource posture across multi-turn abuse, return, confusion, quotes, and owner-boundary cases.
-- `personality_detail_smoke.py` validates personality-detail behavior with restore after each scenario.
-- `personality_continuity_smoke.py` validates multi-turn personality continuity with restore after each scenario.
-- `emotion_vector_sync_smoke.py` validates deterministic emotional vector writes with restore after each scenario.
-- `dream_weight_smoke.py` validates dream-after emotional weight propagation with restore and protected-layer checks.
-- `reflection_dream_residue_smoke.py` validates that dream-after residue can become reflection/growth material without protected-layer rewrites.
-- `consolidation_dream_weight_smoke.py` validates that active dream weight delays archive flattening even after dream seeds are absent.
-- `long_term_memory_gate_smoke.py` validates selective retention/forgetting gates with protected-layer checks.
-- `personality_growth_gate_smoke.py` validates personality-change candidacy without direct profile or stable fact rewrites.
-- `ai_self_iteration_gate_smoke.py` validates q-006 AI-domain self-iteration candidates without direct profile, narrative, relationship, emotion, or knowledge rewrites.
-- `question_pipeline_smoke.py` validates active-question classification into internal clarification, exploration queue, and source-gate candidates.
-- `source_reliability_gate_smoke.py` validates source reliability and source integration gates before source request planning.
-- `real_conversation_quality_smoke.py` validates Phase 3 lived conversation realism: no English filler in Chinese chat, no support-bot tail, no therapy inflation for ordinary life, no customer-service apology, no demo-frame answer, and no roleplay/romance drift for family texture.
-- `phase3_lived_session_smoke.py` validates Phase 3 short-session residue quality: ordinary daily chatter stays non-durable, meaningful closeness leaves proportional residue, repeated template testing does not become canon, low-energy boundaries do not trigger pursuit, and small hurt is not overwritten by immediate normal return.
-- `live_voice_card_smoke.py` validates Phase 4 live voice card content, injection priority, renderer context order, session signature tracking, and no wrong-name/raw-secret leakage.
-- `pre_draft_turn_classifier_smoke.py` validates Phase 4 pre-draft live turn routing.
-- `voice_calibration_promotion_smoke.py` validates review-only voice-profile promotion candidates.
-- `dynamic_life_posture_smoke.py` validates compact current-life posture labels and bridge injection.
-- `proactive_presence_smoke.py` now validates concrete proactive QQ shaping and life-posture proactive blocking.
-- `seed_memory_packaging_smoke.py` validates tracked persona seed packaging and privacy checks.
+- `tests/smoke/memory/integration/memory_mutation_smoke.py` validates one-turn memory mutation with optional restore.
+- `tests/smoke/memory/integration/memory_arc_smoke.py` validates multi-turn emotional arcs with optional restore.
+- `tests/smoke/voice/expression_tone_smoke.py` validates expression prompt and injected-memory text quality before live tone checks.
+- `tests/smoke/runtime/integration/expression_runtime_smoke.py` validates visible expression and template rejection on a complete live emotional scenario.
+- `tests/smoke/dialogue/integration/behavior_regression_smoke.py` validates the representative behavior matrix with restore after each scenario.
+- `tests/smoke/dialogue/integration/resource_boundary_live_smoke.py` validates rolling live-style blacklist/resource posture across multi-turn abuse, return, confusion, quotes, and owner-boundary cases.
+- `tests/smoke/voice/integration/personality_detail_smoke.py` validates personality-detail behavior with restore after each scenario.
+- `tests/smoke/voice/integration/personality_continuity_smoke.py` validates multi-turn personality continuity with restore after each scenario.
+- `tests/smoke/initiative/integration/emotion_vector_sync_smoke.py` validates deterministic emotional vector writes with restore after each scenario.
+- `tests/smoke/life/integration/dream_weight_smoke.py` validates dream-after emotional weight propagation with restore and protected-layer checks.
+- `tests/smoke/life/integration/reflection_dream_residue_smoke.py` validates that dream-after residue can become reflection/growth material without protected-layer rewrites.
+- `tests/smoke/life/integration/consolidation_dream_weight_smoke.py` validates that active dream weight delays archive flattening even after dream seeds are absent.
+- `tests/smoke/memory/integration/long_term_memory_gate_smoke.py` validates selective retention/forgetting gates with protected-layer checks.
+- `tests/smoke/voice/integration/personality_growth_gate_smoke.py` validates personality-change candidacy without direct profile or stable fact rewrites.
+- `tests/smoke/initiative/integration/ai_self_iteration_gate_smoke.py` validates q-006 AI-domain self-iteration candidates without direct profile, narrative, relationship, emotion, or knowledge rewrites.
+- `tests/smoke/learning/integration/question_pipeline_smoke.py` validates active-question classification into internal clarification, exploration queue, and source-gate candidates.
+- `tests/smoke/learning/integration/source_reliability_gate_smoke.py` validates source reliability and source integration gates before source request planning.
+- `tests/smoke/voice/integration/real_conversation_quality_smoke.py` validates Phase 3 lived conversation realism: no English filler in Chinese chat, no support-bot tail, no therapy inflation for ordinary life, no customer-service apology, no demo-frame answer, and no roleplay/romance drift for family texture.
+- `tests/smoke/dialogue/integration/phase3_lived_session_smoke.py` validates Phase 3 short-session residue quality: ordinary daily chatter stays non-durable, meaningful closeness leaves proportional residue, repeated template testing does not become canon, low-energy boundaries do not trigger pursuit, and small hurt is not overwritten by immediate normal return.
+- `tests/smoke/voice/integration/live_voice_card_smoke.py` validates Phase 4 live voice card content, injection priority, renderer context order, session signature tracking, and no wrong-name/raw-secret leakage.
+- `tests/smoke/voice/pre_draft_turn_classifier_smoke.py` validates Phase 4 pre-draft live turn routing.
+- `tests/smoke/voice/voice_calibration_promotion_smoke.py` validates review-only voice-profile promotion candidates.
+- `tests/smoke/voice/dynamic_life_posture_smoke.py` validates compact current-life posture labels and bridge injection.
+- `tests/smoke/initiative/proactive_presence_smoke.py` now validates concrete proactive QQ shaping and life-posture proactive blocking.
+- `tests/smoke/memory/seed_memory_packaging_smoke.py` validates tracked persona seed packaging and privacy checks.
 - Ordinary checks use `--restore-after` so test prompts do not become lived memory.
 - `--restore-after` restores tracked memory plus volatile runtime state and trace logs while mutation reports stay focused on the selected tracked files.
 
@@ -187,14 +187,14 @@ Observed:
 - long-term memory gate now decides preserve/compress/dormant/fade permissions before retention and archive commit
 - personality growth gate now separates change pressure from applied personality rewrites
 - source gate no longer touches `memory/knowledge/general.md` before real external material exists
-- `maintenance_smoke.py` can snapshot and restore tracked memory plus volatile runtime files
+- `tests/smoke/runtime/integration/maintenance_smoke.py` can snapshot and restore tracked memory plus volatile runtime files
 
 ### Expression Tone Guard
 
 Smoke:
 
 ```text
-expression_tone_smoke.py
+tests/smoke/voice/expression_tone_smoke.py
 ```
 
 Observed:
@@ -208,7 +208,7 @@ Observed:
 Smoke:
 
 ```text
-expression_runtime_smoke.py
+tests/smoke/runtime/integration/expression_runtime_smoke.py
 ```
 
 Observed:
@@ -223,7 +223,7 @@ Observed:
 Smoke:
 
 ```text
-behavior_regression_smoke.py
+tests/smoke/dialogue/integration/behavior_regression_smoke.py
 ```
 
 Observed:
@@ -242,7 +242,7 @@ Observed:
 Smoke:
 
 ```text
-personality_detail_smoke.py
+tests/smoke/voice/integration/personality_detail_smoke.py
 ```
 
 Observed:
@@ -259,7 +259,7 @@ Observed:
 Smoke:
 
 ```text
-personality_continuity_smoke.py
+tests/smoke/voice/integration/personality_continuity_smoke.py
 ```
 
 Observed:
@@ -280,7 +280,7 @@ Observed:
 Smoke:
 
 ```text
-memory_arc_smoke.py --all-memory --diff-lines 0
+tests/smoke/memory/integration/memory_arc_smoke.py --all-memory --diff-lines 0
 ```
 
 Observed:
@@ -297,7 +297,7 @@ Observed:
 Smoke:
 
 ```text
-memory_arc_smoke.py --all-memory --diff-lines 0
+tests/smoke/memory/integration/memory_arc_smoke.py --all-memory --diff-lines 0
 ```
 
 Observed:
@@ -317,7 +317,7 @@ Observed:
 Smoke:
 
 ```text
-memory_arc_smoke.py --all-memory --diff-lines 0
+tests/smoke/memory/integration/memory_arc_smoke.py --all-memory --diff-lines 0
 ```
 
 Observed:
@@ -341,7 +341,7 @@ Observed:
 - learner integration state reports both `newly_integrated_materials` and `total_integrated_materials`
 - source notes candidate refresh preserves already integrated source records instead of overwriting the whole file
 - source comparison now distinguishes `semantic_mismatch_hold` from conflict: multiple sources that do not support the same question are held instead of learned
-- `source_comparison_smoke.py` now covers corroborated, conflict-held, and semantic-mismatch-held groups
+- `tests/smoke/learning/integration/source_comparison_smoke.py` now covers corroborated, conflict-held, and semantic-mismatch-held groups
 - source comparison now writes question-aware alignment: same-question evidence can corroborate, adjacent-question evidence is limited independence, and unrelated independent evidence cannot rescue a mismatch
 
 ### Emotion Vector Sync
@@ -349,7 +349,7 @@ Observed:
 Smoke:
 
 ```text
-emotion_vector_sync_smoke.py
+tests/smoke/initiative/integration/emotion_vector_sync_smoke.py
 ```
 
 Observed:
@@ -366,7 +366,7 @@ Observed:
 Smoke:
 
 ```text
-multi_person_relationship_smoke.py
+tests/smoke/dialogue/integration/multi_person_relationship_smoke.py
 ```
 
 Observed:
@@ -384,7 +384,7 @@ Observed:
 Smoke:
 
 ```text
-archive_commit_smoke.py --restore-after --require-commit
+tests/smoke/memory/integration/archive_commit_smoke.py --restore-after --require-commit
 ```
 
 Observed:
@@ -401,7 +401,7 @@ Observed:
 Smoke:
 
 ```text
-memory_pressure_smoke.py --restore-after --require-pressure-hold
+tests/smoke/memory/integration/memory_pressure_smoke.py --restore-after --require-pressure-hold
 ```
 
 Observed:
@@ -419,7 +419,7 @@ Observed:
 Smoke:
 
 ```text
-memory_lived_pressure_arc.py --diff-lines 0
+ops/probes/memory_lived_pressure_arc.py --diff-lines 0
 ```
 
 Observed:
@@ -441,7 +441,7 @@ Observed:
 Smoke:
 
 ```text
-question_pipeline_smoke.py --restore-after --require-queue
+tests/smoke/learning/integration/question_pipeline_smoke.py --restore-after --require-queue
 ```
 
 Observed:
@@ -457,7 +457,7 @@ Observed:
 Smoke:
 
 ```text
-source_reliability_gate_smoke.py --restore-after --require-ready
+tests/smoke/learning/integration/source_reliability_gate_smoke.py --restore-after --require-ready
 ```
 
 Observed:
@@ -474,7 +474,7 @@ Observed:
 Smoke:
 
 ```text
-source_request_planner_smoke.py --restore-after --require-plan
+tests/smoke/learning/integration/source_request_planner_smoke.py --restore-after --require-plan
 ```
 
 Observed:
@@ -490,7 +490,7 @@ Observed:
 Smoke:
 
 ```text
-source_search_resolution_smoke.py --restore-after --require-resolution
+tests/smoke/learning/integration/source_search_resolution_smoke.py --restore-after --require-resolution
 ```
 
 Observed:
@@ -507,7 +507,7 @@ Observed:
 Smoke:
 
 ```text
-source_search_provider_smoke.py --restore-after --require-provider
+tests/smoke/learning/integration/source_search_provider_smoke.py --restore-after --require-provider
 ```
 
 Observed:
@@ -524,7 +524,7 @@ Observed:
 Smoke:
 
 ```text
-autonomous_search_activation_smoke.py --restore-after --require-activation
+tests/smoke/learning/integration/autonomous_search_activation_smoke.py --restore-after --require-activation
 ```
 
 Observed:
@@ -545,7 +545,7 @@ Observed:
 Smoke:
 
 ```text
-social_inquiry_policy_smoke.py --restore-after --require-policy
+tests/smoke/dialogue/integration/social_inquiry_policy_smoke.py --restore-after --require-policy
 ```
 
 Observed:
@@ -564,7 +564,7 @@ Observed:
 Smoke:
 
 ```text
-real_life_input_adapter_smoke.py --restore-after --require-adapter
+tests/smoke/dialogue/integration/real_life_input_adapter_smoke.py --restore-after --require-adapter
 ```
 
 Observed:
@@ -600,7 +600,7 @@ Observed:
 Smoke:
 
 ```text
-outward_source_smoke.py --restore-after --require-stage
+tests/smoke/learning/integration/outward_source_smoke.py --restore-after --require-stage
 ```
 
 Observed:
@@ -616,7 +616,7 @@ Observed:
 Smoke:
 
 ```text
-source_comparison_smoke.py --restore-after --require-comparison
+tests/smoke/learning/integration/source_comparison_smoke.py --restore-after --require-comparison
 ```
 
 Observed:
@@ -637,7 +637,7 @@ Observed:
 Smoke:
 
 ```text
-source_learning_chain_smoke.py --restore-after --require-chain
+tests/smoke/learning/integration/source_learning_chain_smoke.py --restore-after --require-chain
 ```
 
 Observed:
@@ -656,7 +656,7 @@ Observed:
 Smoke:
 
 ```text
-learner_integration_smoke.py --restore-after --require-integration
+tests/smoke/learning/integration/learner_integration_smoke.py --restore-after --require-integration
 ```
 
 Observed:
@@ -672,7 +672,7 @@ Observed:
 Smoke:
 
 ```text
-learning_quality_smoke.py --restore-after --require-quality
+tests/smoke/learning/integration/learning_quality_smoke.py --restore-after --require-quality
 ```
 
 Observed:
@@ -690,7 +690,7 @@ Observed:
 Smoke:
 
 ```text
-learning_session_smoke.py --restore-after --require-session
+tests/smoke/learning/integration/learning_session_smoke.py --restore-after --require-session
 ```
 
 Observed:
@@ -722,8 +722,8 @@ Observed:
 Smoke:
 
 ```text
-resource_boundary_smoke.py
-resource_boundary_live_smoke.py
+tests/smoke/dialogue/integration/resource_boundary_smoke.py
+tests/smoke/dialogue/integration/resource_boundary_live_smoke.py
 ```
 
 Observed:
@@ -742,7 +742,7 @@ Observed:
 Smoke:
 
 ```text
-ai_domain_source_smoke.py --restore-after --require-ai-domain
+tests/smoke/learning/integration/ai_domain_source_smoke.py --restore-after --require-ai-domain
 ```
 
 Observed:
@@ -758,7 +758,7 @@ Observed:
 Smoke:
 
 ```text
-ai_self_iteration_gate_smoke.py --restore-after --require-gate --diff-lines 0
+tests/smoke/initiative/integration/ai_self_iteration_gate_smoke.py --restore-after --require-gate --diff-lines 0
 ```
 
 Observed:
@@ -809,7 +809,7 @@ Observed:
 Smoke:
 
 ```text
-source_quality_followup_smoke.py --restore-after --require-followup
+tests/smoke/learning/integration/source_quality_followup_smoke.py --restore-after --require-followup
 ```
 
 Observed:
@@ -847,7 +847,7 @@ Observed:
 Smoke:
 
 ```text
-initiative_loop_smoke.py --restore-after --require-initiative --diff-lines 0
+tests/smoke/initiative/integration/initiative_loop_smoke.py --restore-after --require-initiative --diff-lines 0
 ```
 
 Observed:
@@ -862,7 +862,7 @@ Observed:
 Smoke:
 
 ```text
-dream_reflection_growth_cycle_smoke.py --restore-after --require-cycle --diff-lines 0
+tests/smoke/life/integration/dream_reflection_growth_cycle_smoke.py --restore-after --require-cycle --diff-lines 0
 ```
 
 Observed:
@@ -878,7 +878,7 @@ Observed:
 Smoke:
 
 ```text
-non_owner_social_world_smoke.py --restore-after --require-social-world --diff-lines 0
+tests/smoke/dialogue/integration/non_owner_social_world_smoke.py --restore-after --require-social-world --diff-lines 0
 ```
 
 Observed:
@@ -895,7 +895,7 @@ Observed:
 Smoke:
 
 ```text
-ai_self_iteration_review_smoke.py --restore-after --require-review --diff-lines 0
+tests/smoke/initiative/integration/ai_self_iteration_review_smoke.py --restore-after --require-review --diff-lines 0
 ```
 
 Observed:
@@ -910,11 +910,11 @@ Observed:
 Smokes:
 
 ```text
-autonomous_search_activation_smoke.py --restore-after --require-activation --diff-lines 0
-social_inquiry_policy_smoke.py --restore-after --require-policy --diff-lines 0
-real_life_input_adapter_smoke.py --restore-after --require-adapter --diff-lines 0
-source_comparison_smoke.py --restore-after --require-comparison --diff-lines 0
-learning_quality_smoke.py --restore-after --require-quality --diff-lines 0
+tests/smoke/learning/integration/autonomous_search_activation_smoke.py --restore-after --require-activation --diff-lines 0
+tests/smoke/dialogue/integration/social_inquiry_policy_smoke.py --restore-after --require-policy --diff-lines 0
+tests/smoke/dialogue/integration/real_life_input_adapter_smoke.py --restore-after --require-adapter --diff-lines 0
+tests/smoke/learning/integration/source_comparison_smoke.py --restore-after --require-comparison --diff-lines 0
+tests/smoke/learning/integration/learning_quality_smoke.py --restore-after --require-quality --diff-lines 0
 ```
 
 Observed:
@@ -930,7 +930,7 @@ Observed:
 Smoke:
 
 ```text
-real_conversation_quality_smoke.py --require-realism --timeout-seconds 140 --settle-seconds 2
+tests/smoke/voice/integration/real_conversation_quality_smoke.py --require-realism --timeout-seconds 140 --settle-seconds 2
 ```
 
 Observed:
@@ -949,7 +949,7 @@ Observed:
 Smoke:
 
 ```text
-phase3_lived_session_smoke.py --require-phase3 --timeout-seconds 140 --settle-seconds 2
+tests/smoke/dialogue/integration/phase3_lived_session_smoke.py --require-phase3 --timeout-seconds 140 --settle-seconds 2
 ```
 
 Observed:
@@ -966,7 +966,7 @@ Observed:
 Smoke:
 
 ```text
-live_voice_card_smoke.py
+tests/smoke/voice/integration/live_voice_card_smoke.py
 ```
 
 Observed:
@@ -982,11 +982,11 @@ Observed:
 Smokes:
 
 ```text
-pre_draft_turn_classifier_smoke.py
-voice_calibration_promotion_smoke.py
-dynamic_life_posture_smoke.py
-proactive_presence_smoke.py
-seed_memory_packaging_smoke.py
+tests/smoke/voice/pre_draft_turn_classifier_smoke.py
+tests/smoke/voice/voice_calibration_promotion_smoke.py
+tests/smoke/voice/dynamic_life_posture_smoke.py
+tests/smoke/initiative/proactive_presence_smoke.py
+tests/smoke/memory/seed_memory_packaging_smoke.py
 ```
 
 Observed:
@@ -1003,12 +1003,12 @@ Observed:
 Smokes:
 
 ```text
-deployment_status_smoke.py
-runtime_security_smoke.py
-local_scope_smoke.py
-bridge_learning_ingest_smoke.py
-runtime_readiness_smoke.py
-state_io_smoke.py
+tests/smoke/runtime/integration/deployment_status_smoke.py
+tests/smoke/runtime/runtime_security_smoke.py
+tests/smoke/learning/local_scope_smoke.py
+tests/smoke/bridge/integration/bridge_learning_ingest_smoke.py
+tests/smoke/runtime/integration/runtime_readiness_smoke.py
+tests/smoke/runtime/state_io_smoke.py
 smoke_run.py --group deployment
 smoke_run.py --group privacy
 smoke_run.py --group learning
@@ -1020,9 +1020,9 @@ Observed:
 
 - Core bridge was running `BRIDGE_VERSION 0.7.0` for the Phase 5 hardening validation, and `xinyu_status.py --json` reported `ok=true`.
 - Legacy AstrBot shell plugin hash checks are retired for the current runtime chain. The active deployment check now verifies Core bridge source/running version, native QQ gateway source/config, live gateway port, NapCat WebUI, and NapCat -> gateway WebSocket state.
-- Live readiness checks can be run through `runtime_readiness_smoke.py`; deployment status, `/probe`, session cleanup, mojibake guard, and long-run status passed.
-- Transport guards are covered by `runtime_security_smoke.py`: API-key traffic over plain HTTP needs explicit local/test override, and non-loopback Core bridge exposure needs a token.
-- Learning ingest scope is covered by `bridge_learning_ingest_smoke.py`: allowed owner-designated paths work, outside-scope absolute paths and traversal are blocked, internal URLs are blocked, `max_bytes` is clamped, and new local metadata/source material paths are redacted.
+- Live readiness checks can be run through `tests/smoke/runtime/integration/runtime_readiness_smoke.py`; deployment status, `/probe`, session cleanup, mojibake guard, and long-run status passed.
+- Transport guards are covered by `tests/smoke/runtime/runtime_security_smoke.py`: API-key traffic over plain HTTP needs explicit local/test override, and non-loopback Core bridge exposure needs a token.
+- Learning ingest scope is covered by `tests/smoke/bridge/integration/bridge_learning_ingest_smoke.py`: allowed owner-designated paths work, outside-scope absolute paths and traversal are blocked, internal URLs are blocked, `max_bytes` is clamped, and new local metadata/source material paths are redacted.
 - `smoke_run.py` grouped manifests now cover `deployment`, `runtime`, `voice`, `learning`, and `privacy`.
 - Phase 4 voice group still passes after the Phase 5 hardening layer.
 - Current live learning quality is `review_needed` with `warning_count: 0` because q-006 has semantic-mismatch held material; this is a live source-review state, not a smoke residue hit.
@@ -1032,7 +1032,7 @@ Observed:
 Smoke:
 
 ```text
-persona_contract_absence_smoke.py
+tests/smoke/voice/integration/persona_contract_absence_smoke.py
 smoke_run.py --group voice
 ```
 

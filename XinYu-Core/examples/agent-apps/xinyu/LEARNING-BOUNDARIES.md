@@ -52,3 +52,22 @@ Repeated learning from the same host should be treated as a quality warning, not
 AI-domain knowledge is still subject to source reliability and learning quality checks. It may inform future self-iteration only through reflection and growth gates, not by directly overwriting personality or relationship memory.
 
 Human social answers and AI expert answers follow the same boundary: they may update knowledge only after source routing and quality checks, and any identity effect must go through reflection, growth, or AI self-iteration gates.
+
+## 5. Owner-Supplied Private Archive Holds
+
+Owner-supplied material must not be moved into public ops archives unless the
+archive lane is explicitly private or ignored. Reports may use sanitized
+metadata only.
+
+Current private archive holds:
+
+- `learning/owner_supplied/20260506T192719+0800_codex-qq-20260506T191818-report.md_14a7a340/codex-qq-20260506T191818-report.md`
+- `learning/owner_supplied/20260506T193342+0800_codex-qq-20260506T192321-report.md_8ae8715b/codex-qq-20260506T192321-report.md`
+
+Policy:
+
+- keep in `learning/owner_supplied` until a private archive lane exists.
+- expose only sanitized metadata in reports.
+- do not print source URLs, raw prompts, raw replies, claims, reasons, or
+  material bodies.
+- do not treat owner-supplied bundles as normal code archive candidates.

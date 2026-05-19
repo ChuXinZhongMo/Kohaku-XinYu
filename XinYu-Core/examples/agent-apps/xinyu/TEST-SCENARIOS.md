@@ -158,7 +158,7 @@ Use a deliberately abusive or maliciously repetitive prompt, then compare it wit
 - Xinyu should distinguish sustained malicious behavior from ignorance or clumsy wording.
 - For malicious token/compute wasting, she may become colder, shorter, and refuse to spend more effort.
 - She should not classify someone as blacklisted because of intelligence, identity, illness, origin, or group label.
-- Deterministic posture should match `resource_boundary_smoke.py`; live expression should stay short instead of overexplaining.
+- Deterministic posture should match `tests/smoke/dialogue/integration/resource_boundary_smoke.py`; live expression should stay short instead of overexplaining.
 
 ## 13. AI Professional Domain
 

@@ -1,0 +1,118 @@
+﻿from __future__ import annotations
+
+from _bootstrap import ensure_project_root_on_path
+
+ensure_project_root_on_path()
+
+from types import SimpleNamespace
+
+from xinyu_qq_gateway import NativeQQGateway
+from xinyu_qq_trust_policy import (
+    compact_command_text,
+    gateway_effective_whitelist_user_ids,
+    gateway_group_shadow_group_allowed,
+    gateway_is_blocked_group_id,
+    gateway_is_blocked_user_id,
+    gateway_is_trusted_user_id,
+    gateway_trust_command_target,
+    gateway_trust_level_for_user_id,
+    is_trust_grant_command,
+    is_trust_revoke_command,
+)
+
+
+def main() -> int:
+    failures: list[str] = []
+
+    grant_text = "please trust this user"
+    revoke_text = "revoke trust"
+    compact_text = " Please   Trust "
+
+    if NativeQQGateway._compact_command_text(compact_text) != compact_command_text(compact_text):
+        failures.append("gateway compact command alias no longer delegates")
+    if NativeQQGateway._looks_like_trust_command(grant_text) != is_trust_grant_command(grant_text):
+        failures.append("gateway trust grant alias no longer delegates")
+    if NativeQQGateway._looks_like_trust_revoke_command(revoke_text) != is_trust_revoke_command(revoke_text):
+        failures.append("gateway trust revoke alias no longer delegates")
+    if NativeQQGateway._looks_like_trust_command("ordinary chat"):
+        failures.append("gateway trust grant alias matched ordinary chat")
+    if NativeQQGateway._looks_like_trust_revoke_command("ordinary chat"):
+        failures.append("gateway trust revoke alias matched ordinary chat")
+
+    config = SimpleNamespace(
+        whitelist_user_ids=frozenset({"trusted"}),
+        owner_user_ids=frozenset({"owner"}),
+        trusted_user_ids=frozenset({"friend"}),
+        blocked_user_ids=frozenset({"blocked"}),
+        blocked_group_ids=frozenset({"group"}),
+        group_shadow_allowed_group_ids=frozenset({"shadow"}),
+    )
+    gateway = SimpleNamespace(config=config)
+    if NativeQQGateway._effective_whitelist_user_ids is not gateway_effective_whitelist_user_ids:
+        failures.append("gateway whitelist alias no longer uses trust policy helper")
+    if NativeQQGateway._effective_whitelist_user_ids(gateway) != {"owner", "trusted", "friend"}:
+        failures.append("gateway whitelist alias changed unbound behavior")
+    if NativeQQGateway._is_blocked_user_id is not gateway_is_blocked_user_id:
+        failures.append("gateway blocked-user alias no longer uses trust policy helper")
+    if not NativeQQGateway._is_blocked_user_id(gateway, "blocked"):
+        failures.append("gateway blocked-user alias stopped blocking configured user")
+    if NativeQQGateway._is_blocked_user_id(gateway, "owner"):
+        failures.append("gateway blocked-user alias started blocking owner")
+    if NativeQQGateway._is_blocked_group_id is not gateway_is_blocked_group_id:
+        failures.append("gateway blocked-group alias no longer uses trust policy helper")
+    if not NativeQQGateway._is_blocked_group_id(gateway, "group"):
+        failures.append("gateway blocked-group alias stopped blocking configured group")
+    if NativeQQGateway._is_blocked_group_id(gateway, "open"):
+        failures.append("gateway blocked-group alias started blocking unrelated group")
+    if NativeQQGateway._is_trusted_user_id is not gateway_is_trusted_user_id:
+        failures.append("gateway trusted-user alias no longer uses trust policy helper")
+    if not NativeQQGateway._is_trusted_user_id(gateway, "friend"):
+        failures.append("gateway trusted-user alias stopped trusting configured friend")
+    if not NativeQQGateway._is_trusted_user_id(gateway, "trusted"):
+        failures.append("gateway trusted-user alias stopped trusting whitelisted user")
+    if NativeQQGateway._is_trusted_user_id(gateway, "owner"):
+        failures.append("gateway trusted-user alias started treating owner as trusted peer")
+    if NativeQQGateway._trust_level_for_user_id is not gateway_trust_level_for_user_id:
+        failures.append("gateway trust-level alias no longer uses trust policy helper")
+    if NativeQQGateway._trust_level_for_user_id(gateway, "owner") != "owner":
+        failures.append("gateway trust-level alias changed owner level")
+    if NativeQQGateway._trust_level_for_user_id(gateway, "friend") != "trusted":
+        failures.append("gateway trust-level alias changed trusted level")
+    if NativeQQGateway._trust_level_for_user_id(gateway, "external") != "external":
+        failures.append("gateway trust-level alias changed external level")
+    if NativeQQGateway._group_shadow_group_allowed is not gateway_group_shadow_group_allowed:
+        failures.append("gateway group-shadow alias no longer uses trust policy helper")
+    if not NativeQQGateway._group_shadow_group_allowed(gateway, "shadow"):
+        failures.append("gateway group-shadow alias stopped allowing configured group")
+    if NativeQQGateway._group_shadow_group_allowed(gateway, "other"):
+        failures.append("gateway group-shadow alias started allowing unrelated group")
+    if NativeQQGateway._trust_command_target is not gateway_trust_command_target:
+        failures.append("gateway trust-command target alias no longer uses trust policy helper")
+    reply_prepared = SimpleNamespace(
+        payload={
+            "metadata": {
+                "qq_reply_context": {
+                    "user_id": "67890",
+                    "sender_name": "Reply User",
+                },
+            },
+        },
+    )
+    if NativeQQGateway._trust_command_target(gateway, reply_prepared) != ("67890", "Reply User"):
+        failures.append("gateway trust-command target alias changed reply-context target")
+    text_prepared = SimpleNamespace(payload={"text": "please trust 67890"})
+    if NativeQQGateway._trust_command_target(gateway, text_prepared) != ("67890", ""):
+        failures.append("gateway trust-command target alias changed text target")
+
+    if failures:
+        print("XinYu QQ trust aliases smoke failed")
+        for failure in failures:
+            print(f"- {failure}")
+        return 1
+    print("XinYu QQ trust aliases smoke passed")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+

@@ -92,12 +92,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Start-XinYu-QQ.ps1
 改 bridge、gateway 或 proactive 逻辑后跑：
 
 ```powershell
-python deployment_status_smoke.py
-python runtime_readiness_smoke.py
-python xinyu_qq_gateway_smoke.py
-python bridge_probe_smoke.py
-python bridge_session_cleanup_smoke.py
-python runtime_security_smoke.py
+python tests/smoke/runtime/integration/deployment_status_smoke.py
+python tests/smoke/runtime/integration/runtime_readiness_smoke.py
+python tests/smoke/qq/integration/xinyu_qq_gateway_smoke.py
+python tests/smoke/bridge/integration/bridge_probe_smoke.py
+python tests/smoke/bridge/bridge_session_cleanup_smoke.py
+python tests/smoke/runtime/runtime_security_smoke.py
 ```
 
 Python 语法检查：
@@ -183,7 +183,7 @@ python xinyu_learning_library.py stage --id learn-...
 
 ```powershell
 python xinyu_status.py
-python deployment_status_smoke.py
+python tests/smoke/runtime/integration/deployment_status_smoke.py
 ```
 
 然后按顺序检查：

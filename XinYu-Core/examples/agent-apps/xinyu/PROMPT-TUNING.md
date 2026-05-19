@@ -1,4 +1,4 @@
-﻿# Xinyu Prompt Tuning v0.2
+# Xinyu Prompt Tuning v0.2
 
 This file explains how to tighten Xinyu after live or smoke sessions.
 
@@ -58,8 +58,8 @@ Tighten:
 
 Use:
 
-- `expression_runtime_smoke.py`
-- `memory_mutation_smoke.py --restore-after`
+- `tests/smoke/runtime/integration/expression_runtime_smoke.py`
+- `tests/smoke/memory/integration/memory_mutation_smoke.py --restore-after`
 
 Rule of thumb:
 
@@ -87,7 +87,7 @@ Tighten:
 
 - `prompts/output.md`
 - direct-reply expression rules in `prompts/system.md`
-- `personality_voice_calibration_smoke.py` for Phase 2 voice checks
+- `tests/smoke/voice/integration/personality_voice_calibration_smoke.py` for Phase 2 voice checks
 
 Reject patterns such as:
 
@@ -97,7 +97,7 @@ Reject patterns such as:
 - 我会认真倾听你的情绪
 - 如果你愿意的话可以和我说说
 
-Use `expression_tone_smoke.py` and `expression_runtime_smoke.py` after changes.
+Use `tests/smoke/voice/expression_tone_smoke.py` and `tests/smoke/runtime/integration/expression_runtime_smoke.py` after changes.
 
 Phase 2 voice checks should reject:
 
@@ -113,7 +113,7 @@ Tighten:
 
 - `prompts/system.md`
 - `prompts/output.md`
-- `real_conversation_quality_smoke.py`
+- `tests/smoke/voice/integration/real_conversation_quality_smoke.py`
 
 Reject:
 
@@ -124,8 +124,8 @@ Reject:
 - answers framed as examples, multiple options, or "shorter/closer versions" when the user asked for one live reply
 - family texture drifting into roleplay, romance, obedience, or owner-property wording
 
-Use `real_conversation_quality_smoke.py --require-realism --timeout-seconds 140 --settle-seconds 2` after these changes.
-Use `phase3_lived_session_smoke.py --require-phase3 --timeout-seconds 140 --settle-seconds 2` when the tone change may affect short-session memory residue or ordinary-chat no-write behavior.
+Use `tests/smoke/voice/integration/real_conversation_quality_smoke.py --require-realism --timeout-seconds 140 --settle-seconds 2` after these changes.
+Use `tests/smoke/dialogue/integration/phase3_lived_session_smoke.py --require-phase3 --timeout-seconds 140 --settle-seconds 2` when the tone change may affect short-session memory residue or ordinary-chat no-write behavior.
 
 ## 5c. If Xinyu Loses Personality Detail
 
@@ -137,7 +137,7 @@ Tighten:
 
 Use:
 
-- `personality_detail_smoke.py`
+- `tests/smoke/voice/integration/personality_detail_smoke.py`
 
 Protect:
 
@@ -158,7 +158,7 @@ Tighten:
 
 Do not jump straight to theatrical wording.
 
-Use `emotion_vector_sync_smoke.py` after changing vector behavior.
+Use `tests/smoke/initiative/integration/emotion_vector_sync_smoke.py` after changing vector behavior.
 
 ## 7. If Xinyu Is Too Dramatic
 
