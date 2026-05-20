@@ -31,7 +31,50 @@ NEGATIVE_MARKERS = (
     "不要查",
 )
 STATUS_ACTION_MARKERS = ("看", "查", "检查", "看看", "状态", "status")
-STATUS_OBJECT_MARKERS = ("状态", "运行", "在线", "health", "status")
+STATUS_ACTION_VERB_MARKERS = ("看", "查", "检查", "看看", "status")
+STATUS_OBJECT_MARKERS = ("状态", "health", "status")
+STATUS_RUNTIME_OBJECT_MARKERS = (
+    "运行",
+    "运行状态",
+    "系统",
+    "系统状态",
+    "服务",
+    "服务状态",
+    "core",
+    "bridge",
+    "gateway",
+    "网关",
+    "qq",
+    "napcat",
+    "队列",
+    "后台",
+    "进程",
+    "端口",
+    "连接",
+    "runtime",
+    "server",
+    "api",
+)
+STATUS_HEALTH_MARKERS = ("在线", "正常", "连上", "连接", "能用", "可用", "通吗", "alive")
+PERSONAL_STATE_MARKERS = (
+    "丫头",
+    "你现在",
+    "你这边",
+    "你自己",
+    "你还好",
+    "还好吗",
+    "还好么",
+    "感觉",
+    "感受",
+    "心情",
+    "怎么样",
+    "咋样",
+    "如何",
+    "什么状态",
+    "累不累",
+    "难受",
+    "开心",
+)
 LOG_ACTION_MARKERS = ("扫", "查", "看", "检查", "分析", "找", "整理", "scan")
 LOG_OBJECT_MARKERS = ("日志", "log", "logs", "报错", "错误", "异常", "error", "traceback", "crash")
 CODEX_MARKERS = ("codex", "Codex", "用 Codex", "让 Codex", "交给 Codex", "调用 Codex")
@@ -302,7 +345,18 @@ class ToolIntentRouter:
         return ""
 
     def _looks_like_status_request(self, text: str) -> bool:
-        return _has_any(text, STATUS_OBJECT_MARKERS) and _has_any(text, STATUS_ACTION_MARKERS)
+        compact = _compact(text)
+        has_status_object = _has_any(text, STATUS_OBJECT_MARKERS)
+        has_action_verb = _has_any(text, STATUS_ACTION_VERB_MARKERS)
+        has_runtime_object = _has_compact_any(compact, STATUS_RUNTIME_OBJECT_MARKERS)
+        has_health_marker = _has_compact_any(compact, STATUS_HEALTH_MARKERS)
+        has_personal_state = _has_compact_any(compact, PERSONAL_STATE_MARKERS)
+
+        if has_runtime_object and (has_status_object or has_action_verb or has_health_marker):
+            return True
+        if has_personal_state:
+            return False
+        return has_status_object and has_action_verb
 
     def _extract_kohaku_call(self, text: str) -> dict[str, str]:
         stripped = text.strip()

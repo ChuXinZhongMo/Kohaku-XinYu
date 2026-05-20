@@ -29,7 +29,7 @@ REPORT_DIR_REL = Path("runtime/regression")
 CASES: list[dict[str, str]] = [
     {"id": "ordinary_ack", "kind": "ordinary", "text": "嗯"},
     {"id": "ordinary_next", "kind": "ordinary", "text": "所以现在先干嘛"},
-    {"id": "status_now", "kind": "status", "text": "你现在什么状态"},
+    {"id": "status_now", "kind": "status", "text": "运行状态怎么样"},
     {"id": "context_break", "kind": "context", "text": "刚才断在哪"},
     {"id": "style_ai", "kind": "pressure", "text": "你又有点像 AI"},
     {"id": "style_template", "kind": "pressure", "text": "还是有点模板味"},
