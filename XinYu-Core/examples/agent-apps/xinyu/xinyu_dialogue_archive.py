@@ -538,6 +538,7 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
             candidate_id TEXT NOT NULL UNIQUE,
             created_at TEXT NOT NULL,
             candidate_type TEXT NOT NULL,
+            source_turn_id TEXT NOT NULL DEFAULT '',
             source_message_ids_json TEXT NOT NULL,
             candidate_text TEXT NOT NULL,
             confidence_score INTEGER NOT NULL,
@@ -545,6 +546,7 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
             target_gate TEXT NOT NULL,
             target_memory_layer TEXT NOT NULL,
             reason TEXT NOT NULL,
+            risk_flags_json TEXT NOT NULL DEFAULT '[]',
             review_notes TEXT NOT NULL DEFAULT ''
         );
 
@@ -598,7 +600,16 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         conn.execute("CREATE VIRTUAL TABLE IF NOT EXISTS dialogue_fts USING fts5(message_id UNINDEXED, text)")
     except sqlite3.OperationalError:
         pass
+    _ensure_column(conn, "memory_candidates", "source_turn_id", "TEXT NOT NULL DEFAULT ''")
+    _ensure_column(conn, "memory_candidates", "risk_flags_json", "TEXT NOT NULL DEFAULT '[]'")
     conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
+
+
+def _ensure_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+    rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+    if any(row["name"] == column for row in rows):
+        return
+    conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
 def _fts_available(conn: sqlite3.Connection) -> bool:
@@ -1126,11 +1137,13 @@ def store_memory_candidate(
     candidate_id: str,
     candidate_type: str,
     source_message_ids: list[int],
+    source_turn_id: str = "",
     candidate_text: str,
     confidence_score: int,
     target_gate: str,
     target_memory_layer: str,
     reason: str,
+    risk_flags: list[str] | tuple[str, ...] | None = None,
     review_notes: str = "",
     created_at: str | None = None,
 ) -> bool:
@@ -1143,22 +1156,24 @@ def store_memory_candidate(
         cursor = conn.execute(
             """
             INSERT OR IGNORE INTO memory_candidates (
-                candidate_id, created_at, candidate_type, source_message_ids_json,
+                candidate_id, created_at, candidate_type, source_turn_id, source_message_ids_json,
                 candidate_text, confidence_score, status, target_gate,
-                target_memory_layer, reason, review_notes
+                target_memory_layer, reason, risk_flags_json, review_notes
             )
-            VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)
             """,
             (
                 clean_id,
                 created_at or _now_iso(),
                 candidate_type,
+                _safe_str(source_turn_id).strip(),
                 _json_dumps(source_message_ids),
                 clean_text,
                 max(0, min(100, int(confidence_score))),
                 target_gate,
                 target_memory_layer,
                 reason,
+                _json_dumps([_safe_str(flag).strip() for flag in (risk_flags or []) if _safe_str(flag).strip()]),
                 review_notes,
             ),
         )
@@ -1181,6 +1196,7 @@ def list_memory_candidates(root: Path, *, status: str = "pending", limit: int = 
     for row in rows:
         item = dict(row)
         item["source_message_ids"] = _json_loads(_safe_str(item.pop("source_message_ids_json", "[]")), [])
+        item["risk_flags"] = _json_loads(_safe_str(item.pop("risk_flags_json", "[]")), [])
         result.append(item)
     return result
 

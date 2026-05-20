@@ -144,6 +144,13 @@ def _candidate_id(candidate_type: str, text: str, source_message_ids: list[int])
     return "memcand-" + hashlib.sha256(seed.encode("utf-8", errors="replace")).hexdigest()[:18]
 
 
+def _source_turn_id(payload: dict[str, Any] | None) -> str:
+    if not isinstance(payload, dict):
+        return ""
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+    return _safe_str(payload.get("turn_id") or metadata.get("turn_id")).strip()
+
+
 def _candidate_text(user_text: str, assistant_reply: str, *, prefix: str = "") -> str:
     parts = []
     if prefix:
@@ -292,16 +299,24 @@ def extract_memory_candidates(
             f"memory_immune={immune.immune_status}/{immune.danger_level}/{immune.action}; "
             "stable_write_allowed=false"
         )
+        risk_flags = [
+            f"memory_immune:{immune.immune_status}",
+            f"danger:{immune.danger_level}",
+            f"action:{immune.action}",
+            f"scope:{scope.scope}",
+        ]
         if store_memory_candidate(
             root,
             candidate_id=candidate_id,
             candidate_type=spec.candidate_type,
             source_message_ids=message_ids,
+            source_turn_id=_source_turn_id(payload),
             candidate_text=spec.text,
             confidence_score=spec.confidence_score,
             target_gate=spec.target_gate,
             target_memory_layer=spec.target_memory_layer,
             reason=spec.reason,
+            risk_flags=risk_flags,
             review_notes=review_notes,
             created_at=created_at,
         ):

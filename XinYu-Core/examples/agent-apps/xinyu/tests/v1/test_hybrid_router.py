@@ -19,8 +19,27 @@ def test_greeting_routes_fast_path() -> None:
     assert decision.route is RouteName.FAST_PATH
 
 
+def test_greeting_containing_ack_marker_stays_greeting_only() -> None:
+    decision = HybridRouter().decide(_turn("\u665a\u4e0a\u597d"))
+    assert decision.route is RouteName.FAST_PATH
+    assert decision.classification.intents == ("greeting",)
+
+
 def test_relationship_pressure_routes_slow_path() -> None:
     decision = HybridRouter().decide(_turn("你刚才那样我有点失望"))
     assert decision.route is RouteName.SLOW_PATH
     assert "relationship_pressure" in decision.classification.intents
 
+
+def test_english_and_japanese_greetings_route_fast_path() -> None:
+    for text in ("hello", "good evening", "こんにちは", "こんばんは"):
+        decision = HybridRouter().decide(_turn(text))
+        assert decision.route is RouteName.FAST_PATH
+        assert "greeting" in decision.classification.intents
+
+
+def test_english_and_japanese_relationship_pressure_stays_slow_path() -> None:
+    for text in ("I am disappointed", "失望した", "寂しい"):
+        decision = HybridRouter().decide(_turn(text))
+        assert decision.route is RouteName.SLOW_PATH
+        assert "relationship_pressure" in decision.classification.intents
