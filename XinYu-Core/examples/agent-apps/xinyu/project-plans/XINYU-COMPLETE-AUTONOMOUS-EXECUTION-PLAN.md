@@ -408,16 +408,33 @@ Goal: make XinYu understandable and reproducible as an interactivity research ar
 
 Autonomous execution status: all tasks in this plan are checked and have focused evidence above.
 
+Current next task: none inside this plan. Treat future work as a new iteration plan unless a regression is found.
+
+Final closure update, 2026-05-21:
+
+- Supplemental regression commits after the original plan closure:
+  - `7446b0a fix(xinyu): keep personal state chat out of runtime context`
+  - `2edb7e2 fix(xinyu): replace stale failover replies in private chat`
+  - `6c87a6a fix(xinyu): retry transient core chat disconnects`
+  - `69b98ef chore(xinyu): ignore local external plugin control`
+  - `e128c6a fix(xinyu): avoid bare ack in owner life chat`
+- Current worktree before this note: clean.
+- Runtime status after restart: `xinyu_status.py --json` reported `ok=true`, `bridge_restart_required=false`, `runtime_restart_required=false`, `gateway_restart_may_be_needed=false`.
+
 Final focused gate:
 
 - `python -m py_compile xinyu_proactive_lifecycle_trace.py xinyu_proactive_request_loop.py xinyu_proactive_presence.py xinyu_core_bridge.py xinyu_local_inspector.py failure-scenarios\generate_sanitized_trace_examples.py tests\test_proactive_controlled_lifecycle.py tests\test_xinyu_local_inspector.py tests\test_public_research_package.py`
 - `.\.venv\Scripts\python.exe -m pytest tests\test_public_research_package.py tests\test_xinyu_local_inspector.py tests\test_proactive_controlled_lifecycle.py tests\test_expression_scenarios.py tests\v1\test_hybrid_router.py tests\test_memory_candidate_review_cli.py tests\failure_scenarios\test_failure_scenarios.py tests\test_turn_intervention_routes.py tests\test_bridge_semantic_fast_routes.py tests\test_bridge_slow_live_turn.py tests\test_bridge_reply_pipeline.py tests\test_bridge_route_observer.py tests\test_bridge_turn_pipeline_pre_model_runtime.py tests\test_dialogue_curiosity_bridge_injection.py -k "public_research or local_inspector or proactive or expression or greeting or relationship_pressure or memory_candidate or failure_scenario or turn_ or semantic_fast or slow_live_turn or memory_recall or model_inject or reply_pipeline or empty_visible_reply or route_observer or pre_model or turn_finish_sidecars or outward_renderer or finish_sidecars or health_operator or final_reply_guard or owner_reply" -q`
 
-Result: `81 passed, 39 deselected`.
+Result: `86 passed, 39 deselected`.
 
 Extended closure gate:
 
 - `git diff --check`
-  - Result: no whitespace errors; Git reported CRLF normalization warnings for `tests/smoke/qq/integration/xinyu_qq_gateway_smoke.py` and `xinyu_proactive_presence.py`.
+  - Result: no whitespace errors.
 - `.\.venv\Scripts\python.exe -m pytest tests -q`
-  - Result: `735 passed`.
+  - Result: `759 passed`.
+- `.\.venv\Scripts\python.exe tests\smoke\runtime\integration\runtime_readiness_smoke.py --timeout-seconds 240 --json`
+  - Result: `ok=true`; all subcommands exited `0`.
+- `.\.venv\Scripts\python.exe tests\smoke\qq\integration\xinyu_qq_gateway_smoke.py`
+  - Result: `xinyu_qq_gateway_smoke: ok`.
