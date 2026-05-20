@@ -1,0 +1,33 @@
+{
+  "id": "stale_running_cancellation",
+  "title": "Owner cancels stale running turn",
+  "input_payload": {
+    "platform": "owner_intervention",
+    "message_type": "cancel",
+    "session_id": "owner_intervention",
+    "user_id": "owner"
+  },
+  "expected_trace_stages": [
+    "intervention_requested",
+    "intervention_applied"
+  ],
+  "expected_health_state": {
+    "before.current_turn_state": "stale_running",
+    "after.current_turn_state": "cancelled"
+  },
+  "expected_visible_behavior": {
+    "accepted": true,
+    "reply_non_empty": false,
+    "status": "cancelled"
+  },
+  "expected_memory_impact": {
+    "runtime_trace": "allowed",
+    "runtime_presence": "allowed",
+    "approved_long_term_memory": "forbidden"
+  },
+  "recovery_action": {
+    "kind": "owner_intervention",
+    "operator_action": "POST /turn/cancel"
+  },
+  "privacy_notes": "Intervention payload has no private chat content."
+}

@@ -1,0 +1,37 @@
+{
+  "id": "renderer_empty_reply_recovery",
+  "title": "Empty visible reply is recovered through renderer",
+  "input_payload": {
+    "platform": "qq",
+    "message_type": "private_text",
+    "session_id": "scenario:owner-private",
+    "user_id": "scenario-owner",
+    "text": "晚上好",
+    "metadata": {
+      "is_owner_user": true
+    }
+  },
+  "expected_trace_stages": [
+    "outward_renderer_started",
+    "outward_renderer_finished",
+    "route_finished"
+  ],
+  "expected_health_state": {
+    "operator.route_status": "ok"
+  },
+  "expected_visible_behavior": {
+    "accepted": true,
+    "reply_non_empty": true,
+    "must_not_contain": ["模板", "fallback"]
+  },
+  "expected_memory_impact": {
+    "runtime_trace": "allowed",
+    "expression_learning": "allowed",
+    "approved_long_term_memory": "forbidden"
+  },
+  "recovery_action": {
+    "kind": "automatic",
+    "operator_action": "renderer retry"
+  },
+  "privacy_notes": "Generic greeting only."
+}

@@ -1,0 +1,39 @@
+{
+  "id": "proactive_conflict_with_live_reply",
+  "title": "Proactive delivery conflicts with live owner reply",
+  "input_payload": {
+    "platform": "qq",
+    "message_type": "private_text",
+    "session_id": "scenario:owner-private",
+    "user_id": "scenario-owner",
+    "text": "刚才那个提醒先别发",
+    "metadata": {
+      "is_owner_user": true
+    }
+  },
+  "expected_trace_stages": [
+    "turn_started",
+    "route_decided",
+    "finish_sidecars_finished",
+    "route_finished"
+  ],
+  "expected_health_state": {
+    "operator.route": "slow_live",
+    "operator.route_status": "ok"
+  },
+  "expected_visible_behavior": {
+    "accepted": true,
+    "reply_non_empty": true,
+    "status": "live_reply_wins"
+  },
+  "expected_memory_impact": {
+    "runtime_trace": "allowed",
+    "proactive_state": "allowed",
+    "approved_long_term_memory": "forbidden"
+  },
+  "recovery_action": {
+    "kind": "automatic",
+    "operator_action": "mark proactive request answered or skipped"
+  },
+  "privacy_notes": "Synthetic proactive conflict with scenario ids."
+}

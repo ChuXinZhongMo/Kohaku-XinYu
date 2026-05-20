@@ -1,0 +1,39 @@
+{
+  "id": "pre_model_timeout_containment",
+  "title": "Pre-model routes time out and slow live continues",
+  "input_payload": {
+    "platform": "qq",
+    "message_type": "private_text",
+    "session_id": "scenario:owner-private",
+    "user_id": "scenario-owner",
+    "text": "这事需要认真看一下",
+    "metadata": {
+      "is_owner_user": true
+    }
+  },
+  "expected_trace_stages": [
+    "pre_model_routes_started",
+    "pre_model_routes_finished",
+    "route_decided",
+    "memory_recall_started"
+  ],
+  "expected_health_state": {
+    "turn_route.last_timeout_stage": "pre_model_routes_finished",
+    "turn_route.last_timeout_reason": "pre_model_routes_timeout"
+  },
+  "expected_visible_behavior": {
+    "accepted": true,
+    "reply_non_empty": true,
+    "status": "continued_after_contained_timeout"
+  },
+  "expected_memory_impact": {
+    "runtime_trace": "allowed",
+    "event_sourcing": "unknown_after_timeout",
+    "approved_long_term_memory": "forbidden"
+  },
+  "recovery_action": {
+    "kind": "none",
+    "operator_action": "observe trace only"
+  },
+  "privacy_notes": "Generic technical text and scenario ids only."
+}

@@ -1,0 +1,37 @@
+{
+  "id": "stuck_before_route_decision",
+  "title": "Turn stalls before route decision",
+  "input_payload": {
+    "platform": "qq",
+    "message_type": "private_text",
+    "session_id": "scenario:owner-private",
+    "user_id": "scenario-owner",
+    "text": "检查一下这个问题",
+    "metadata": {
+      "is_owner_user": true
+    }
+  },
+  "expected_trace_stages": [
+    "turn_started",
+    "semantic_fast_probe_started"
+  ],
+  "expected_health_state": {
+    "operator.current_turn_state": "running",
+    "operator.route_stage": "semantic_fast_probe_started"
+  },
+  "expected_visible_behavior": {
+    "accepted": false,
+    "reply_non_empty": false,
+    "status": "stalled"
+  },
+  "expected_memory_impact": {
+    "runtime_trace": "allowed",
+    "dialogue_tail": "forbidden",
+    "approved_long_term_memory": "forbidden"
+  },
+  "recovery_action": {
+    "kind": "inspect",
+    "operator_action": "GET /turn/current then POST /turn/cancel if stale"
+  },
+  "privacy_notes": "No real account id or raw private content."
+}

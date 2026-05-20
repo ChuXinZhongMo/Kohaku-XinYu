@@ -1,101 +1,40 @@
 # XinYu App
 
-这个目录是 XinYu 的主开发入口：提示词、运行入口、记忆引擎、bridge、QQ gateway、状态检查、v1 重构骨架和 smoke 测试都在这里。
+Language: [中文](README.md) | [English](README.en.md) | [日本語](README.ja.md)
 
-XinYu 的目标不是“回答得像人”这么简单，而是让一个 AI 系统在长期交互中维持连续性：记住关系、调整表达、审查自身变化，并在被允许时主动联系 owner。
+Research package: [INTERACTIVITY-RESEARCH.md](INTERACTIVITY-RESEARCH.md) | [ARCHITECTURE.md](ARCHITECTURE.md) | [TRACE-SCHEMA.md](TRACE-SCHEMA.md) | [FAILURE-SCENARIOS.md](FAILURE-SCENARIOS.md)
+
+XinYu 是一个本地 owner 运营的长期交互 agent 项目。目标不是做一个只会单轮回答的聊天机器人，而是让系统在长期互动中保持连续性：能观察自己卡在哪、能通过审查边界沉淀记忆、能调整表达，并且只在明确授权和可审计的情况下主动联系 owner。
 
 ## 当前运行链路
 
 ```text
-NapCatQQ
+NapCat QQ
   -> ws://127.0.0.1:6199/ws
   -> xinyu_qq_gateway.py
   -> http://127.0.0.1:8765/chat
   -> xinyu_core_bridge.py
-  -> XinYu Core
+  -> XinYu runtime
 ```
 
-AstrBot 已经不是当前运行链路的一部分。当前 QQ 侧由仓库内的原生 `xinyu_qq_gateway.py` 处理：白名单、群触发、消息归一化、OneBot 回复和转发到 Core。
+`xinyu_qq_gateway.py` 只负责 transport：白名单、群触发、消息归一化、OneBot 回复、outbox claim/ack。人格、记忆、主动性、回复策略和干预状态都在 core bridge/runtime 侧。
 
-## 目录内容
+## 主要入口
 
-核心运行文件：
-
-- `config.yaml` - XinYu 运行时配置
-- `run_local_xinyu.py` / `run_local_xinyu.ps1` - 本地运行入口
-- `xinyu_core_bridge.py` - 给外部 shell / gateway 使用的 HTTP bridge
-- `xinyu_qq_gateway.py` - 原生 NapCat / OneBot QQ gateway
-- `xinyu_proactive_presence.py` - 主动 QQ 候选、claim、ack 逻辑
-- `xinyu_learning_library.py` - 下载、登记、分桶保存学习资料并接入 source materials
-- `xinyu_status.py` - 整体系统只读状态检查
-
-v1 重构骨架：
-
-- `xinyu_v1/gateway/`
-- `xinyu_v1/routing/`
-- `xinyu_v1/memory/`
-- `xinyu_v1/emotion/`
-- `xinyu_v1/response/`
-- `xinyu_v1/autonomy/`
-- `xinyu_v1/observability/`
-- `xinyu_v1/storage/`
-
-当前重构边界：
-
-- `CURRENT-REFACTOR-PLAN.md` 是当前阶段的结构重构源文件。
-- `xinyu_v1/` 仍处于 shadow / canary 路径；只有 owner 显式开启窄范围 canary 时，v1 才能处理 owner 私聊的简单文本。
-- `xinyu_core_bridge.py` 是运行合同入口，应继续变薄；新的大块行为不要直接堆回这个文件。
-- `xinyu_qq_gateway.py` 是 NapCat / OneBot transport adapter，不承载人格、记忆策略或 action 决策。
-
-提示词和行为模块：
-
-- `prompts/system.md`
-- `prompts/output.md`
-- `prompts/*_writer.md`
-- `custom/*_bridge_plugin.py`
-- `custom/*_engine.py`
-
-验证脚本和测试：
-
-- `tests/smoke/qq/integration/xinyu_qq_gateway_smoke.py`
-- `tests/smoke/runtime/integration/runtime_readiness_smoke.py`
-- `tests/smoke/runtime/integration/deployment_status_smoke.py`
-- `tests/smoke/runtime/runtime_security_smoke.py`
-- `tests/smoke/memory/memory_event_sourcing_smoke.py`
-- `tests/smoke/voice/persona_state_flow_smoke.py`
-- `tests/`
-
-本地私有运行状态：
-
-- `xinyu.local.env`
-- `xinyu_qq_gateway.config.json`
-- `logs/`
-- `memory/`
-- `runtime/`
-- `learning/self_found/`
-- `learning/owner_supplied/`
-
-这些路径已被 Git 忽略，不应该上传。
-
-## 当前能力
-
-已经实现并在本地验证：
-
-- 本地 XinYu runtime launcher
-- Core bridge health、chat、probe、proactive、ack、learning、Codex 相关接口
-- 原生 QQ gateway 与 NapCat / OneBot 反向 WebSocket 链路
-- 记忆导向的 prompt / writer 结构
-- 关系、反思、梦境、归档、上下文、学习和事件 sourcing 层
-- AI self-iteration gate、learning quality gate、memory consistency gate、summary coverage gate
-- 主动 QQ 候选消息生成和明确的 claim / ack dispatch 状态
-- 检查 Core、QQ gateway、NapCat、主动发送、review、runtime readiness 的能力
+- `xinyu_core_bridge.py`：HTTP bridge，提供 `/chat`、`/health`、`/turn/*`、learning、Codex、proactive 等接口。
+- `xinyu_qq_gateway.py`：NapCat / OneBot QQ gateway。
+- `xinyu_local_inspector.py`：本地只读 inspector，可查看 turn、route timeline、gateway、proactive、memory candidate 和 stale warnings。
+- `xinyu_status.py`：运行状态检查。
+- `xinyu_proactive_request_loop.py` / `xinyu_proactive_presence.py`：主动候选、claim、ack、冷却和生命周期 trace。
+- `xinyu_memory_candidate_review_cli.py`：候选记忆审查 CLI。
+- `xinyu_v1/`：v1 shadow/canary 骨架，不是默认全量主路径。
 
 ## 本地启动
 
 进入目录：
 
 ```powershell
-cd D:\XinYu\XinYu-Core\examples\agent-apps\xinyu
+cd path\to\XinYu-Core\examples\agent-apps\xinyu
 ```
 
 创建本地环境文件：
@@ -118,13 +57,13 @@ XINYU_LLM_MODEL=
 python -m pip install -r requirements-minimal.txt
 ```
 
-启动 Core bridge：
+启动 core bridge：
 
 ```powershell
 .\start_xinyu_core_bridge.ps1 -AllowInsecureLlmHttp
 ```
 
-启动原生 QQ gateway：
+启动 QQ gateway：
 
 ```powershell
 .\start_xinyu_qq_gateway.ps1
@@ -141,78 +80,69 @@ python -m pip install -r requirements-minimal.txt
 
 ```powershell
 python xinyu_status.py
-```
-
-给程序读取：
-
-```powershell
 python xinyu_status.py --json
 ```
 
-查看最近一轮 turn 由哪些拆分后的 live module 影响：
+本地 inspector：
 
 ```powershell
-python ops/diagnostics/xinyu_live_module_diagnostics.py --json
+.\.venv\Scripts\python.exe xinyu_local_inspector.py --no-network
+.\.venv\Scripts\python.exe xinyu_local_inspector.py --no-network --json
+.\.venv\Scripts\python.exe xinyu_local_inspector.py --no-network dashboard
 ```
 
-当 QQ 发送、主动消息、Core bridge 或 NapCat 连接看起来不对时，先跑这个命令。
-
-## Smoke 测试
-
-改行为前后建议跑：
+常用 turn intervention：
 
 ```powershell
-python tests/smoke/qq/integration/xinyu_qq_gateway_smoke.py
-python tests/smoke/runtime/integration/deployment_status_smoke.py
-python tests/smoke/runtime/integration/runtime_readiness_smoke.py
-python tests/smoke/runtime/runtime_security_smoke.py
-python tests/smoke/memory/memory_event_sourcing_smoke.py
-python tests/smoke/voice/persona_state_flow_smoke.py
-python tests/smoke/memory/seed_memory_packaging_smoke.py
+.\.venv\Scripts\python.exe xinyu_local_inspector.py intervene current
+.\.venv\Scripts\python.exe xinyu_local_inspector.py intervene status-message
+.\.venv\Scripts\python.exe xinyu_local_inspector.py intervene cancel
 ```
 
-改 Python bridge / gateway 后跑：
+## 测试
+
+全量 pytest：
 
 ```powershell
-python -m py_compile xinyu_core_bridge.py xinyu_qq_gateway.py xinyu_status.py
+.\.venv\Scripts\python.exe -m pytest tests -q
 ```
 
-pytest 测试：
+关键 smoke：
 
 ```powershell
-python -m pytest tests -q
+.\.venv\Scripts\python.exe tests\smoke\initiative\proactive_presence_smoke.py
+.\.venv\Scripts\python.exe tests\smoke\initiative\proactive_request_loop_smoke.py
+.\.venv\Scripts\python.exe tests\smoke\desktop\xinyu_desktop_proactive_smoke.py
+.\.venv\Scripts\python.exe tests\smoke\qq\integration\xinyu_qq_gateway_smoke.py
 ```
 
-## 学习资料库
-
-学习资料库在：
-
-```text
-learning/
-  self_found/
-  owner_supplied/
-```
-
-常用命令：
+语法检查：
 
 ```powershell
-python xinyu_learning_library.py init
-python xinyu_learning_library.py url "https://example.com/paper.pdf" --origin owner_supplied --reason "owner 要求学习这篇论文"
-python xinyu_learning_library.py github "https://github.com/user/repo" --origin owner_supplied --reason "学习这个插件结构"
-python xinyu_learning_library.py add "D:\path\to\file-or-folder" --origin owner_supplied --reason "owner 手动放入的资料"
-python xinyu_learning_library.py list
-python xinyu_learning_library.py stage --id learn-...
+python -m py_compile xinyu_core_bridge.py xinyu_qq_gateway.py xinyu_status.py xinyu_local_inspector.py
 ```
 
-`owner_supplied` 会作为 curated material 进入学习管道；`self_found` 默认需要比较或审查，不能直接冒充已经学会。
+## 研究与公开材料
 
-## 运维文档
+- `INTERACTIVITY-RESEARCH.md`：项目研究问题、证据和限制。
+- `ARCHITECTURE.md`：当前架构与干预 API 图。
+- `TRACE-SCHEMA.md`：可公开 trace 字段说明。
+- `FAILURE-SCENARIOS.md` / `failure-scenarios/`：脱敏 failure scenario 包。
+- `LOCAL-INSPECTOR-DEMO.md`：截图/演示边界。
+- `GRANT-PROGRESS-REPORT-TEMPLATE.md`：研究进度报告模板。
+- `MEMORY-LAYERS.md` / `PRIVACY-BOUNDARY.md`：记忆与隐私边界。
+- `EXPRESSION-STABILITY.md`：表达稳定性回归边界。
 
-- `DEPLOYMENT-STATUS-RUNBOOK.md` - 当前原生 QQ 链路部署说明
-- `RUNBOOK.md` - 启动、状态检查、链路恢复
-- `LEARNING-LIBRARY.md` - 学习资料库和下载 / stage 流程
-- `STATE-OF-XINYU.md` - 当前工程状态
-- `VALIDATION-INDEX.md` - 验证地图
-- `CHANGELOG-XINYU.md` - 演进记录
-- `FAILURE-MODES.md` - 已知失败模式
-- `CURRENT-REFACTOR-PLAN.md` - 当前结构重构计划与验收顺序
+## 本地私有状态
+
+这些路径是本地运行状态，不应上传公开仓库：
+
+- `xinyu.local.env`
+- `xinyu_qq_gateway.config.json`
+- `logs/`
+- `memory/`
+- `runtime/`
+- `learning/self_found/`
+- `learning/owner_supplied/`
+
+公开报告、截图和 trace 示例必须避免包含原始 owner 聊天、完整 QQ ID、token、cookie、API key 和本地绝对路径。

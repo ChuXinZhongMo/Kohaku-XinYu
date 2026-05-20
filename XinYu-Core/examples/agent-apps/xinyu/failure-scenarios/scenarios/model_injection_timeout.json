@@ -1,0 +1,37 @@
+{
+  "id": "model_injection_timeout",
+  "title": "Model event injection times out",
+  "input_payload": {
+    "platform": "qq",
+    "message_type": "private_text",
+    "session_id": "scenario:owner-private",
+    "user_id": "scenario-owner",
+    "text": "测试模型注入超时",
+    "metadata": {
+      "is_owner_user": true
+    }
+  },
+  "expected_trace_stages": [
+    "model_inject_started",
+    "model_inject_timeout"
+  ],
+  "expected_health_state": {
+    "operator.route_stage": "model_inject_timeout",
+    "operator.last_timeout_reason": "turn_timeout"
+  },
+  "expected_visible_behavior": {
+    "accepted": false,
+    "reply_non_empty": false,
+    "status": "gateway_timeout"
+  },
+  "expected_memory_impact": {
+    "runtime_trace": "allowed",
+    "dialogue_tail": "forbidden",
+    "approved_long_term_memory": "forbidden"
+  },
+  "recovery_action": {
+    "kind": "cancel_or_retry",
+    "operator_action": "POST /turn/cancel or POST /turn/retry-lightweight with force"
+  },
+  "privacy_notes": "Synthetic timeout scenario."
+}

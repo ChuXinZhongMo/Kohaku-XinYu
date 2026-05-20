@@ -1,0 +1,42 @@
+{
+  "id": "owner_private_greeting_fast_route",
+  "title": "Owner private greeting uses semantic fast route",
+  "input_payload": {
+    "platform": "qq",
+    "message_type": "private_text",
+    "session_id": "scenario:owner-private",
+    "user_id": "scenario-owner",
+    "text": "晚上好",
+    "metadata": {
+      "is_owner_user": true
+    }
+  },
+  "expected_trace_stages": [
+    "turn_started",
+    "semantic_fast_probe_started",
+    "semantic_fast_probe_finished",
+    "route_decided",
+    "semantic_fast_session_started",
+    "semantic_fast_session_finished",
+    "route_finished"
+  ],
+  "expected_health_state": {
+    "operator.route": "owner_private_semantic_fast",
+    "operator.route_status": "ok"
+  },
+  "expected_visible_behavior": {
+    "accepted": true,
+    "reply_non_empty": true,
+    "must_not_contain": ["在。", "模板", "v1"]
+  },
+  "expected_memory_impact": {
+    "runtime_trace": "allowed",
+    "dialogue_tail": "allowed",
+    "approved_long_term_memory": "forbidden"
+  },
+  "recovery_action": {
+    "kind": "none",
+    "operator_action": "no recovery needed"
+  },
+  "privacy_notes": "Uses scenario ids and a generic greeting only."
+}
