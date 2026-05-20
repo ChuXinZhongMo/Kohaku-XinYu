@@ -64,6 +64,7 @@ BRIDGE_TIMEOUT_OWNER_REPLY = (
     "\u6211\u8fd9\u8fb9\u5361\u4f4f\u4e86\uff0c\u521a\u624d\u90a3\u53e5\u6536\u5230\uff0c"
     "\u4f46\u6838\u5fc3\u56de\u590d\u8d85\u65f6\u3002\u7b49\u6211\u6062\u590d\u518d\u63a5\u3002"
 )
+CORE_CHAT_RETRY_DELAY_SECONDS = 1.0
 
 
 class NativeQQGateway:
@@ -568,6 +569,57 @@ class NativeQQGateway:
             return ""
         return BRIDGE_TIMEOUT_OWNER_REPLY
 
+    @staticmethod
+    def _is_retryable_core_chat_connection_error(error: str) -> bool:
+        lowered = error.lower()
+        if "core bridge connection failed" not in lowered and "remotedisconnected" not in lowered:
+            return False
+        return any(
+            marker in lowered
+            for marker in (
+                "winerror 10053",
+                "winerror 10054",
+                "winerror 10061",
+                "connection reset",
+                "connection aborted",
+                "connection refused",
+                "forcibly closed",
+                "remote end closed",
+                "remote disconnected",
+                "remotedisconnected",
+                "actively refused",
+            )
+        )
+
+    async def _sleep_before_core_chat_retry(self) -> None:
+        await asyncio.sleep(CORE_CHAT_RETRY_DELAY_SECONDS)
+
+    async def _chat_with_core_retry(
+        self,
+        payload: dict[str, Any],
+        *,
+        prepared: PreparedMessage,
+        event: dict[str, Any],
+        metadata: dict[str, Any],
+    ) -> dict[str, Any]:
+        try:
+            return await self.client.chat(payload)
+        except BridgeError as exc:
+            error = str(exc)
+            if not self._is_retryable_core_chat_connection_error(error):
+                raise
+            self._trace_qq_inbound(
+                event,
+                stage="core_chat_retry_after_connection_reset",
+                arrival_seq=_as_int(metadata.get("qq_arrival_seq"), 0),
+                prepared=prepared,
+                session_queue_key=_safe_str(metadata.get("qq_session_queue_hash")),
+                drop_reason="core_bridge_connection_reset_retry",
+                error=f"BridgeError: {exc}",
+            )
+            await self._sleep_before_core_chat_retry()
+            return await self.client.chat(payload)
+
     def _trace_qq_inbound(
         self,
         event: dict[str, Any],
@@ -777,7 +829,12 @@ class NativeQQGateway:
                         PreparedMessage(target=prepared.target, payload=followup_payload, route="chat"),
                         stage="attachment_followup",
                     )
-                    response = await self.client.chat(followup_payload)
+                    response = await self._chat_with_core_retry(
+                        followup_payload,
+                        prepared=prepared,
+                        event=event_for_trace,
+                        metadata=metadata,
+                    )
             elif prepared.route == "sticker_import":
                 if not self.config.bridge_token:
                     await self.send_reply(
@@ -849,7 +906,12 @@ class NativeQQGateway:
                         PreparedMessage(target=prepared.target, payload=followup_payload, route="chat"),
                         stage="sticker_followup_after_import",
                     )
-                    response = await self.client.chat(followup_payload)
+                    response = await self._chat_with_core_retry(
+                        followup_payload,
+                        prepared=prepared,
+                        event=event_for_trace,
+                        metadata=metadata,
+                    )
             elif prepared.route == "package_install":
                 if not self.config.bridge_token:
                     await self.send_reply(
@@ -896,7 +958,12 @@ class NativeQQGateway:
                     await self.send_reply(websocket, prepared.target, self._goldmark_result_reply(response))
                 return
             else:
-                response = await self.client.chat(prepared.payload)
+                response = await self._chat_with_core_retry(
+                    prepared.payload,
+                    prepared=prepared,
+                    event=event_for_trace,
+                    metadata=metadata,
+                )
         except BridgeError as exc:
             print(f"[xinyu_qq_gateway] core bridge error: {exc}", flush=True)
             bridge_timed_out = self._is_bridge_request_timeout_error(str(exc))

@@ -13,6 +13,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from xinyu_image_context import _image_data_uri, build_image_context
+import xinyu_qq_core_client
 from xinyu_qq_core_client import BridgeError
 import xinyu_qq_reply_bubbles
 import xinyu_qq_server
@@ -51,6 +52,38 @@ def main() -> int:
     assert gateway.client.sticker_import_url.endswith("/sticker/import")
     assert gateway.client.review_inbox_command_url.endswith("/review/inbox/command")
     assert NativeQQGateway._install_signal_handlers is xinyu_qq_server.install_signal_handlers
+
+    class ResettingCoreOpener:
+        def open(self, request, timeout):
+            raise ConnectionResetError(10054, "connection reset by peer")
+
+    old_opener = xinyu_qq_core_client.NO_PROXY_OPENER
+    try:
+        xinyu_qq_core_client.NO_PROXY_OPENER = ResettingCoreOpener()
+        reset_client = xinyu_qq_core_client.CoreBridgeClient(
+            chat_url="http://127.0.0.1:8765/chat",
+            codex_execute_url="",
+            learning_ingest_url="",
+            sticker_import_url="",
+            package_install_url="",
+            review_inbox_command_url="",
+            goldmark_mark_url="",
+            qq_outbox_claim_url="",
+            qq_outbox_ack_url="",
+            message_ack_url="",
+            token="",
+            timeout_seconds=1,
+            gateway_version="smoke",
+        )
+        try:
+            reset_client._post_json(reset_client.chat_url, {"text": "hi"})
+        except BridgeError as exc:
+            assert "core bridge connection failed" in str(exc)
+            assert "10054" in str(exc)
+        else:
+            raise AssertionError("ConnectionResetError should be normalized to BridgeError")
+    finally:
+        xinyu_qq_core_client.NO_PROXY_OPENER = old_opener
 
     with _smoke_dir(".qq_gateway_trusted_config_smoke_runtime") as tmp:
         config_path = tmp / "gateway.config.json"
@@ -715,6 +748,67 @@ def main() -> int:
         assert any(item["stage"] == "bridge_timeout_fallback_sent" for item in timeout_gateway.traces)
 
     asyncio.run(_bridge_timeout_fallback_smoke())
+
+    class RetryAfterConnectionResetClient:
+        def __init__(self):
+            self.calls = []
+
+        async def chat(self, payload):
+            self.calls.append(payload)
+            if len(self.calls) == 1:
+                raise BridgeError("core bridge connection failed: [WinError 10054] connection reset")
+            return {"accepted": True, "reply": "\u6211\u5728\u3002", "route": "chat"}
+
+    class RetryAfterConnectionResetGateway(NativeQQGateway):
+        def __init__(self):
+            super().__init__(
+                GatewayConfig(
+                    bridge_token="",
+                    whitelist_user_ids=frozenset({"42"}),
+                    owner_user_ids=frozenset({"42"}),
+                    owner_private_coalesce_seconds=0.0,
+                    show_bridge_errors=False,
+                )
+            )
+            self.client = RetryAfterConnectionResetClient()
+            self.replies = []
+            self.traces = []
+
+        async def _sleep_before_core_chat_retry(self):
+            return None
+
+        async def send_reply(self, websocket, target, text):
+            self.replies.append(text)
+            return {"status": "ok", "retcode": 0, "data": {"message_id": 4500 + len(self.replies)}}
+
+        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error=""):
+            self.traces.append({"stage": stage, "drop_reason": drop_reason, "error": error})
+
+    async def _bridge_connection_reset_retry_smoke():
+        retry_gateway = RetryAfterConnectionResetGateway()
+        await retry_gateway._dispatch_prepared_message(
+            None,
+            PreparedMessage(
+                target=ReplyTarget(message_kind="private", user_id="42", group_id=""),
+                payload={
+                    "text": "收到消息吗",
+                    "message_id": "bridge-reset-retry-smoke",
+                    "session_id": "qq:private:42",
+                    "metadata": {
+                        "source": "onebot_message_event",
+                        "message_type": "private",
+                        "is_owner_user": True,
+                    },
+                },
+                route="chat",
+            ),
+        )
+        assert len(retry_gateway.client.calls) == 2
+        assert retry_gateway.replies == ["\u6211\u5728\u3002"]
+        assert any(item["stage"] == "core_chat_retry_after_connection_reset" for item in retry_gateway.traces)
+        assert not any(item["stage"] == "dispatch_error" for item in retry_gateway.traces)
+
+    asyncio.run(_bridge_connection_reset_retry_smoke())
 
     class OrderedInboundGateway(NativeQQGateway):
         def __init__(self):

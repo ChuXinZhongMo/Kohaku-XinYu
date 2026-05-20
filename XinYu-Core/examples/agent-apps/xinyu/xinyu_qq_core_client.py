@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import http.client
 import json
 import urllib.error
 import urllib.request
@@ -109,6 +110,15 @@ class CoreBridgeClient:
             raise BridgeError(f"core bridge connection failed: {exc.reason}") from exc
         except TimeoutError as exc:
             raise BridgeError("core bridge request timed out") from exc
+        except (
+            ConnectionResetError,
+            ConnectionAbortedError,
+            BrokenPipeError,
+            http.client.RemoteDisconnected,
+        ) as exc:
+            raise BridgeError(f"core bridge connection failed: {exc}") from exc
+        except OSError as exc:
+            raise BridgeError(f"core bridge connection failed: {exc}") from exc
         if status < 200 or status >= 300:
             raise BridgeError(f"core bridge HTTP {status}: {response_body[:300]}")
         try:
