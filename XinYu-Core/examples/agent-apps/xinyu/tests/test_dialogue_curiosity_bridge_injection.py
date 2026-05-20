@@ -1291,7 +1291,7 @@ def test_owner_private_relationship_pressure_stays_out_of_semantic_fast_route(tm
     assert "relationship_pressure" in decision["intents"]
 
 
-def test_owner_private_greeting_semantic_fast_route_renders_not_v1_template(tmp_path) -> None:
+def test_owner_private_greeting_semantic_fast_route_uses_direct_reply_not_renderer(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     payload = {
         "message_type": "private_text",
@@ -1333,9 +1333,10 @@ def test_owner_private_greeting_semantic_fast_route_renders_not_v1_template(tmp_
     assert response is not None
     assert response["reply"] == "\u665a\u4e0a\u597d\u3002"
     assert response["semantic_fast"]["intents"] == ["greeting"]
+    assert response["semantic_fast"]["renderer"] == "direct"
     assert "owner_private_semantic_fast_intercepted" in response["notes"]
     assert "semantic_fast_intents:greeting" in response["notes"]
-    assert render_calls == [{"user_text": "\u665a\u4e0a\u597d", "draft_reply": ""}]
+    assert render_calls == []
     assert published and published[0]["reply"] == "\u665a\u4e0a\u597d\u3002"
     assert "\u5728\u3002" not in response["reply"]
     tail = load_dialogue_tail(runtime.xinyu_dir, session.key, max_entries=4)
@@ -1407,8 +1408,9 @@ def test_owner_private_greeting_chat_replay_intercepts_before_full_live_event(tm
     assert response["reply"] == "\u665a\u4e0a\u597d\u3002"
     assert response["semantic_fast"]["route"] == "fast_path"
     assert response["semantic_fast"]["intents"] == ["greeting"]
+    assert response["semantic_fast"]["renderer"] == "direct"
     assert "owner_private_semantic_fast_intercepted" in response["notes"]
-    assert render_calls == [{"user_text": "\u665a\u4e0a\u597d", "draft_reply": ""}]
+    assert render_calls == []
     assert published_started
     assert published_finished and published_finished[0]["reply"] == "\u665a\u4e0a\u597d\u3002"
     assert "\u5728\u3002" not in response["reply"]

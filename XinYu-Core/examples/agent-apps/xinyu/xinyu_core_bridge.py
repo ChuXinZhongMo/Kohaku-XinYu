@@ -2042,7 +2042,7 @@ class XinYuBridgeRuntime:
         payload: dict[str, Any],
         *,
         text: str,
-        session: AgentSession,
+        session: AgentSession | None,
         session_key: str,
         turn_id: str,
         turn_started_wall: str,
@@ -4687,6 +4687,29 @@ tags: [autonomy, maintenance, runtime]
                         notes=[f"desktop_publish_error:{type(exc).__name__}"],
                     )
                 try:
+                    if semantic_fast_decision.get("direct_reply"):
+                        trace_route_stage("semantic_fast_direct_started", route="owner_private_semantic_fast")
+                        semantic_fast_response = await self._maybe_handle_owner_private_semantic_fast_turn(
+                            payload,
+                            text=text,
+                            session=None,
+                            session_key=session_key,
+                            turn_id=turn_id,
+                            turn_started_wall=turn_started_wall,
+                            turn_started_at=turn_started_at,
+                            before_memory=None,
+                            cleanup=cleanup,
+                            event_sidecar={"notes": ["event_sourcing_deferred_for_semantic_fast"]},
+                            decision=semantic_fast_decision,
+                            record_decision_stage=False,
+                        )
+                        if semantic_fast_response is not None:
+                            return semantic_fast_response
+                        trace_route_stage(
+                            "semantic_fast_direct_finished",
+                            route="owner_private_semantic_fast",
+                            status="empty_or_blocked",
+                        )
                     trace_route_stage("semantic_fast_session_started", route="owner_private_semantic_fast")
                     session = await self._get_session(session_key)
                     trace_route_stage("semantic_fast_session_finished", route="owner_private_semantic_fast", status="ok")
@@ -5215,6 +5238,21 @@ tags: [autonomy, maintenance, runtime]
             if visible_dedupe.changed:
                 reply = visible_dedupe.text
                 self._replace_last_assistant_message(session.agent, reply)
+            stale_context_reply_replaced = False
+            if (
+                self._owner_private_payload_matches(payload)
+                and not self_code_task
+                and not model_codex_task
+                and not direct_codex_task
+                and not wait_to_think_task
+                and xinyu_bridge_semantic_fast_routes.reply_looks_like_stale_plan_residue(reply)
+            ):
+                repair_reply = xinyu_bridge_semantic_fast_routes.owner_private_direct_repair_reply(self, text)
+                if repair_reply:
+                    reply = _normalize_reply(repair_reply)
+                    stale_context_reply_replaced = True
+                    final_guard_flags = _dedupe(final_guard_flags + ["stale_context_reply_replaced"])
+                    self._replace_last_assistant_message(session.agent, reply)
             life_reply_adjustment: dict[str, Any] = {"notes": []}
             if not self_code_task and not model_codex_task and not direct_codex_task and not wait_to_think_task:
                 life_reply_adjustment = apply_life_reply_policy(reply, policy=life_reply_policy, user_text=text)
@@ -5372,6 +5410,8 @@ tags: [autonomy, maintenance, runtime]
                 notes.append("final_reply_guard_flags:" + ",".join(final_guard_flags[:3]))
             if final_guard_applied:
                 notes.append("final_reply_guard_applied")
+            if stale_context_reply_replaced:
+                notes.append("stale_context_reply_replaced")
             notes.extend(visible_dedupe.notes)
             if residue_written:
                 notes.append("persona_surface_residue_updated")

@@ -64,6 +64,12 @@ STALE_CONTEXT_KEYWORDS = (
     "\u5f53\u524d\u8fd9\u53e5",
     "\u521a\u624d\u8bf4\u7684",
     "\u4f60\u6ca1\u770b\u5f53\u524d",
+    "\u4f60\u5728\u8bf4\u4ec0\u4e48",
+    "\u7b54\u975e\u6240\u95ee",
+    "\u4ec0\u4e48\u60c5\u51b5",
+    "\u6ca1\u53cd\u5e94",
+    "\u600e\u4e48\u8fd9\u4e48\u4e45",
+    "\u8fd9\u4e48\u4e45\u624d\u56de",
     "current message",
     "stale context",
 )

@@ -13,7 +13,115 @@ from xinyu_turn_route_trace import record_turn_route_stage
 from xinyu_visible_reply_guard import dedupe_visible_reply
 
 
-SEMANTIC_FAST_ALLOWED_INTENTS = frozenset({"greeting", "ack"})
+SEMANTIC_FAST_ALLOWED_INTENTS = frozenset(
+    {"greeting", "ack", "reply_quality_complaint", "runtime_status_question"}
+)
+
+_REPLY_QUALITY_COMPLAINT_MARKERS = (
+    "\u4f60\u5728\u8bf4\u4ec0\u4e48",
+    "\u7b54\u975e\u6240\u95ee",
+    "\u4ec0\u4e48\u60c5\u51b5",
+    "\u6ca1\u53cd\u5e94",
+    "\u4e0d\u56de\u8bdd",
+    "\u4e0d\u56de\u6d88\u606f",
+    "\u600e\u4e48\u8fd9\u4e48\u4e45",
+    "\u8fd9\u4e48\u4e45\u624d\u56de",
+    "\u4f60\u5728\u5e72\u561b",
+    "what are you talking about",
+    "why so slow",
+)
+_RUNTIME_STATUS_MARKERS = (
+    "\u540e\u53f0\u5728\u8dd1",
+    "\u540e\u53f0\u8dd1",
+    "\u5728\u8dd1\u4ec0\u4e48",
+    "\u8dd1\u4ec0\u4e48\u4e1c\u897f",
+    "what is running",
+)
+_CONFUSION_ONLY_MARKERS = ("??", "???", "????", "\uff1f\uff1f", "\uff1f\uff1f\uff1f", "\uff1f\uff1f\uff1f\uff1f")
+_STALE_PLAN_REPLY_MARKERS = (
+    "\u5148\u628a\u8303\u56f4\u538b\u5c0f",
+    "\u672c\u5730\u53ef\u8fd0\u884c",
+    "\u53ef\u56de\u6eda",
+    "\u6700\u5c0f\u53ef\u8fd0\u884c",
+    "\u4e3b\u94fe\u8def",
+    "shadow",
+)
+
+
+def _compact_text(text: str) -> str:
+    return "".join(text.split())
+
+
+def _contains_any(text: str, markers: tuple[str, ...]) -> bool:
+    lowered = text.lower()
+    return any(marker.lower() in lowered for marker in markers)
+
+
+def _repair_intents_for_text(text: str) -> tuple[str, ...]:
+    compact = _compact_text(text)
+    if not compact:
+        return ()
+    intents: list[str] = []
+    if _contains_any(compact, _RUNTIME_STATUS_MARKERS):
+        intents.append("runtime_status_question")
+    if _contains_any(compact, _REPLY_QUALITY_COMPLAINT_MARKERS) or compact in _CONFUSION_ONLY_MARKERS:
+        intents.append("reply_quality_complaint")
+    return tuple(intents)
+
+
+def owner_private_direct_repair_reply(runtime: Any, text: str, intents: tuple[str, ...] | None = None) -> str:
+    del runtime
+    detected = tuple(intents or _repair_intents_for_text(text))
+    if "runtime_status_question" in detected:
+        return (
+            "\u540e\u53f0\u5728\u5904\u7406\u5f53\u524d\u8fd9\u6761\u79c1\u804a\uff1b"
+            "\u521a\u624d\u6162\u662f core \u8d70\u4e86\u6162\u94fe\u8def\uff0c"
+            "\u4e0d\u662f QQ \u6ca1\u6536\u5230\u3002"
+        )
+    if "reply_quality_complaint" in detected:
+        if _contains_any(
+            _compact_text(text),
+            ("\u600e\u4e48\u8fd9\u4e48\u4e45", "\u8fd9\u4e48\u4e45\u624d\u56de", "why so slow"),
+        ):
+            return (
+                "\u4e0d\u662f\u6ca1\u6536\u5230\uff0c"
+                "\u662f\u521a\u624d\u90a3\u8f6e\u8fdb\u4e86\u6162\u94fe\u8def\uff1b"
+                "\u8fd9\u53e5\u6211\u5148\u6309\u4f60\u5f53\u524d\u95ee\u9898\u56de\u3002"
+            )
+        return (
+            "\u521a\u624d\u90a3\u53e5\u63a5\u9519\u4e86\uff0c"
+            "\u662f\u65e7\u4e0a\u4e0b\u6587\u4e32\u8fdb\u6765\u4e86\uff1b"
+            "\u8fd9\u53e5\u6211\u6309\u4f60\u5f53\u524d\u95ee\u9898\u6765\u3002"
+        )
+    return ""
+
+
+def reply_looks_like_stale_plan_residue(reply: str) -> bool:
+    compact = _compact_text(reply)
+    if not compact:
+        return False
+    hits = sum(1 for marker in _STALE_PLAN_REPLY_MARKERS if marker.lower() in compact.lower())
+    return hits >= 2
+
+
+def _direct_greeting_ack_reply(text: str, intents: tuple[str, ...]) -> str:
+    compact = _compact_text(text)
+    lowered = compact.lower()
+    if any(marker in compact for marker in ("\u4e2d\u5348\u597d",)):
+        return "\u4e2d\u5348\u597d\u3002"
+    if any(marker in compact for marker in ("\u4e0b\u5348\u597d",)):
+        return "\u4e0b\u5348\u597d\u3002"
+    if any(marker in compact for marker in ("\u665a\u4e0a\u597d",)):
+        return "\u665a\u4e0a\u597d\u3002"
+    if any(marker in compact for marker in ("\u65e9\u4e0a\u597d", "\u65e9\u5b89", "\u65e9")):
+        return "\u65e9\u3002"
+    if any(marker in compact for marker in ("\u665a\u5b89",)):
+        return "\u665a\u5b89\u3002"
+    if any(marker in compact for marker in ("\u4f60\u597d", "\u5728\u5417")) or lowered in {"hi", "hello", "hey"}:
+        return "\u5728\u3002"
+    if "greeting" in intents:
+        return "\u5728\u3002"
+    return "\u55ef\u3002"
 
 
 def _safe_str(value: Any, default: str = "") -> str:
@@ -66,6 +174,18 @@ def owner_private_semantic_fast_decision(runtime: Any, payload: dict[str, Any], 
         return {"allowed": False, "notes": ["empty_text"]}
     if "\n" in raw_text or "\r" in raw_text:
         return {"allowed": False, "notes": ["multiline_text"]}
+
+    repair_intents = _repair_intents_for_text(raw_text)
+    if repair_intents and len(compact) <= 64:
+        reply = owner_private_direct_repair_reply(runtime, raw_text, repair_intents)
+        return {
+            "allowed": True,
+            "route": "fast_path",
+            "intents": repair_intents,
+            "reasons": ("owner_private_live_repair",),
+            "direct_reply": reply,
+            "notes": ["semantic_fast_allowed", f"semantic_fast_intents:{','.join(repair_intents)}"],
+        }
     if len(compact) > 20:
         return {"allowed": False, "notes": ["text_too_long_for_semantic_fast_route"]}
 
@@ -89,11 +209,13 @@ def owner_private_semantic_fast_decision(runtime: Any, payload: dict[str, Any], 
         and not classification.needs_model
         and not classification.needs_memory
     ):
+        reply = _direct_greeting_ack_reply(raw_text, intents)
         return {
             "allowed": True,
             "route": route,
             "intents": intents,
             "reasons": tuple(_safe_str(reason) for reason in decision.reasons),
+            "direct_reply": reply,
             "notes": ["semantic_fast_allowed", f"semantic_fast_intents:{','.join(intents)}"],
         }
     return {
@@ -110,7 +232,7 @@ async def handle_owner_private_semantic_fast_turn(
     payload: dict[str, Any],
     *,
     text: str,
-    session: Any,
+    session: Any | None,
     session_key: str,
     turn_id: str,
     turn_started_wall: str,
@@ -142,21 +264,27 @@ async def handle_owner_private_semantic_fast_turn(
             notes=[_safe_str(note) for note in decision.get("notes", [])[:4]],
         )
 
-    try:
-        rendered = await runtime._render_outward_reply(
-            session.agent,
-            payload=payload,
-            user_text=text,
-            draft_reply="",
-            canonical_recall_context="",
-        )
-    except Exception as exc:
-        print(f"[xinyu_core_bridge] semantic fast renderer failed: {type(exc).__name__}: {exc}", flush=True)
-        return None
-
-    reply = _safe_str(rendered).strip()
+    renderer_name = "direct"
+    reply = _safe_str(decision.get("direct_reply")).strip()
     if not reply:
-        return None
+        if session is None:
+            return None
+        renderer_name = "outward_reply"
+        try:
+            rendered = await runtime._render_outward_reply(
+                session.agent,
+                payload=payload,
+                user_text=text,
+                draft_reply="",
+                canonical_recall_context="",
+            )
+        except Exception as exc:
+            print(f"[xinyu_core_bridge] semantic fast renderer failed: {type(exc).__name__}: {exc}", flush=True)
+            return None
+
+        reply = _safe_str(rendered).strip()
+        if not reply:
+            return None
 
     guarded_reply, guard_flags = runtime.speech_controller.final_reply_guard(
         payload=payload,
@@ -171,14 +299,15 @@ async def handle_owner_private_semantic_fast_turn(
     if not reply:
         return None
 
-    try:
-        runtime._replace_last_assistant_message(session.agent, reply)
-    except Exception:
-        pass
-    try:
-        runtime._append_dialogue_tail(session, user_text=text, reply=reply, payload=payload)
-    except Exception as exc:
-        print(f"[xinyu_core_bridge] semantic fast dialogue tail failed: {type(exc).__name__}: {exc}", flush=True)
+    if session is not None:
+        try:
+            runtime._replace_last_assistant_message(session.agent, reply)
+        except Exception:
+            pass
+        try:
+            runtime._append_dialogue_tail(session, user_text=text, reply=reply, payload=payload)
+        except Exception as exc:
+            print(f"[xinyu_core_bridge] semantic fast dialogue tail failed: {type(exc).__name__}: {exc}", flush=True)
 
     elapsed_ms = int((time.perf_counter() - started) * 1000)
     total_elapsed_ms = int((time.perf_counter() - turn_started_at) * 1000)
@@ -190,6 +319,8 @@ async def handle_owner_private_semantic_fast_turn(
     ]
     if intents:
         notes.append(f"semantic_fast_intents:{','.join(intents)}")
+    if renderer_name == "direct":
+        notes.append("semantic_fast_direct_reply")
     notes.extend(_safe_str(note) for note in decision.get("notes", [])[:3])
     notes.extend(_safe_str(note) for note in event_sidecar.get("notes", [])[:3])
     if guard_flags:
@@ -252,11 +383,11 @@ async def handle_owner_private_semantic_fast_turn(
         "archive_message_ids": [],
         "archive_assistant_message_id": "",
         "semantic_fast": {
-            "scope": "owner_private_greeting_ack",
+            "scope": "owner_private_direct_fast",
             "route": _safe_str(decision.get("route"), "fast_path"),
             "intents": list(intents),
             "elapsed_ms": elapsed_ms,
-            "renderer": "outward_reply",
+            "renderer": renderer_name,
         },
         "notes": notes,
     }

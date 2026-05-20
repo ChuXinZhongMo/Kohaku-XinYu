@@ -25,6 +25,12 @@ def test_greeting_containing_ack_marker_stays_greeting_only() -> None:
     assert decision.classification.intents == ("greeting",)
 
 
+def test_noon_greeting_stays_greeting_not_ack() -> None:
+    decision = HybridRouter().decide(_turn("\u4e2d\u5348\u597d"))
+    assert decision.route is RouteName.FAST_PATH
+    assert decision.classification.intents == ("greeting",)
+
+
 def test_relationship_pressure_routes_slow_path() -> None:
     decision = HybridRouter().decide(_turn("你刚才那样我有点失望"))
     assert decision.route is RouteName.SLOW_PATH
