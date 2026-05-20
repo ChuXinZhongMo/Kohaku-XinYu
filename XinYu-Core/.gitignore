@@ -84,6 +84,7 @@ memory/
 runtime/
 examples/agent-apps/xinyu/xinyu.local.env
 examples/agent-apps/xinyu/xinyu_qq_gateway.config.json
+examples/agent-apps/xinyu/config/external_plugins.json
 examples/agent-apps/xinyu/logs/
 examples/agent-apps/xinyu/memory/
 examples/agent-apps/xinyu/runtime/
