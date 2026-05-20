@@ -136,3 +136,9 @@ def test_stale_plan_residue_detector_and_repair_reply() -> None:
     assert reply_looks_like_stale_plan_residue(stale_reply) is True
     assert reply_looks_like_stale_plan_residue("\u4e0d\u662f\u6ca1\u6536\u5230\u3002") is False
     assert owner_private_direct_repair_reply(object(), "\uff1f\uff1f\uff1f")
+    sleep_repair = owner_private_direct_repair_reply(
+        object(),
+        "\u611f\u89c9\u4f60\u4eca\u5929\u6ca1\u4ec0\u4e48\u7cbe\u795e\uff0c\u6211\u5c31\u4e0d\u5435\u4f60\u4e86\uff0c\u65e9\u70b9\u7761\u3002",
+    )
+    assert "\u4e3b\u94fe\u8def" not in sleep_repair
+    assert "\u65e9\u70b9\u7761" in sleep_repair

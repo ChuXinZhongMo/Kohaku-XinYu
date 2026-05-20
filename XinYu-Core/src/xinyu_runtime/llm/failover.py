@@ -192,6 +192,13 @@ class TinyKernelVisibleFailover:
         try:
             response = await asyncio.to_thread(self._post_fn, endpoint, payload, _timeout_seconds())
             reply = _visible_reply_from_tinykernel(response, context)
+            replacement_reason = _failover_replacement_reason(reply, response, context)
+            if replacement_reason:
+                local_reply = _local_owner_private_failover_reply(context)
+                if local_reply:
+                    response = _response_with_note(response, replacement_reason)
+                    response["reply_candidate"] = local_reply
+                    reply = local_reply
             if not reply:
                 error = "empty_tinykernel_reply"
                 raise primary_error
@@ -249,6 +256,107 @@ def _visible_reply_from_tinykernel(response: dict[str, Any], context: dict[str, 
         max_chars = 240
     max_chars = max(1, min(1000, max_chars))
     return reply[:max_chars]
+
+
+def _failover_replacement_reason(reply: str, response: dict[str, Any], context: dict[str, Any]) -> str:
+    if not reply:
+        return ""
+    user_text = str(context.get("user_text") or "")
+    if _looks_like_stale_plan_reply(reply) and not _looks_like_technical_user_text(user_text):
+        return "tinykernel_stale_plan_reply_replaced"
+    if _looks_like_bare_ack(reply) and (_looks_like_late_sleep_text(user_text) or _looks_like_question(user_text)):
+        return "tinykernel_bare_ack_replaced"
+    notes = response.get("notes") if isinstance(response.get("notes"), list) else []
+    if "default_reply" in {str(note) for note in notes} and not _looks_like_technical_user_text(user_text):
+        return "tinykernel_default_reply_replaced"
+    return ""
+
+
+def _response_with_note(response: dict[str, Any], note: str) -> dict[str, Any]:
+    updated = dict(response)
+    notes = updated.get("notes") if isinstance(updated.get("notes"), list) else []
+    updated["notes"] = [*notes, note]
+    return updated
+
+
+def _looks_like_stale_plan_reply(reply: str) -> bool:
+    compact = "".join(str(reply or "").split()).lower()
+    if not compact:
+        return False
+    markers = (
+        "先把范围压小",
+        "本地可运行",
+        "可回滚",
+        "最小可运行",
+        "最小可验证",
+        "主链路",
+        "shadow",
+        "工具",
+        "代码",
+        "项目",
+    )
+    return sum(1 for marker in markers if marker.lower() in compact) >= 2
+
+
+def _looks_like_technical_user_text(text: str) -> bool:
+    compact = "".join(str(text or "").split()).lower()
+    if not compact:
+        return False
+    markers = (
+        "codex",
+        "api",
+        "bug",
+        "项目",
+        "代码",
+        "日志",
+        "测试",
+        "修",
+        "改",
+        "部署",
+        "接口",
+        "主链路",
+        "模型",
+        "内核",
+        "路由",
+        "仓库",
+        "文件",
+    )
+    return any(marker.lower() in compact for marker in markers)
+
+
+def _looks_like_bare_ack(reply: str) -> bool:
+    compact = "".join(str(reply or "").split())
+    return compact in {"嗯", "嗯。", "嗯嗯", "嗯嗯。", "好", "好。"}
+
+
+def _looks_like_late_sleep_text(text: str) -> bool:
+    compact = "".join(str(text or "").split())
+    markers = ("困", "睡", "凌晨", "晚安", "休息", "不吵", "没精神", "累")
+    return any(marker in compact for marker in markers)
+
+
+def _looks_like_question(text: str) -> bool:
+    return "?" in str(text or "") or "？" in str(text or "")
+
+
+def _local_owner_private_failover_reply(context: dict[str, Any]) -> str:
+    text = str(context.get("user_text") or "")
+    compact = "".join(text.split())
+    if not compact:
+        return "我在。"
+    if any(marker in compact for marker in ("不吵", "早点睡", "早睡", "休息")):
+        return "嗯，我收住。你也早点睡。"
+    if any(marker in compact for marker in ("凌晨", "太晚", "很晚")):
+        return "嗯，太晚了。你先睡。"
+    if any(marker in compact for marker in ("困", "睡", "累", "没精神")):
+        if _looks_like_question(text):
+            return "有点。你也早点睡。"
+        return "嗯，先不硬聊了。"
+    if _looks_like_question(text):
+        return "我这边有点卡，先短一点。"
+    if len(compact) <= 8:
+        return "嗯，我在。"
+    return "我这边有点卡，先短一点。"
 
 
 def _record_failover_trace(

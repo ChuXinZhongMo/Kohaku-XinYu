@@ -115,6 +115,40 @@ def _tinykernel_post(endpoint: str, payload: dict[str, object], timeout_seconds:
     }
 
 
+def _tinykernel_stale_plan_post(endpoint: str, payload: dict[str, object], timeout_seconds: float) -> dict[str, object]:
+    return {
+        "ok": True,
+        "mode": "reply",
+        "reply_candidate": "我明白。先按最小可运行版本推进，不直接动主链路。",
+        "confidence": 0.62,
+        "notes": ["compose_shadow", "shadow_only", "compose_fallback_persona"],
+    }
+
+
+def _tinykernel_bare_ack_post(endpoint: str, payload: dict[str, object], timeout_seconds: float) -> dict[str, object]:
+    return {
+        "ok": True,
+        "mode": "reply",
+        "reply_candidate": "嗯。",
+        "confidence": 0.62,
+        "notes": ["compose_shadow", "shadow_only", "compose_fallback_persona"],
+    }
+
+
+def _tinykernel_default_reply_post(
+    endpoint: str,
+    payload: dict[str, object],
+    timeout_seconds: float,
+) -> dict[str, object]:
+    return {
+        "ok": True,
+        "mode": "reply",
+        "reply_candidate": "我明白。",
+        "confidence": 0.55,
+        "notes": ["compose_shadow", "default_reply"],
+    }
+
+
 async def test_visible_failover_returns_local_reply_and_records_trace(tmp_path: Path) -> None:
     provider = wrap_llm_with_visible_failover(_FailingPrimaryLLM())
     provider._failover = TinyKernelVisibleFailover(post_fn=_tinykernel_post)
@@ -148,6 +182,141 @@ async def test_visible_failover_returns_local_reply_and_records_trace(tmp_path: 
     assert trace_path.exists()
     trace_text = trace_path.read_text(encoding="utf-8")
     assert "今晚我有点累" not in trace_text
+
+
+async def test_visible_failover_replaces_stale_project_reply_for_life_chat(tmp_path: Path) -> None:
+    provider = wrap_llm_with_visible_failover(_FailingPrimaryLLM())
+    provider._failover = TinyKernelVisibleFailover(post_fn=_tinykernel_stale_plan_post)
+
+    controller = Controller(
+        provider,
+        ControllerConfig(
+            system_prompt="You are a helpful assistant.",
+            include_job_status=False,
+            include_tools_list=False,
+            max_messages=8,
+            tool_format="bracket",
+        ),
+    )
+    user_text = "感觉你今天没什么精神，我就不吵你了，早点睡。"
+    event = TriggerEvent(
+        type=EventType.USER_INPUT,
+        content=user_text,
+        context={"llm_failover": _failover_context(tmp_path, text=user_text)},
+    )
+    await controller.push_event(event)
+
+    chunks: list[str] = []
+    async for parse_event in controller.run_once():
+        if isinstance(parse_event, TextEvent):
+            chunks.append(parse_event.text)
+
+    reply = "".join(chunks)
+    assert "主链路" not in reply
+    assert "最小可运行" not in reply
+    assert "早点睡" in reply
+    trace_text = (tmp_path / "runtime/tinykernel_failover_trace.jsonl").read_text(encoding="utf-8")
+    assert "tinykernel_stale_plan_reply_replaced" in trace_text
+
+
+async def test_visible_failover_keeps_project_reply_for_technical_chat(tmp_path: Path) -> None:
+    provider = wrap_llm_with_visible_failover(_FailingPrimaryLLM())
+    provider._failover = TinyKernelVisibleFailover(post_fn=_tinykernel_stale_plan_post)
+
+    controller = Controller(
+        provider,
+        ControllerConfig(
+            system_prompt="You are a helpful assistant.",
+            include_job_status=False,
+            include_tools_list=False,
+            max_messages=8,
+            tool_format="bracket",
+        ),
+    )
+    user_text = "继续修主链路代码"
+    event = TriggerEvent(
+        type=EventType.USER_INPUT,
+        content=user_text,
+        context={"llm_failover": _failover_context(tmp_path, text=user_text)},
+    )
+    await controller.push_event(event)
+
+    chunks: list[str] = []
+    async for parse_event in controller.run_once():
+        if isinstance(parse_event, TextEvent):
+            chunks.append(parse_event.text)
+
+    reply = "".join(chunks)
+    assert "主链路" in reply
+    assert "最小可运行" in reply
+    trace_text = (tmp_path / "runtime/tinykernel_failover_trace.jsonl").read_text(encoding="utf-8")
+    assert "tinykernel_stale_plan_reply_replaced" not in trace_text
+
+
+async def test_visible_failover_replaces_bare_ack_for_sleep_question(tmp_path: Path) -> None:
+    provider = wrap_llm_with_visible_failover(_FailingPrimaryLLM())
+    provider._failover = TinyKernelVisibleFailover(post_fn=_tinykernel_bare_ack_post)
+
+    controller = Controller(
+        provider,
+        ControllerConfig(
+            system_prompt="You are a helpful assistant.",
+            include_job_status=False,
+            include_tools_list=False,
+            max_messages=8,
+            tool_format="bracket",
+        ),
+    )
+    user_text = "困了？"
+    event = TriggerEvent(
+        type=EventType.USER_INPUT,
+        content=user_text,
+        context={"llm_failover": _failover_context(tmp_path, text=user_text)},
+    )
+    await controller.push_event(event)
+
+    chunks: list[str] = []
+    async for parse_event in controller.run_once():
+        if isinstance(parse_event, TextEvent):
+            chunks.append(parse_event.text)
+
+    reply = "".join(chunks)
+    assert reply != "嗯。"
+    assert "早点睡" in reply
+
+
+async def test_visible_failover_replaces_default_reply_for_life_chat(tmp_path: Path) -> None:
+    provider = wrap_llm_with_visible_failover(_FailingPrimaryLLM())
+    provider._failover = TinyKernelVisibleFailover(post_fn=_tinykernel_default_reply_post)
+
+    controller = Controller(
+        provider,
+        ControllerConfig(
+            system_prompt="You are a helpful assistant.",
+            include_job_status=False,
+            include_tools_list=False,
+            max_messages=8,
+            tool_format="bracket",
+        ),
+    )
+    user_text = "今晚我有点累"
+    event = TriggerEvent(
+        type=EventType.USER_INPUT,
+        content=user_text,
+        context={"llm_failover": _failover_context(tmp_path, text=user_text)},
+    )
+    await controller.push_event(event)
+
+    chunks: list[str] = []
+    async for parse_event in controller.run_once():
+        if isinstance(parse_event, TextEvent):
+            chunks.append(parse_event.text)
+
+    reply = "".join(chunks)
+    assert reply != "我明白。"
+    assert "先不硬聊" in reply
+    trace_text = (tmp_path / "runtime/tinykernel_failover_trace.jsonl").read_text(encoding="utf-8")
+    assert "tinykernel_default_reply_replaced" in trace_text
 
 
 async def test_visible_failover_recovers_from_quota_limit(tmp_path: Path) -> None:

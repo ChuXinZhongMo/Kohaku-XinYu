@@ -93,7 +93,26 @@ def owner_private_direct_repair_reply(runtime: Any, text: str, intents: tuple[st
             "\u662f\u65e7\u4e0a\u4e0b\u6587\u4e32\u8fdb\u6765\u4e86\uff1b"
             "\u8fd9\u53e5\u6211\u6309\u4f60\u5f53\u524d\u95ee\u9898\u6765\u3002"
         )
-    return ""
+    return _ordinary_private_repair_reply(text)
+
+
+def _ordinary_private_repair_reply(text: str) -> str:
+    compact = _compact_text(text)
+    if not compact:
+        return "\u6211\u5728\u3002"
+    if any(marker in compact for marker in ("\u4e0d\u5435", "\u65e9\u70b9\u7761", "\u65e9\u7761", "\u4f11\u606f")):
+        return "\u55ef\uff0c\u6211\u6536\u4f4f\u3002\u4f60\u4e5f\u65e9\u70b9\u7761\u3002"
+    if any(marker in compact for marker in ("\u51cc\u6668", "\u592a\u665a", "\u5f88\u665a")):
+        return "\u55ef\uff0c\u592a\u665a\u4e86\u3002\u4f60\u5148\u7761\u3002"
+    if any(marker in compact for marker in ("\u56f0", "\u7761", "\u7d2f", "\u6ca1\u7cbe\u795e")):
+        if "?" in text or "\uff1f" in text:
+            return "\u6709\u70b9\u3002\u4f60\u4e5f\u65e9\u70b9\u7761\u3002"
+        return "\u55ef\uff0c\u5148\u4e0d\u786c\u804a\u4e86\u3002"
+    if "?" in text or "\uff1f" in text:
+        return "\u8fd9\u53e5\u6211\u521a\u624d\u63a5\u9519\u4e86\u3002\u4f60\u518d\u95ee\u4e00\u904d\uff0c\u6211\u6309\u73b0\u5728\u8fd9\u53e5\u6765\u3002"
+    if len(compact) <= 8:
+        return "\u55ef\uff0c\u6211\u5728\u3002"
+    return "\u8fd9\u53e5\u6211\u521a\u624d\u4e32\u5230\u65e7\u8bed\u5883\u4e86\u3002\u6211\u5148\u6536\u56de\u6765\u3002"
 
 
 def reply_looks_like_stale_plan_residue(reply: str) -> bool:
