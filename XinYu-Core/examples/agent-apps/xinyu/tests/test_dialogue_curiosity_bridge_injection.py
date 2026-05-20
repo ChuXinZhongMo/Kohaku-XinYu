@@ -1272,6 +1272,24 @@ def test_owner_private_greeting_semantic_fast_decision_uses_v1_classifier(tmp_pa
     assert decision["intents"] == ("greeting",)
 
 
+def test_owner_private_state_question_semantic_fast_decision_uses_direct_persona_reply(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    payload = {
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "metadata": {"is_owner_user": True},
+    }
+
+    decision = runtime._owner_private_semantic_fast_decision(payload, "\u72b6\u6001\u5982\u4f55\uff0c\u4e2b\u5934")
+
+    assert decision["allowed"] is True
+    assert decision["route"] == "fast_path"
+    assert decision["intents"] == ("owner_state_question",)
+    assert decision["direct_reply"] == "\u8fd8\u5728\u3002\u521a\u624d\u6709\u70b9\u5361\uff0c\u7f13\u8fc7\u6765\u4e86\u3002"
+    assert "owner_state_question_fast_persona_reply" in decision["notes"]
+
+
 def test_owner_private_relationship_pressure_stays_out_of_semantic_fast_route(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     payload = {

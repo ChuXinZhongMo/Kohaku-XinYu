@@ -91,18 +91,20 @@ def test_owner_private_semantic_fast_decision_rejects_shape_before_v1() -> None:
     }
 
 
-def test_owner_private_semantic_fast_decision_defers_short_state_question_before_ack() -> None:
+def test_owner_private_semantic_fast_decision_allows_short_state_question_before_ack() -> None:
     runtime = FakeRuntime(decision=_decision(route="fast_path", intents=["ack"]))
 
     result = owner_private_semantic_fast_decision(
         runtime,
         {"message_type": "private_text", "metadata": {"is_owner_user": True}},
-        "还好吗",
+        "\u8fd8\u597d\u5417",
     )
 
-    assert result["allowed"] is False
-    assert "owner_state_question_needs_live_model" in result["notes"]
-    assert "semantic_fast_not_low_risk" in result["notes"]
+    assert result["allowed"] is True
+    assert result["route"] == "fast_path"
+    assert result["intents"] == ("owner_state_question",)
+    assert result["direct_reply"] == "\u8fd8\u5728\u3002\u521a\u624d\u6709\u70b9\u5361\uff0c\u7f13\u8fc7\u6765\u4e86\u3002"
+    assert "owner_state_question_fast_persona_reply" in result["notes"]
 
 
 def test_owner_private_semantic_fast_decision_directly_handles_current_reply_complaint() -> None:

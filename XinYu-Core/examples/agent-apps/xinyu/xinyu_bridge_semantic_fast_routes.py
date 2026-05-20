@@ -14,7 +14,7 @@ from xinyu_visible_reply_guard import dedupe_visible_reply
 
 
 SEMANTIC_FAST_ALLOWED_INTENTS = frozenset(
-    {"greeting", "ack", "reply_quality_complaint", "runtime_status_question"}
+    {"greeting", "ack", "reply_quality_complaint", "runtime_status_question", "owner_state_question"}
 )
 
 _REPLY_QUALITY_COMPLAINT_MARKERS = (
@@ -35,18 +35,30 @@ _RUNTIME_STATUS_MARKERS = (
     "\u540e\u53f0\u8dd1",
     "\u5728\u8dd1\u4ec0\u4e48",
     "\u8dd1\u4ec0\u4e48\u4e1c\u897f",
+    "\u8fd0\u884c\u72b6\u6001",
+    "core \u72b6\u6001",
+    "core\u72b6\u6001",
+    "qq \u72b6\u6001",
+    "qq\u72b6\u6001",
+    "napcat \u72b6\u6001",
+    "napcat\u72b6\u6001",
+    "\u67e5\u4e00\u4e0b\u72b6\u6001",
+    "/status",
     "what is running",
 )
 _OWNER_STATE_QUESTION_MARKERS = (
     "\u8fd8\u597d\u5417",
     "\u8fd8\u597d\u4e48",
     "\u8fd8\u597d\u561b",
+    "\u4f60\u600e\u4e48\u6837",
     "\u611f\u89c9\u600e\u4e48\u6837",
     "\u611f\u89c9\u5982\u4f55",
+    "\u72b6\u6001\u600e\u4e48\u6837",
     "\u72b6\u6001\u5982\u4f55",
     "\u4ec0\u4e48\u72b6\u6001",
     "\u4f60\u73b0\u5728\u4ec0\u4e48\u72b6\u6001",
 )
+_OWNER_STATE_FAST_MAX_CHARS = 24
 _CONFUSION_ONLY_MARKERS = ("??", "???", "????", "\uff1f\uff1f", "\uff1f\uff1f\uff1f", "\uff1f\uff1f\uff1f\uff1f")
 _STALE_PLAN_REPLY_MARKERS = (
     "\u5148\u628a\u8303\u56f4\u538b\u5c0f",
@@ -84,6 +96,11 @@ def _looks_like_owner_state_question(text: str) -> bool:
     if not compact:
         return False
     return any(marker in compact for marker in _OWNER_STATE_QUESTION_MARKERS)
+
+
+def owner_private_direct_state_reply(runtime: Any, text: str) -> str:
+    del runtime, text
+    return "\u8fd8\u5728\u3002\u521a\u624d\u6709\u70b9\u5361\uff0c\u7f13\u8fc7\u6765\u4e86\u3002"
 
 
 def owner_private_direct_repair_reply(runtime: Any, text: str, intents: tuple[str, ...] | None = None) -> str:
@@ -223,6 +240,19 @@ def owner_private_semantic_fast_decision(runtime: Any, payload: dict[str, Any], 
             "notes": ["semantic_fast_allowed", f"semantic_fast_intents:{','.join(repair_intents)}"],
         }
     if _looks_like_owner_state_question(raw_text):
+        if len(compact) <= _OWNER_STATE_FAST_MAX_CHARS:
+            return {
+                "allowed": True,
+                "route": "fast_path",
+                "intents": ("owner_state_question",),
+                "reasons": ("owner_private_state_question_fast_reply",),
+                "direct_reply": owner_private_direct_state_reply(runtime, raw_text),
+                "notes": [
+                    "semantic_fast_allowed",
+                    "semantic_fast_intents:owner_state_question",
+                    "owner_state_question_fast_persona_reply",
+                ],
+            }
         return {
             "allowed": False,
             "notes": ["owner_state_question_needs_live_model", "semantic_fast_not_low_risk"],

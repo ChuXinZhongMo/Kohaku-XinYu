@@ -103,22 +103,30 @@ def test_runtime_status_requests_keep_runtime_status_context(tmp_path: Path) -> 
         assert "goldmark_auth" in blocked
 
 
-def test_semantic_fast_keeps_greetings_direct_but_defers_personal_state() -> None:
+def test_semantic_fast_keeps_greetings_and_short_personal_state_direct() -> None:
     greeting = owner_private_semantic_fast_decision(
         FakeRuntime(decision=_decision(route="fast_path", intents=["greeting"])),
         OWNER_PAYLOAD,
-        "晚上好",
+        "\u665a\u4e0a\u597d",
     )
-    personal_state = owner_private_semantic_fast_decision(
+    short_personal_state = owner_private_semantic_fast_decision(
         FakeRuntime(decision=_decision(route="slow_path", intents=["ordinary_chat"], needs_model=True)),
         OWNER_PAYLOAD,
-        "现在感觉如何",
+        "\u73b0\u5728\u611f\u89c9\u5982\u4f55",
+    )
+    complex_personal_state = owner_private_semantic_fast_decision(
+        FakeRuntime(decision=_decision(route="slow_path", intents=["ordinary_chat"], needs_model=True)),
+        OWNER_PAYLOAD,
+        "\u4f60\u521a\u624d\u6c89\u9ed8\u4e86\u4e00\u4f1a\u513f\uff0c\u73b0\u5728\u611f\u89c9\u5982\u4f55\uff0c\u662f\u4e0d\u662f\u60c5\u7eea\u6709\u70b9\u4e71",
     )
 
     assert greeting["allowed"] is True
-    assert greeting["direct_reply"] == "晚上好。"
-    assert personal_state["allowed"] is False
-    assert "semantic_fast_not_low_risk" in personal_state["notes"]
+    assert greeting["direct_reply"] == "\u665a\u4e0a\u597d\u3002"
+    assert short_personal_state["allowed"] is True
+    assert short_personal_state["intents"] == ("owner_state_question",)
+    assert "owner_state_question_fast_persona_reply" in short_personal_state["notes"]
+    assert complex_personal_state["allowed"] is False
+    assert "semantic_fast_not_low_risk" in complex_personal_state["notes"]
 
 
 def test_visible_reply_guard_handles_recent_short_loop_without_flattening() -> None:
