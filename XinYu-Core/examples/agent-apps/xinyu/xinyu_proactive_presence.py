@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 from xinyu_text_variants import readable_markers
+from xinyu_proactive_lifecycle_trace import append_proactive_lifecycle_event
 
 
 def read_text(path: Path) -> str:
@@ -275,7 +276,7 @@ def _request_preview_candidate(proactive_request: str) -> dict[str, str]:
     question = extract_value(proactive_request, "concrete_question", "none")
     requested_action = extract_value(proactive_request, "requested_action", "none")
 
-    if status in {"claimed", "sent", "answered", "failed"}:
+    if status in {"claimed", "sent", "answered"}:
         return {
             "candidate": "none",
             "shape": f"request_status_{status}",
@@ -286,7 +287,7 @@ def _request_preview_candidate(proactive_request: str) -> dict[str, str]:
             "kind": kind,
             "source": source,
         }
-    if status not in {"candidate_only", "ready"}:
+    if status not in {"candidate_only", "ready", "failed"}:
         return {
             "candidate": "none",
             "shape": f"request_status_{status}",
@@ -298,7 +299,7 @@ def _request_preview_candidate(proactive_request: str) -> dict[str, str]:
             "source": source,
         }
     delivery_preview = delivery_level in {"state_only", "preview_only"}
-    delivery_claimable = status == "ready" and delivery_level in {"queue_owner_private", "claim_ack"}
+    delivery_claimable = status in {"ready", "failed"} and delivery_level in {"queue_owner_private", "claim_ack"}
     if not delivery_preview and not delivery_claimable:
         return {
             "candidate": "none",
@@ -350,8 +351,14 @@ def _request_preview_candidate(proactive_request: str) -> dict[str, str]:
         }
     return {
         "candidate": candidate,
-        "shape": "proactive_request_claimable" if delivery_claimable else "proactive_request_preview",
-        "reason": f"proactive_request_{delivery_level}_{'ready' if delivery_claimable else 'preview'}",
+        "shape": (
+            "proactive_request_retryable"
+            if status == "failed" and delivery_claimable
+            else "proactive_request_claimable"
+            if delivery_claimable
+            else "proactive_request_preview"
+        ),
+        "reason": f"proactive_request_{delivery_level}_{'retryable' if status == 'failed' and delivery_claimable else 'ready' if delivery_claimable else 'preview'}",
         "status": status,
         "delivery_level": delivery_level,
         "request_id": request_id,
@@ -706,6 +713,16 @@ def claim_proactive_qq_message(
     )
     if not ready:
         notes.append(f"not_ready:{result['proactive_decision']}")
+        append_proactive_lifecycle_event(
+            root,
+            event_kind="proactive_claim_not_ready",
+            event_time=evaluated_at,
+            request_state=read_text(_request_state_path(root)),
+            dispatch_state=read_text(_dispatch_state_path(root)),
+            request_id=str(result.get("proactive_request_id") or ""),
+            claim_id=claim_id,
+            notes=notes,
+        )
         response = {
             **result,
             "accepted": True,
@@ -730,6 +747,16 @@ def claim_proactive_qq_message(
     )
     if hold_reason:
         notes.append(hold_reason)
+        append_proactive_lifecycle_event(
+            root,
+            event_kind="proactive_claim_blocked",
+            event_time=evaluated_at,
+            request_state=read_text(_request_state_path(root)),
+            dispatch_state=dispatch_state,
+            request_id=request_id,
+            claim_id=claim_id,
+            notes=notes,
+        )
         return {
             **result,
             "accepted": True,
@@ -758,9 +785,29 @@ def claim_proactive_qq_message(
         ):
             notes.append("proactive_request_marked_claimed")
         notes.append("candidate_claimed")
+        append_proactive_lifecycle_event(
+            root,
+            event_kind="proactive_candidate_claimed",
+            event_time=evaluated_at,
+            request_state=read_text(_request_state_path(root)),
+            dispatch_state=read_text(_dispatch_state_path(root)),
+            request_id=request_id,
+            claim_id=claim_id,
+            notes=notes,
+        )
         reply = candidate
     else:
         notes.append("preview_only")
+        append_proactive_lifecycle_event(
+            root,
+            event_kind="proactive_candidate_previewed",
+            event_time=evaluated_at,
+            request_state=read_text(_request_state_path(root)),
+            dispatch_state=dispatch_state,
+            request_id=request_id,
+            claim_id=claim_id,
+            notes=notes,
+        )
         reply = ""
 
     return {
@@ -788,6 +835,17 @@ def acknowledge_proactive_qq_message(
     notes = ["no_agent_turn", "no_session_created"]
 
     if ack_status not in {"sent", "failed"}:
+        append_proactive_lifecycle_event(
+            root,
+            event_kind="proactive_ack_rejected",
+            event_time=acked_at,
+            request_state=read_text(_request_state_path(root)),
+            dispatch_state=read_text(_dispatch_state_path(root)),
+            claim_id=claim_id,
+            ack_status=ack_status,
+            adapter_status="invalid_ack_status",
+            notes=notes + ["invalid_ack_status"],
+        )
         return {
             "accepted": False,
             "ack_recorded": False,
@@ -799,6 +857,17 @@ def acknowledge_proactive_qq_message(
     state = read_text(_dispatch_state_path(root))
     last_claim_id = extract_value(state, "last_claim_id", "")
     if not state or last_claim_id in {"", "none", "unknown"}:
+        append_proactive_lifecycle_event(
+            root,
+            event_kind="proactive_ack_rejected",
+            event_time=acked_at,
+            request_state=read_text(_request_state_path(root)),
+            dispatch_state=state,
+            claim_id=claim_id,
+            ack_status=ack_status,
+            adapter_status="no_claim_to_ack",
+            notes=notes + ["no_claim_to_ack"],
+        )
         return {
             "accepted": True,
             "ack_recorded": False,
@@ -807,6 +876,17 @@ def acknowledge_proactive_qq_message(
             "notes": notes + ["no_claim_to_ack"],
         }
     if claim_id and last_claim_id != claim_id:
+        append_proactive_lifecycle_event(
+            root,
+            event_kind="proactive_ack_rejected",
+            event_time=acked_at,
+            request_state=read_text(_request_state_path(root)),
+            dispatch_state=state,
+            claim_id=claim_id,
+            ack_status=ack_status,
+            adapter_status="claim_id_mismatch",
+            notes=notes + ["claim_id_mismatch"],
+        )
         return {
             "accepted": True,
             "ack_recorded": False,
@@ -835,6 +915,17 @@ def acknowledge_proactive_qq_message(
         adapter_message_id=adapter_message_id,
         adapter_error=adapter_error,
         updated_at=_timestamp_or_now_iso(acked_at),
+    )
+    append_proactive_lifecycle_event(
+        root,
+        event_kind="proactive_ack_recorded",
+        event_time=acked_at,
+        request_state=read_text(_request_state_path(root)),
+        dispatch_state=read_text(_dispatch_state_path(root)),
+        claim_id=last_claim_id,
+        ack_status=ack_status,
+        adapter_status="recorded",
+        notes=notes + ["ack_recorded"] + (["proactive_request_delivery_updated"] if request_updated else []),
     )
     return {
         "accepted": True,

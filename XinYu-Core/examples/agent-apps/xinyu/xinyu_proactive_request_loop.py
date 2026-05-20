@@ -282,6 +282,11 @@ def _candidate_from_self_thought(
         "intention": intention,
         "evidence_label": evidence_label,
         "evidence_hash": evidence_hash,
+        "reason": _reason_for(focus_kind, intention, evidence_label),
+        "urgency": _urgency_for(focus_kind, intention),
+        "risk": _risk_for(focus_kind, intention),
+        "owner_relevance": _owner_relevance_for(requested_action, evidence_label),
+        "channel": "owner_private",
         "request_family": request_family,
         "thread_id": thread_id,
         "conversation_mode": "threaded",
@@ -292,6 +297,7 @@ def _candidate_from_self_thought(
         "dedupe_key": dedupe_key,
         "cooldown_seconds": DEFAULT_COOLDOWN_SECONDS,
         "expires_at": _expires_at(evaluated_at, expires_seconds),
+        "expiration": _expires_at(evaluated_at, expires_seconds),
         "delivery_level": "none",
         "max_chars": message_limit,
         "initial_message_budget": DEFAULT_INITIAL_MESSAGE_BUDGET,
@@ -462,6 +468,11 @@ tags: [proactive, request, owner-private, boundary]
 - focus_kind: {_one_line(request['focus_kind'])}
 - focus_label: {_one_line(request['focus_label'])}
 - priority: {_one_line(request['priority'])}
+- reason: {_one_line(request['reason'])}
+- urgency: {_one_line(request['urgency'])}
+- risk: {_one_line(request['risk'])}
+- owner_relevance: {_one_line(request['owner_relevance'])}
+- channel: {_one_line(request['channel'])}
 - request_family: {_one_line(request['request_family'])}
 - thread_id: {_one_line(request['thread_id'])}
 - conversation_mode: {_one_line(request['conversation_mode'])}
@@ -474,6 +485,7 @@ tags: [proactive, request, owner-private, boundary]
 - dedupe_key: {_one_line(request['dedupe_key'])}
 - cooldown_seconds: {int(request['cooldown_seconds'])}
 - expires_at: {_one_line(request['expires_at'])}
+- expiration: {_one_line(request['expiration'])}
 
 ## Conversation Budget
 - initial_message_budget: {int(request['initial_message_budget'])}
@@ -531,13 +543,21 @@ tags: [proactive, request, owner-private, boundary]
 
 def _append_trace(root: Path, request: dict[str, Any]) -> None:
     payload = {
+        "event_kind": "proactive_request_evaluated",
         "request_id": request["request_id"],
         "created_at": _timestamp_or_now_iso(request["created_at"]),
+        "event_time": _timestamp_or_now_iso(request["created_at"]),
         "status": request["status"],
         "kind": request["kind"],
         "source": request["source"],
         "focus_kind": request["focus_kind"],
         "evidence_hash": request["evidence_hash"],
+        "reason": request.get("reason", "unknown"),
+        "urgency": request.get("urgency", "unknown"),
+        "risk": request.get("risk", "unknown"),
+        "owner_relevance": request.get("owner_relevance", "unknown"),
+        "channel": request.get("channel", "unknown"),
+        "expiration": request.get("expiration", request.get("expires_at", "unknown")),
         "delivery_level": request["delivery_level"],
         "notes": request["notes"],
     }
@@ -686,6 +706,40 @@ def _priority_for(focus_kind: str, intention: str) -> str:
     if intention in {"report_completion", "repair_input"}:
         return "normal"
     return "low"
+
+
+def _reason_for(focus_kind: str, intention: str, evidence_label: str) -> str:
+    if focus_kind in {"", "none", "unknown"} or intention in {"", "none", "unknown"}:
+        return "no_valid_proactive_reason"
+    if evidence_label not in {"", "none", "unknown"}:
+        return _one_line(f"{intention}:{focus_kind}:{evidence_label}", limit=180)
+    return _one_line(f"{intention}:{focus_kind}", limit=180)
+
+
+def _urgency_for(focus_kind: str, intention: str) -> str:
+    if focus_kind in {"runtime_issue", "codex_followup"} and intention in {"diagnostic_decision", "repair_input"}:
+        return "high"
+    if intention in {"report_completion", "repair_input", "request_permission"}:
+        return "normal"
+    return "low"
+
+
+def _risk_for(focus_kind: str, intention: str) -> str:
+    if focus_kind == "runtime_issue":
+        return "medium_runtime_context"
+    if intention in {"share_dream", "share_reflection"}:
+        return "low_subjective_context"
+    if intention == "request_permission":
+        return "medium_permission_boundary"
+    return "low_owner_private"
+
+
+def _owner_relevance_for(requested_action: str, evidence_label: str) -> str:
+    if requested_action in OWNER_REQUESTED_ACTIONS:
+        return f"owner_action:{requested_action}"
+    if evidence_label not in {"", "none", "unknown"}:
+        return "owner_context_evidence_present"
+    return "weak_owner_relevance"
 
 
 def _memory_feedback_target(focus_kind: str, intention: str) -> str:
