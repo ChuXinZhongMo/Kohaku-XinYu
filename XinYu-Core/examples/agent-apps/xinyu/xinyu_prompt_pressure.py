@@ -45,13 +45,70 @@ STATUS_REFERENCE_MARKERS = readable_markers(
     "\u72b6\u6001",
     "\u8fd0\u884c",
     "\u5065\u5eb7\u68c0\u67e5",
-    "\u73b0\u5728\u600e\u4e48\u6837",
     "\u662f\u4ec0\u4e48\u72b6\u6001",
     "status",
     "runtime",
     "health",
     "running",
     "bridge",
+)
+STATUS_ACTION_MARKERS = readable_markers(
+    "\u67e5",
+    "\u770b",
+    "\u68c0\u67e5",
+    "\u770b\u770b",
+    "status",
+    "health",
+)
+RUNTIME_STATUS_OBJECT_MARKERS = readable_markers(
+    "\u8fd0\u884c",
+    "\u8fd0\u884c\u72b6\u6001",
+    "\u7cfb\u7edf",
+    "\u7cfb\u7edf\u72b6\u6001",
+    "\u670d\u52a1",
+    "\u670d\u52a1\u72b6\u6001",
+    "\u540e\u53f0",
+    "\u961f\u5217",
+    "\u8fdb\u7a0b",
+    "\u7aef\u53e3",
+    "\u8fde\u63a5",
+    "\u7f51\u5173",
+    "xinyu status",
+    "core",
+    "bridge",
+    "gateway",
+    "qq",
+    "napcat",
+    "runtime",
+    "server",
+    "api",
+)
+RUNTIME_HEALTH_MARKERS = readable_markers(
+    "\u5728\u7ebf",
+    "\u6b63\u5e38",
+    "\u8fde\u4e0a",
+    "\u80fd\u7528",
+    "\u53ef\u7528",
+    "\u901a\u5417",
+    "alive",
+)
+PERSONAL_STATE_REFERENCE_MARKERS = readable_markers(
+    "\u4e2b\u5934",
+    "\u4f60\u73b0\u5728",
+    "\u4f60\u8fd9\u8fb9",
+    "\u4f60\u81ea\u5df1",
+    "\u611f\u89c9",
+    "\u611f\u53d7",
+    "\u5fc3\u60c5",
+    "\u600e\u4e48\u6837",
+    "\u548b\u6837",
+    "\u5982\u4f55",
+    "\u4ec0\u4e48\u72b6\u6001",
+    "\u8fd8\u597d\u5417",
+    "\u8fd8\u597d\u4e48",
+    "\u4f60\u8fd8\u597d",
+    "\u7d2f\u4e0d\u7d2f",
+    "\u56f0\u4e0d\u56f0",
 )
 
 DIGEST_REFERENCE_MARKERS = readable_markers(
@@ -206,7 +263,7 @@ def select_prompt_sidecars(
         for flag in ("attachment_followup_after_ingest", "qq_coalesced_owner_messages")
     )
     context_reference = context_reference or bool(_safe_str(metadata.get("desktop_proactive_candidate_id")).strip())
-    status_reference = _contains_any(user_text, STATUS_REFERENCE_MARKERS)
+    status_reference = _looks_like_runtime_status_reference(user_text)
     digest_reference = _contains_any(user_text, DIGEST_REFERENCE_MARKERS)
 
     quiet_owner_mode = owner_private and turn_kind in OWNER_QUIET_TURN_KINDS and not technical_work
@@ -343,3 +400,31 @@ def _as_bool(value: Any, default: bool = False) -> bool:
 def _contains_any(text: str, markers: tuple[str, ...]) -> bool:
     compact = _safe_str(text).lower()
     return any(marker and marker.lower() in compact for marker in markers)
+
+
+def _compact_text(text: str) -> str:
+    return "".join(_safe_str(text).split()).lower()
+
+
+def _contains_compact_any(compact: str, markers: tuple[str, ...]) -> bool:
+    return any(_compact_text(marker) in compact for marker in markers if marker)
+
+
+def _looks_like_runtime_status_reference(text: str) -> bool:
+    compact = _compact_text(text)
+    if not compact:
+        return False
+    if compact.startswith("/status") or compact in {"status", "\u72b6\u6001"}:
+        return True
+
+    has_status_object = _contains_any(text, STATUS_REFERENCE_MARKERS)
+    has_action = _contains_any(text, STATUS_ACTION_MARKERS)
+    has_runtime_object = _contains_compact_any(compact, RUNTIME_STATUS_OBJECT_MARKERS)
+    has_health_marker = _contains_compact_any(compact, RUNTIME_HEALTH_MARKERS)
+    has_personal_state = _contains_compact_any(compact, PERSONAL_STATE_REFERENCE_MARKERS)
+
+    if has_runtime_object and (has_status_object or has_action or has_health_marker):
+        return True
+    if has_personal_state:
+        return False
+    return has_status_object and has_action
