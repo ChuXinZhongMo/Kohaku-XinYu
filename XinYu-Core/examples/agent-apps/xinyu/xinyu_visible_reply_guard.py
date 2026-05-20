@@ -89,7 +89,12 @@ def _split_sentences(text: str) -> list[str]:
     return sentences
 
 
-def _repeated_prefix_size(keys: list[str]) -> int:
+def _repeated_prefix_size(
+    keys: list[str],
+    *,
+    min_content_len: int = 8,
+    min_multi_unit_content_len: int | None = None,
+) -> int:
     count = len(keys)
     if count < 2:
         return 0
@@ -99,7 +104,10 @@ def _repeated_prefix_size(keys: list[str]) -> int:
         prefix = keys[:size]
         if not all(keys[index : index + size] == prefix for index in range(size, count, size)):
             continue
-        if sum(_content_len(key) for key in prefix) >= 8:
+        threshold = min_content_len
+        if size > 1 and min_multi_unit_content_len is not None:
+            threshold = min_multi_unit_content_len
+        if sum(_content_len(key) for key in prefix) >= threshold:
             return size
     return 0
 
@@ -132,7 +140,7 @@ def _dedupe_duplicate_sentences(text: str) -> tuple[str, bool]:
         return text.strip(), False
 
     keys = [_unit_key(sentence) for sentence in sentences]
-    prefix_size = _repeated_prefix_size(keys)
+    prefix_size = _repeated_prefix_size(keys, min_content_len=6, min_multi_unit_content_len=3)
     if prefix_size:
         return _join_units(sentences[:prefix_size]), True
 

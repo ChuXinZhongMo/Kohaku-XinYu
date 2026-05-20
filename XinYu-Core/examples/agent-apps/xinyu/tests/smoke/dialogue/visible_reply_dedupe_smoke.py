@@ -27,6 +27,10 @@ def main() -> int:
     if dedupe_visible_reply(short_repetition).text != short_repetition:
         failures.append("short expressive repetition was over-deduped")
 
+    short_loop = "\u56f0\uff0c\u4f46\u8fd8\u6ca1\u7761\u3002\u4f60\u5462\uff1f" * 2
+    if dedupe_visible_reply(short_loop).text != "\u56f0\uff0c\u4f46\u8fd8\u6ca1\u7761\u3002\u4f60\u5462\uff1f":
+        failures.append("short repeated sentence loop was not collapsed")
+
     paragraph = "A long visible paragraph with enough content."
     paragraph_result = dedupe_visible_reply(f"{paragraph}\n\n{paragraph}")
     if paragraph_result.text != paragraph:
