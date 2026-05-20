@@ -53,7 +53,7 @@ except ImportError as exc:  # pragma: no cover - exercised by startup scripts
     raise SystemExit("Missing dependency: websockets. Run: python -m pip install -r requirements-minimal.txt") from exc
 
 
-GATEWAY_VERSION = "0.1.24"
+GATEWAY_VERSION = "0.1.25"
 GATEWAY_NAME = "xinyu_native_qq_gateway"
 QQ_INBOUND_TRACE_REL = Path("runtime") / "qq_inbound_trace.jsonl"
 QQ_RICH_CONTEXT_TRACE_REL = Path("runtime") / "qq_rich_context_trace.jsonl"
@@ -63,6 +63,10 @@ SUPPORTED_IMAGE_SUFFIXES = xinyu_qq_attachment_resolver.SUPPORTED_IMAGE_SUFFIXES
 BRIDGE_TIMEOUT_OWNER_REPLY = (
     "\u6211\u8fd9\u8fb9\u5361\u4f4f\u4e86\uff0c\u521a\u624d\u90a3\u53e5\u6536\u5230\uff0c"
     "\u4f46\u6838\u5fc3\u56de\u590d\u8d85\u65f6\u3002\u7b49\u6211\u6062\u590d\u518d\u63a5\u3002"
+)
+BRIDGE_UNAVAILABLE_OWNER_REPLY = (
+    "\u6211\u6536\u5230\u4e86\uff0c\u4f46\u521a\u624d\u8fd9\u8fb9\u91cd\u542f\u65ad\u5f00\u4e86\uff0c"
+    "\u90a3\u6761\u6ca1\u8dd1\u5b8c\u3002\u4f60\u518d\u53d1\u4e00\u6b21\uff0c\u6211\u73b0\u5728\u63a5\u3002"
 )
 CORE_CHAT_RETRY_DELAY_SECONDS = 1.0
 
@@ -569,6 +573,15 @@ class NativeQQGateway:
             return ""
         return BRIDGE_TIMEOUT_OWNER_REPLY
 
+    def _bridge_unavailable_fallback_reply(self, prepared: PreparedMessage) -> str:
+        if prepared.route != "chat":
+            return ""
+        if prepared.target.message_kind != "private":
+            return ""
+        if prepared.target.user_id not in self.config.owner_user_ids:
+            return ""
+        return BRIDGE_UNAVAILABLE_OWNER_REPLY
+
     @staticmethod
     def _is_retryable_core_chat_connection_error(error: str) -> bool:
         lowered = error.lower()
@@ -590,6 +603,10 @@ class NativeQQGateway:
                 "actively refused",
             )
         )
+
+    @staticmethod
+    def _is_bridge_connection_unavailable_error(error: str) -> bool:
+        return NativeQQGateway._is_retryable_core_chat_connection_error(error)
 
     async def _sleep_before_core_chat_retry(self) -> None:
         await asyncio.sleep(CORE_CHAT_RETRY_DELAY_SECONDS)
@@ -966,9 +983,26 @@ class NativeQQGateway:
                 )
         except BridgeError as exc:
             print(f"[xinyu_qq_gateway] core bridge error: {exc}", flush=True)
-            bridge_timed_out = self._is_bridge_request_timeout_error(str(exc))
-            timeout_fallback = self._bridge_timeout_fallback_reply(prepared) if bridge_timed_out else ""
-            drop_reason = "bridge_request_timeout" if bridge_timed_out else ""
+            error_text = str(exc)
+            bridge_timed_out = self._is_bridge_request_timeout_error(error_text)
+            bridge_unavailable = (
+                not bridge_timed_out and self._is_bridge_connection_unavailable_error(error_text)
+            )
+            fallback_reply = ""
+            fallback_stage = ""
+            if bridge_timed_out:
+                fallback_reply = self._bridge_timeout_fallback_reply(prepared)
+                fallback_stage = "bridge_timeout_fallback_sent"
+            elif bridge_unavailable:
+                fallback_reply = self._bridge_unavailable_fallback_reply(prepared)
+                fallback_stage = "bridge_unavailable_fallback_sent"
+            drop_reason = (
+                "bridge_request_timeout"
+                if bridge_timed_out
+                else "core_bridge_connection_unavailable"
+                if bridge_unavailable
+                else ""
+            )
             self._trace_qq_inbound(
                 event_for_trace,
                 stage="dispatch_error",
@@ -978,7 +1012,7 @@ class NativeQQGateway:
                 drop_reason=drop_reason,
                 error=f"BridgeError: {exc}",
             )
-            if timeout_fallback and self.config.send_replies:
+            if fallback_reply and self.config.send_replies:
                 stale, generation_waterline, latest_arrival = self._visible_reply_stale_waterline(prepared)
                 if stale:
                     self._trace_qq_inbound(
@@ -987,13 +1021,16 @@ class NativeQQGateway:
                         arrival_seq=_as_int(metadata.get("qq_arrival_seq"), 0),
                         prepared=prepared,
                         session_queue_key=_safe_str(metadata.get("qq_session_queue_hash")),
-                        drop_reason=f"newer_input_before_timeout_fallback:{generation_waterline}->{latest_arrival}",
+                        drop_reason=(
+                            f"newer_input_before_{fallback_stage}:"
+                            f"{generation_waterline}->{latest_arrival}"
+                        ),
                     )
                     return
-                await self.send_reply(websocket, prepared.target, timeout_fallback)
+                await self.send_reply(websocket, prepared.target, fallback_reply)
                 self._trace_qq_inbound(
                     event_for_trace,
-                    stage="bridge_timeout_fallback_sent",
+                    stage=fallback_stage,
                     arrival_seq=_as_int(metadata.get("qq_arrival_seq"), 0),
                     prepared=prepared,
                     session_queue_key=_safe_str(metadata.get("qq_session_queue_hash")),

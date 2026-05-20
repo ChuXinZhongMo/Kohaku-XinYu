@@ -17,7 +17,13 @@ import xinyu_qq_core_client
 from xinyu_qq_core_client import BridgeError
 import xinyu_qq_reply_bubbles
 import xinyu_qq_server
-from xinyu_qq_gateway import GatewayConfig, NativeQQGateway, PreparedMessage, ReplyTarget
+from xinyu_qq_gateway import (
+    BRIDGE_UNAVAILABLE_OWNER_REPLY,
+    GatewayConfig,
+    NativeQQGateway,
+    PreparedMessage,
+    ReplyTarget,
+)
 
 
 MINIMAL_PNG = base64.b64decode(
@@ -809,6 +815,72 @@ def main() -> int:
         assert not any(item["stage"] == "dispatch_error" for item in retry_gateway.traces)
 
     asyncio.run(_bridge_connection_reset_retry_smoke())
+
+    class RetryThenUnavailableClient:
+        def __init__(self):
+            self.calls = []
+
+        async def chat(self, payload):
+            self.calls.append(payload)
+            if len(self.calls) == 1:
+                raise BridgeError("core bridge connection failed: [WinError 10054] connection reset")
+            raise BridgeError("core bridge connection failed: [WinError 10061] actively refused")
+
+    class RetryThenUnavailableGateway(NativeQQGateway):
+        def __init__(self):
+            super().__init__(
+                GatewayConfig(
+                    bridge_token="",
+                    whitelist_user_ids=frozenset({"42"}),
+                    owner_user_ids=frozenset({"42"}),
+                    owner_private_coalesce_seconds=0.0,
+                    show_bridge_errors=False,
+                )
+            )
+            self.client = RetryThenUnavailableClient()
+            self.replies = []
+            self.traces = []
+
+        async def _sleep_before_core_chat_retry(self):
+            return None
+
+        async def send_reply(self, websocket, target, text):
+            self.replies.append(text)
+            return {"status": "ok", "retcode": 0, "data": {"message_id": 4600 + len(self.replies)}}
+
+        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error=""):
+            self.traces.append({"stage": stage, "drop_reason": drop_reason, "error": error})
+
+    async def _bridge_unavailable_fallback_smoke():
+        unavailable_gateway = RetryThenUnavailableGateway()
+        await unavailable_gateway._dispatch_prepared_message(
+            None,
+            PreparedMessage(
+                target=ReplyTarget(message_kind="private", user_id="42", group_id=""),
+                payload={
+                    "text": "still there?",
+                    "message_id": "bridge-unavailable-smoke",
+                    "session_id": "qq:private:42",
+                    "metadata": {
+                        "source": "onebot_message_event",
+                        "message_type": "private",
+                        "is_owner_user": True,
+                    },
+                },
+                route="chat",
+            ),
+        )
+        assert len(unavailable_gateway.client.calls) == 2
+        assert unavailable_gateway.replies == [BRIDGE_UNAVAILABLE_OWNER_REPLY]
+        assert any(item["stage"] == "core_chat_retry_after_connection_reset" for item in unavailable_gateway.traces)
+        assert any(
+            item["stage"] == "dispatch_error"
+            and item["drop_reason"] == "core_bridge_connection_unavailable"
+            for item in unavailable_gateway.traces
+        )
+        assert any(item["stage"] == "bridge_unavailable_fallback_sent" for item in unavailable_gateway.traces)
+
+    asyncio.run(_bridge_unavailable_fallback_smoke())
 
     class OrderedInboundGateway(NativeQQGateway):
         def __init__(self):
