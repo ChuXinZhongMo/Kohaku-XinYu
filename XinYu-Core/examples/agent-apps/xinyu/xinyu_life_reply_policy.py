@@ -13,6 +13,7 @@ TECHNICAL_RE = re.compile(
 QUESTION_TAIL_RE = re.compile(
     r"(。?\s*(要不要|需不需要|你要是想|如果你想|要我|我可以继续|需要的话).{0,42}[？?]\s*)$"
 )
+BARE_ACK_REPLY_RE = re.compile(r"^嗯+[。.!！]*$")
 
 
 def _safe_str(value: Any, default: str = "") -> str:
@@ -35,6 +36,31 @@ def _band_value(value: str, mapping: dict[str, float], default: float = 0.0) -> 
 
 def _is_technical_turn(user_text: str) -> bool:
     return bool(TECHNICAL_RE.search(user_text or ""))
+
+
+def _compact_text(text: str) -> str:
+    return "".join(_safe_str(text).split())
+
+
+def _looks_like_owner_state_question(text: str) -> bool:
+    compact = _compact_text(text)
+    markers = (
+        "还好吗",
+        "还好么",
+        "还好嘛",
+        "感觉怎么样",
+        "感觉如何",
+        "状态如何",
+        "什么状态",
+        "你现在什么状态",
+    )
+    return any(marker in compact for marker in markers)
+
+
+def _replacement_for_bare_ack_reply(user_text: str) -> str:
+    if _looks_like_owner_state_question(user_text):
+        return "还在。刚才有点卡。"
+    return "我在。"
 
 
 def build_life_reply_policy(
@@ -189,6 +215,10 @@ def apply_life_reply_policy(
     max_sentences = int(policy.get("max_sentences") or (5 if technical else 3))
     mode = _safe_str(policy.get("mode"), "steady")
     next_text = text
+
+    if not technical and BARE_ACK_REPLY_RE.fullmatch(next_text):
+        next_text = _replacement_for_bare_ack_reply(user_text)
+        notes.append("life_reply_bare_ack_replaced")
 
     if suppress_question:
         stripped = QUESTION_TAIL_RE.sub("", next_text).strip()

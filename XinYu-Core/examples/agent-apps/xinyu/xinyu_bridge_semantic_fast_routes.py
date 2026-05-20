@@ -37,6 +37,16 @@ _RUNTIME_STATUS_MARKERS = (
     "\u8dd1\u4ec0\u4e48\u4e1c\u897f",
     "what is running",
 )
+_OWNER_STATE_QUESTION_MARKERS = (
+    "\u8fd8\u597d\u5417",
+    "\u8fd8\u597d\u4e48",
+    "\u8fd8\u597d\u561b",
+    "\u611f\u89c9\u600e\u4e48\u6837",
+    "\u611f\u89c9\u5982\u4f55",
+    "\u72b6\u6001\u5982\u4f55",
+    "\u4ec0\u4e48\u72b6\u6001",
+    "\u4f60\u73b0\u5728\u4ec0\u4e48\u72b6\u6001",
+)
 _CONFUSION_ONLY_MARKERS = ("??", "???", "????", "\uff1f\uff1f", "\uff1f\uff1f\uff1f", "\uff1f\uff1f\uff1f\uff1f")
 _STALE_PLAN_REPLY_MARKERS = (
     "\u5148\u628a\u8303\u56f4\u538b\u5c0f",
@@ -67,6 +77,13 @@ def _repair_intents_for_text(text: str) -> tuple[str, ...]:
     if _contains_any(compact, _REPLY_QUALITY_COMPLAINT_MARKERS) or compact in _CONFUSION_ONLY_MARKERS:
         intents.append("reply_quality_complaint")
     return tuple(intents)
+
+
+def _looks_like_owner_state_question(text: str) -> bool:
+    compact = _compact_text(text)
+    if not compact:
+        return False
+    return any(marker in compact for marker in _OWNER_STATE_QUESTION_MARKERS)
 
 
 def owner_private_direct_repair_reply(runtime: Any, text: str, intents: tuple[str, ...] | None = None) -> str:
@@ -204,6 +221,11 @@ def owner_private_semantic_fast_decision(runtime: Any, payload: dict[str, Any], 
             "reasons": ("owner_private_live_repair",),
             "direct_reply": reply,
             "notes": ["semantic_fast_allowed", f"semantic_fast_intents:{','.join(repair_intents)}"],
+        }
+    if _looks_like_owner_state_question(raw_text):
+        return {
+            "allowed": False,
+            "notes": ["owner_state_question_needs_live_model", "semantic_fast_not_low_risk"],
         }
     if len(compact) > 20:
         return {"allowed": False, "notes": ["text_too_long_for_semantic_fast_route"]}

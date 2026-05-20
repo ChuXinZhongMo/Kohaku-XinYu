@@ -285,6 +285,39 @@ async def test_visible_failover_replaces_bare_ack_for_sleep_question(tmp_path: P
     assert "早点睡" in reply
 
 
+async def test_visible_failover_replaces_bare_ack_for_short_sigh(tmp_path: Path) -> None:
+    provider = wrap_llm_with_visible_failover(_FailingPrimaryLLM())
+    provider._failover = TinyKernelVisibleFailover(post_fn=_tinykernel_bare_ack_post)
+
+    controller = Controller(
+        provider,
+        ControllerConfig(
+            system_prompt="You are a helpful assistant.",
+            include_job_status=False,
+            include_tools_list=False,
+            max_messages=8,
+            tool_format="bracket",
+        ),
+    )
+    user_text = "唉"
+    event = TriggerEvent(
+        type=EventType.USER_INPUT,
+        content=user_text,
+        context={"llm_failover": _failover_context(tmp_path, text=user_text)},
+    )
+    await controller.push_event(event)
+
+    chunks: list[str] = []
+    async for parse_event in controller.run_once():
+        if isinstance(parse_event, TextEvent):
+            chunks.append(parse_event.text)
+
+    reply = "".join(chunks)
+    assert reply == "我在。"
+    trace_text = (tmp_path / "runtime/tinykernel_failover_trace.jsonl").read_text(encoding="utf-8")
+    assert "tinykernel_bare_ack_replaced" in trace_text
+
+
 async def test_visible_failover_replaces_default_reply_for_life_chat(tmp_path: Path) -> None:
     provider = wrap_llm_with_visible_failover(_FailingPrimaryLLM())
     provider._failover = TinyKernelVisibleFailover(post_fn=_tinykernel_default_reply_post)

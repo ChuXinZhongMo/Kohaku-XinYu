@@ -264,7 +264,7 @@ def _failover_replacement_reason(reply: str, response: dict[str, Any], context: 
     user_text = str(context.get("user_text") or "")
     if _looks_like_stale_plan_reply(reply) and not _looks_like_technical_user_text(user_text):
         return "tinykernel_stale_plan_reply_replaced"
-    if _looks_like_bare_ack(reply) and (_looks_like_late_sleep_text(user_text) or _looks_like_question(user_text)):
+    if _looks_like_bare_ack(reply) and not _looks_like_technical_user_text(user_text):
         return "tinykernel_bare_ack_replaced"
     notes = response.get("notes") if isinstance(response.get("notes"), list) else []
     if "default_reply" in {str(note) for note in notes} and not _looks_like_technical_user_text(user_text):
@@ -326,12 +326,28 @@ def _looks_like_technical_user_text(text: str) -> bool:
 
 def _looks_like_bare_ack(reply: str) -> bool:
     compact = "".join(str(reply or "").split())
-    return compact in {"嗯", "嗯。", "嗯嗯", "嗯嗯。", "好", "好。"}
+    normalized = compact.rstrip("。.!！")
+    return bool(normalized) and len(normalized) <= 3 and set(normalized) == {"嗯"}
 
 
 def _looks_like_late_sleep_text(text: str) -> bool:
     compact = "".join(str(text or "").split())
     markers = ("困", "睡", "凌晨", "晚安", "休息", "不吵", "没精神", "累")
+    return any(marker in compact for marker in markers)
+
+
+def _looks_like_owner_state_question(text: str) -> bool:
+    compact = "".join(str(text or "").split())
+    markers = (
+        "还好吗",
+        "还好么",
+        "还好嘛",
+        "感觉怎么样",
+        "感觉如何",
+        "状态如何",
+        "什么状态",
+        "你现在什么状态",
+    )
     return any(marker in compact for marker in markers)
 
 
@@ -344,6 +360,8 @@ def _local_owner_private_failover_reply(context: dict[str, Any]) -> str:
     compact = "".join(text.split())
     if not compact:
         return "我在。"
+    if _looks_like_owner_state_question(text):
+        return "还在。刚才有点卡。"
     if any(marker in compact for marker in ("不吵", "早点睡", "早睡", "休息")):
         return "嗯，我收住。你也早点睡。"
     if any(marker in compact for marker in ("凌晨", "太晚", "很晚")):
@@ -355,7 +373,7 @@ def _local_owner_private_failover_reply(context: dict[str, Any]) -> str:
     if _looks_like_question(text):
         return "我这边有点卡，先短一点。"
     if len(compact) <= 8:
-        return "嗯，我在。"
+        return "我在。"
     return "我这边有点卡，先短一点。"
 
 
