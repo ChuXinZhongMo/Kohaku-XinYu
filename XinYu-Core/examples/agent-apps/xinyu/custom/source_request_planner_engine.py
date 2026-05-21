@@ -14,6 +14,7 @@ from source_protocol_utils import (
 from xinyu_storage_paths import knowledge_file_path
 
 READY_PERMISSIONS = {"prepare_only", "integrate_ready"}
+GENERIC_TARGETS = {"", "none", "unknown", "general"}
 
 
 def read_text(path: Path) -> str:
@@ -58,6 +59,51 @@ def extract_active_question_targets(text: str) -> dict[str, str]:
         if target != "unknown":
             targets[qid] = target
     return targets
+
+
+def _specific_target(target: str) -> bool:
+    return target.strip().lower() not in GENERIC_TARGETS
+
+
+def extract_request_question_targets(requests: list[dict[str, str]]) -> dict[str, str]:
+    targets: dict[str, str] = {}
+    for item in requests:
+        qid = item.get("question_id", "none")
+        target = item.get("target", "unknown")
+        if qid != "none" and _specific_target(target) and qid not in targets:
+            targets[qid] = target
+    return targets
+
+
+def merge_question_targets(*target_maps: dict[str, str]) -> dict[str, str]:
+    merged: dict[str, str] = {}
+    for targets in target_maps:
+        for qid, target in targets.items():
+            if qid != "none" and _specific_target(target):
+                merged[qid] = target
+    return merged
+
+
+def normalize_existing_quality_followups(
+    requests: list[dict[str, str]],
+    question_targets: dict[str, str],
+) -> int:
+    normalized = 0
+    for item in requests:
+        if item.get("followup_kind") != "source_diversity":
+            continue
+        if item.get("status") != "pending_url":
+            continue
+        qid = item.get("question_id", "none")
+        target = question_targets.get(qid, "")
+        if not _specific_target(target):
+            continue
+        if _specific_target(item.get("target", "")):
+            continue
+        item["target"] = target
+        item["query"] = query_for_target(target)
+        normalized += 1
+    return normalized
 
 
 def extract_quality_followup_candidates(learning_quality_text: str, question_targets: dict[str, str]) -> list[dict[str, str]]:
@@ -205,6 +251,7 @@ def render_state(
     permission: str,
     candidate_count: int,
     planned_count: int,
+    normalized_count: int,
     ready_count: int,
     pending_url_count: int,
     quality_followup_candidates: int,
@@ -235,6 +282,7 @@ tags: [knowledge, source, request, planner]
 - permission: {permission}
 - source_candidates: {candidate_count}
 - planned_requests: {planned_count}
+- normalized_existing_followups: {normalized_count}
 - ready_requests: {ready_count}
 - pending_url_requests: {pending_url_count}
 - quality_followup_candidates: {quality_followup_candidates}
@@ -259,7 +307,11 @@ def run_source_request_planner(
     permission = extract_value(integration_gate, "integration_permission", "hold")
     source_gate = read_text(_knowledge(root, "source_gate_state.md"))
     candidates = extract_source_candidates(source_gate)
-    question_targets = extract_active_question_targets(read_text(root / "memory/context/active_questions.md"))
+    existing = split_requests(read_text(_knowledge(root, "source_requests.md")))
+    question_targets = merge_question_targets(
+        extract_request_question_targets(existing),
+        extract_active_question_targets(read_text(root / "memory/context/active_questions.md")),
+    )
     quality_followups = (
         extract_quality_followup_candidates(
             read_text(_knowledge(root, "learning_quality_state.md")),
@@ -268,7 +320,6 @@ def run_source_request_planner(
         if not candidates
         else []
     )
-    existing = split_requests(read_text(_knowledge(root, "source_requests.md")))
     existing_qids = {item["question_id"] for item in existing}
     existing_followups = {
         (item.get("question_id", "none"), item.get("avoid_host", "none"), item.get("followup_slot", "1"))
@@ -279,6 +330,7 @@ def run_source_request_planner(
 
     requests = list(existing)
     added = 0
+    normalized = normalize_existing_quality_followups(requests, question_targets)
     skipped_reason = "none"
     if permission not in READY_PERMISSIONS:
         skipped_reason = "integration_gate_not_open"
@@ -328,7 +380,7 @@ def run_source_request_planner(
             existing_followups.add(followup_key)
             added += 1
         if added <= 0:
-            skipped_reason = "requests_already_planned"
+            skipped_reason = "requests_already_planned_target_normalized" if normalized else "requests_already_planned"
 
     ready_count = sum(1 for item in requests if item["status"] == "ready")
     pending_url_count = sum(1 for item in requests if item["status"] == "pending_url")
@@ -342,6 +394,7 @@ def run_source_request_planner(
             permission,
             len(candidates),
             added,
+            normalized,
             ready_count,
             pending_url_count,
             len(quality_followups),
@@ -356,5 +409,6 @@ def run_source_request_planner(
         "ready_requests": ready_count,
         "pending_url_requests": pending_url_count,
         "quality_followup_candidates": len(quality_followups),
+        "normalized_requests": normalized,
         "skipped_reason": skipped_reason,
     }

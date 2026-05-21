@@ -48,6 +48,11 @@ STOPWORDS = {
     "with",
     "would",
 }
+TOKEN_NORMALIZATIONS = {
+    "close": "closeness",
+    "closer": "closeness",
+    "closest": "closeness",
+}
 MIN_QUESTION_OVERLAP = 0.50
 MIN_SHARED_QUESTION_TOKENS = 2
 
@@ -173,8 +178,24 @@ def render_materials(compared_at: str, preface: str, materials: list[dict[str, o
     return text.rstrip() + "\n"
 
 
+def normalize_support_token(token: str) -> str:
+    token = TOKEN_NORMALIZATIONS.get(token, token)
+    if token.endswith("ies") and len(token) > 5:
+        token = token[:-3] + "y"
+    elif token.endswith("s") and not token.endswith("ss") and len(token) > 4:
+        token = token[:-1]
+    return TOKEN_NORMALIZATIONS.get(token, token)
+
+
 def tokens_for_claim(claim: str) -> list[str]:
-    return [token for token in re.findall(r"[a-z0-9]+", claim.lower()) if len(token) > 3 and token not in STOPWORDS]
+    tokens: list[str] = []
+    for token in re.findall(r"[a-z0-9]+", claim.lower()):
+        if len(token) <= 3 or token in STOPWORDS:
+            continue
+        normalized = normalize_support_token(token)
+        if normalized not in STOPWORDS:
+            tokens.append(normalized)
+    return tokens
 
 
 def support_tokens_for_claim(claim: str) -> set[str]:
