@@ -194,11 +194,30 @@ class TinyKernelVisibleFailover:
             reply = _visible_reply_from_tinykernel(response, context)
             replacement_reason = _failover_replacement_reason(reply, response, context)
             if replacement_reason:
-                local_reply = _local_owner_private_failover_reply(context)
-                if local_reply:
-                    response = _response_with_note(response, replacement_reason)
-                    response["reply_candidate"] = local_reply
-                    reply = local_reply
+                response = _response_with_note(response, replacement_reason)
+                retry_payload = _build_template_free_retry_payload(
+                    context,
+                    rejected_reply=reply,
+                    reason=replacement_reason,
+                )
+                retry_response = await asyncio.to_thread(
+                    self._post_fn,
+                    endpoint,
+                    retry_payload,
+                    _timeout_seconds(),
+                )
+                retry_reply = _visible_reply_from_tinykernel(retry_response, context)
+                retry_replacement_reason = _failover_replacement_reason(retry_reply, retry_response, context)
+                if retry_reply and not retry_replacement_reason:
+                    response = _response_with_note(retry_response, f"{replacement_reason}_retry_accepted")
+                    reply = retry_reply
+                else:
+                    response = _response_with_note(
+                        retry_response or response,
+                        f"{replacement_reason}_retry_rejected",
+                    )
+                    error = f"{replacement_reason}_retry_rejected"
+                    raise primary_error
             if not reply:
                 error = "empty_tinykernel_reply"
                 raise primary_error
@@ -240,6 +259,30 @@ def _build_tinykernel_payload(context: dict[str, Any]) -> dict[str, Any]:
             "allow_memory_candidate": False,
         },
     }
+
+
+def _build_template_free_retry_payload(
+    context: dict[str, Any],
+    *,
+    rejected_reply: str,
+    reason: str,
+) -> dict[str, Any]:
+    payload = _build_tinykernel_payload(context)
+    constraints = payload.get("constraints") if isinstance(payload.get("constraints"), dict) else {}
+    constraints["avoid_bare_ack"] = True
+    constraints["avoid_project_plan_residue"] = True
+    constraints["avoid_fixed_fallback"] = True
+    payload["constraints"] = constraints
+    payload["quality_retry"] = {
+        "reason": str(reason or ""),
+        "rejected_reply_hash": "sha256:" + hashlib.sha256(str(rejected_reply or "").encode("utf-8")).hexdigest(),
+        "instruction": (
+            "Generate a fresh visible owner-private reply for user_text. "
+            "Do not return a bare acknowledgement, a project-plan residue, a status-report line, "
+            "or a fixed apology/fallback template. If you cannot produce a live reply, return an empty candidate."
+        ),
+    }
+    return payload
 
 
 def _visible_reply_from_tinykernel(response: dict[str, Any], context: dict[str, Any]) -> str:
@@ -328,53 +371,6 @@ def _looks_like_bare_ack(reply: str) -> bool:
     compact = "".join(str(reply or "").split())
     normalized = compact.rstrip("。.!！")
     return bool(normalized) and len(normalized) <= 3 and set(normalized) == {"嗯"}
-
-
-def _looks_like_late_sleep_text(text: str) -> bool:
-    compact = "".join(str(text or "").split())
-    markers = ("困", "睡", "凌晨", "晚安", "休息", "不吵", "没精神", "累")
-    return any(marker in compact for marker in markers)
-
-
-def _looks_like_owner_state_question(text: str) -> bool:
-    compact = "".join(str(text or "").split())
-    markers = (
-        "还好吗",
-        "还好么",
-        "还好嘛",
-        "感觉怎么样",
-        "感觉如何",
-        "状态如何",
-        "什么状态",
-        "你现在什么状态",
-    )
-    return any(marker in compact for marker in markers)
-
-
-def _looks_like_question(text: str) -> bool:
-    return "?" in str(text or "") or "？" in str(text or "")
-
-
-def _local_owner_private_failover_reply(context: dict[str, Any]) -> str:
-    text = str(context.get("user_text") or "")
-    compact = "".join(text.split())
-    if not compact:
-        return "我在。"
-    if _looks_like_owner_state_question(text):
-        return "还在。刚才有点卡。"
-    if any(marker in compact for marker in ("不吵", "早点睡", "早睡", "休息")):
-        return "嗯，我收住。你也早点睡。"
-    if any(marker in compact for marker in ("凌晨", "太晚", "很晚")):
-        return "嗯，太晚了。你先睡。"
-    if any(marker in compact for marker in ("困", "睡", "累", "没精神")):
-        if _looks_like_question(text):
-            return "有点。你也早点睡。"
-        return "嗯，先不硬聊了。"
-    if _looks_like_question(text):
-        return "我这边有点卡，先短一点。"
-    if len(compact) <= 8:
-        return "我在。"
-    return "我这边有点卡，先短一点。"
 
 
 def _record_failover_trace(

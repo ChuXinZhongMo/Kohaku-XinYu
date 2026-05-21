@@ -58,9 +58,8 @@ def _looks_like_owner_state_question(text: str) -> bool:
 
 
 def _replacement_for_bare_ack_reply(user_text: str) -> str:
-    if _looks_like_owner_state_question(user_text):
-        return "还在。刚才有点卡。"
-    return "我在。"
+    del user_text
+    return ""
 
 
 def build_life_reply_policy(
@@ -218,7 +217,7 @@ def apply_life_reply_policy(
 
     if not technical and BARE_ACK_REPLY_RE.fullmatch(next_text):
         next_text = _replacement_for_bare_ack_reply(user_text)
-        notes.append("life_reply_bare_ack_replaced")
+        notes.append("life_reply_bare_ack_blocked_no_template")
 
     if suppress_question:
         stripped = QUESTION_TAIL_RE.sub("", next_text).strip()

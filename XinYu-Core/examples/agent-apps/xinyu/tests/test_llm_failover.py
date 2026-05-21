@@ -149,6 +149,26 @@ def _tinykernel_default_reply_post(
     }
 
 
+class _TinyKernelRetryPost:
+    def __init__(self, first_post, retry_reply: str) -> None:
+        self.first_post = first_post
+        self.retry_reply = retry_reply
+        self.calls: list[dict[str, object]] = []
+
+    def __call__(self, endpoint: str, payload: dict[str, object], timeout_seconds: float) -> dict[str, object]:
+        self.calls.append(payload)
+        if len(self.calls) == 1:
+            return self.first_post(endpoint, payload, timeout_seconds)
+        assert isinstance(payload.get("quality_retry"), dict)
+        return {
+            "ok": True,
+            "mode": "reply",
+            "reply_candidate": self.retry_reply,
+            "confidence": 0.71,
+            "notes": ["compose_shadow", "quality_retry"],
+        }
+
+
 async def test_visible_failover_returns_local_reply_and_records_trace(tmp_path: Path) -> None:
     provider = wrap_llm_with_visible_failover(_FailingPrimaryLLM())
     provider._failover = TinyKernelVisibleFailover(post_fn=_tinykernel_post)
@@ -185,8 +205,12 @@ async def test_visible_failover_returns_local_reply_and_records_trace(tmp_path: 
 
 
 async def test_visible_failover_replaces_stale_project_reply_for_life_chat(tmp_path: Path) -> None:
+    retry_post = _TinyKernelRetryPost(
+        _tinykernel_stale_plan_post,
+        "收住了。今晚不把话硬往下推。",
+    )
     provider = wrap_llm_with_visible_failover(_FailingPrimaryLLM())
-    provider._failover = TinyKernelVisibleFailover(post_fn=_tinykernel_stale_plan_post)
+    provider._failover = TinyKernelVisibleFailover(post_fn=retry_post)
 
     controller = Controller(
         provider,
@@ -214,9 +238,11 @@ async def test_visible_failover_replaces_stale_project_reply_for_life_chat(tmp_p
     reply = "".join(chunks)
     assert "主链路" not in reply
     assert "最小可运行" not in reply
-    assert "早点睡" in reply
+    assert reply == "收住了。今晚不把话硬往下推。"
+    assert len(retry_post.calls) == 2
     trace_text = (tmp_path / "runtime/tinykernel_failover_trace.jsonl").read_text(encoding="utf-8")
     assert "tinykernel_stale_plan_reply_replaced" in trace_text
+    assert "tinykernel_stale_plan_reply_replaced_retry_accepted" in trace_text
 
 
 async def test_visible_failover_keeps_project_reply_for_technical_chat(tmp_path: Path) -> None:
@@ -254,8 +280,12 @@ async def test_visible_failover_keeps_project_reply_for_technical_chat(tmp_path:
 
 
 async def test_visible_failover_replaces_bare_ack_for_sleep_question(tmp_path: Path) -> None:
+    retry_post = _TinyKernelRetryPost(
+        _tinykernel_bare_ack_post,
+        "困了就先别撑着聊。",
+    )
     provider = wrap_llm_with_visible_failover(_FailingPrimaryLLM())
-    provider._failover = TinyKernelVisibleFailover(post_fn=_tinykernel_bare_ack_post)
+    provider._failover = TinyKernelVisibleFailover(post_fn=retry_post)
 
     controller = Controller(
         provider,
@@ -282,12 +312,17 @@ async def test_visible_failover_replaces_bare_ack_for_sleep_question(tmp_path: P
 
     reply = "".join(chunks)
     assert reply != "嗯。"
-    assert "早点睡" in reply
+    assert reply == "困了就先别撑着聊。"
+    assert len(retry_post.calls) == 2
 
 
 async def test_visible_failover_replaces_bare_ack_for_short_sigh(tmp_path: Path) -> None:
+    retry_post = _TinyKernelRetryPost(
+        _tinykernel_bare_ack_post,
+        "在，刚才只冒了个音。",
+    )
     provider = wrap_llm_with_visible_failover(_FailingPrimaryLLM())
-    provider._failover = TinyKernelVisibleFailover(post_fn=_tinykernel_bare_ack_post)
+    provider._failover = TinyKernelVisibleFailover(post_fn=retry_post)
 
     controller = Controller(
         provider,
@@ -313,14 +348,20 @@ async def test_visible_failover_replaces_bare_ack_for_short_sigh(tmp_path: Path)
             chunks.append(parse_event.text)
 
     reply = "".join(chunks)
-    assert reply == "我在。"
+    assert reply == "在，刚才只冒了个音。"
+    assert len(retry_post.calls) == 2
     trace_text = (tmp_path / "runtime/tinykernel_failover_trace.jsonl").read_text(encoding="utf-8")
     assert "tinykernel_bare_ack_replaced" in trace_text
+    assert "tinykernel_bare_ack_replaced_retry_accepted" in trace_text
 
 
 async def test_visible_failover_replaces_default_reply_for_life_chat(tmp_path: Path) -> None:
+    retry_post = _TinyKernelRetryPost(
+        _tinykernel_default_reply_post,
+        "今晚确实有点低，我不用那种应声糊你。",
+    )
     provider = wrap_llm_with_visible_failover(_FailingPrimaryLLM())
-    provider._failover = TinyKernelVisibleFailover(post_fn=_tinykernel_default_reply_post)
+    provider._failover = TinyKernelVisibleFailover(post_fn=retry_post)
 
     controller = Controller(
         provider,
@@ -347,9 +388,11 @@ async def test_visible_failover_replaces_default_reply_for_life_chat(tmp_path: P
 
     reply = "".join(chunks)
     assert reply != "我明白。"
-    assert "先不硬聊" in reply
+    assert reply == "今晚确实有点低，我不用那种应声糊你。"
+    assert len(retry_post.calls) == 2
     trace_text = (tmp_path / "runtime/tinykernel_failover_trace.jsonl").read_text(encoding="utf-8")
     assert "tinykernel_default_reply_replaced" in trace_text
+    assert "tinykernel_default_reply_replaced_retry_accepted" in trace_text
 
 
 async def test_visible_failover_recovers_from_quota_limit(tmp_path: Path) -> None:

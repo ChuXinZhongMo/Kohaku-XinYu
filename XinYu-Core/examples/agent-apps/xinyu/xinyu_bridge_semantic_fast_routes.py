@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from contextlib import nullcontext
 from datetime import datetime
 from typing import Any
 
@@ -96,11 +97,6 @@ def _looks_like_owner_state_question(text: str) -> bool:
     if not compact:
         return False
     return any(marker in compact for marker in _OWNER_STATE_QUESTION_MARKERS)
-
-
-def owner_private_direct_state_reply(runtime: Any, text: str) -> str:
-    del runtime, text
-    return "\u8fd8\u5728\u3002\u521a\u624d\u6709\u70b9\u5361\uff0c\u7f13\u8fc7\u6765\u4e86\u3002"
 
 
 def owner_private_direct_repair_reply(runtime: Any, text: str, intents: tuple[str, ...] | None = None) -> str:
@@ -204,6 +200,16 @@ def _command_id(payload: dict[str, Any]) -> str:
     return _safe_str(metadata.get("desktop_command_id") or payload.get("command_id"))
 
 
+def _provider_failover_context(provider: Any, context: dict[str, Any] | None) -> Any:
+    if provider is None or not context:
+        return nullcontext()
+    try:
+        from xinyu_runtime.llm.failover import provider_failover_context
+    except ModuleNotFoundError:
+        return nullcontext()
+    return provider_failover_context(provider, context)
+
+
 def ensure_v1_app(runtime: Any) -> Any:
     if runtime._v1_app is not None:
         return runtime._v1_app
@@ -245,12 +251,12 @@ def owner_private_semantic_fast_decision(runtime: Any, payload: dict[str, Any], 
                 "allowed": True,
                 "route": "fast_path",
                 "intents": ("owner_state_question",),
-                "reasons": ("owner_private_state_question_fast_reply",),
-                "direct_reply": owner_private_direct_state_reply(runtime, raw_text),
+                "reasons": ("owner_private_state_question_live_renderer",),
+                "direct_reply": "",
                 "notes": [
                     "semantic_fast_allowed",
                     "semantic_fast_intents:owner_state_question",
-                    "owner_state_question_fast_persona_reply",
+                    "owner_state_question_live_renderer_required",
                 ],
             }
         return {
@@ -342,13 +348,32 @@ async def handle_owner_private_semantic_fast_turn(
             return None
         renderer_name = "outward_reply"
         try:
-            rendered = await runtime._render_outward_reply(
-                session.agent,
-                payload=payload,
-                user_text=text,
-                draft_reply="",
-                canonical_recall_context="",
+            llm = getattr(session.agent, "llm", None)
+            failover_context = None
+            failover_builder = getattr(runtime, "_owner_private_llm_failover_context", None)
+            if callable(failover_builder):
+                try:
+                    failover_context = failover_builder(
+                        payload,
+                        text=text,
+                        session_key=session_key,
+                        turn_id=turn_id,
+                    )
+                except Exception:
+                    failover_context = None
+            context_manager = (
+                _provider_failover_context(llm, failover_context)
+                if llm is not None and failover_context
+                else nullcontext()
             )
+            with context_manager:
+                rendered = await runtime._render_outward_reply(
+                    session.agent,
+                    payload=payload,
+                    user_text=text,
+                    draft_reply="",
+                    canonical_recall_context="",
+                )
         except Exception as exc:
             print(f"[xinyu_core_bridge] semantic fast renderer failed: {type(exc).__name__}: {exc}", flush=True)
             return None

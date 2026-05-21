@@ -75,7 +75,7 @@ def test_life_reply_policy_scene_frame_marks_relationship_boundary(tmp_path: Pat
     assert "- scene_reply_policy: warm_boundary_aware" in block
 
 
-def test_life_reply_policy_replaces_bare_ack_for_life_chat() -> None:
+def test_life_reply_policy_blocks_bare_ack_without_template_for_life_chat() -> None:
     shaped = apply_life_reply_policy(
         "嗯。",
         policy={"technical_turn": False, "mode": "steady", "max_sentences": 3},
@@ -83,8 +83,8 @@ def test_life_reply_policy_replaces_bare_ack_for_life_chat() -> None:
     )
 
     assert shaped["changed"] is True
-    assert shaped["reply"] == "我在。"
-    assert "life_reply_bare_ack_replaced" in shaped["notes"]
+    assert shaped["reply"] == ""
+    assert "life_reply_bare_ack_blocked_no_template" in shaped["notes"]
 
     state_question = apply_life_reply_policy(
         "嗯。",
@@ -92,7 +92,8 @@ def test_life_reply_policy_replaces_bare_ack_for_life_chat() -> None:
         user_text="还好吗",
     )
 
-    assert state_question["reply"] == "还在。刚才有点卡。"
+    assert state_question["reply"] == ""
+    assert "life_reply_bare_ack_blocked_no_template" in state_question["notes"]
 
 
 def test_life_reply_policy_keeps_bare_ack_for_technical_turn() -> None:

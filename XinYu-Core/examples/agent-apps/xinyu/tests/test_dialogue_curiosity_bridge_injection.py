@@ -1272,7 +1272,7 @@ def test_owner_private_greeting_semantic_fast_decision_uses_v1_classifier(tmp_pa
     assert decision["intents"] == ("greeting",)
 
 
-def test_owner_private_state_question_semantic_fast_decision_uses_direct_persona_reply(tmp_path) -> None:
+def test_owner_private_state_question_semantic_fast_decision_requires_live_renderer(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     payload = {
         "message_type": "private_text",
@@ -1286,8 +1286,57 @@ def test_owner_private_state_question_semantic_fast_decision_uses_direct_persona
     assert decision["allowed"] is True
     assert decision["route"] == "fast_path"
     assert decision["intents"] == ("owner_state_question",)
-    assert decision["direct_reply"] == "\u8fd8\u5728\u3002\u521a\u624d\u6709\u70b9\u5361\uff0c\u7f13\u8fc7\u6765\u4e86\u3002"
-    assert "owner_state_question_fast_persona_reply" in decision["notes"]
+    assert decision["direct_reply"] == ""
+    assert "owner_state_question_live_renderer_required" in decision["notes"]
+
+
+def test_owner_private_state_question_semantic_fast_route_uses_renderer_not_template(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    payload = {
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "metadata": {"is_owner_user": True},
+    }
+    session = AgentSession(key="qq:private:owner", agent=FakeAgent(), prompt_signature="")
+    render_calls: list[dict[str, str]] = []
+    published: list[dict[str, object]] = []
+    rendered_reply = "\u6709\u70b9\u70e6\uff0c\u521a\u624d\u5361\u4e86\u4e00\u4e0b\u3002\u4f46\u6211\u5728\u8fd9\u513f\u3002"
+
+    async def fake_render(agent, *, payload, user_text, draft_reply, canonical_recall_context=""):
+        del agent, payload, canonical_recall_context
+        render_calls.append({"user_text": user_text, "draft_reply": draft_reply})
+        return rendered_reply
+
+    async def fake_publish(payload, **kwargs):
+        del payload
+        published.append(kwargs)
+
+    runtime._render_outward_reply = fake_render  # type: ignore[method-assign]
+    runtime._desktop_publish_chat_finished = fake_publish  # type: ignore[method-assign]
+
+    response = asyncio.run(
+        runtime._maybe_handle_owner_private_semantic_fast_turn(
+            payload,
+            text="\u72b6\u6001\u5982\u4f55\uff0c\u4e2b\u5934",
+            session=session,
+            session_key=session.key,
+            turn_id="turn-semantic-fast-state-test",
+            turn_started_wall="2026-05-21T06:10:00+08:00",
+            turn_started_at=0.0,
+            before_memory={},
+            cleanup={"cleaned_sessions": 0},
+            event_sidecar={"notes": ["event_sourcing_recorded"]},
+        )
+    )
+
+    assert response is not None
+    assert response["reply"] == rendered_reply
+    assert response["semantic_fast"]["intents"] == ["owner_state_question"]
+    assert response["semantic_fast"]["renderer"] == "outward_reply"
+    assert render_calls == [{"user_text": "\u72b6\u6001\u5982\u4f55\uff0c\u4e2b\u5934", "draft_reply": ""}]
+    assert "\u8fd8\u5728\u3002\u521a\u624d\u6709\u70b9\u5361" not in response["reply"]
+    assert published and published[0]["reply"] == rendered_reply
 
 
 def test_owner_private_relationship_pressure_stays_out_of_semantic_fast_route(tmp_path) -> None:

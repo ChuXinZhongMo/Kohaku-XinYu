@@ -103,8 +103,8 @@ def test_owner_private_semantic_fast_decision_allows_short_state_question_before
     assert result["allowed"] is True
     assert result["route"] == "fast_path"
     assert result["intents"] == ("owner_state_question",)
-    assert result["direct_reply"] == "\u8fd8\u5728\u3002\u521a\u624d\u6709\u70b9\u5361\uff0c\u7f13\u8fc7\u6765\u4e86\u3002"
-    assert "owner_state_question_fast_persona_reply" in result["notes"]
+    assert result["direct_reply"] == ""
+    assert "owner_state_question_live_renderer_required" in result["notes"]
 
 
 def test_owner_private_semantic_fast_decision_directly_handles_current_reply_complaint() -> None:

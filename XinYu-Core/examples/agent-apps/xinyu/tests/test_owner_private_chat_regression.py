@@ -124,7 +124,8 @@ def test_semantic_fast_keeps_greetings_and_short_personal_state_direct() -> None
     assert greeting["direct_reply"] == "\u665a\u4e0a\u597d\u3002"
     assert short_personal_state["allowed"] is True
     assert short_personal_state["intents"] == ("owner_state_question",)
-    assert "owner_state_question_fast_persona_reply" in short_personal_state["notes"]
+    assert short_personal_state["direct_reply"] == ""
+    assert "owner_state_question_live_renderer_required" in short_personal_state["notes"]
     assert complex_personal_state["allowed"] is False
     assert "semantic_fast_not_low_risk" in complex_personal_state["notes"]
 
