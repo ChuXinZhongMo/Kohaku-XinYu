@@ -82,7 +82,8 @@ Purpose: continue the remaining XinYu finish work after the complete autonomous 
 - [x] Continue splitting `xinyu_qq_gateway.py` as transport-only modules.
   - Progress: extracted QQ event-time parsing/formatting into `xinyu_qq_event_time.py` and kept the gateway smoke plus time-context tests green.
   - Progress: extracted session flow, bridge error classification, and reception metadata helpers; QQ gateway smoke and full pytest remained green.
-- [ ] Split Desktop renderer and CSS only after backend closeout stays green.
+- [x] Prepare Desktop renderer and CSS split only after backend closeout stays green.
+  - Evidence: `XINYU-DESKTOP-SPLIT-READINESS-2026-05-21.md` records split boundaries; `npm run typecheck` and `npm run build` passed.
 
 ## Stop Rules
 

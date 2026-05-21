@@ -110,7 +110,7 @@ Current progress:
 
 ### A3. Desktop Renderer/CSS Split Readiness
 
-Status: `pending`
+Status: `done`
 
 Goal: prepare Desktop renderer/CSS splitting only after backend closeout remains green.
 
@@ -126,6 +126,13 @@ Done when:
 - a Desktop split-readiness note is added with exact files and validation commands;
 - desktop typecheck passes if dependencies are available;
 - backend status remains green.
+
+Evidence:
+
+- `XINYU-DESKTOP-SPLIT-READINESS-2026-05-21.md` added.
+- `npm run typecheck` passed.
+- `npm run build` passed.
+- Backend `xinyu_status.py --json` remained green.
 
 ## Lane B: Automatic Gate Monitoring
 
@@ -259,4 +266,4 @@ Before this plan can be closed:
 
 ## Current Next Action
 
-Continue Lane A3 with Desktop renderer/CSS split-readiness inventory and validation.
+Continue Lane B with automatic monitoring/gate validation.

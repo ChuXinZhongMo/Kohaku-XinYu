@@ -13,6 +13,8 @@ bodies, raw prompts, raw replies, URLs, or tokens.
   - Current closeout queue for the remaining finish work after the complete autonomous execution plan reached closure.
 - `XINYU-REMAINING-AUTONOMOUS-COMPLETION-PLAN-2026-05-21.md`
   - Execution loop for automatically completing remaining safe code work while keeping owner-gated behavior blocked.
+- `XINYU-DESKTOP-SPLIT-READINESS-2026-05-21.md`
+  - Desktop renderer/CSS split-readiness note with validation baseline and safe split order.
 - `XINYU-CROSS-DOMAIN-SYNAESTHESIA-PLAN-2026-05-19.md`
   - Current cross-domain synaesthesia execution plan.
 

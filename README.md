@@ -83,7 +83,7 @@ Latest checked local baseline, 2026-05-21:
 - runtime readiness smoke: `ok`
 - QQ gateway smoke: `ok`
 - desktop typecheck: passed
-- desktop build: not rerun in this closeout pass
+- desktop build: passed
 
 Detailed audit and recovery notes live in `worklog/` and
 `XinYu-Core/examples/agent-apps/xinyu/ops/reports/`.
