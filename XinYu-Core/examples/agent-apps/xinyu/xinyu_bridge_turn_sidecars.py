@@ -5,6 +5,7 @@ from typing import Any
 
 from xinyu_action_experience_digest import read_recent_action_digest_context
 from xinyu_bridge_values import as_bool, safe_str
+from xinyu_bridge_state_text import build_payload_time_context_block
 from xinyu_conversation_experience_sidecar import build_conversation_experience_prompt_block
 from xinyu_daily_digest import build_daily_digest_prompt_block
 from xinyu_dialogue_rule_trial_overlay import build_dialogue_rule_trial_overlay_prompt_block
@@ -97,6 +98,7 @@ def inject_live_turn_context(
     sender_name = safe_str(payload.get("sender_name")) or safe_str(payload.get("user_id"))
     source_line = "QQ group chat" if message_type.startswith("group_") else "QQ private chat"
     relationship_line = "owner" if is_owner else ("trusted contact" if is_trusted else "external contact")
+    time_context_block = build_payload_time_context_block(payload)
     if visible_turn is None:
         visible_turn = classify_visible_turn(runtime.xinyu_dir, payload=payload, user_text=text)
     life_posture = build_life_posture(runtime.xinyu_dir, payload=payload, user_text=text, visible_turn=visible_turn)
@@ -460,6 +462,7 @@ def inject_live_turn_context(
         f"source: {source_line}",
         f"speaker_relation: {relationship_line}",
         f"sender_display: {sender_name or 'unknown'}",
+        time_context_block,
         residue_line,
         tail_block,
         *sidecar_lines,

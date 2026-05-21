@@ -115,6 +115,29 @@ def test_bridge_uses_restored_live_turn_context_with_session_tail(tmp_path) -> N
     assert "previous_prediction_error" in content
 
 
+def test_live_turn_prompt_includes_exact_time_context(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    agent = FakeAgent()
+    event_timestamp = int(datetime.fromisoformat("2026-05-18T13:30:00+08:00").timestamp())
+
+    runtime._inject_live_turn_context(
+        agent,
+        payload={
+            "message_type": "private_text",
+            "timestamp": event_timestamp,
+            "metadata": {"is_owner_user": True},
+        },
+        text="status check",
+    )
+
+    content = agent.controller._pending_injections[0]["content"]
+    assert "Live Time Context" in content
+    assert "current_runtime_time:" in content
+    assert f"message_event_unix: {event_timestamp}" in content
+    assert "message_age_seconds:" in content
+    assert "event_time_source: payload.timestamp" in content
+
+
 def test_live_turn_injects_owner_continuity_hint_for_three_fix_reference(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     (runtime.xinyu_dir / "memory/context/recent_context_runtime_anchor.md").write_text(
@@ -1416,7 +1439,7 @@ def test_owner_private_relationship_pressure_stays_out_of_semantic_fast_route(tm
     assert "relationship_pressure" in decision["intents"]
 
 
-def test_owner_private_greeting_semantic_fast_route_uses_direct_reply_not_renderer(tmp_path) -> None:
+def test_owner_private_greeting_semantic_fast_route_uses_renderer_not_template(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     payload = {
         "message_type": "private_text",
@@ -1431,7 +1454,7 @@ def test_owner_private_greeting_semantic_fast_route_uses_direct_reply_not_render
     async def fake_render(agent, *, payload, user_text, draft_reply, canonical_recall_context=""):
         del agent, payload, canonical_recall_context
         render_calls.append({"user_text": user_text, "draft_reply": draft_reply})
-        return "\u665a\u4e0a\u597d\u3002"
+        return "\u665a\u4e0a\u597d\uff0c\u54e5\u3002"
 
     async def fake_publish(payload, **kwargs):
         del payload
@@ -1456,16 +1479,17 @@ def test_owner_private_greeting_semantic_fast_route_uses_direct_reply_not_render
     )
 
     assert response is not None
-    assert response["reply"] == "\u665a\u4e0a\u597d\u3002"
+    assert response["reply"] == "\u665a\u4e0a\u597d\uff0c\u54e5\u3002"
     assert response["semantic_fast"]["intents"] == ["greeting"]
-    assert response["semantic_fast"]["renderer"] == "direct"
+    assert response["semantic_fast"]["renderer"] == "outward_reply"
+    assert response["semantic_fast"]["scope"] == "owner_private_live_fast"
     assert "owner_private_semantic_fast_intercepted" in response["notes"]
     assert "semantic_fast_intents:greeting" in response["notes"]
-    assert render_calls == []
-    assert published and published[0]["reply"] == "\u665a\u4e0a\u597d\u3002"
+    assert render_calls == [{"user_text": "\u665a\u4e0a\u597d", "draft_reply": ""}]
+    assert published and published[0]["reply"] == "\u665a\u4e0a\u597d\uff0c\u54e5\u3002"
     assert "\u5728\u3002" not in response["reply"]
     tail = load_dialogue_tail(runtime.xinyu_dir, session.key, max_entries=4)
-    assert [item["content"] for item in tail[-2:]] == ["\u665a\u4e0a\u597d", "\u665a\u4e0a\u597d\u3002"]
+    assert [item["content"] for item in tail[-2:]] == ["\u665a\u4e0a\u597d", "\u665a\u4e0a\u597d\uff0c\u54e5\u3002"]
 
 
 def test_owner_private_greeting_chat_replay_intercepts_before_full_live_event(tmp_path, monkeypatch) -> None:
@@ -1501,7 +1525,7 @@ def test_owner_private_greeting_chat_replay_intercepts_before_full_live_event(tm
     async def fake_render(agent, *, payload, user_text, draft_reply, canonical_recall_context=""):
         del agent, payload, canonical_recall_context
         render_calls.append({"user_text": user_text, "draft_reply": draft_reply})
-        return "\u665a\u4e0a\u597d\u3002"
+        return "\u665a\u4e0a\u597d\uff0c\u54e5\u3002"
 
     async def fake_started(payload, **kwargs):
         del payload
@@ -1530,14 +1554,15 @@ def test_owner_private_greeting_chat_replay_intercepts_before_full_live_event(tm
     response = asyncio.run(runtime.chat(payload))
 
     assert response["accepted"] is True
-    assert response["reply"] == "\u665a\u4e0a\u597d\u3002"
+    assert response["reply"] == "\u665a\u4e0a\u597d\uff0c\u54e5\u3002"
     assert response["semantic_fast"]["route"] == "fast_path"
     assert response["semantic_fast"]["intents"] == ["greeting"]
-    assert response["semantic_fast"]["renderer"] == "direct"
+    assert response["semantic_fast"]["renderer"] == "outward_reply"
+    assert response["semantic_fast"]["scope"] == "owner_private_live_fast"
     assert "owner_private_semantic_fast_intercepted" in response["notes"]
-    assert render_calls == []
+    assert render_calls == [{"user_text": "\u665a\u4e0a\u597d", "draft_reply": ""}]
     assert published_started
-    assert published_finished and published_finished[0]["reply"] == "\u665a\u4e0a\u597d\u3002"
+    assert published_finished and published_finished[0]["reply"] == "\u665a\u4e0a\u597d\uff0c\u54e5\u3002"
     assert "\u5728\u3002" not in response["reply"]
     trace_path = runtime.xinyu_dir / "runtime" / "turn_route_trace.jsonl"
     trace_rows = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]

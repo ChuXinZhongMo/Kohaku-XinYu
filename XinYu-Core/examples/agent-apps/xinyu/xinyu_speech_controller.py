@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_persona_runtime import PersonaRuntimeState, build_persona_runtime_state
+from xinyu_bridge_state_text import build_payload_time_context_block
 from xinyu_text_variants import readable_markers
 from xinyu_turn_classifier import classify_visible_turn
 from xinyu_owner_context_bridge import (
@@ -1158,8 +1159,17 @@ class XinyuSpeechController:
             "## Controller Semantic Draft",
             draft_reply or "(empty)",
             "",
+            build_payload_time_context_block(payload),
+            "",
             persona_state.to_prompt_block(),
         ]
+        live_bias = self._empty_draft_live_bias_prompt(
+            scene=scene,
+            user_text=user_text,
+            draft_reply=draft_reply,
+        )
+        if live_bias:
+            user_parts.extend(["", live_bias])
         if failed_reply:
             user_parts.extend(
                 [
@@ -1196,6 +1206,21 @@ class XinyuSpeechController:
             {"role": "system", "content": system},
             {"role": "user", "content": "\n\n".join(user_parts)},
         ]
+
+    def _empty_draft_live_bias_prompt(self, *, scene: SpeechScene, user_text: str, draft_reply: str) -> str:
+        if draft_reply.strip() or not scene.is_owner or scene.technical_request:
+            return ""
+        compact = re.sub(r"\s+", "", _safe_str(user_text))
+        if not compact or len(compact) > 32:
+            return ""
+        return "\n".join(
+            [
+                "## Empty Draft Live Bias",
+                "The controller intentionally supplied no sentence here.",
+                "For a short owner-private greeting, acknowledgement, or self-state question, generate the one live line XinYu would say now from the persona/runtime state and recent tail.",
+                "Do not mirror the input with a fixed greeting, bare acknowledgement, support-bot formula, or status report unless that is genuinely the whole current line.",
+            ]
+        )
 
     def reply_quality_flags(
         self,

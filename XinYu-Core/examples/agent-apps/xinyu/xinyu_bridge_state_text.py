@@ -110,6 +110,52 @@ def payload_event_timestamp_seconds(payload: Mapping[str, Any] | None, *, fallba
     return int(datetime.now().astimezone().timestamp())
 
 
+def build_payload_time_context_block(
+    payload: Mapping[str, Any] | None,
+    *,
+    observed_at: Any = None,
+    heading: str = "Live Time Context",
+) -> str:
+    """Render exact real-world time anchors for the current message.
+
+    ``message_event_time`` is when the adapter says the user message happened.
+    ``current_runtime_time`` is when XinYu is building the reply. Both are kept
+    because delayed turns must not be interpreted as happening "now".
+    """
+    observed = _coerce_event_datetime(observed_at) or datetime.now().astimezone()
+    if observed.tzinfo is None:
+        observed = observed.astimezone()
+    event_with_source = _payload_event_datetime_with_source(payload)
+    event_source = "runtime_fallback"
+    if event_with_source is None:
+        event = observed
+    else:
+        event, event_source = event_with_source
+    if event.tzinfo is None:
+        event = event.astimezone()
+    observed_local = observed.astimezone()
+    event_local = event.astimezone()
+    age_seconds = int((observed_local - event_local).total_seconds())
+    clock_skew = age_seconds < -5
+    return "\n".join(
+        [
+            f"## {safe_str(heading).strip() or 'Live Time Context'}",
+            f"current_runtime_time: {observed_local.isoformat(timespec='seconds')}",
+            f"current_runtime_unix: {int(observed_local.timestamp())}",
+            f"message_event_time: {event_local.isoformat(timespec='seconds')}",
+            f"message_event_unix: {int(event_local.timestamp())}",
+            f"message_age_seconds: {age_seconds}",
+            f"event_time_source: {event_source}",
+            f"clock_skew_possible: {str(clock_skew).lower()}",
+            (
+                "time_policy: use message_event_time for when the owner actually said the message; "
+                "use current_runtime_time for the reply moment; use message_age_seconds when judging "
+                "waiting, sleep/wake state, emotional residue, and whether older context is stale."
+            ),
+        ]
+    )
+
+
 def payload_path(value: str) -> Path:
     text = value.strip()
     if text.lower().startswith("file://"):
@@ -122,27 +168,32 @@ def payload_path(value: str) -> Path:
 
 
 def _payload_event_datetime(payload: Mapping[str, Any] | None) -> datetime | None:
+    event = _payload_event_datetime_with_source(payload)
+    return event[0] if event is not None else None
+
+
+def _payload_event_datetime_with_source(payload: Mapping[str, Any] | None) -> tuple[datetime, str] | None:
     if not isinstance(payload, Mapping):
         return None
     metadata = payload.get("metadata")
     metadata = metadata if isinstance(metadata, Mapping) else {}
-    for value in (
-        payload.get("event_time"),
-        payload.get("recorded_at"),
-        payload.get("created_at"),
-        payload.get("timestamp"),
-        payload.get("time"),
-        metadata.get("event_time"),
-        metadata.get("recorded_at"),
-        metadata.get("created_at"),
-        metadata.get("timestamp"),
-        metadata.get("time"),
-        metadata.get("qq_event_time_iso"),
-        metadata.get("desktop_event_time_iso"),
+    for source, value in (
+        ("payload.event_time", payload.get("event_time")),
+        ("payload.recorded_at", payload.get("recorded_at")),
+        ("payload.created_at", payload.get("created_at")),
+        ("payload.timestamp", payload.get("timestamp")),
+        ("payload.time", payload.get("time")),
+        ("metadata.event_time", metadata.get("event_time")),
+        ("metadata.recorded_at", metadata.get("recorded_at")),
+        ("metadata.created_at", metadata.get("created_at")),
+        ("metadata.timestamp", metadata.get("timestamp")),
+        ("metadata.time", metadata.get("time")),
+        ("metadata.qq_event_time_iso", metadata.get("qq_event_time_iso")),
+        ("metadata.desktop_event_time_iso", metadata.get("desktop_event_time_iso")),
     ):
         parsed = _coerce_event_datetime(value)
         if parsed is not None:
-            return parsed
+            return parsed, source
     return None
 
 

@@ -8,6 +8,7 @@ from xinyu_bridge_desktop_state_text import (
 )
 from xinyu_bridge_session import AgentSession
 from xinyu_bridge_state_text import (
+    build_payload_time_context_block,
     desktop_replace_frontmatter_field,
     desktop_replace_list_field,
     payload_event_time_iso,
@@ -76,6 +77,31 @@ def test_payload_event_time_accepts_millisecond_timestamp() -> None:
     expected_timestamp = _timestamp("2026-05-18T13:30:00+08:00")
 
     assert payload_event_timestamp_seconds({"timestamp": expected_timestamp * 1000}) == expected_timestamp
+
+
+def test_payload_time_context_block_separates_event_time_from_runtime_time() -> None:
+    event_timestamp = _timestamp("2026-05-18T13:30:00+08:00")
+    payload = {
+        "timestamp": event_timestamp,
+        "metadata": {"qq_event_time_iso": "2026-01-01T00:00:00+00:00"},
+    }
+
+    block = build_payload_time_context_block(payload, observed_at="2026-05-18T13:32:05+08:00")
+
+    assert "## Live Time Context" in block
+    assert "current_runtime_time:" in block
+    assert f"message_event_unix: {event_timestamp}" in block
+    assert "message_age_seconds: 125" in block
+    assert "event_time_source: payload.timestamp" in block
+    assert "clock_skew_possible: false" in block
+    assert "use message_event_time for when the owner actually said the message" in block
+
+
+def test_payload_time_context_block_falls_back_to_runtime_time() -> None:
+    block = build_payload_time_context_block({}, observed_at="2026-05-18T13:32:05+08:00")
+
+    assert "event_time_source: runtime_fallback" in block
+    assert "message_age_seconds: 0" in block
 
 
 def test_core_bridge_dialogue_tail_uses_payload_time_for_user_turn(tmp_path) -> None:

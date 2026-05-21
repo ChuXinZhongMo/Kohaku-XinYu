@@ -246,7 +246,9 @@ class BridgeRenderer:
                 )
             content_text = _safe_str(content).strip()
             if content_text:
-                lines.append(f"{role}: {content_text[:1000]}")
+                recorded_at = _safe_str(message.get("recorded_at")).strip() if isinstance(message, dict) else ""
+                time_suffix = f" ({recorded_at})" if recorded_at else ""
+                lines.append(f"{role}{time_suffix}: {content_text[:1000]}")
         return "\n".join(lines)
 
     def strip_renderer_wrappers(self, text: str) -> str:

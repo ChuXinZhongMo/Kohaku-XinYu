@@ -71,6 +71,22 @@ BRIDGE_UNAVAILABLE_OWNER_REPLY = (
 CORE_CHAT_RETRY_DELAY_SECONDS = 1.0
 
 
+def _event_timestamp_seconds(event: dict[str, Any]) -> int:
+    timestamp = _as_int(event.get("time"), int(time.time()))
+    if timestamp > 10_000_000_000:
+        timestamp = int(timestamp / 1000)
+    if timestamp <= 0:
+        return int(time.time())
+    return timestamp
+
+
+def _event_time_iso(timestamp_seconds: int) -> str:
+    try:
+        return datetime.fromtimestamp(int(timestamp_seconds)).astimezone().isoformat(timespec="seconds")
+    except (OSError, OverflowError, ValueError):
+        return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
 class NativeQQGateway:
     def __init__(self, config: GatewayConfig, *, config_path: Path | None = None) -> None:
         self.config = config
@@ -2394,6 +2410,7 @@ class NativeQQGateway:
         owner_note: str,
         text: str,
     ) -> dict[str, Any]:
+        event_timestamp = _event_timestamp_seconds(event)
         return {
             "platform": "qq",
             "adapter": GATEWAY_NAME,
@@ -2404,11 +2421,13 @@ class NativeQQGateway:
             "user_id": target.user_id,
             "source_message_id": _safe_str(event.get("message_id")).strip(),
             "command_text": text,
-            "timestamp": _as_int(event.get("time"), int(time.time())),
+            "timestamp": event_timestamp,
             "metadata": {
                 "gateway": GATEWAY_NAME,
                 "gateway_version": GATEWAY_VERSION,
                 "source": "qq_gateway_goldmark_command",
+                "qq_event_time_iso": _event_time_iso(event_timestamp),
+                "qq_event_time_unix": event_timestamp,
                 "onebot_post_type": _safe_str(event.get("post_type")),
                 "onebot_message_type": _safe_str(event.get("message_type")),
                 "is_owner_user": True,
@@ -2473,6 +2492,7 @@ class NativeQQGateway:
         command: dict[str, str],
         reply_message_id: str = "",
     ) -> dict[str, Any]:
+        event_timestamp = _event_timestamp_seconds(event)
         decision = _safe_str(command.get("decision"), "approved")
         authorize_existing = _as_bool(command.get("authorize_existing"), default=decision != "denied")
         return {
@@ -2492,11 +2512,13 @@ class NativeQQGateway:
             "message_id": _safe_str(event.get("message_id")),
             "reply_message_id": reply_message_id,
             "raw_command": text,
-            "timestamp": _as_int(event.get("time"), int(time.time())),
+            "timestamp": event_timestamp,
             "metadata": {
                 "gateway": GATEWAY_NAME,
                 "gateway_version": GATEWAY_VERSION,
                 "source": "qq_gateway_self_action_approval_command",
+                "qq_event_time_iso": _event_time_iso(event_timestamp),
+                "qq_event_time_unix": event_timestamp,
                 "is_owner_user": target.user_id in self.config.owner_user_ids,
                 "control_plane": True,
                 "quoted_self_action_message": bool(reply_message_id),
@@ -2512,6 +2534,7 @@ class NativeQQGateway:
         text: str,
         command: dict[str, Any],
     ) -> dict[str, Any]:
+        event_timestamp = _event_timestamp_seconds(event)
         return {
             "batch_id": "latest",
             "command": _safe_str(command.get("command")),
@@ -2525,11 +2548,13 @@ class NativeQQGateway:
             "user_id": target.user_id,
             "sender_name": self._sender_name(event),
             "message_id": _safe_str(event.get("message_id")),
-            "timestamp": _as_int(event.get("time"), int(time.time())),
+            "timestamp": event_timestamp,
             "metadata": {
                 "gateway": GATEWAY_NAME,
                 "gateway_version": GATEWAY_VERSION,
                 "source": "qq_gateway_review_admin_command",
+                "qq_event_time_iso": _event_time_iso(event_timestamp),
+                "qq_event_time_unix": event_timestamp,
                 "is_owner_user": target.user_id in self.config.owner_user_ids,
                 "control_plane": True,
             },
@@ -2688,10 +2713,13 @@ class NativeQQGateway:
         session_id = self._session_id(target)
         message_type = f"{target.message_kind}_text"
         rich_context = rich_context or self._extract_rich_message_context(event)
+        event_timestamp = _event_timestamp_seconds(event)
         metadata = {
             "gateway": GATEWAY_NAME,
             "gateway_version": GATEWAY_VERSION,
             "source": "onebot_message_event",
+            "qq_event_time_iso": _event_time_iso(event_timestamp),
+            "qq_event_time_unix": event_timestamp,
             "source_channel": (
                 "owner_private"
                 if target.message_kind == "private" and target.user_id in self.config.owner_user_ids
@@ -2731,7 +2759,7 @@ class NativeQQGateway:
             "message_id": _safe_str(event.get("message_id")),
             "text": text,
             "raw_message": _safe_str(event.get("raw_message"), text),
-            "timestamp": _as_int(event.get("time"), int(time.time())),
+            "timestamp": event_timestamp,
             "metadata": metadata,
         }
 
@@ -2745,6 +2773,7 @@ class NativeQQGateway:
     ) -> dict[str, Any]:
         name = _safe_str(material.get("name"), "qq-file").strip() or "qq-file"
         reason_text = self._learning_reason_text(text)
+        event_timestamp = _event_timestamp_seconds(event)
         payload: dict[str, Any] = {
             "origin": "owner_supplied",
             "reason": reason_text,
@@ -2755,10 +2784,13 @@ class NativeQQGateway:
             "file_id": _safe_str(material.get("file_id")).strip(),
             "stage": self.config.qq_file_learning_stage,
             "curated": self.config.qq_file_learning_curated,
+            "timestamp": event_timestamp,
             "metadata": {
                 "gateway": GATEWAY_NAME,
                 "gateway_version": GATEWAY_VERSION,
                 "source": "qq_file_message",
+                "qq_event_time_iso": _event_time_iso(event_timestamp),
+                "qq_event_time_unix": event_timestamp,
                 "onebot_post_type": _safe_str(event.get("post_type")),
                 "onebot_message_type": _safe_str(event.get("message_type")),
                 "message_id": _safe_str(event.get("message_id")),
@@ -2790,6 +2822,7 @@ class NativeQQGateway:
         text: str,
     ) -> dict[str, Any]:
         name = _safe_str(material.get("name"), "qq-sticker").strip() or "qq-sticker"
+        event_timestamp = _event_timestamp_seconds(event)
         payload: dict[str, Any] = {
             "origin": "qq_owner_sticker",
             "platform": "qq",
@@ -2800,7 +2833,7 @@ class NativeQQGateway:
             "sender_name": self._sender_name(event),
             "group_id": target.group_id or "",
             "message_id": _safe_str(event.get("message_id")),
-            "timestamp": _as_int(event.get("time"), int(time.time())),
+            "timestamp": event_timestamp,
             "file_name": name,
             "name": name,
             "summary": _safe_str(material.get("summary")).strip(),
@@ -2812,6 +2845,8 @@ class NativeQQGateway:
                 "gateway": GATEWAY_NAME,
                 "gateway_version": GATEWAY_VERSION,
                 "source": "qq_sticker_message",
+                "qq_event_time_iso": _event_time_iso(event_timestamp),
+                "qq_event_time_unix": event_timestamp,
                 "onebot_post_type": _safe_str(event.get("post_type")),
                 "onebot_message_type": _safe_str(event.get("message_type")),
                 "message_id": _safe_str(event.get("message_id")),
@@ -3071,6 +3106,7 @@ class NativeQQGateway:
         text: str,
     ) -> dict[str, Any]:
         session_id = self._session_id(target)
+        event_timestamp = _event_timestamp_seconds(event)
         return {
             "packages": package_text,
             "current_text": text,
@@ -3078,11 +3114,13 @@ class NativeQQGateway:
             "source": "qq_gateway_package_install_message",
             "requested_by": target.user_id,
             "message_id": _safe_str(event.get("message_id")),
-            "timestamp": _as_int(event.get("time"), int(time.time())),
+            "timestamp": event_timestamp,
             "metadata": {
                 "gateway": GATEWAY_NAME,
                 "gateway_version": GATEWAY_VERSION,
                 "source": "qq_gateway_package_install_message",
+                "qq_event_time_iso": _event_time_iso(event_timestamp),
+                "qq_event_time_unix": event_timestamp,
                 "onebot_post_type": _safe_str(event.get("post_type")),
                 "onebot_message_type": _safe_str(event.get("message_type")),
                 "session_id": session_id,
@@ -3096,10 +3134,13 @@ class NativeQQGateway:
 
     def _build_codex_payload(self, event: dict[str, Any], *, target: ReplyTarget, task_text: str) -> dict[str, Any]:
         session_id = self._session_id(target)
+        event_timestamp = _event_timestamp_seconds(event)
         metadata = {
             "gateway": GATEWAY_NAME,
             "gateway_version": GATEWAY_VERSION,
             "source": "qq_gateway_codex_execute_message",
+            "qq_event_time_iso": _event_time_iso(event_timestamp),
+            "qq_event_time_unix": event_timestamp,
             "onebot_post_type": _safe_str(event.get("post_type")),
             "onebot_message_type": _safe_str(event.get("message_type")),
             "is_owner_user": True,
@@ -3126,7 +3167,7 @@ class NativeQQGateway:
             "visible_window": self.config.codex_visible_window,
             "window_title": self.config.codex_window_title,
             "network_access": self.config.codex_network_access,
-            "timestamp": _as_int(event.get("time"), int(time.time())),
+            "timestamp": event_timestamp,
             "metadata": metadata,
         }
 
