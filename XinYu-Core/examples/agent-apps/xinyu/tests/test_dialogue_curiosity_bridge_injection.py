@@ -1256,6 +1256,20 @@ def test_empty_visible_reply_recovery_uses_renderer_not_template(tmp_path) -> No
     assert runtime._empty_visible_reply_fallback(payload=payload, user_text="晚上好") == ""
 
 
+def test_empty_visible_reply_fallback_reports_owner_state_generation_failure(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    payload = {"message_type": "private_text", "metadata": {"is_owner_user": True}}
+
+    reply = runtime._empty_visible_reply_fallback(
+        payload=payload,
+        user_text="\u72b6\u6001\u5982\u4f55\uff0c\u4e2b\u5934",
+    )
+
+    assert reply
+    assert "\u8fd8\u5728\u3002\u521a\u624d\u6709\u70b9\u5361" not in reply
+    assert any(marker in reply for marker in ("\u6a21\u578b", "\u751f\u6210", "QQ"))
+
+
 def test_owner_private_greeting_semantic_fast_decision_uses_v1_classifier(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     payload = {
@@ -1337,6 +1351,50 @@ def test_owner_private_state_question_semantic_fast_route_uses_renderer_not_temp
     assert render_calls == [{"user_text": "\u72b6\u6001\u5982\u4f55\uff0c\u4e2b\u5934", "draft_reply": ""}]
     assert "\u8fd8\u5728\u3002\u521a\u624d\u6709\u70b9\u5361" not in response["reply"]
     assert published and published[0]["reply"] == rendered_reply
+
+
+def test_owner_private_state_question_semantic_fast_route_reports_empty_renderer(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    payload = {
+        "message_type": "private_text",
+        "session_id": "qq:private:owner",
+        "user_id": "42",
+        "metadata": {"is_owner_user": True},
+    }
+    session = AgentSession(key="qq:private:owner", agent=FakeAgent(), prompt_signature="")
+    published: list[dict[str, object]] = []
+
+    async def empty_render(agent, *, payload, user_text, draft_reply, canonical_recall_context=""):
+        del agent, payload, user_text, draft_reply, canonical_recall_context
+        return ""
+
+    async def fake_publish(payload, **kwargs):
+        del payload
+        published.append(kwargs)
+
+    runtime._render_outward_reply = empty_render  # type: ignore[method-assign]
+    runtime._desktop_publish_chat_finished = fake_publish  # type: ignore[method-assign]
+
+    response = asyncio.run(
+        runtime._maybe_handle_owner_private_semantic_fast_turn(
+            payload,
+            text="\u72b6\u6001\u5982\u4f55\uff0c\u4e2b\u5934",
+            session=session,
+            session_key=session.key,
+            turn_id="turn-semantic-fast-state-empty-renderer",
+            turn_started_wall="2026-05-21T14:10:00+08:00",
+            turn_started_at=0.0,
+            before_memory={},
+            cleanup={"cleaned_sessions": 0},
+            event_sidecar={"notes": ["event_sourcing_recorded"]},
+        )
+    )
+
+    assert response is not None
+    assert response["semantic_fast"]["renderer"] == "empty_state_notice"
+    assert any(marker in response["reply"] for marker in ("\u6a21\u578b", "\u751f\u6210", "QQ"))
+    assert "\u8fd8\u5728\u3002\u521a\u624d\u6709\u70b9\u5361" not in response["reply"]
+    assert published and published[0]["reply"] == response["reply"]
 
 
 def test_owner_private_relationship_pressure_stays_out_of_semantic_fast_route(tmp_path) -> None:

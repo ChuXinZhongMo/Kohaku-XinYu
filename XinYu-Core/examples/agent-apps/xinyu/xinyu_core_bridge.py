@@ -6123,8 +6123,12 @@ tags: [autonomy, maintenance, runtime]
     _looks_like_false_single_bubble_limitation = staticmethod(looks_like_false_single_bubble_limitation)
 
     def _empty_visible_reply_fallback(self, *, payload: dict[str, Any], user_text: str, delegate_note: str = "") -> str:
-        del payload, user_text, delegate_note
-        return ""
+        del delegate_note
+        if not self._owner_private_payload_matches(payload):
+            return ""
+        if self._is_explicit_technical_request(user_text):
+            return ""
+        return xinyu_bridge_semantic_fast_routes.owner_private_empty_state_notice(user_text)
 
     async def _recover_empty_visible_reply(
         self,

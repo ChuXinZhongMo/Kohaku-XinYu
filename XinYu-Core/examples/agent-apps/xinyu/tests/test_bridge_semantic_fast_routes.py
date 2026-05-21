@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from xinyu_bridge_semantic_fast_routes import owner_private_direct_repair_reply
+from xinyu_bridge_semantic_fast_routes import owner_private_empty_state_notice
 from xinyu_bridge_semantic_fast_routes import owner_private_semantic_fast_decision
 from xinyu_bridge_semantic_fast_routes import reply_looks_like_stale_plan_residue
 
@@ -105,6 +106,14 @@ def test_owner_private_semantic_fast_decision_allows_short_state_question_before
     assert result["intents"] == ("owner_state_question",)
     assert result["direct_reply"] == ""
     assert "owner_state_question_live_renderer_required" in result["notes"]
+
+
+def test_owner_private_empty_state_notice_is_transparent_not_persona_template() -> None:
+    notice = owner_private_empty_state_notice("\u72b6\u6001\u5982\u4f55\uff0c\u4e2b\u5934", seed="turn-429")
+
+    assert notice
+    assert "\u8fd8\u5728\u3002\u521a\u624d\u6709\u70b9\u5361" not in notice
+    assert any(marker in notice for marker in ("\u6a21\u578b", "\u751f\u6210", "QQ"))
 
 
 def test_owner_private_semantic_fast_decision_directly_handles_current_reply_complaint() -> None:

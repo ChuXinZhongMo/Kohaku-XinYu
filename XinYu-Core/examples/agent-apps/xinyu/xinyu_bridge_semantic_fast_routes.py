@@ -60,6 +60,11 @@ _OWNER_STATE_QUESTION_MARKERS = (
     "\u4f60\u73b0\u5728\u4ec0\u4e48\u72b6\u6001",
 )
 _OWNER_STATE_FAST_MAX_CHARS = 24
+_OWNER_STATE_EMPTY_REPLY_NOTICES = (
+    "\u8fd9\u8f6e\u4e3b\u6a21\u578b\u6ca1\u751f\u6210\u51fa\u80fd\u53d1\u7684\u56de\u590d\uff0c\u4e0d\u662f\u4f60\u6d88\u606f\u6ca1\u5230\u3002",
+    "\u8fd9\u6761\u6211\u6536\u5230\u4e86\uff0c\u4f46\u6a21\u578b\u90a3\u8f6e\u6ca1\u5410\u51fa\u53ef\u89c1\u56de\u590d\u3002",
+    "\u521a\u624d\u65ad\u5728\u751f\u6210\u4e0a\uff0c\u4e0d\u662f QQ \u6ca1\u6536\u5230\uff1b\u8fd9\u8f6e\u522b\u7ee7\u7eed\u7b49\u3002",
+)
 _CONFUSION_ONLY_MARKERS = ("??", "???", "????", "\uff1f\uff1f", "\uff1f\uff1f\uff1f", "\uff1f\uff1f\uff1f\uff1f")
 _STALE_PLAN_REPLY_MARKERS = (
     "\u5148\u628a\u8303\u56f4\u538b\u5c0f",
@@ -97,6 +102,14 @@ def _looks_like_owner_state_question(text: str) -> bool:
     if not compact:
         return False
     return any(marker in compact for marker in _OWNER_STATE_QUESTION_MARKERS)
+
+
+def owner_private_empty_state_notice(text: str, *, seed: str = "") -> str:
+    if not _looks_like_owner_state_question(text):
+        return ""
+    basis = _compact_text(seed or text)
+    index = sum(ord(char) for char in basis) % len(_OWNER_STATE_EMPTY_REPLY_NOTICES)
+    return _OWNER_STATE_EMPTY_REPLY_NOTICES[index]
 
 
 def owner_private_direct_repair_reply(runtime: Any, text: str, intents: tuple[str, ...] | None = None) -> str:
@@ -380,7 +393,10 @@ async def handle_owner_private_semantic_fast_turn(
 
         reply = _safe_str(rendered).strip()
         if not reply:
-            return None
+            reply = owner_private_empty_state_notice(text, seed=turn_id)
+            if not reply:
+                return None
+            renderer_name = "empty_state_notice"
 
     guarded_reply, guard_flags = runtime.speech_controller.final_reply_guard(
         payload=payload,
