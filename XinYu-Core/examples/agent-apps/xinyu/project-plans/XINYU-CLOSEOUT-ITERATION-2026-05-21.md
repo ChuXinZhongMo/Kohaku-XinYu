@@ -44,8 +44,11 @@ Purpose: continue the remaining XinYu finish work after the complete autonomous 
   - "status / how do you feel" self-state questions;
   - template-style complaints;
   - correction-after-delay cases.
+  - Blocked: live owner-private QQ input is required; `XINYU-QQ-OBSERVATION-PROBE-CHECKLIST-2026-05-21.md` prepares the safe probe categories.
 - [ ] Inspect shadow flags without storing raw private chat in public artifacts.
+  - Blocked: depends on the live probe batch; safe trace fields are documented.
 - [ ] Convert real owner corrections into reviewable calibration candidates through existing QQ review tooling.
+  - Blocked: depends on real owner corrections; sanitized candidate format is documented.
 
 ### 4. Learning Quality Review
 
@@ -67,13 +70,17 @@ Purpose: continue the remaining XinYu finish work after the complete autonomous 
   - unrelated and should stay held;
   - rejected.
   - Evidence: q-903 candidates were only applied after source comparison passed; earlier semantic-mismatch candidates were left unapplied.
-- [ ] Keep stable self/personality/relationship memory blocked unless review evidence justifies a candidate.
+- [x] Keep stable self/personality/relationship memory blocked unless review evidence justifies a candidate.
+  - Evidence: gate tests passed; `ai_self_iteration_state.md` keeps profile direct writes blocked, narrative review-only, relationship blocked, and emotion blocked.
 
 ### 5. v1 Canary Decision
 
-- [ ] Keep v1 shadow metrics collecting.
-- [ ] Do not enable owner-simple canary automatically.
-- [ ] If owner explicitly approves, enable only owner-private simple-message canary and keep fallback to the old main path.
+- [x] Keep v1 shadow metrics collecting.
+  - Evidence: `xinyu_status.py --json` reports readiness sample window `200`, error rate `0.000`, and owner approval required.
+- [x] Do not enable owner-simple canary automatically.
+  - Evidence: status reports `owner_simple_canary: false` and `auto_full_switch: false`.
+- [x] If owner explicitly approves, enable only owner-private simple-message canary and keep fallback to the old main path.
+  - Evidence: no approval was present in this pass, so the path remains documented and blocked at owner approval.
 
 ### 6. Structural Debt
 

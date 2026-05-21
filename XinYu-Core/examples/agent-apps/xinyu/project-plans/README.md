@@ -15,6 +15,8 @@ bodies, raw prompts, raw replies, URLs, or tokens.
   - Execution loop for automatically completing remaining safe code work while keeping owner-gated behavior blocked.
 - `XINYU-DESKTOP-SPLIT-READINESS-2026-05-21.md`
   - Desktop renderer/CSS split-readiness note with validation baseline and safe split order.
+- `XINYU-QQ-OBSERVATION-PROBE-CHECKLIST-2026-05-21.md`
+  - Owner-private QQ probe checklist and safe trace fields for no-raw-transcript observation.
 - `XINYU-CROSS-DOMAIN-SYNAESTHESIA-PLAN-2026-05-19.md`
   - Current cross-domain synaesthesia execution plan.
 

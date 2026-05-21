@@ -138,7 +138,7 @@ Evidence:
 
 ### B1. Stable Memory Gate
 
-Status: `monitor_only`
+Status: `done`
 
 Goal: prove stable self/personality/relationship writes remain blocked unless review evidence justifies a candidate.
 
@@ -153,9 +153,15 @@ Done when:
 - current gate state is documented with file/state evidence;
 - tests or status confirm review-only behavior.
 
+Evidence:
+
+- `tests/test_personality_evolution.py`, `tests/test_persona_runtime_boundaries.py`, `tests/test_ai_personality_maintenance_bridge.py`, and `tests/test_memory_immune_gate.py` passed.
+- `ai_self_iteration_state.md` reports profile direct writes blocked, narrative review-only, relationship blocked, and emotion blocked.
+- `personality_change_state.md` reports `profile_write_permission: review_only_not_auto_apply`.
+
 ### B2. v1 Shadow Metrics
 
-Status: `monitor_only`
+Status: `done`
 
 Goal: keep v1 shadow metrics collecting without enabling owner-simple canary automatically.
 
@@ -169,9 +175,14 @@ Done when:
 - readiness evidence is fresh;
 - `owner_simple_canary` remains disabled unless explicit owner approval is present.
 
+Evidence:
+
+- `tests/test_v1_canary_readiness.py` passed.
+- `xinyu_status.py --json` reports `v1_canary_decision: ready_for_owner_canary_request`, `switch_permission: owner_approval_required`, sample window `200`, error rate `0.000`, and `owner_simple_canary: false`.
+
 ### B3. Owner-Simple Canary Block
 
-Status: `monitor_only`
+Status: `done`
 
 Goal: prevent accidental auto-enable of owner-simple canary.
 
@@ -184,9 +195,14 @@ Done when:
 
 - regression/status evidence confirms no automatic canary switch.
 
+Evidence:
+
+- `xinyu_status.py --json` reports `v1_canary_auto_full_switch: false`.
+- `tests/test_v1_canary_readiness.py` passed.
+
 ### B4. Owner-Approved Canary Path
 
-Status: `owner_approval_required`
+Status: `blocked_owner_approval_absent`
 
 Goal: if explicit owner approval is later given, enable only owner-private simple-message canary with fallback to the old path.
 
@@ -200,11 +216,16 @@ Done when:
 
 - either owner approval is absent and this remains blocked with evidence, or owner approval is present and the canary is enabled narrowly with rollback evidence.
 
+Evidence:
+
+- Owner approval to enable v1 canary was not present in this execution pass.
+- Status confirms the path remains held at owner approval, with no automatic canary switch.
+
 ## Lane C: Real QQ Observation
 
 ### C1. Owner-Private Probe Batch
 
-Status: `owner_input_required`
+Status: `blocked_owner_input_prepared`
 
 Goal: observe real owner-private behavior for:
 
@@ -222,9 +243,14 @@ Done when:
 
 - owner sends the probes through QQ, or explicitly approves a local synthetic replay as substitute evidence.
 
+Preparation evidence:
+
+- `XINYU-QQ-OBSERVATION-PROBE-CHECKLIST-2026-05-21.md` added with generic probe categories and no raw private transcript.
+- Live QQ probe evidence still requires owner input.
+
 ### C2. Shadow Flag Inspection
 
-Status: `owner_input_required`
+Status: `blocked_owner_input_prepared`
 
 Goal: inspect route/shadow flags from the live probes without publishing raw QQ text.
 
@@ -236,9 +262,14 @@ Done when:
 
 - flags are inspected after live probes and summarized without raw transcript.
 
+Preparation evidence:
+
+- Safe fields identified for `runtime/qq_inbound_trace.jsonl` and `runtime/answer_discipline_visible_send_shadow.jsonl`.
+- No raw private text is required for the committed summary.
+
 ### C3. Calibration Candidate Conversion
 
-Status: `owner_input_required`
+Status: `blocked_owner_input_prepared`
 
 Goal: convert real owner corrections into reviewable calibration candidates.
 
@@ -250,6 +281,12 @@ Automatic preparation:
 Done when:
 
 - real owner corrections exist and are converted into review-only candidates.
+
+Preparation evidence:
+
+- Sanitized calibration candidate format documented.
+- `xinyu_qq_review.py` and `xinyu_review_inbox.py` identified as review tooling.
+- No stable-memory promotion is authorized by this lane.
 
 ## Completion Gate
 
@@ -264,6 +301,16 @@ Before this plan can be closed:
 - All `monitor_only` items have fresh evidence.
 - All `owner_input_required` items are either completed from owner-provided probes or explicitly listed as blocked by missing owner input.
 
+## Completion Evidence
+
+- Full pytest passed with `786 passed`.
+- QQ gateway smoke passed.
+- Runtime readiness smoke passed.
+- `xinyu_status.py --json` returned `"ok": true`.
+- `owner_simple_canary` remained `false`.
+- `v1_canary_auto_full_switch` remained `false`.
+- Real QQ observation is prepared but blocked on owner-provided live probes.
+
 ## Current Next Action
 
-Continue Lane B with automatic monitoring/gate validation.
+All automatic lanes are complete. Remaining live evidence requires owner-provided QQ probes.
