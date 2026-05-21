@@ -34,7 +34,8 @@ Purpose: continue the remaining XinYu finish work after the complete autonomous 
   - Evidence: owner-private regression tests passed in the previous batch.
 - [x] Re-run full `pytest` after this closeout batch.
   - Evidence: `.\.venv\Scripts\python.exe -m pytest` passed, `773 passed`.
-- [ ] Split current worktree into reviewable commit packages before starting larger refactors.
+- [x] Split current worktree into reviewable commit packages before starting larger refactors.
+  - Evidence: closeout work was split into five commits ending at `031dfce`.
 
 ### 3. Real QQ Observation
 
