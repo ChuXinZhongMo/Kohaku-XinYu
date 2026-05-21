@@ -9,10 +9,15 @@ bodies, raw prompts, raw replies, URLs, or tokens.
 
 ## Active
 
-- `XINYU-COMPLETE-AUTONOMOUS-EXECUTION-PLAN.md`
-  - Current end-to-end Codex execution loop for finishing XinYu as a reliable local long-running agent system.
+- `XINYU-CLOSEOUT-ITERATION-2026-05-21.md`
+  - Current closeout queue for the remaining finish work after the complete autonomous execution plan reached closure.
 - `XINYU-CROSS-DOMAIN-SYNAESTHESIA-PLAN-2026-05-19.md`
   - Current cross-domain synaesthesia execution plan.
+
+## Completed
+
+- `XINYU-COMPLETE-AUTONOMOUS-EXECUTION-PLAN.md`
+  - Closed on 2026-05-21; all tasks inside the plan are checked and have focused evidence.
 
 ## Hold
 

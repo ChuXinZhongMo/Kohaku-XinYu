@@ -77,12 +77,13 @@ Do not commit local credentials or machine-specific secrets.
 
 ## Current Validation Baseline
 
-Latest checked baseline:
+Latest checked local baseline, 2026-05-21:
 
-- Python tests: `667 passed`
-- quick smoke: `ok=true`
+- Python tests: `772 passed`
+- runtime readiness smoke: `ok`
+- QQ gateway smoke: `ok`
 - desktop typecheck: passed
-- desktop build: passed
+- desktop build: not rerun in this closeout pass
 
 Detailed audit and recovery notes live in `worklog/` and
 `XinYu-Core/examples/agent-apps/xinyu/ops/reports/`.

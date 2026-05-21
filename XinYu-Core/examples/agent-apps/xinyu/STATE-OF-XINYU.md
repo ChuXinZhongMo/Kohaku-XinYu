@@ -152,7 +152,9 @@ This file is the current one-page engineering state summary for XinYu.
 - q-006 has four real AI-agent/self-understanding sources staged, compared as `corroborated`, and integrated into `knowledge/general.md` as knowledge-only entries after source-diversity follow-up
 - q-006 now feeds `memory/self/ai_self_iteration_state.md` as `growth_review_candidate` with `confidence_score: 96`, while stable personality, narrative, owner, relationship, emotion, and knowledge layers remain protected from direct rewrite
 - q-003 and q-006 source-diversity follow-up has completed: q-003 gained two Nature-hosted sources, q-006 gained an Anthropic-hosted source, and earlier repeated-host warnings were cleared
-- current live learning quality is `review_needed` with `warning_count: 0` because two q-006 source materials are held as `semantic_mismatch_hold`; autonomous search remains blocked until the held material is reviewed or fixed
+- current live learning quality is `stable` with `warning_count: 0`; q-903 gained two independent-host human-relationship follow-up sources and the repeated-host warning is resolved
+- q-903 source-diversity follow-up requests recover `target: human-relationship` from existing same-question requests when `active_questions.md` is stale, so follow-up search no longer degrades to `general reliable source`
+- source comparison now normalizes conservative relationship word forms such as `boundary/boundaries` and `close/closer/closeness`, so same-question support is not missed because of simple morphology while generic relationship words remain excluded
 - source notes now place learner-integrated sources and learning-quality warnings into their correct sections; stale comparison holds are not kept after a successful re-compare
 - autonomous search activation now blocks broad search without pending requests, blocks provider execution when learning quality is `review_needed`, and limits enabled provider search by query budget
 - social inquiry policy now blocks owner-private prompts without explicit consent, blocks non-AI professional expert questions, blocks direct personality rewrite requests, and routes external human answers as source material candidates only
@@ -217,6 +219,7 @@ This file is the current one-page engineering state summary for XinYu.
 - source comparison is still heuristic, but it now requires cross-host same-question token support before marking sources as corroborated
 - blacklist-resource posture is deterministically and live-style smoke-validated, including repeated abuse escalation, return de-escalation, quoted insult discussion, and owner-boundary protection
 - AI-domain learning has completed its first source-gated integration, source-diversity follow-up, and self-iteration candidate gate pass; any actual personality rewrite remains gated and pending
+- q-903 learning-quality cleanup is complete for this pass: weak public pages were first held in temp dry-run as semantic mismatch, then two independent-host relationship-boundary sources passed comparison and were integrated as knowledge-only entries
 - non-owner person extraction is intentionally conservative and currently requires explicit name/introduction-style phrasing before creating a person node
 - local computer access is now restricted to `D:\XinYu\XinYu-Local-Scope` through a safe resolver; broad private filesystem access remains blocked
 - bridge diagnostics now use `/probe` for no-memory checks, and runtime sessions have idle/max-session cleanup
@@ -227,8 +230,11 @@ This file is the current one-page engineering state summary for XinYu.
 - Phase 4 Milestone 27 is complete: `prompts/live_voice_card.md` is now loaded before deeper memory context, included in session prompt signatures, available to the optional renderer path, and covered by `tests/smoke/voice/integration/live_voice_card_smoke.py`.
 - Phase 4 Milestones 28-33 are complete: live turns are classified before drafting, repeated corrections create review-only voice-profile candidates, compact life posture is injected into runtime/renderer context, proactive QQ candidates are shaped into concrete one-bubble messages, status checks cover Core/native-gateway deployment consistency, and portable persona seeds live under `memory-seeds/`.
 - Phase 5 Milestones 34-39 are complete: deployment truth gate, transport/auth guards, learning ingest scope enforcement, runtime readiness runner, bridge module split, shared state IO, and grouped smoke manifests are active and validated.
-- current Phase 5 long-run audit passes with 40 completed milestones, no missing docs, no missing validations, no known residue hits, deployment gate ok, `learning_quality_grade: review_needed`, and `autonomous_search_permission: blocked`.
+- current Phase 5 long-run audit passes with 40 completed milestones, no missing docs, no missing validations, no known residue hits, deployment gate ok, and the current live learning quality is stable after q-903 follow-up.
 - the former separate persona prompt artifact is deleted; live voice, personality, reality-boundary, and memory-policy layers now carry identity and surface voice.
+- live message time is now an explicit first-class prompt context: QQ payloads carry event Unix/ISO time, live and renderer prompts receive current runtime time, message event time, message age, and event-time source, and renderer conversation tails preserve per-message `recorded_at`.
+- ordinary owner-private greeting/self-state turns now bias toward live generation instead of fixed direct greeting templates, while the renderer and slow live path can use exact message age to distinguish late replies from current intent.
+- runtime readiness no longer depends on a slow recursive traversal through excluded archive/report/snapshot directories; `mojibake_guard_smoke.py` prunes excluded trees during traversal and keeps critical-file checks.
 
 ## 5. Immediate Priority Order
 
@@ -241,7 +247,7 @@ This file is the current one-page engineering state summary for XinYu.
 7. stabilize expression quality on relationship scenarios
 8. delay broad autonomy until post-validation
 9. validate blacklisted-resource posture in live behavior without misclassifying misunderstanding as malice
-10. keep source learning gated and review q-006 semantic mismatch before broadening controlled autonomy
+10. keep source learning gated and keep q-903's resolved follow-up under source comparison and learner integration boundaries
 11. keep local filesystem work inside the authorized local scope unless the owner grants a new explicit path
 12. keep runtime readiness green before interpreting any real QQ behavior as personality/prompt failure
 
@@ -257,10 +263,11 @@ The current sequence is:
 - preserve the Phase 4 live voice card as the highest-priority surface-speech guide
 - preserve pre-draft classification, life posture, and speech-controller final gates before deeper prompt/personality changes
 - keep non-owner person nodes conservative: explicit names only, lower-than-owner priority, separate profile files
-- keep autonomous search blocked while live learning quality remains `review_needed` from semantic-mismatch held source material
+- keep autonomous search/source follow-up gated; q-903 is stable now, but future source work should still pass search, fetch, comparison, learner, and learning-quality gates
 - preserve completed framework gates during longer real sessions and personality-detail tuning
 - run `tests/smoke/voice/integration/real_conversation_quality_smoke.py` after prompt-expression changes
 - prefer small no-restore lived-session batches with immediate residue inspection before changing stable personality files
+- use `project-plans/XINYU-CLOSEOUT-ITERATION-2026-05-21.md` as the current closeout queue; the previous complete autonomous execution plan is closed.
 
 ## 7. Current Summary
 
@@ -275,4 +282,4 @@ XinYu is now a runnable early-stage scaffold:
 
 She is now script-stable across the current representative behavior/personality/real-conversation matrices, with a Phase 4 QQ surface pipeline and a Phase 5 runtime-hardening layer: live readiness, deployment truth, transport/auth guards, scoped learning ingest, grouped smokes, and split bridge modules.
 
-The remaining gap is lived QQ observation, q-006 semantic-mismatch review/fix, and further tuning from real owner corrections, not missing base framework milestones.
+The remaining gap is lived QQ observation and further tuning from real owner corrections, not missing base framework milestones.
