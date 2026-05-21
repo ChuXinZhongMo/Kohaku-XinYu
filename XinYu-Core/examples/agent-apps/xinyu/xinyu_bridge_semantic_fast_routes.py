@@ -299,14 +299,19 @@ def owner_private_semantic_fast_decision(runtime: Any, payload: dict[str, Any], 
         and not classification.needs_model
         and not classification.needs_memory
     ):
-        reply = _direct_greeting_ack_reply(raw_text, intents)
+        notes = ["semantic_fast_allowed", f"semantic_fast_intents:{','.join(intents)}"]
+        if "greeting" in intent_set:
+            reply = ""
+            notes.append("owner_greeting_live_renderer_required")
+        else:
+            reply = _direct_greeting_ack_reply(raw_text, intents)
         return {
             "allowed": True,
             "route": route,
             "intents": intents,
             "reasons": tuple(_safe_str(reason) for reason in decision.reasons),
             "direct_reply": reply,
-            "notes": ["semantic_fast_allowed", f"semantic_fast_intents:{','.join(intents)}"],
+            "notes": notes,
         }
     return {
         "allowed": False,
@@ -495,7 +500,7 @@ async def handle_owner_private_semantic_fast_turn(
         "archive_message_ids": [],
         "archive_assistant_message_id": "",
         "semantic_fast": {
-            "scope": "owner_private_direct_fast",
+            "scope": "owner_private_direct_fast" if renderer_name == "direct" else "owner_private_live_fast",
             "route": _safe_str(decision.get("route"), "fast_path"),
             "intents": list(intents),
             "elapsed_ms": elapsed_ms,

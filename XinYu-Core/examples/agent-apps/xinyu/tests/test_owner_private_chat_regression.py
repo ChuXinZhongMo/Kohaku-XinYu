@@ -103,7 +103,7 @@ def test_runtime_status_requests_keep_runtime_status_context(tmp_path: Path) -> 
         assert "goldmark_auth" in blocked
 
 
-def test_semantic_fast_keeps_greetings_and_short_personal_state_direct() -> None:
+def test_semantic_fast_routes_greetings_and_short_personal_state_to_live_renderer() -> None:
     greeting = owner_private_semantic_fast_decision(
         FakeRuntime(decision=_decision(route="fast_path", intents=["greeting"])),
         OWNER_PAYLOAD,
@@ -121,7 +121,8 @@ def test_semantic_fast_keeps_greetings_and_short_personal_state_direct() -> None
     )
 
     assert greeting["allowed"] is True
-    assert greeting["direct_reply"] == "\u665a\u4e0a\u597d\u3002"
+    assert greeting["direct_reply"] == ""
+    assert "owner_greeting_live_renderer_required" in greeting["notes"]
     assert short_personal_state["allowed"] is True
     assert short_personal_state["intents"] == ("owner_state_question",)
     assert short_personal_state["direct_reply"] == ""

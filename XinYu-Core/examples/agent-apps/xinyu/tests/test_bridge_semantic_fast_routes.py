@@ -36,7 +36,7 @@ def _decision(*, route: str, intents: list[str], needs_model: bool = False, need
     )
 
 
-def test_owner_private_semantic_fast_decision_allows_low_risk_greeting() -> None:
+def test_owner_private_semantic_fast_decision_routes_greeting_to_live_renderer() -> None:
     runtime = FakeRuntime(decision=_decision(route="fast_path", intents=["greeting"]))
 
     result = owner_private_semantic_fast_decision(
@@ -48,8 +48,9 @@ def test_owner_private_semantic_fast_decision_allows_low_risk_greeting() -> None
     assert result["allowed"] is True
     assert result["route"] == "fast_path"
     assert result["intents"] == ("greeting",)
-    assert result["direct_reply"] == "\u665a\u4e0a\u597d\u3002"
+    assert result["direct_reply"] == ""
     assert "semantic_fast_allowed" in result["notes"]
+    assert "owner_greeting_live_renderer_required" in result["notes"]
 
 
 def test_owner_private_semantic_fast_decision_rejects_non_owner_without_v1() -> None:
