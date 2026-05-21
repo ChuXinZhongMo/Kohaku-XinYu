@@ -105,6 +105,8 @@ Do not write stable memory, stable personality, or relationship memory from this
 
 ## Current Status
 
-- Probe tooling is prepared.
-- No live owner-private probe batch was run in this pass.
-- Remaining evidence requires owner-provided QQ interaction.
+- Probe tooling was prepared and then exercised through owner-provided QQ interaction.
+- Sanitized trace review after the live probe found 7 owner-private arrivals after the review cutoff: 5 visible replies, 1 low-information acknowledgement drop, and 1 coalesced/prepared turn with no separate direct send.
+- Visible replies stayed on route `chat`, with `local_reply=false`; answer-discipline shadow events passed and did not save raw prompts or raw replies.
+- One route issue was found: a reply-quality complaint was still eligible for owner-private semantic fast direct reply. It was fixed so reply-quality complaints now fall through to live model generation instead of using a direct repair reply.
+- No raw owner-private transcript was copied into this document.

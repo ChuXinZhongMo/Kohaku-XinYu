@@ -225,7 +225,7 @@ Evidence:
 
 ### C1. Owner-Private Probe Batch
 
-Status: `blocked_owner_input_prepared`
+Status: `done_live_probe_sanitized`
 
 Goal: observe real owner-private behavior for:
 
@@ -246,11 +246,12 @@ Done when:
 Preparation evidence:
 
 - `XINYU-QQ-OBSERVATION-PROBE-CHECKLIST-2026-05-21.md` added with generic probe categories and no raw private transcript.
-- Live QQ probe evidence still requires owner input.
+- Owner-provided live QQ probes were reviewed through sanitized trace fields only.
+- Observed after the review cutoff: 7 owner-private arrivals, 5 visible replies, 1 low-information acknowledgement drop, and 1 coalesced/prepared turn without a separate direct send.
 
 ### C2. Shadow Flag Inspection
 
-Status: `blocked_owner_input_prepared`
+Status: `done_live_probe_sanitized`
 
 Goal: inspect route/shadow flags from the live probes without publishing raw QQ text.
 
@@ -265,11 +266,14 @@ Done when:
 Preparation evidence:
 
 - Safe fields identified for `runtime/qq_inbound_trace.jsonl` and `runtime/answer_discipline_visible_send_shadow.jsonl`.
+- Live-probe visible replies stayed on route `chat`, with `local_reply=false`.
+- Answer-discipline visible-send shadow events passed and reported no raw prompt or raw reply saved.
+- Route review found one behavioral issue: reply-quality complaints were still eligible for semantic fast direct repair. The route was changed so those complaints now go to live model generation.
 - No raw private text is required for the committed summary.
 
 ### C3. Calibration Candidate Conversion
 
-Status: `blocked_owner_input_prepared`
+Status: `done_route_rule_fix_no_stable_memory`
 
 Goal: convert real owner corrections into reviewable calibration candidates.
 
@@ -287,6 +291,7 @@ Preparation evidence:
 - Sanitized calibration candidate format documented.
 - `xinyu_qq_review.py` and `xinyu_review_inbox.py` identified as review tooling.
 - No stable-memory promotion is authorized by this lane.
+- The live probe produced a route-rule fix rather than a stable memory/personality candidate: `reply_quality_complaint` is no longer handled by direct semantic fast reply.
 
 ## Completion Gate
 
@@ -309,8 +314,9 @@ Before this plan can be closed:
 - `xinyu_status.py --json` returned `"ok": true`.
 - `owner_simple_canary` remained `false`.
 - `v1_canary_auto_full_switch` remained `false`.
-- Real QQ observation is prepared but blocked on owner-provided live probes.
+- Real QQ observation was completed from owner-provided live probes using sanitized trace fields only.
+- Reply-quality complaints now route to live model generation instead of owner-private semantic fast direct reply.
 
 ## Current Next Action
 
-All automatic lanes are complete. Remaining live evidence requires owner-provided QQ probes.
+All automatic lanes are complete. Live QQ probe evidence has been reviewed, and the discovered route issue has been fixed without raw transcript storage or stable-memory promotion.

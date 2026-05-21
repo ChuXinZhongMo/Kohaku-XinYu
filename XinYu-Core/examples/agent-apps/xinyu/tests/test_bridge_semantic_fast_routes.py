@@ -117,7 +117,7 @@ def test_owner_private_empty_state_notice_is_transparent_not_persona_template() 
     assert any(marker in notice for marker in ("\u6a21\u578b", "\u751f\u6210", "QQ"))
 
 
-def test_owner_private_semantic_fast_decision_directly_handles_current_reply_complaint() -> None:
+def test_owner_private_semantic_fast_decision_routes_reply_complaint_to_live_model() -> None:
     runtime = FakeRuntime(
         decision=_decision(route="slow_path", intents=["ordinary_chat"], needs_model=True, needs_memory=True)
     )
@@ -128,13 +128,10 @@ def test_owner_private_semantic_fast_decision_directly_handles_current_reply_com
         "\u4f60\u5728\u8bf4\u4ec0\u4e48",
     )
 
-    assert result["allowed"] is True
+    assert result["allowed"] is False
     assert result["intents"] == ("reply_quality_complaint",)
-    assert result["direct_reply"] == (
-        "\u521a\u624d\u90a3\u53e5\u63a5\u9519\u4e86\uff0c"
-        "\u662f\u65e7\u4e0a\u4e0b\u6587\u4e32\u8fdb\u6765\u4e86\uff1b"
-        "\u8fd9\u53e5\u6211\u6309\u4f60\u5f53\u524d\u95ee\u9898\u6765\u3002"
-    )
+    assert "reply_quality_complaint_needs_live_model" in result["notes"]
+    assert "semantic_fast_not_low_risk" in result["notes"]
 
 
 def test_owner_private_semantic_fast_decision_directly_handles_runtime_status_question() -> None:

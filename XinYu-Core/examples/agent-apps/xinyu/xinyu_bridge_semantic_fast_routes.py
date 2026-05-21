@@ -248,6 +248,16 @@ def owner_private_semantic_fast_decision(runtime: Any, payload: dict[str, Any], 
         return {"allowed": False, "notes": ["multiline_text"]}
 
     repair_intents = _repair_intents_for_text(raw_text)
+    if "reply_quality_complaint" in repair_intents:
+        return {
+            "allowed": False,
+            "intents": repair_intents,
+            "notes": [
+                "reply_quality_complaint_needs_live_model",
+                "semantic_fast_not_low_risk",
+                f"semantic_fast_intents:{','.join(repair_intents)}",
+            ],
+        }
     if repair_intents and len(compact) <= 64:
         reply = owner_private_direct_repair_reply(runtime, raw_text, repair_intents)
         return {
