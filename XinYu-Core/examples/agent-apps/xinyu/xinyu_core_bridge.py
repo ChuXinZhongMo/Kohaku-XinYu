@@ -22,6 +22,8 @@ from xinyu_action_layer import XinyuActionLayer, codex_response_to_outcome
 from xinyu_action_reply_composer import compose_action_reply
 from state_service import append_jsonl, atomic_write_text
 from xinyu_bridge_errors import BridgeRequestError
+from xinyu_bridge_codex_markers import extract_model_codex_delegate as _extract_model_codex_delegate
+from xinyu_bridge_codex_markers import extract_self_code_approval_id as _extract_self_code_approval_id
 from xinyu_bridge_external_plugin_routes import (
     external_plugin_call as _external_plugin_call_route,
     external_plugin_config as _external_plugin_config_route,
@@ -157,6 +159,7 @@ from xinyu_bridge_turn_finish_sidecars import run_slow_turn_finish_sidecars
 import xinyu_bridge_turn_sidecars
 from xinyu_bridge_turn_pipeline import PreModelRouteResult, run_pre_model_routes, run_pre_model_routes_with_timeout
 import xinyu_bridge_v1_routes
+from xinyu_bridge_time_utils import timestamp_or_now_iso as _timestamp_or_now_iso
 from v1_canary_gate import payload_has_attachment_signal as _payload_has_attachment_signal
 from xinyu_chat_service import ChatServiceError, build_chat_service
 from xinyu_codex_delegate import (
@@ -309,27 +312,6 @@ from xinyu_visible_persona_voice import (
 )
 from xinyu_visible_state_hygiene import sanitize_visible_state_files
 from xinyu_watched_sources import run_watched_source_check
-
-
-def _timestamp_or_now_iso(value: Any) -> str:
-    parsed = _parse_timestamp_iso(value)
-    if parsed is None:
-        return datetime.now().astimezone().isoformat()
-    return parsed.astimezone().isoformat()
-
-
-def _parse_timestamp_iso(value: Any) -> datetime | None:
-    text = _safe_str(value).strip()
-    if not text or text.lower() in {"none", "unknown", "null", "n/a", "na"}:
-        return None
-    try:
-        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.astimezone()
-    return parsed
-
 
 BRIDGE_VERSION = "0.8.99"
 BRIDGE_SOURCE_PATH = Path(__file__).resolve()
@@ -3947,14 +3929,7 @@ tags: [autonomy, maintenance, runtime]
         }
 
     def _extract_model_codex_delegate(self, reply: str) -> str:
-        for pattern in CODEX_DELEGATE_PATTERNS:
-            match = pattern.search(reply or "")
-            if not match:
-                continue
-            task = re.sub(r"\s+", " ", match.group("task")).strip()
-            task = re.sub(r"(?i)^@@task\s*=\s*", "", task).strip()
-            return task[:4000]
-        return ""
+        return _extract_model_codex_delegate(reply, CODEX_DELEGATE_PATTERNS)
 
     def _extract_wait_to_think_task(self, reply: str, *, user_text: str, session_key: str) -> str:
         for pattern in WAIT_TO_THINK_PATTERNS:
@@ -4032,8 +4007,7 @@ tags: [autonomy, maintenance, runtime]
         )
 
     def _extract_self_code_approval_id(self, task_text: str) -> str:
-        match = re.search(r"(?im)^\s*Self-code approval id:\s*([A-Za-z0-9_-]+)\s*$", task_text or "")
-        return match.group(1).strip() if match else "unknown"
+        return _extract_self_code_approval_id(task_text)
 
     def _prepare_self_code_watchdog_payload(self, payload: dict[str, Any], *, approval_id: str) -> dict[str, Any]:
         snapshot = create_self_code_snapshot(

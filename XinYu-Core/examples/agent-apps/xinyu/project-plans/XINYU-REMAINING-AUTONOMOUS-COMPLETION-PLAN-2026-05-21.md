@@ -85,7 +85,7 @@ Current progress:
 
 ### A2. Thin `xinyu_core_bridge.py`
 
-Status: `pending`
+Status: `done`
 
 Goal: continue moving small pure bridge helpers into focused modules without changing `/chat`, turn routing, owner gates, or memory write behavior.
 
@@ -101,6 +101,12 @@ Done when:
 - targeted tests and full pytest pass;
 - runtime readiness smoke passes;
 - `xinyu_status.py --json` is green.
+
+Current progress:
+
+- `xinyu_bridge_time_utils.py` extracted for timestamp parsing and fallback ISO normalization.
+- `xinyu_bridge_codex_markers.py` extracted for Codex/self-code marker parsing.
+- Evidence: targeted bridge tests passed; runtime readiness smoke passed after core bridge restart; full pytest passed with `786 passed`.
 
 ### A3. Desktop Renderer/CSS Split Readiness
 
@@ -253,4 +259,4 @@ Before this plan can be closed:
 
 ## Current Next Action
 
-Continue Lane A2 with a behavior-preserving `xinyu_core_bridge.py` extraction slice, then validate and commit.
+Continue Lane A3 with Desktop renderer/CSS split-readiness inventory and validation.

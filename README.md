@@ -79,7 +79,7 @@ Do not commit local credentials or machine-specific secrets.
 
 Latest checked local baseline, 2026-05-21:
 
-- Python tests: `781 passed`
+- Python tests: `786 passed`
 - runtime readiness smoke: `ok`
 - QQ gateway smoke: `ok`
 - desktop typecheck: passed
