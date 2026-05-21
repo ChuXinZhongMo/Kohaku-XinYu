@@ -4,6 +4,7 @@ from datetime import datetime
 
 from xinyu_bridge_state_text import payload_event_timestamp_seconds
 from xinyu_qq_config import GatewayConfig
+from xinyu_qq_event_time import event_timestamp_seconds
 from xinyu_qq_gateway import NativeQQGateway
 from xinyu_qq_models import ReplyTarget
 
@@ -37,3 +38,9 @@ def test_qq_chat_payload_carries_exact_event_time_iso() -> None:
     assert metadata["qq_event_time_unix"] == event_timestamp
     assert int(datetime.fromisoformat(metadata["qq_event_time_iso"]).timestamp()) == event_timestamp
     assert payload_event_timestamp_seconds(payload) == event_timestamp
+
+
+def test_qq_event_time_accepts_millisecond_event_timestamp() -> None:
+    event_timestamp = int(datetime.fromisoformat("2026-05-18T13:30:00+08:00").timestamp())
+
+    assert event_timestamp_seconds({"time": event_timestamp * 1000}) == event_timestamp

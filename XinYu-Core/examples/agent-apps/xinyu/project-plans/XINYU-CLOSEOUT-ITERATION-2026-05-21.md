@@ -33,7 +33,7 @@ Purpose: continue the remaining XinYu finish work after the complete autonomous 
 - [x] Keep owner-private ordinary greetings/self-state questions on live generation rather than fixed text.
   - Evidence: owner-private regression tests passed in the previous batch.
 - [x] Re-run full `pytest` after this closeout batch.
-  - Evidence: `.\.venv\Scripts\python.exe -m pytest` passed, `772 passed`.
+  - Evidence: `.\.venv\Scripts\python.exe -m pytest` passed, `773 passed`.
 - [ ] Split current worktree into reviewable commit packages before starting larger refactors.
 
 ### 3. Real QQ Observation
@@ -78,6 +78,7 @@ Purpose: continue the remaining XinYu finish work after the complete autonomous 
 
 - [ ] Continue thinning `xinyu_core_bridge.py` only in behavior-preserving slices.
 - [ ] Continue splitting `xinyu_qq_gateway.py` as transport-only modules.
+  - Progress: extracted QQ event-time parsing/formatting into `xinyu_qq_event_time.py` and kept the gateway smoke plus time-context tests green.
 - [ ] Split Desktop renderer and CSS only after backend closeout stays green.
 
 ## Stop Rules

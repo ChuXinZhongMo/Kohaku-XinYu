@@ -29,6 +29,8 @@ from xinyu_qq_config import (
     load_json_object as _load_json,
 )
 from xinyu_qq_core_client import BridgeError, CoreBridgeClient
+from xinyu_qq_event_time import event_time_iso as _event_time_iso
+from xinyu_qq_event_time import event_timestamp_seconds as _event_timestamp_seconds
 import xinyu_qq_forward_context
 from xinyu_qq_models import PendingAction, PreparedMessage, RecentStickerImportState, ReplyTarget
 from xinyu_qq_gateway_utils import hash_id as _hash_id
@@ -69,22 +71,6 @@ BRIDGE_UNAVAILABLE_OWNER_REPLY = (
     "\u90a3\u6761\u6ca1\u8dd1\u5b8c\u3002\u4f60\u518d\u53d1\u4e00\u6b21\uff0c\u6211\u73b0\u5728\u63a5\u3002"
 )
 CORE_CHAT_RETRY_DELAY_SECONDS = 1.0
-
-
-def _event_timestamp_seconds(event: dict[str, Any]) -> int:
-    timestamp = _as_int(event.get("time"), int(time.time()))
-    if timestamp > 10_000_000_000:
-        timestamp = int(timestamp / 1000)
-    if timestamp <= 0:
-        return int(time.time())
-    return timestamp
-
-
-def _event_time_iso(timestamp_seconds: int) -> str:
-    try:
-        return datetime.fromtimestamp(int(timestamp_seconds)).astimezone().isoformat(timespec="seconds")
-    except (OSError, OverflowError, ValueError):
-        return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
 class NativeQQGateway:
