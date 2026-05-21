@@ -58,7 +58,7 @@ Stop and report instead of changing behavior when an item needs:
 
 ### A1. Thin `xinyu_qq_gateway.py`
 
-Status: `in_progress`
+Status: `done`
 
 Goal: keep splitting transport-adjacent helper logic out of `xinyu_qq_gateway.py` without changing visible behavior.
 
@@ -78,6 +78,10 @@ Done when:
 Current progress:
 
 - `xinyu_qq_event_time.py` extracted and validated.
+- `xinyu_qq_session_flow.py` extracted for session queue keys, arrival waterlines, and stale visible reply checks.
+- `xinyu_qq_bridge_errors.py` extracted for bridge timeout/unavailable classification and owner-private fallback selection.
+- `xinyu_qq_reception_metadata.py` extracted for inbound arrival, prepared, dispatch, and session metadata annotations.
+- Evidence: targeted QQ gateway tests passed; QQ gateway smoke passed; full pytest passed with `781 passed`.
 
 ### A2. Thin `xinyu_core_bridge.py`
 
@@ -249,4 +253,4 @@ Before this plan can be closed:
 
 ## Current Next Action
 
-Continue Lane A1 with another behavior-preserving `xinyu_qq_gateway.py` extraction slice, then validate and commit.
+Continue Lane A2 with a behavior-preserving `xinyu_core_bridge.py` extraction slice, then validate and commit.

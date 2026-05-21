@@ -33,7 +33,7 @@ Purpose: continue the remaining XinYu finish work after the complete autonomous 
 - [x] Keep owner-private ordinary greetings/self-state questions on live generation rather than fixed text.
   - Evidence: owner-private regression tests passed in the previous batch.
 - [x] Re-run full `pytest` after this closeout batch.
-  - Evidence: `.\.venv\Scripts\python.exe -m pytest` passed, `773 passed`.
+  - Evidence: `.\.venv\Scripts\python.exe -m pytest` passed, `781 passed`.
 - [x] Split current worktree into reviewable commit packages before starting larger refactors.
   - Evidence: closeout work was split into five commits ending at `031dfce`.
 
@@ -78,8 +78,9 @@ Purpose: continue the remaining XinYu finish work after the complete autonomous 
 ### 6. Structural Debt
 
 - [ ] Continue thinning `xinyu_core_bridge.py` only in behavior-preserving slices.
-- [ ] Continue splitting `xinyu_qq_gateway.py` as transport-only modules.
+- [x] Continue splitting `xinyu_qq_gateway.py` as transport-only modules.
   - Progress: extracted QQ event-time parsing/formatting into `xinyu_qq_event_time.py` and kept the gateway smoke plus time-context tests green.
+  - Progress: extracted session flow, bridge error classification, and reception metadata helpers; QQ gateway smoke and full pytest remained green.
 - [ ] Split Desktop renderer and CSS only after backend closeout stays green.
 
 ## Stop Rules

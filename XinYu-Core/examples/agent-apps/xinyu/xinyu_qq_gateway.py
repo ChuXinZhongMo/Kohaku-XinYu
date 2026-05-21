@@ -28,6 +28,8 @@ from xinyu_qq_config import (
     as_str_list as _as_str_list,
     load_json_object as _load_json,
 )
+from xinyu_qq_bridge_errors import BRIDGE_TIMEOUT_OWNER_REPLY, BRIDGE_UNAVAILABLE_OWNER_REPLY
+import xinyu_qq_bridge_errors
 from xinyu_qq_core_client import BridgeError, CoreBridgeClient
 from xinyu_qq_event_time import event_time_iso as _event_time_iso
 from xinyu_qq_event_time import event_timestamp_seconds as _event_timestamp_seconds
@@ -40,8 +42,10 @@ from xinyu_qq_gateway_utils import safe_str as _safe_str
 import xinyu_qq_normalizer
 import xinyu_qq_outbox_client
 import xinyu_qq_outbox_dispatcher
+import xinyu_qq_reception_metadata
 import xinyu_qq_reply_bubbles
 import xinyu_qq_rich_context
+import xinyu_qq_session_flow
 import xinyu_qq_server
 import xinyu_qq_sender
 import xinyu_qq_sticker_semantics
@@ -62,14 +66,6 @@ QQ_RICH_CONTEXT_TRACE_REL = Path("runtime") / "qq_rich_context_trace.jsonl"
 QQ_STICKER_IMPORT_TRACE_REL = Path("runtime") / "qq_sticker_import_trace.jsonl"
 QQ_RECENT_STICKER_STATE_REL = Path("runtime") / "qq_recent_sticker_state.json"
 SUPPORTED_IMAGE_SUFFIXES = xinyu_qq_attachment_resolver.SUPPORTED_IMAGE_SUFFIXES
-BRIDGE_TIMEOUT_OWNER_REPLY = (
-    "\u6211\u8fd9\u8fb9\u5361\u4f4f\u4e86\uff0c\u521a\u624d\u90a3\u53e5\u6536\u5230\uff0c"
-    "\u4f46\u6838\u5fc3\u56de\u590d\u8d85\u65f6\u3002\u7b49\u6211\u6062\u590d\u518d\u63a5\u3002"
-)
-BRIDGE_UNAVAILABLE_OWNER_REPLY = (
-    "\u6211\u6536\u5230\u4e86\uff0c\u4f46\u521a\u624d\u8fd9\u8fb9\u91cd\u542f\u65ad\u5f00\u4e86\uff0c"
-    "\u90a3\u6761\u6ca1\u8dd1\u5b8c\u3002\u4f60\u518d\u53d1\u4e00\u6b21\uff0c\u6211\u73b0\u5728\u63a5\u3002"
-)
 CORE_CHAT_RETRY_DELAY_SECONDS = 1.0
 
 
@@ -416,48 +412,34 @@ class NativeQQGateway:
         return self._dispatch_seq
 
     def _event_session_queue_key(self, event: dict[str, Any]) -> str:
-        message_kind = self._message_kind(event)
-        if message_kind == "group":
-            group_id = _safe_str(event.get("group_id")).strip()
-            return f"group:{group_id or 'unknown'}"
-        sender_id = _safe_str(event.get("user_id")).strip()
-        return f"private:{sender_id or 'unknown'}"
+        return xinyu_qq_session_flow.event_session_queue_key(
+            message_kind=self._message_kind(event),
+            group_id=event.get("group_id"),
+            user_id=event.get("user_id"),
+        )
 
     def _mark_latest_session_arrival(self, session_queue_key: str, arrival_seq: int) -> None:
-        if not session_queue_key or arrival_seq <= 0:
-            return
-        session_hash = _hash_id(session_queue_key)
-        previous = self._latest_inbound_arrival_by_session_hash.get(session_hash, 0)
-        if arrival_seq > previous:
-            self._latest_inbound_arrival_by_session_hash[session_hash] = arrival_seq
+        xinyu_qq_session_flow.mark_latest_session_arrival(
+            self._latest_inbound_arrival_by_session_hash,
+            session_queue_key,
+            arrival_seq,
+        )
 
     @staticmethod
     def _prepared_arrival_waterline(prepared: PreparedMessage) -> int:
         payload = prepared.payload if isinstance(prepared.payload, dict) else {}
-        metadata = payload.get("metadata")
-        metadata = metadata if isinstance(metadata, dict) else {}
-        arrivals: list[int] = []
-        raw_arrivals = metadata.get("qq_arrival_seqs")
-        if isinstance(raw_arrivals, list):
-            arrivals.extend(_as_int(value, 0) for value in raw_arrivals)
-        arrivals.append(_as_int(metadata.get("qq_arrival_seq"), 0))
-        arrivals = [value for value in arrivals if value > 0]
-        return max(arrivals) if arrivals else 0
+        return xinyu_qq_session_flow.prepared_arrival_waterline(payload)
 
     def _visible_reply_stale_waterline(self, prepared: PreparedMessage) -> tuple[bool, int, int]:
-        if prepared.route != "chat":
-            return False, 0, 0
-        if prepared.target.message_kind != "private" or prepared.target.user_id not in self.config.owner_user_ids:
-            return False, 0, 0
         payload = prepared.payload if isinstance(prepared.payload, dict) else {}
-        metadata = payload.get("metadata")
-        metadata = metadata if isinstance(metadata, dict) else {}
-        session_hash = _safe_str(metadata.get("qq_session_queue_hash")).strip()
-        generation_waterline = self._prepared_arrival_waterline(prepared)
-        if not session_hash or generation_waterline <= 0:
-            return False, generation_waterline, 0
-        latest_arrival = self._latest_inbound_arrival_by_session_hash.get(session_hash, 0)
-        return latest_arrival > generation_waterline, generation_waterline, latest_arrival
+        return xinyu_qq_session_flow.visible_reply_stale_waterline(
+            route=prepared.route,
+            target_message_kind=prepared.target.message_kind,
+            target_user_id=prepared.target.user_id,
+            owner_user_ids=self.config.owner_user_ids,
+            payload=payload,
+            latest_by_session_hash=self._latest_inbound_arrival_by_session_hash,
+        )
 
     async def _enqueue_onebot_event(self, websocket: Any, event: dict[str, Any]) -> None:
         if _safe_str(event.get("post_type")).lower() != "message":
@@ -531,84 +513,55 @@ class NativeQQGateway:
     ) -> PreparedMessage:
         prepared_seq = self._next_prepared_seq()
         payload = prepared.payload if isinstance(prepared.payload, dict) else {}
-        metadata = payload.get("metadata")
-        if not isinstance(metadata, dict):
-            metadata = {}
-        metadata.update(
-            {
-                "qq_arrival_seq": arrival_seq,
-                "qq_prepared_seq": prepared_seq,
-                "qq_session_queue_hash": _hash_id(session_queue_key),
-                "qq_gateway_received_message_id": _safe_str(event.get("message_id")).strip(),
-            }
+        metadata = xinyu_qq_reception_metadata.annotate_prepared_reception_metadata(
+            payload,
+            event_message_id=event.get("message_id"),
+            arrival_seq=arrival_seq,
+            prepared_seq=prepared_seq,
+            session_queue_key=session_queue_key,
         )
-        payload["metadata"] = metadata
         prepared.payload["metadata"] = metadata
         return prepared
 
     def _annotate_dispatch_reception(self, prepared: PreparedMessage) -> int:
         dispatch_seq = self._next_dispatch_seq()
         payload = prepared.payload if isinstance(prepared.payload, dict) else {}
-        metadata = payload.get("metadata")
-        if not isinstance(metadata, dict):
-            metadata = {}
-        metadata["qq_dispatch_seq"] = dispatch_seq
-        payload["metadata"] = metadata
+        metadata = xinyu_qq_reception_metadata.annotate_dispatch_reception_metadata(
+            payload,
+            dispatch_seq=dispatch_seq,
+        )
         prepared.payload["metadata"] = metadata
         return dispatch_seq
 
     @staticmethod
     def _is_bridge_request_timeout_error(error: str) -> bool:
-        lowered = error.lower()
-        return (
-            "bridge_request_timeout" in lowered
-            or "core bridge request timed out" in lowered
-            or "core bridge connection failed: timed out" in lowered
-        )
+        return xinyu_qq_bridge_errors.is_bridge_request_timeout_error(error)
 
     def _bridge_timeout_fallback_reply(self, prepared: PreparedMessage) -> str:
-        if prepared.route != "chat":
-            return ""
-        if prepared.target.message_kind != "private":
-            return ""
-        if prepared.target.user_id not in self.config.owner_user_ids:
-            return ""
-        return BRIDGE_TIMEOUT_OWNER_REPLY
+        return xinyu_qq_bridge_errors.owner_private_chat_fallback_reply(
+            route=prepared.route,
+            target_message_kind=prepared.target.message_kind,
+            target_user_id=prepared.target.user_id,
+            owner_user_ids=self.config.owner_user_ids,
+            reply_text=BRIDGE_TIMEOUT_OWNER_REPLY,
+        )
 
     def _bridge_unavailable_fallback_reply(self, prepared: PreparedMessage) -> str:
-        if prepared.route != "chat":
-            return ""
-        if prepared.target.message_kind != "private":
-            return ""
-        if prepared.target.user_id not in self.config.owner_user_ids:
-            return ""
-        return BRIDGE_UNAVAILABLE_OWNER_REPLY
+        return xinyu_qq_bridge_errors.owner_private_chat_fallback_reply(
+            route=prepared.route,
+            target_message_kind=prepared.target.message_kind,
+            target_user_id=prepared.target.user_id,
+            owner_user_ids=self.config.owner_user_ids,
+            reply_text=BRIDGE_UNAVAILABLE_OWNER_REPLY,
+        )
 
     @staticmethod
     def _is_retryable_core_chat_connection_error(error: str) -> bool:
-        lowered = error.lower()
-        if "core bridge connection failed" not in lowered and "remotedisconnected" not in lowered:
-            return False
-        return any(
-            marker in lowered
-            for marker in (
-                "winerror 10053",
-                "winerror 10054",
-                "winerror 10061",
-                "connection reset",
-                "connection aborted",
-                "connection refused",
-                "forcibly closed",
-                "remote end closed",
-                "remote disconnected",
-                "remotedisconnected",
-                "actively refused",
-            )
-        )
+        return xinyu_qq_bridge_errors.is_retryable_core_chat_connection_error(error)
 
     @staticmethod
     def _is_bridge_connection_unavailable_error(error: str) -> bool:
-        return NativeQQGateway._is_retryable_core_chat_connection_error(error)
+        return xinyu_qq_bridge_errors.is_bridge_connection_unavailable_error(error)
 
     async def _sleep_before_core_chat_retry(self) -> None:
         await asyncio.sleep(CORE_CHAT_RETRY_DELAY_SECONDS)
