@@ -1,12 +1,18 @@
-﻿# XinYu Autonomy
+# XinYu Autonomy
 
-杩欎釜鐩綍鏄?`D:\XinYu` 宸ヤ綔鍖洪噷 owner 鍙鐨勮嚜涓绘€ц〃闈€?
-- `thoughts/`锛氭闈晶鍙鐨勭鏈夋椂闂存兂娉曘€?- `dreams/`锛氭ⅵ澧冩棩蹇楀鍑哄拰鏈€鏂版ⅵ澧冭鍥俱€?- `journal/`锛氳緝鏃╃殑鑷富鎬у璁″鍑猴紝淇濈暀鐢ㄤ簬杩炵画鎬с€?- `system/`锛氭寚鍚戝疄鏃惰嚜涓绘€х姸鎬?`memory/self/autonomy/` 鐨?junction銆?
-瀹炴椂鐘舵€佹潵鑷?XinYu 鏍稿績杩愯鏃讹細
+这个目录是 `D:\XinYu` 工作区里 owner 可见的自主性表面。
+
+- `thoughts/`：桌面侧可见的私有时间想法。
+- `dreams/`：梦境日志导出和最新梦境视图。
+- `journal/`：较早的自主性审计导出，保留用于连续性。
+- `system/`：指向实时自主性状态 `memory/self/autonomy/` 的 junction。
+
+实时状态来自 XinYu 核心运行时：
 
 ```text
 D:\XinYu\XinYu-Core\examples\agent-apps\xinyu\memory\self\autonomy
 ```
 
-缂栬緫 `system/` 閲岀殑鏂囦欢锛屼細鐩存帴缂栬緫瀹炴椂鑷富鎬х姸鎬併€?
-杩欎釜鐩綍鏀惧湪 `D:\XinYu` 鏍逛笅锛岃€屼笉鏄杩涙闈㈠３閲岋紝鏄负浜嗚杩愯鏃躲€佸鍑哄拰瀹炴椂鐘舵€佷繚鎸佸湪鍚屼竴涓湰鍦伴」鐩爲涓€?
+编辑 `system/` 里的文件，会直接编辑实时自主性状态。
+
+这个目录放在 `D:\XinYu` 根下，而不是塞进桌面壳里，是为了让运行时、导出和实时状态保持在同一个本地项目树中。

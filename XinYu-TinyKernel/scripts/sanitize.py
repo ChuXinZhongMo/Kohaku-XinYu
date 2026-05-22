@@ -8,10 +8,15 @@ from typing import Any
 from common import DATA_DIR, compact_space, read_jsonl, write_jsonl
 
 
+PATH_STOP_CHARS = r"\s\"',;\uFF0C\u3002\uFF1B"
+
 PATH_REPLACEMENTS = (
-    (re.compile(r"[A-Za-z]:\\XinYu(?:\\XinYu-TinyKernel|-TinyKernel)(?:\\[^\s\"'锛屻€傦紱;]*)?", re.I), "<tinykernel_root>"),
-    (re.compile(r"[A-Za-z]:\\XinYu(?:\\[^\s\"'锛屻€傦紱;]*)?", re.I), "<xinyu_root>"),
-    (re.compile(r"[A-Za-z]:\\Users\\[^\s\"'锛屻€傦紱;]+", re.I), "<user_path>"),
+    (
+        re.compile(rf"[A-Za-z]:\\XinYu(?:\\XinYu-TinyKernel|-TinyKernel)(?:\\[^{PATH_STOP_CHARS}]*)?", re.I),
+        "<tinykernel_root>",
+    ),
+    (re.compile(rf"[A-Za-z]:\\XinYu(?:\\[^{PATH_STOP_CHARS}]*)?", re.I), "<xinyu_root>"),
+    (re.compile(rf"[A-Za-z]:\\Users\\[^{PATH_STOP_CHARS}]+", re.I), "<user_path>"),
 )
 SECRET_PATTERNS = (
     re.compile(r"(?i)(api[_-]?key|token|secret|cookie)\s*[:=]\s*[A-Za-z0-9_\-\.]{8,}"),
@@ -19,7 +24,7 @@ SECRET_PATTERNS = (
 )
 LONG_ID_PATTERN = re.compile(r"\b\d{8,}\b")
 HASH_PATTERN = re.compile(r"\b[a-f0-9]{24,64}\b", re.I)
-STATE_FILE_PATTERN = re.compile(r"\b(memory|runtime|logs)\\[^\s\"'锛屻€傦紱;]+", re.I)
+STATE_FILE_PATTERN = re.compile(rf"\b(memory|runtime|logs)\\[^{PATH_STOP_CHARS}]+", re.I)
 
 
 def sanitize_text(text: str) -> str:
