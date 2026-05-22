@@ -41,6 +41,7 @@ TEXT_HEALTH_FILES = (
     "memory/context/self_thought_state.md",
     "memory/context/emotion_council_state.md",
     "memory/context/impulse_soup_state.md",
+    "memory/context/early_visible_segment_shadow_state.md",
     "memory/self/learning_closed_loop_state.md",
     "memory/people/owner.md",
     "memory/relationships/index.md",

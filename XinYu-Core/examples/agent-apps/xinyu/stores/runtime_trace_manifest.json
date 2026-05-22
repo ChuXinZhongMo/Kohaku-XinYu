@@ -31,7 +31,8 @@
         "memory/context/early_visible_segment_shadow_state.md"
       ],
       "allowed_raw_readers": [
-        "xinyu_early_visible_segment.py"
+        "xinyu_early_visible_segment.py",
+        "xinyu_runtime_presence.py"
       ],
       "privacy": "internal_runtime_trace",
       "retention_policy": "append_only_pending_rotation",

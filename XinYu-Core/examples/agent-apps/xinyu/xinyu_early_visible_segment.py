@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import re
+from collections import Counter, deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -13,6 +15,9 @@ from state_service import append_jsonl, atomic_write_text
 
 TRACE_REL = Path("runtime/early_visible_segment_shadow.jsonl")
 STATE_REL = Path("memory/context/early_visible_segment_shadow_state.md")
+SUMMARY_WINDOW_ROWS = 200
+MIN_CANARY_REVIEW_ELIGIBLE = 20
+CANARY_REVIEW_ACCEPTANCE_RATE_PCT = 70
 
 TERMINATORS = ".!?\n\u3002\uff01\uff1f\uff1b\u2026"
 SOFT_BREAKS = ",;\uff0c\uff1b"
@@ -201,6 +206,88 @@ async def observe_early_visible_segment_shadow(
     return decision
 
 
+def summarize_early_visible_segment_shadow(
+    root: Path | str,
+    *,
+    max_rows: int = SUMMARY_WINDOW_ROWS,
+) -> dict[str, Any]:
+    rows = _read_recent_shadow_rows(Path(root), max_rows=max_rows)
+    if not rows:
+        return {
+            "status": "no_data",
+            "checked_at": "",
+            "latest_status": "none",
+            "window_rows": 0,
+            "eligible_count": 0,
+            "accepted_shadow_count": 0,
+            "rejected_shadow_count": 0,
+            "no_candidate_count": 0,
+            "not_eligible_count": 0,
+            "acceptance_rate_pct": 0,
+            "avg_elapsed_ms": 0,
+            "p95_elapsed_ms": 0,
+            "avg_segment_chars": 0,
+            "top_reasons": [],
+            "privacy_violation_count": 0,
+            "raw_user_text_saved": False,
+            "raw_segment_saved": False,
+            "behavior_change": "none_shadow_only",
+            "canary_readiness": "collect_more_shadow",
+            "next_action": "collect_shadow_observations",
+        }
+
+    latest = rows[-1]
+    status_counts = Counter(_safe_str(row.get("status"), "unknown") for row in rows)
+    reason_counts: Counter[str] = Counter()
+    elapsed_values: list[int] = []
+    segment_char_values: list[int] = []
+    privacy_violation_count = 0
+    for row in rows:
+        elapsed_values.append(_safe_int(row.get("elapsed_ms"), 0))
+        segment_char_values.append(_safe_int(row.get("segment_chars"), 0))
+        reasons = row.get("reasons")
+        if isinstance(reasons, list):
+            reason_counts.update(_safe_str(item) for item in reasons if _safe_str(item))
+        if row.get("raw_user_text_saved") is not False or row.get("raw_segment_saved") is not False:
+            privacy_violation_count += 1
+
+    accepted_count = status_counts["accepted_shadow"]
+    rejected_count = status_counts["rejected_shadow"]
+    no_candidate_count = status_counts["no_candidate"]
+    not_eligible_count = status_counts["not_eligible"]
+    eligible_count = accepted_count + rejected_count + no_candidate_count
+    acceptance_rate_pct = int(round((accepted_count / eligible_count) * 100)) if eligible_count else 0
+    canary_readiness = _canary_readiness(
+        eligible_count=eligible_count,
+        acceptance_rate_pct=acceptance_rate_pct,
+        privacy_violation_count=privacy_violation_count,
+        reason_counts=reason_counts,
+    )
+
+    return {
+        "status": "privacy_blocked" if privacy_violation_count else "shadow_observing",
+        "checked_at": _safe_str(latest.get("checked_at")),
+        "latest_status": _safe_str(latest.get("status"), "unknown"),
+        "window_rows": len(rows),
+        "eligible_count": eligible_count,
+        "accepted_shadow_count": accepted_count,
+        "rejected_shadow_count": rejected_count,
+        "no_candidate_count": no_candidate_count,
+        "not_eligible_count": not_eligible_count,
+        "acceptance_rate_pct": acceptance_rate_pct,
+        "avg_elapsed_ms": _average_int(elapsed_values),
+        "p95_elapsed_ms": _percentile_int(elapsed_values, 95),
+        "avg_segment_chars": _average_int(segment_char_values),
+        "top_reasons": [f"{reason}:{count}" for reason, count in reason_counts.most_common(5)],
+        "privacy_violation_count": privacy_violation_count,
+        "raw_user_text_saved": False,
+        "raw_segment_saved": False,
+        "behavior_change": "none_shadow_only",
+        "canary_readiness": canary_readiness,
+        "next_action": _next_action_for_readiness(canary_readiness),
+    }
+
+
 def _with_observation(
     decision: EarlyVisibleSegmentDecision,
     *,
@@ -249,34 +336,95 @@ def _record_shadow(
             "platform": _safe_str(payload.get("platform"))[:80],
         }
         append_jsonl(root_path / TRACE_REL, row)
-        _write_state(root_path, row)
+        _write_state(root_path)
     except Exception:
         return
 
 
-def _write_state(root: Path, row: dict[str, Any]) -> None:
-    reasons_text = ", ".join(_safe_str(item) for item in row.get("reasons", []) or []) or "none"
+def _write_state(root: Path) -> None:
+    summary = summarize_early_visible_segment_shadow(root)
+    reasons_text = ", ".join(_safe_str(item) for item in summary.get("top_reasons", []) or []) or "none"
     lines = [
         "---",
         "memory_type: early_visible_segment_shadow_state",
-        "updated_at: " + _safe_str(row.get("checked_at")),
+        "updated_at: " + (_safe_str(summary.get("checked_at")) or datetime.now().astimezone().isoformat(timespec="seconds")),
         "privacy: hash_and_counts_only",
         "---",
         "",
         "# Early Visible Segment Shadow",
         "",
-        "- status: " + _safe_str(row.get("status"), "unknown"),
-        "- accepted_shadow: " + str(bool(row.get("accepted_shadow"))).lower(),
-        "- elapsed_ms: " + str(int(row.get("elapsed_ms") or 0)),
-        "- observed_chars: " + str(int(row.get("observed_chars") or 0)),
-        "- segment_chars: " + str(int(row.get("segment_chars") or 0)),
-        "- reasons: " + reasons_text,
+        "- status: " + _safe_str(summary.get("status"), "unknown"),
+        "- checked_at: " + _safe_str(summary.get("checked_at")),
+        "- latest_status: " + _safe_str(summary.get("latest_status"), "unknown"),
+        "- window_rows: " + str(_safe_int(summary.get("window_rows"), 0)),
+        "- eligible_count: " + str(_safe_int(summary.get("eligible_count"), 0)),
+        "- accepted_shadow_count: " + str(_safe_int(summary.get("accepted_shadow_count"), 0)),
+        "- rejected_shadow_count: " + str(_safe_int(summary.get("rejected_shadow_count"), 0)),
+        "- no_candidate_count: " + str(_safe_int(summary.get("no_candidate_count"), 0)),
+        "- not_eligible_count: " + str(_safe_int(summary.get("not_eligible_count"), 0)),
+        "- acceptance_rate_pct: " + str(_safe_int(summary.get("acceptance_rate_pct"), 0)),
+        "- avg_elapsed_ms: " + str(_safe_int(summary.get("avg_elapsed_ms"), 0)),
+        "- p95_elapsed_ms: " + str(_safe_int(summary.get("p95_elapsed_ms"), 0)),
+        "- avg_segment_chars: " + str(_safe_int(summary.get("avg_segment_chars"), 0)),
+        "- top_reasons: " + reasons_text,
+        "- privacy_violation_count: " + str(_safe_int(summary.get("privacy_violation_count"), 0)),
         "- raw_user_text_saved: false",
         "- raw_segment_saved: false",
+        "- behavior_change: none_shadow_only",
+        "- canary_readiness: " + _safe_str(summary.get("canary_readiness"), "collect_more_shadow"),
+        "- next_action: " + _safe_str(summary.get("next_action"), "collect_shadow_observations"),
         "",
         "This is shadow-only evidence for possible first natural segment delivery.",
     ]
     atomic_write_text(root / STATE_REL, "\n".join(lines))
+
+
+def _read_recent_shadow_rows(root: Path, *, max_rows: int) -> list[dict[str, Any]]:
+    path = root / TRACE_REL
+    if max_rows <= 0 or not path.exists():
+        return []
+    rows: deque[dict[str, Any]] = deque(maxlen=max_rows)
+    try:
+        with path.open("r", encoding="utf-8-sig") as handle:
+            for line in handle:
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(row, dict):
+                    continue
+                if row.get("event_kind") != "early_visible_segment_shadow":
+                    continue
+                rows.append(row)
+    except OSError:
+        return []
+    return list(rows)
+
+
+def _canary_readiness(
+    *,
+    eligible_count: int,
+    acceptance_rate_pct: int,
+    privacy_violation_count: int,
+    reason_counts: Counter[str],
+) -> str:
+    if privacy_violation_count:
+        return "blocked_privacy_flags"
+    if eligible_count < MIN_CANARY_REVIEW_ELIGIBLE:
+        return "collect_more_shadow"
+    if reason_counts.get("mechanic_or_backend_leak", 0) > 0:
+        return "hold_mechanic_leak_observed"
+    if acceptance_rate_pct < CANARY_REVIEW_ACCEPTANCE_RATE_PCT:
+        return "hold_low_acceptance_rate"
+    return "ready_for_owner_private_canary_review"
+
+
+def _next_action_for_readiness(readiness: str) -> str:
+    if readiness == "ready_for_owner_private_canary_review":
+        return "review_aggregate_shadow_before_owner_private_canary"
+    if readiness.startswith("hold_") or readiness.startswith("blocked_"):
+        return "tighten_rejection_rules_before_any_send"
+    return "collect_shadow_observations"
 
 
 def _payload_allows_shadow(payload: dict[str, Any]) -> bool:
@@ -319,6 +467,27 @@ def _hash_text(text: str) -> str:
 
 def _elapsed_ms(now: float, start: float) -> int:
     return max(0, int((now - start) * 1000))
+
+
+def _average_int(values: Sequence[int]) -> int:
+    if not values:
+        return 0
+    return int(round(sum(values) / len(values)))
+
+
+def _percentile_int(values: Sequence[int], pct: int) -> int:
+    if not values:
+        return 0
+    ordered = sorted(values)
+    index = int(round(((max(0, min(100, pct)) / 100) * (len(ordered) - 1))))
+    return ordered[max(0, min(len(ordered) - 1, index))]
+
+
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(float(_safe_str(value)))
+    except (TypeError, ValueError):
+        return default
 
 
 def _safe_str(value: Any, default: str = "") -> str:

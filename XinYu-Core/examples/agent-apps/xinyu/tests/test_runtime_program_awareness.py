@@ -410,6 +410,41 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
         """,
     )
     _write(
+        tmp_path / "memory/context/early_visible_segment_shadow_state.md",
+        """
+        - status: shadow_observing
+        - checked_at: 2026-05-23T00:03:00+08:00
+        - latest_status: accepted_shadow
+        - window_rows: 5
+        - eligible_count: 4
+        - accepted_shadow_count: 3
+        - rejected_shadow_count: 1
+        - no_candidate_count: 0
+        - not_eligible_count: 1
+        - acceptance_rate_pct: 75
+        - avg_elapsed_ms: 900
+        - p95_elapsed_ms: 1400
+        - avg_segment_chars: 18
+        - top_reasons: generic_presence_or_meta_prefix:1
+        - privacy_violation_count: 0
+        - raw_user_text_saved: false
+        - raw_segment_saved: false
+        - behavior_change: none_shadow_only
+        - canary_readiness: collect_more_shadow
+        - next_action: collect_shadow_observations
+        """,
+    )
+    _write(
+        tmp_path / "runtime/early_visible_segment_shadow.jsonl",
+        json.dumps(
+            {
+                "event_kind": "early_visible_segment_shadow",
+                "checked_at": "2026-05-23T00:03:00+08:00",
+                "status": "accepted_shadow",
+            }
+        ),
+    )
+    _write(
         tmp_path / "runtime/initiative_metrics.json",
         json.dumps(
             {
@@ -527,6 +562,9 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
     assert "feedback_count_24h=1" in block
     assert "initiative_feedback:" in block
     assert "future_effect=lower similar future initiative priority" in block
+    assert "early_visible_segment_shadow:" in block
+    assert "accepted_shadow_count=3" in block
+    assert "behavior_change=none_shadow_only" in block
     assert "[local-path]" not in block
 
     awareness = summary["program_awareness"]
@@ -569,6 +607,9 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
     assert awareness["subsystems"]["initiative_metrics"]["desktop_shown_count_24h"] == "1"
     assert awareness["subsystems"]["initiative_metrics"]["feedback_count_24h"] == "1"
     assert awareness["subsystems"]["initiative_feedback"]["scoring_bias_only"] == "true"
+    assert awareness["subsystems"]["early_visible_segment_shadow"]["accepted_shadow_count"] == "3"
+    assert awareness["subsystems"]["early_visible_segment_shadow"]["behavior_change"] == "none_shadow_only"
+    assert awareness["traces"]["early_visible_segment_shadow"]["last_event_kind"] == "early_visible_segment_shadow"
     assert summary["initiative_lifecycle"]["pending_feedback_count"] == "1"
     assert summary["contextual_self_loop"]["initiative_posture"] == "hold_unless_owner_asks"
     assert summary["contextual_recall"]["admitted_recall_count"] == "2"
