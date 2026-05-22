@@ -109,12 +109,10 @@ def test_owner_private_semantic_fast_decision_allows_short_state_question_before
     assert "owner_state_question_live_renderer_required" in result["notes"]
 
 
-def test_owner_private_empty_state_notice_is_transparent_not_persona_template() -> None:
+def test_owner_private_empty_state_notice_is_disabled_not_mechanical() -> None:
     notice = owner_private_empty_state_notice("\u72b6\u6001\u5982\u4f55\uff0c\u4e2b\u5934", seed="turn-429")
 
-    assert notice
-    assert "\u8fd8\u5728\u3002\u521a\u624d\u6709\u70b9\u5361" not in notice
-    assert any(marker in notice for marker in ("\u6a21\u578b", "\u751f\u6210", "QQ"))
+    assert notice == ""
 
 
 def test_owner_private_semantic_fast_decision_routes_reply_complaint_to_live_model() -> None:

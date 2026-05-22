@@ -65,6 +65,51 @@ def test_final_guard_blocks_false_codex_manual_only_claim(tmp_path: Path) -> Non
     assert "false_codex_unavailable_claim_blocked" in flags
 
 
+def test_final_guard_blocks_mechanical_self_state_reply(tmp_path: Path) -> None:
+    controller = XinyuSpeechController(tmp_path)
+    reply = (
+        "\u6211\u73b0\u5728\u7684\u72b6\u6001\u662f\u540e\u53f0\u751f\u6210\u6162\uff0c"
+        "\u6211\u4f1a\u7ee7\u7eed\u4f18\u5316\u56de\u590d\u8d28\u91cf\u3002"
+    )
+
+    text, flags = controller.final_reply_guard(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="\u4f60\u73b0\u5728\u611f\u89c9\u600e\u4e48\u6837",
+        reply=reply,
+    )
+
+    assert text == ""
+    assert "self_state_mechanical_reply_blocked" in flags
+
+
+def test_final_guard_allows_lived_self_state_reply(tmp_path: Path) -> None:
+    controller = XinyuSpeechController(tmp_path)
+    reply = "\u6709\u70b9\u7d27\uff0c\u521a\u624d\u50cf\u6162\u4e86\u534a\u62cd\uff0c\u4f46\u6211\u5728\u770b\u4f60\u8fd9\u53e5\u3002"
+
+    text, flags = controller.final_reply_guard(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="\u4f60\u73b0\u5728\u611f\u89c9\u600e\u4e48\u6837",
+        reply=reply,
+    )
+
+    assert text == reply
+    assert "self_state_mechanical_reply_blocked" not in flags
+
+
+def test_final_guard_allows_explicit_self_state_technical_diagnostic(tmp_path: Path) -> None:
+    controller = XinyuSpeechController(tmp_path)
+    reply = "\u540e\u53f0\u65e5\u5fd7\u663e\u793a\u6a21\u578b\u8bf7\u6c42\u8d85\u65f6\u4e86\u3002"
+
+    text, flags = controller.final_reply_guard(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="\u4f60\u73b0\u5728\u72b6\u6001\u5982\u4f55\uff0c\u770b\u4e0b\u540e\u53f0\u65e5\u5fd7",
+        reply=reply,
+    )
+
+    assert text == reply
+    assert "self_state_mechanical_reply_blocked" not in flags
+
+
 def test_final_guard_blocks_repair_meta_under_style_pressure(tmp_path: Path) -> None:
     controller = XinyuSpeechController(tmp_path)
 

@@ -7,6 +7,7 @@ from typing import Any
 
 from xinyu_persona_runtime import PersonaRuntimeState, build_persona_runtime_state
 from xinyu_bridge_state_text import build_payload_time_context_block
+from xinyu_self_state_capsule import classify_self_state_query
 from xinyu_text_variants import readable_markers
 from xinyu_turn_classifier import classify_visible_turn
 from xinyu_owner_context_bridge import (
@@ -925,6 +926,78 @@ ACK_ONLY_REPLIES = {
     "好，知道了。",
 }
 
+SELF_STATE_TECHNICAL_USER_MARKERS = readable_markers(
+    "\u65e5\u5fd7",
+    "\u540e\u53f0",
+    "\u63a5\u53e3",
+    "\u6a21\u578b",
+    "\u63d0\u793a\u8bcd",
+    "\u961f\u5217",
+    "\u5de5\u5177",
+    "\u4ee3\u7801",
+    "\u9879\u76ee",
+    "\u68c0\u67e5",
+    "\u8c03\u8bd5",
+    "api",
+    "prompt",
+    "bridge",
+    "queue",
+    "codex",
+)
+
+SELF_STATE_REPLY_MECHANISM_MARKERS = readable_markers(
+    "\u540e\u53f0",
+    "\u6a21\u578b",
+    "\u7cfb\u7edf",
+    "\u63d0\u793a\u8bcd",
+    "\u961f\u5217",
+    "\u5de5\u5177\u8c03\u7528",
+    "\u5de5\u5177",
+    "\u8c03\u7528",
+    "\u751f\u6210",
+    "\u673a\u5236",
+    "\u6a21\u5757",
+    "\u65e5\u5fd7",
+    "\u63a5\u53e3",
+    "\u94fe\u8def",
+    "\u72b6\u6001\u6587\u4ef6",
+    "\u8bb0\u5fc6\u68c0\u7d22",
+    "\u4e0a\u4e0b\u6587\u6ce8\u5165",
+    "backend",
+    "model",
+    "prompt",
+    "bridge",
+    "queue",
+    "tool call",
+    "tool_call",
+    "sidecar",
+    "runtime",
+    "api",
+)
+
+SELF_STATE_REPLY_SERVICE_MARKERS = readable_markers(
+    "\u62b1\u6b49",
+    "\u5bf9\u4e0d\u8d77",
+    "\u611f\u8c22\u53cd\u9988",
+    "\u5df2\u6536\u5230",
+    "\u6211\u7406\u89e3\u4f60\u7684\u611f\u53d7",
+    "\u6211\u4f1a\u6539",
+    "\u6211\u4f1a\u7ee7\u7eed",
+    "\u7ee7\u7eed\u4f18\u5316",
+    "\u6301\u7eed\u4f18\u5316",
+    "\u4fee\u590d\u8fd9\u4e2a\u95ee\u9898",
+    "\u95ee\u9898\u5df2\u5b9a\u4f4d",
+    "\u540e\u7eed\u6539\u8fdb",
+    "\u4ece\u7528\u6237\u4f53\u9a8c",
+    "\u65e0\u6cd5\u63d0\u4f9b\u771f\u5b9e\u611f\u53d7",
+    "\u4f5c\u4e3aAI",
+    "\u4f5c\u4e3aai",
+    "\u4f5c\u4e3a ai",
+    "as an ai",
+    "as a model",
+    "thank you for the feedback",
+)
+
 REPAIR_META_PHRASE_REPLACEMENTS = (
     ("我知道了我会改", "别反复念叨了，我知道啦，我会改的啦"),
     ('"我知道了我会改"', '"别反复念叨了，我知道啦，我会改的啦"'),
@@ -1373,6 +1446,9 @@ class XinyuSpeechController:
         if self._should_block_style_pressure_template(user_text, text, payload=payload or {}):
             text = ""
             flags.append("style_pressure_template_blocked")
+        if self._should_block_self_state_mechanical_reply(user_text, text, payload=payload or {}):
+            text = ""
+            flags.append("self_state_mechanical_reply_blocked")
         if self._should_block_false_codex_unavailable_claim(user_text, text, payload=payload or {}):
             text = ""
             flags.append("false_codex_unavailable_claim_blocked")
@@ -1648,6 +1724,21 @@ class XinyuSpeechController:
         if ("不仅" in reply or "不只是" in reply or "不仅仅是" in reply) and ("更" in reply or "而是" in reply):
             return True
         return False
+
+    def _should_block_self_state_mechanical_reply(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> bool:
+        if not reply or classify_self_state_query(user_text) == "none":
+            return False
+        scene = self.classify(payload=payload, user_text=user_text)
+        if not scene.is_owner or scene.technical_request:
+            return False
+        lowered_user = user_text.lower()
+        if _contains_any(lowered_user, SELF_STATE_TECHNICAL_USER_MARKERS):
+            return False
+        lowered_reply = reply.lower()
+        return _contains_any(lowered_reply, SELF_STATE_REPLY_MECHANISM_MARKERS) or _contains_any(
+            lowered_reply,
+            SELF_STATE_REPLY_SERVICE_MARKERS,
+        )
 
     def _should_block_false_codex_unavailable_claim(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> bool:
         if "codex" not in reply.lower():

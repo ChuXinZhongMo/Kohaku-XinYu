@@ -42,6 +42,7 @@ CRITICAL_FINAL_GUARD_FLAGS = frozenset(
         "emotion_council_mechanics_blocked",
         "false_codex_unavailable_claim_blocked",
         "layered_voice_self_analysis_blocked",
+        "self_state_mechanical_reply_blocked",
         "owner_address_label_blocked",
         "owner_address_query_blocked",
     }

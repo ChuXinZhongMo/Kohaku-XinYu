@@ -1225,6 +1225,9 @@ def test_false_codex_manual_only_claim_is_critical_guard_flag(tmp_path) -> None:
     assert runtime._critical_final_guard_flags(["false_codex_unavailable_claim_blocked"]) == [
         "false_codex_unavailable_claim_blocked"
     ]
+    assert runtime._critical_final_guard_flags(["self_state_mechanical_reply_blocked"]) == [
+        "self_state_mechanical_reply_blocked"
+    ]
 
 
 def test_model_codex_delegate_accepts_legacy_visible_marker(tmp_path) -> None:
@@ -1312,7 +1315,7 @@ def test_empty_visible_reply_recovery_uses_renderer_not_template(tmp_path) -> No
     assert runtime._empty_visible_reply_fallback(payload=payload, user_text="晚上好") == ""
 
 
-def test_empty_visible_reply_fallback_reports_owner_state_generation_failure(tmp_path) -> None:
+def test_empty_visible_reply_fallback_does_not_report_owner_state_mechanics(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     payload = {"message_type": "private_text", "metadata": {"is_owner_user": True}}
 
@@ -1321,9 +1324,7 @@ def test_empty_visible_reply_fallback_reports_owner_state_generation_failure(tmp
         user_text="\u72b6\u6001\u5982\u4f55\uff0c\u4e2b\u5934",
     )
 
-    assert reply
-    assert "\u8fd8\u5728\u3002\u521a\u624d\u6709\u70b9\u5361" not in reply
-    assert any(marker in reply for marker in ("\u6a21\u578b", "\u751f\u6210", "QQ"))
+    assert reply == ""
 
 
 def test_owner_private_greeting_semantic_fast_decision_uses_v1_classifier(tmp_path) -> None:
@@ -1409,7 +1410,7 @@ def test_owner_private_state_question_semantic_fast_route_uses_renderer_not_temp
     assert published and published[0]["reply"] == rendered_reply
 
 
-def test_owner_private_state_question_semantic_fast_route_reports_empty_renderer(tmp_path) -> None:
+def test_owner_private_state_question_semantic_fast_route_drops_empty_renderer(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     payload = {
         "message_type": "private_text",
@@ -1446,11 +1447,8 @@ def test_owner_private_state_question_semantic_fast_route_reports_empty_renderer
         )
     )
 
-    assert response is not None
-    assert response["semantic_fast"]["renderer"] == "empty_state_notice"
-    assert any(marker in response["reply"] for marker in ("\u6a21\u578b", "\u751f\u6210", "QQ"))
-    assert "\u8fd8\u5728\u3002\u521a\u624d\u6709\u70b9\u5361" not in response["reply"]
-    assert published and published[0]["reply"] == response["reply"]
+    assert response is None
+    assert published == []
 
 
 def test_owner_private_relationship_pressure_stays_out_of_semantic_fast_route(tmp_path) -> None:
