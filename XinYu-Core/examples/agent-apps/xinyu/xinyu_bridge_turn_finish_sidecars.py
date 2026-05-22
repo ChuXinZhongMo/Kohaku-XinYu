@@ -14,6 +14,7 @@ from xinyu_interaction_journal import record_interaction_turn
 from xinyu_learning_closed_loop import record_learning_closed_loop_turn
 from xinyu_living_memory_recall import log_living_memory_recall
 from xinyu_memory_candidate_extractor import extract_memory_candidates
+from xinyu_memory_candidate_maintenance import run_memory_candidate_maintenance
 from xinyu_memory_self_review import run_memory_self_review
 from xinyu_private_thought_events import record_private_thought_reply_link
 from xinyu_recent_context_guard import ensure_recent_context_health
@@ -382,6 +383,20 @@ def _extract_memory_candidates(
 def _run_memory_self_review(runtime: Any) -> dict[str, Any]:
     try:
         result = run_memory_self_review(runtime.xinyu_dir)
+        try:
+            maintenance = run_memory_candidate_maintenance(runtime.xinyu_dir)
+            result["candidate_maintenance"] = maintenance
+            if int(maintenance.get("backfill", {}).get("backfilled") or 0) or int(
+                maintenance.get("cleanup", {}).get("archived") or 0
+            ):
+                result.setdefault("notes", []).append(
+                    "memory_candidate_maintenance:"
+                    f"{_safe_str(maintenance.get('backfill', {}).get('backfilled'), '0')}/"
+                    f"{_safe_str(maintenance.get('cleanup', {}).get('archived'), '0')}"
+                )
+        except Exception as exc:
+            print(f"[xinyu_core_bridge] memory candidate maintenance failed: {exc}", flush=True)
+            result.setdefault("notes", []).append(f"memory_candidate_maintenance_error:{type(exc).__name__}")
         if int(result.get("reviewed_candidates") or 0) > 0:
             result.setdefault("notes", []).append(
                 "memory_self_review:"

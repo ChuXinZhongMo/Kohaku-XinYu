@@ -11,6 +11,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from xinyu_dialogue_archive import list_memory_candidates
+from xinyu_memory_candidate_review_cli import decide_candidate, explain_candidate
 from xinyu_qq_outbox import enqueue_qq_outbox_message
 from xinyu_storage_paths import knowledge_file_path, knowledge_ref
 from xinyu_visible_persona_voice import compose_review_inbox_card, compose_review_inbox_command_reply
@@ -297,6 +299,60 @@ def _learning_items(root: Path, decisions: dict[str, Any]) -> list[dict[str, Any
     return items
 
 
+def _memory_candidate_items(root: Path, decisions: dict[str, Any]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for row in list_memory_candidates(root, status="owner_review_required", limit=50):
+        candidate_id = _safe_str(row.get("candidate_id")).strip()
+        if not candidate_id:
+            continue
+        explanation = explain_candidate(root, candidate_id)
+        if not explanation.get("ok"):
+            continue
+        review = explanation.get("memory_review") if isinstance(explanation.get("memory_review"), dict) else {}
+        content_hash = _sha256_text(
+            "\n".join(
+                [
+                    candidate_id,
+                    _safe_str(row.get("status")),
+                    _safe_str(row.get("candidate_type")),
+                    _safe_str(row.get("target_memory_layer")),
+                    _safe_str(row.get("reason")),
+                    _safe_str(review.get("claim_key")),
+                    _safe_str(review.get("recommendation")),
+                    _safe_str(row.get("review_notes")),
+                ]
+            )
+        )
+        if _decision_applies(
+            decisions,
+            action_kind="memory_candidate",
+            record_key=candidate_id,
+            content_hash=content_hash,
+        ):
+            continue
+        recommendation = _safe_str(review.get("recommendation"), "owner_review_required")
+        conflict_count = _safe_str(review.get("conflict_count"), "0")
+        evidence_count = _safe_str(review.get("evidence_count"), "1")
+        items.append(
+            {
+                "action_kind": "memory_candidate",
+                "source_kind": "memory_candidate",
+                "source_path": "runtime/dialogue_archive/dialogue.sqlite3",
+                "item_id": candidate_id,
+                "record_key": candidate_id,
+                "title": f"{row.get('candidate_type', 'memory_candidate')} -> {row.get('target_memory_layer', 'unknown')}",
+                "summary": (
+                    f"{recommendation}; evidence={evidence_count}; conflicts={conflict_count}; "
+                    "ok approves candidate only, not stable memory"
+                ),
+                "detail": _one_line(row.get("reason"), limit=260),
+                "content_hash": content_hash,
+                "transaction_group": "",
+            }
+        )
+    return items
+
+
 def _interleave(groups: list[list[dict[str, Any]]], limit: int) -> list[dict[str, Any]]:
     selected: list[dict[str, Any]] = []
     offset = 0
@@ -318,6 +374,7 @@ def _discover_items(root: Path, *, limit: int) -> list[dict[str, Any]]:
     decisions = _load_decisions(root)
     return _interleave(
         [
+            _memory_candidate_items(root, decisions),
             _voice_items(root, decisions),
             _learning_items(root, decisions),
         ],
@@ -556,6 +613,10 @@ def _resolve_current_item(root: Path, cursor_item: dict[str, Any]) -> dict[str, 
         for item in _learning_items(root, decisions):
             if item.get("record_key") == record_key:
                 return item
+    if action_kind == "memory_candidate":
+        for item in _memory_candidate_items(root, decisions):
+            if item.get("record_key") == record_key:
+                return item
     return None
 
 
@@ -635,6 +696,35 @@ def _append_decision(
     return decision
 
 
+def _apply_item_decision(root: Path, item: dict[str, Any], *, command: str, mod_text: str = "") -> dict[str, Any]:
+    action_kind = _safe_str(item.get("action_kind"))
+    if action_kind != "memory_candidate":
+        return {"applied": False, "notes": ["overlay_decision_only"]}
+    candidate_id = _safe_str(item.get("record_key"))
+    if command == "ok":
+        return decide_candidate(
+            root,
+            candidate_id,
+            decision="approve",
+            review_notes="review_inbox_accepted owner_approved_high_risk owner_resolved_conflict",
+        )
+    if command == "rej":
+        return decide_candidate(
+            root,
+            candidate_id,
+            decision="reject",
+            review_notes="review_inbox_rejected",
+        )
+    if command == "mod":
+        return {
+            "ok": True,
+            "applied": False,
+            "candidate_id": candidate_id,
+            "notes": ["memory_candidate_mod_recorded_without_status_change", _one_line(mod_text, limit=160)],
+        }
+    return {"ok": False, "error": "unsupported_memory_candidate_decision", "candidate_id": candidate_id}
+
+
 def handle_review_inbox_command(root: Path, payload: dict[str, Any] | None = None) -> dict[str, Any]:
     root = root.resolve()
     payload = payload or {}
@@ -707,11 +797,22 @@ def handle_review_inbox_command(root: Path, payload: dict[str, Any] | None = Non
         decisions = _load_decisions(root)
         processed: list[dict[str, Any]] = []
         stale: list[dict[str, Any]] = []
+        apply_results: list[dict[str, Any]] = []
         for item in selected:
             current = _resolve_current_item(root, item)
             if current is None or _safe_str(current.get("content_hash")) != _safe_str(item.get("content_hash")):
                 stale.append(item)
                 continue
+            apply_result = _apply_item_decision(
+                root,
+                item,
+                command=command,
+                mod_text=_safe_str(payload.get("mod_text")),
+            )
+            if apply_result.get("ok") is False:
+                stale.append(item)
+                continue
+            apply_results.append(apply_result)
             processed.append(
                 _append_decision(
                     decisions,
@@ -759,6 +860,7 @@ def handle_review_inbox_command(root: Path, payload: dict[str, Any] | None = Non
                 "command": command,
                 "processed_count": processed_count,
                 "stale_count": stale_count,
+                "apply_results": apply_results[:12],
                 "refreshed_batch_id": refreshed.get("batch_id", ""),
             },
         )
@@ -767,6 +869,7 @@ def handle_review_inbox_command(root: Path, payload: dict[str, Any] | None = Non
             "reply": reply,
             "processed_count": processed_count,
             "stale_count": stale_count,
+            "apply_results": apply_results,
             "refreshed": refreshed,
             "notes": ["review_command_processed"],
         }

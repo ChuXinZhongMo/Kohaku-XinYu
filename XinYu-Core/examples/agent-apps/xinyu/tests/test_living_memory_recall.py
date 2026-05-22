@@ -11,6 +11,7 @@ from xinyu_living_memory_recall import (
     RecalledContextResult,
     run_living_memory_recall_algorithm,
 )
+from xinyu_dialogue_archive import store_memory_candidate, update_memory_candidate_status
 
 
 def test_living_memory_recall_declares_canonical_owner_and_provider_boundary() -> None:
@@ -281,3 +282,60 @@ def test_living_memory_recall_adds_temporal_context_after_keyword_recall(monkeyp
     assert "## Temporal Context" in run.prompt_block
     assert "inference: recent_wake_from_nap" in run.prompt_block
     assert all("time_context:" in item.relevance for item in run.result.items)
+
+
+def test_living_memory_recall_attaches_candidate_boundaries_without_promoting_facts(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    assert store_memory_candidate(
+        tmp_path,
+        candidate_id="memcand-boundary",
+        candidate_type="owner_preference",
+        source_message_ids=[1],
+        source_turn_id="turn-boundary",
+        candidate_text="owner preference candidate\nowner_turn: I might prefer concise replies",
+        confidence_score=65,
+        target_gate="owner_memory_review",
+        target_memory_layer="memory/people/owner.md",
+        reason="owner might prefer concise replies",
+        risk_flags=["memory_immune:review", "scope:owner_private"],
+        created_at="2026-05-20T12:00:00+08:00",
+    )
+    assert update_memory_candidate_status(
+        tmp_path,
+        candidate_id="memcand-boundary",
+        status="owner_review_required",
+        review_notes="needs owner review",
+    )
+
+    def fake_retrieve(
+        root: Path,
+        payload: dict[str, Any] | None,
+        *,
+        user_text: str,
+        dialogue_tail: list[dict[str, str]] | None = None,
+        visible_turn: Any | None = None,
+    ) -> RecalledContextResult:
+        return RecalledContextResult(
+            turn_id="turn-boundary",
+            query_text=user_text,
+            prompt_block="## Recalled Context",
+            items=(),
+            notes=("recalled_context_active",),
+        )
+
+    monkeypatch.setattr(living_recall, "_retrieve_recalled_context", fake_retrieve)
+
+    run = run_living_memory_recall_algorithm(
+        tmp_path,
+        {"message_type": "private"},
+        user_text="concise replies",
+        evaluated_at="2026-05-22T12:00:00+08:00",
+    )
+
+    assert "## Memory Candidate Boundaries" in run.prompt_block
+    assert "candidate material is not stable memory" in run.prompt_block
+    assert "use_policy: owner_review_pending_uncertain_do_not_promote" in run.prompt_block
+    assert "memory_candidate_boundaries_attached" in run.result.notes
+    assert run.result.items == ()

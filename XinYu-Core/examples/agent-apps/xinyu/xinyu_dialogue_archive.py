@@ -1237,6 +1237,44 @@ def update_memory_candidate_status(
         return cursor.rowcount > 0
 
 
+def update_memory_candidate_metadata(
+    root: Path,
+    *,
+    candidate_id: str,
+    evidence: dict[str, Any] | None = None,
+    provenance: dict[str, Any] | None = None,
+    review_notes: str | None = None,
+) -> bool:
+    clean_id = _safe_str(candidate_id).strip()
+    if not clean_id:
+        return False
+    assignments: list[str] = []
+    values: list[Any] = []
+    if evidence is not None:
+        assignments.append("evidence_json = ?")
+        values.append(_json_dumps(evidence))
+    if provenance is not None:
+        assignments.append("provenance_json = ?")
+        values.append(_json_dumps(provenance))
+    if review_notes is not None:
+        assignments.append("review_notes = ?")
+        values.append(_safe_str(review_notes).strip())
+    if not assignments:
+        return False
+    values.append(clean_id)
+    with _connection(root) as conn:
+        _ensure_schema(conn)
+        cursor = conn.execute(
+            f"""
+            UPDATE memory_candidates
+            SET {", ".join(assignments)}
+            WHERE candidate_id = ?
+            """,
+            values,
+        )
+        return cursor.rowcount > 0
+
+
 def _trace_type_for_candidate(candidate_type: str) -> tuple[str, str]:
     normalized = _safe_str(candidate_type).strip()
     mapping = {

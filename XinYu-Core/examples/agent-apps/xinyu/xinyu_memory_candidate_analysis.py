@@ -16,6 +16,11 @@ ACTIVE_REVIEW_STATUSES = {
     "observe_more_unknown",
     "approved",
 }
+RECALL_BOUNDARY_STATUSES = (
+    "owner_review_required",
+    "self_approved_recent_context",
+    "self_approved_voice_review",
+)
 
 NEGATIVE_MARKERS = (
     "do not",
@@ -216,6 +221,48 @@ def candidate_review_context(row: dict[str, Any], rows: list[dict[str, Any]]) ->
     }
 
 
+def build_memory_candidate_recall_boundary(root: Any, *, query_text: str = "", limit: int = 6) -> str:
+    from pathlib import Path
+
+    from xinyu_dialogue_archive import list_memory_candidates
+
+    root_path = Path(root)
+    rows: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for status in RECALL_BOUNDARY_STATUSES:
+        for row in list_memory_candidates(root_path, status=status, limit=max(1, int(limit))):
+            candidate_id = _safe_str(row.get("candidate_id")).strip()
+            if not candidate_id or candidate_id in seen:
+                continue
+            seen.add(candidate_id)
+            rows.append(row)
+    if not rows:
+        return ""
+    ranked = sorted(rows, key=lambda row: _boundary_rank(row, query_text=query_text), reverse=True)[: max(1, int(limit))]
+    lines = [
+        "## Memory Candidate Boundaries",
+        "purpose: review-status context only; candidate material is not stable memory unless owner-approved and separately promoted.",
+        "- current_turn_wins: true",
+        "- unresolved_conflicts_are_not_facts: true",
+    ]
+    for row in ranked:
+        review = candidate_review_context(row, rows)
+        status = _safe_str(row.get("status"), "unknown")
+        lines.extend(
+            [
+                f"- candidate_id: {_safe_str(row.get('candidate_id'), 'unknown')}",
+                f"  status: {status}",
+                f"  candidate_type: {_safe_str(row.get('candidate_type'), 'unknown')}",
+                f"  use_policy: {_recall_use_policy(status, review)}",
+                f"  evidence_count: {_safe_str(review.get('evidence_count'), '1')}",
+                f"  conflict_count: {_safe_str(review.get('conflict_count'), '0')}",
+                f"  target_memory_layer: {_safe_str(row.get('target_memory_layer'), 'unknown')}",
+                f"  reason: {_compact(row.get('reason'), limit=180)}",
+            ]
+        )
+    return "\n".join(lines).strip()
+
+
 def _review_recommendation(row: dict[str, Any], *, evidence_count: int, conflict_count: int) -> str:
     if conflict_count:
         return "hold_conflict_review"
@@ -226,6 +273,32 @@ def _review_recommendation(row: dict[str, Any], *, evidence_count: int, conflict
     if evidence_count >= 2:
         return "corroborated_candidate_review"
     return "single_candidate_review"
+
+
+def _boundary_rank(row: dict[str, Any], *, query_text: str) -> int:
+    status = _safe_str(row.get("status"))
+    score = {
+        "owner_review_required": 30,
+        "self_approved_recent_context": 20,
+        "self_approved_voice_review": 10,
+    }.get(status, 0)
+    haystack = f"{row.get('candidate_type', '')}\n{row.get('target_memory_layer', '')}\n{row.get('reason', '')}".lower()
+    for token in _tokens(query_text):
+        if token in haystack:
+            score += 2
+    return score
+
+
+def _recall_use_policy(status: str, review: dict[str, Any]) -> str:
+    if int(review.get("conflict_count", 0) or 0) > 0:
+        return "conflict_marker_only_do_not_treat_as_fact"
+    if status == "self_approved_recent_context":
+        return "short_term_project_continuity_hint_not_stable_memory"
+    if status == "self_approved_voice_review":
+        return "voice_review_evidence_not_stable_voice_profile"
+    if status == "owner_review_required":
+        return "owner_review_pending_uncertain_do_not_promote"
+    return "candidate_boundary_only"
 
 
 def _claim_source_text(text: str) -> str:
@@ -320,6 +393,13 @@ def _safe_str(value: Any, default: str = "") -> str:
     except Exception:
         return default
     return text if text else default
+
+
+def _compact(value: Any, *, limit: int = 180, default: str = "none") -> str:
+    text = re.sub(r"\s+", " ", _safe_str(value)).strip()
+    if not text:
+        return default
+    return text if len(text) <= limit else text[: max(0, limit - 3)].rstrip() + "..."
 
 
 def _hash(text: str, *, length: int) -> str:
