@@ -20,6 +20,7 @@ from xinyu_dialogue_archive import (
 )
 from xinyu_memory_immune_gate import BLOCK
 from xinyu_memory_immune_gate import evaluate_memory_immune_gate
+from xinyu_memory_candidate_analysis import candidate_claim_metadata
 from xinyu_text_variants import readable_markers
 
 
@@ -151,6 +152,86 @@ def _source_turn_id(payload: dict[str, Any] | None) -> str:
     return _safe_str(payload.get("turn_id") or metadata.get("turn_id")).strip()
 
 
+def _payload_metadata(payload: dict[str, Any] | None) -> dict[str, Any]:
+    metadata = payload.get("metadata") if isinstance(payload, dict) else {}
+    return metadata if isinstance(metadata, dict) else {}
+
+
+def _payload_value(payload: dict[str, Any] | None, key: str) -> str:
+    if not isinstance(payload, dict):
+        return ""
+    metadata = _payload_metadata(payload)
+    return _safe_str(payload.get(key) if payload.get(key) is not None else metadata.get(key)).strip()
+
+
+def _text_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest()
+
+
+def _candidate_evidence(
+    *,
+    spec: CandidateSpec,
+    immune: Any,
+    scope: Any,
+    source_message_ids: list[int],
+    source_turn_id: str,
+    created_at: str,
+) -> dict[str, Any]:
+    claim = candidate_claim_metadata(
+        candidate_type=spec.candidate_type,
+        target_memory_layer=spec.target_memory_layer,
+        source_scope=_safe_str(getattr(scope, "scope", "")),
+        candidate_text=spec.text,
+    )
+    return {
+        "evidence_kind": "dialogue_turn",
+        "source_scope": _safe_str(getattr(scope, "scope", "")),
+        "source_turn_id": source_turn_id,
+        "source_message_ids": source_message_ids,
+        "source_message_count": len(source_message_ids),
+        "candidate_text_hash": _text_hash(spec.text),
+        "confidence_score": max(0, min(100, int(spec.confidence_score))),
+        "reason": spec.reason,
+        "immune_status": _safe_str(getattr(immune, "immune_status", "")),
+        "immune_danger_level": _safe_str(getattr(immune, "danger_level", "")),
+        "immune_danger_signals": list(getattr(immune, "danger_signals", ()) or ()),
+        "immune_action": _safe_str(getattr(immune, "action", "")),
+        "target_gate": spec.target_gate,
+        "target_memory_layer": spec.target_memory_layer,
+        "created_at": created_at,
+        **claim,
+    }
+
+
+def _candidate_provenance(
+    *,
+    payload: dict[str, Any] | None,
+    scope: Any,
+    created_at: str,
+) -> dict[str, Any]:
+    metadata = _payload_metadata(payload)
+    owner_marker = metadata.get("is_owner_user") if "is_owner_user" in metadata else None
+    if owner_marker is None and isinstance(payload, dict):
+        owner_marker = payload.get("is_owner_user")
+    event_id = _payload_value(payload, "message_id") or _payload_value(payload, "source_event_id")
+    return {
+        "source_channel": _safe_str(getattr(scope, "channel", "")),
+        "dialogue_scope": _safe_str(getattr(scope, "scope", "")),
+        "privacy_scope": _safe_str(getattr(scope, "privacy_scope", "")),
+        "session_key_hash": _safe_str(getattr(scope, "session_key_hash", "")),
+        "message_type": _payload_value(payload, "message_type"),
+        "event_time": created_at,
+        "source_event_id_hash": _text_hash(event_id)[:24] if event_id else "",
+        "stable_memory_write_allowed": False,
+        "promotion_requires_review": True,
+        "owner_private": _safe_str(getattr(scope, "scope", "")) == OWNER_PRIVATE_SCOPE,
+        "group_scope": _safe_str(getattr(scope, "scope", "")) == GROUP_SCOPE,
+        "owner_marked": _as_bool(owner_marker),
+        "extractor": "xinyu_memory_candidate_extractor",
+        "schema": "memory_candidate_provenance_v1",
+    }
+
+
 def _candidate_text(user_text: str, assistant_reply: str, *, prefix: str = "") -> str:
     parts = []
     if prefix:
@@ -279,6 +360,7 @@ def extract_memory_candidates(
     immune_blocked = 0
     immune_notes: list[str] = []
     created_at = payload_event_time_iso(payload, fallback=datetime.now().astimezone().isoformat())
+    source_turn_id = _source_turn_id(payload)
     for spec in specs:
         candidate_id = _candidate_id(spec.candidate_type, spec.text, message_ids)
         immune = evaluate_memory_immune_gate(
@@ -310,13 +392,22 @@ def extract_memory_candidates(
             candidate_id=candidate_id,
             candidate_type=spec.candidate_type,
             source_message_ids=message_ids,
-            source_turn_id=_source_turn_id(payload),
+            source_turn_id=source_turn_id,
             candidate_text=spec.text,
             confidence_score=spec.confidence_score,
             target_gate=spec.target_gate,
             target_memory_layer=spec.target_memory_layer,
             reason=spec.reason,
             risk_flags=risk_flags,
+            evidence=_candidate_evidence(
+                spec=spec,
+                immune=immune,
+                scope=scope,
+                source_message_ids=message_ids,
+                source_turn_id=source_turn_id,
+                created_at=created_at,
+            ),
+            provenance=_candidate_provenance(payload=payload, scope=scope, created_at=created_at),
             review_notes=review_notes,
             created_at=created_at,
         ):

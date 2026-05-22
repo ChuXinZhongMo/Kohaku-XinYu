@@ -16,7 +16,7 @@ from xinyu_bridge_state_text import payload_event_time_iso
 
 
 ARCHIVE_REL_PATH = Path("runtime") / "dialogue_archive" / "dialogue.sqlite3"
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 OWNER_PRIVATE_SCOPE = "owner_private"
 GROUP_SCOPE = "qq_group"
@@ -547,6 +547,8 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
             target_memory_layer TEXT NOT NULL,
             reason TEXT NOT NULL,
             risk_flags_json TEXT NOT NULL DEFAULT '[]',
+            evidence_json TEXT NOT NULL DEFAULT '{}',
+            provenance_json TEXT NOT NULL DEFAULT '{}',
             review_notes TEXT NOT NULL DEFAULT ''
         );
 
@@ -602,6 +604,8 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
         pass
     _ensure_column(conn, "memory_candidates", "source_turn_id", "TEXT NOT NULL DEFAULT ''")
     _ensure_column(conn, "memory_candidates", "risk_flags_json", "TEXT NOT NULL DEFAULT '[]'")
+    _ensure_column(conn, "memory_candidates", "evidence_json", "TEXT NOT NULL DEFAULT '{}'")
+    _ensure_column(conn, "memory_candidates", "provenance_json", "TEXT NOT NULL DEFAULT '{}'")
     conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
 
 
@@ -1144,6 +1148,8 @@ def store_memory_candidate(
     target_memory_layer: str,
     reason: str,
     risk_flags: list[str] | tuple[str, ...] | None = None,
+    evidence: dict[str, Any] | None = None,
+    provenance: dict[str, Any] | None = None,
     review_notes: str = "",
     created_at: str | None = None,
 ) -> bool:
@@ -1158,9 +1164,9 @@ def store_memory_candidate(
             INSERT OR IGNORE INTO memory_candidates (
                 candidate_id, created_at, candidate_type, source_turn_id, source_message_ids_json,
                 candidate_text, confidence_score, status, target_gate,
-                target_memory_layer, reason, risk_flags_json, review_notes
+                target_memory_layer, reason, risk_flags_json, evidence_json, provenance_json, review_notes
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 clean_id,
@@ -1174,6 +1180,8 @@ def store_memory_candidate(
                 target_memory_layer,
                 reason,
                 _json_dumps([_safe_str(flag).strip() for flag in (risk_flags or []) if _safe_str(flag).strip()]),
+                _json_dumps(evidence or {}),
+                _json_dumps(provenance or {}),
                 review_notes,
             ),
         )
@@ -1197,6 +1205,10 @@ def list_memory_candidates(root: Path, *, status: str = "pending", limit: int = 
         item = dict(row)
         item["source_message_ids"] = _json_loads(_safe_str(item.pop("source_message_ids_json", "[]")), [])
         item["risk_flags"] = _json_loads(_safe_str(item.pop("risk_flags_json", "[]")), [])
+        evidence = _json_loads(_safe_str(item.pop("evidence_json", "{}")), {})
+        provenance = _json_loads(_safe_str(item.pop("provenance_json", "{}")), {})
+        item["evidence"] = evidence if isinstance(evidence, dict) else {}
+        item["provenance"] = provenance if isinstance(provenance, dict) else {}
         result.append(item)
     return result
 

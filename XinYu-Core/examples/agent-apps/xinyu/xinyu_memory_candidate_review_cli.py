@@ -6,9 +6,22 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_dialogue_archive import list_memory_candidates, update_memory_candidate_status
+from xinyu_memory_candidate_analysis import candidate_review_context
 
 
-STATUSES = ("pending", "owner_review_required", "self_approved_recent_context", "self_approved_voice_review", "rejected", "approved")
+STATUSES = (
+    "pending",
+    "owner_review_required",
+    "self_approved_recent_context",
+    "self_approved_voice_review",
+    "observe_more_owner_preference",
+    "observe_more_relationship_signal",
+    "observe_more_unknown",
+    "blocked_scope_mismatch",
+    "blocked_sensitive",
+    "rejected",
+    "approved",
+)
 
 
 def _safe_str(value: Any, default: str = "") -> str:
@@ -19,6 +32,35 @@ def _safe_str(value: Any, default: str = "") -> str:
     except Exception:
         return default
     return text if text else default
+
+
+def _dict_field(row: dict[str, Any], key: str) -> dict[str, Any]:
+    value = row.get(key)
+    return value if isinstance(value, dict) else {}
+
+
+def _evidence_summary(row: dict[str, Any]) -> dict[str, Any]:
+    evidence = _dict_field(row, "evidence")
+    provenance = _dict_field(row, "provenance")
+    return {
+        "source_scope": evidence.get("source_scope") or provenance.get("dialogue_scope", ""),
+        "source_turn_id": evidence.get("source_turn_id") or row.get("source_turn_id", ""),
+        "source_message_count": evidence.get("source_message_count", len(row.get("source_message_ids", []) or [])),
+        "confidence_score": evidence.get("confidence_score", row.get("confidence_score", 0)),
+        "immune_status": evidence.get("immune_status", ""),
+        "immune_danger_level": evidence.get("immune_danger_level", ""),
+        "immune_action": evidence.get("immune_action", ""),
+        "event_time": provenance.get("event_time") or row.get("created_at", ""),
+        "stable_memory_write_allowed": provenance.get("stable_memory_write_allowed", False),
+        "promotion_requires_review": provenance.get("promotion_requires_review", True),
+    }
+
+
+def _stable_memory_write_status(row: dict[str, Any]) -> str:
+    provenance = _dict_field(row, "provenance")
+    if provenance.get("stable_memory_write_allowed") is True:
+        return "allowed_by_provenance"
+    return "blocked_until_review"
 
 
 def _all_candidates(root: Path, *, limit: int = 200) -> list[dict[str, Any]]:
@@ -58,6 +100,7 @@ def explain_candidate(root: Path, candidate_id: str) -> dict[str, Any]:
     row = get_candidate(root, candidate_id)
     if row is None:
         return {"ok": False, "error": "candidate_not_found", "candidate_id": candidate_id}
+    review_context = candidate_review_context(row, _all_candidates(root))
     return {
         "ok": True,
         "candidate_id": row.get("candidate_id"),
@@ -65,10 +108,14 @@ def explain_candidate(root: Path, candidate_id: str) -> dict[str, Any]:
         "source_message_ids": row.get("source_message_ids", []),
         "extraction_reason": row.get("reason", ""),
         "risk_flags": row.get("risk_flags", []),
+        "evidence": _dict_field(row, "evidence"),
+        "provenance": _dict_field(row, "provenance"),
+        "evidence_summary": _evidence_summary(row),
+        "memory_review": review_context,
         "target_gate": row.get("target_gate", ""),
         "target_memory_layer": row.get("target_memory_layer", ""),
         "status": row.get("status", ""),
-        "stable_memory_write": "blocked_until_review",
+        "stable_memory_write": _stable_memory_write_status(row),
     }
 
 
@@ -78,7 +125,8 @@ def decide_candidate(root: Path, candidate_id: str, *, decision: str, review_not
     if row is None:
         return {"ok": False, "error": "candidate_not_found", "candidate_id": candidate_id}
     if decision == "approve":
-        approval_error = _approval_error(row, review_notes=review_notes)
+        review_context = candidate_review_context(row, _all_candidates(root))
+        approval_error = _approval_error(row, review_notes=review_notes, review_context=review_context)
         if approval_error:
             return {"ok": False, "error": approval_error, "candidate_id": candidate_id, "status": row.get("status", "")}
     if not update_memory_candidate_status(root, candidate_id=candidate_id, status=status, review_notes=review_notes):
@@ -86,12 +134,15 @@ def decide_candidate(root: Path, candidate_id: str, *, decision: str, review_not
     return {"ok": True, "candidate_id": candidate_id, "status": status, "review_notes": review_notes}
 
 
-def _approval_error(row: dict[str, Any], *, review_notes: str) -> str:
+def _approval_error(row: dict[str, Any], *, review_notes: str, review_context: dict[str, Any] | None = None) -> str:
     risk_text = " ".join(_safe_str(flag).lower() for flag in row.get("risk_flags", []))
     risk_text += " " + _safe_str(row.get("review_notes")).lower()
     risk_text += " " + _safe_str(row.get("reason")).lower()
     if any(marker in risk_text for marker in ("runtime_trace", "timeout", "temporary_operational")):
         return "runtime_or_timeout_candidate_cannot_be_approved_directly"
+    context = review_context if isinstance(review_context, dict) else {}
+    if context.get("conflict_count", 0) and "owner_resolved_conflict" not in review_notes:
+        return "candidate_conflict_requires_owner_resolution"
     high_risk_types = {"relationship_signal", "owner_preference", "personality_change", "voice_correction"}
     candidate_type = _safe_str(row.get("candidate_type")).strip()
     if candidate_type in high_risk_types and "owner_approved_high_risk" not in review_notes:

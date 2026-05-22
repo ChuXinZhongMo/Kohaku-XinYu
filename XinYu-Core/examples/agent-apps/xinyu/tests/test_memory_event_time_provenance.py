@@ -59,5 +59,15 @@ def test_memory_write_paths_preserve_payload_event_time(tmp_path: Path) -> None:
     assert candidates
     assert traces
     assert {_timestamp(row["created_at"]) for row in candidates} == {event_timestamp}
+    assert {_timestamp(row["provenance"]["event_time"]) for row in candidates} == {event_timestamp}
+    assert {tuple(row["evidence"]["source_message_ids"]) for row in candidates} == {tuple(archive["message_ids"])}
+    assert {row["evidence"]["source_scope"] for row in candidates} == {OWNER_PRIVATE_SCOPE}
+    assert {row["provenance"]["owner_private"] for row in candidates} == {True}
+    assert {row["provenance"]["stable_memory_write_allowed"] for row in candidates} == {False}
+    assert {row["provenance"]["promotion_requires_review"] for row in candidates} == {True}
+    assert all(row["evidence"]["immune_status"] for row in candidates)
+    assert all(row["evidence"]["claim_key"] for row in candidates)
+    assert all(row["evidence"]["claim_topic_key"] for row in candidates)
+    assert all(row["evidence"]["claim_text_hash"] for row in candidates)
     assert {_timestamp(row["created_at"]) for row in traces} == {event_timestamp}
     assert {_timestamp(row["updated_at"]) for row in traces} == {event_timestamp}
