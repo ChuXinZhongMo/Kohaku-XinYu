@@ -86,7 +86,7 @@ class SessionStore:
         # Restore counters from existing data
         self._restore_counters()
 
-        # Artifacts directory 鈥?created lazily so stores backing
+        # Artifacts directory  - created lazily so stores backing
         # transient in-memory sessions (tests, dry runs) stay fully
         # tidy when no artifact is ever written.
         self._artifacts_dir: Path | None = None
@@ -95,7 +95,7 @@ class SessionStore:
 
     @property
     def session_id(self) -> str:
-        """Session id 鈥?read from meta if set, else derived from the filename.
+        """Session id  - read from meta if set, else derived from the filename.
 
         The stem of the ``.xinyu`` file is the authoritative session
         identifier (``<session_id>.xinyu``). The meta-table value
@@ -193,7 +193,7 @@ class SessionStore:
                 channel_count=len(self._channel_seq),
             )
 
-    # 鈹€鈹€鈹€ Event Log 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # --- Event Log --------------------------------------------------
 
     def _next_event_seq(self, agent: str) -> int:
         """Get and increment the event sequence counter for an agent."""
@@ -277,7 +277,7 @@ class SessionStore:
         all_events.sort(key=lambda x: x[1].get("ts", 0))
         return all_events
 
-    # 鈹€鈹€鈹€ Conversation Snapshots 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # --- Conversation Snapshots -------------------------------------
 
     def save_conversation(self, agent: str, messages: list[dict] | str) -> None:
         """Save a conversation snapshot (overwritten each time).
@@ -313,7 +313,7 @@ class SessionStore:
         except KeyError:
             return None
 
-    # 鈹€鈹€鈹€ Per-Agent State 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # --- Per-Agent State --------------------------------------------
 
     def save_state(
         self,
@@ -368,7 +368,7 @@ class SessionStore:
         except KeyError:
             return []
 
-    # 鈹€鈹€鈹€ Channel Messages 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # --- Channel Messages -------------------------------------------
 
     def _next_channel_seq(self, channel: str) -> int:
         seq = self._channel_seq.get(channel, 0)
@@ -416,7 +416,7 @@ class SessionStore:
                 )
         return result
 
-    # 鈹€鈹€鈹€ Sub-Agent Conversations 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # --- Sub-Agent Conversations ------------------------------------
 
     def next_subagent_run(self, parent: str, name: str) -> int:
         """Get the next run index for a sub-agent."""
@@ -458,7 +458,7 @@ class SessionStore:
         except KeyError:
             return None
 
-    # 鈹€鈹€鈹€ Job Records 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # --- Job Records ------------------------------------------------
 
     def save_job(self, job_id: str, data: dict) -> None:
         """Save a job execution record."""
@@ -473,7 +473,7 @@ class SessionStore:
         except KeyError:
             return None
 
-    # 鈹€鈹€鈹€ Meta 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # --- Meta -------------------------------------------------------
 
     def init_meta(
         self,
@@ -537,7 +537,7 @@ class SessionStore:
                 logger.debug("Failed to read meta key", error=str(e), exc_info=True)
         return result
 
-    # 鈹€鈹€鈹€ Search 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # --- Search -----------------------------------------------------
 
     def search(self, query: str, k: int = 10) -> list[dict]:
         """Search session content via FTS5 (BM25 keyword search).
@@ -552,7 +552,7 @@ class SessionStore:
             logger.warning("FTS search failed", error=str(e))
         return results
 
-    # 鈹€鈹€鈹€ Lifecycle 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # --- Lifecycle --------------------------------------------------
 
     @property
     def path(self) -> str:

@@ -1,4 +1,4 @@
-﻿"""Schema route 鈥?returns the param list for a module entry.
+﻿"""Schema route  - returns the param list for a module entry.
 
 Called from the frontend's module-slot accordion to render a proper
 option form for both builtin and custom modules. See
@@ -33,7 +33,7 @@ async def module_schema(
     req: ModuleSchemaRequest,
     ws: Workspace = Depends(get_workspace),
 ) -> dict:
-    # Trigger-as-tool entries (``type: trigger``) aren't real builtins 鈥?    # their identity is the setup_tool_name and they carry no options
+    # Trigger-as-tool entries (``type: trigger``) aren't real builtins - their identity is the setup_tool_name and they carry no options
     # the user would edit here (those are set via the add_* call at
     # runtime). Return the builtin-tools schema as a baseline.
     if req.type == "trigger":

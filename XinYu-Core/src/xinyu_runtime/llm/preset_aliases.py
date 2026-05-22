@@ -4,26 +4,26 @@ Split out of :mod:`presets` to keep that module under the 1000-line
 hard cap. The tables define two mappings:
 
 ``_CANONICAL_NAMES``
-    Legacy preset key (``gpt-5.4-api`` / ``gpt-5.4-or`` / 鈥? 鈫?bare
+    Legacy preset key (``gpt-5.4-api`` / ``gpt-5.4-or`` / etc.) -> bare
     canonical name under the new ``(provider, name)`` hierarchy. Used
     when transforming the flat ``PRESETS`` dict into the nested view
     that the rest of the codebase consumes.
 
 ``ALIASES``
     Free-form alias (short friendly names, pre-2026 preset names)
-    鈫?``(provider, canonical_name)`` tuple. Used by
+    -> ``(provider, canonical_name)`` tuple. Used by
     :func:`xinyu_runtime.llm.profiles.resolve_controller_llm` to
     let user configs and CLI input keep referencing old identifiers
     after the suffix clean-up.
 """
 
-# 鈹€鈹€ Canonical name mapping 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+# -- Canonical name mapping ------------------------------------
 #
 # The flat ``PRESETS`` dict in :mod:`presets` is keyed by legacy
 # disambiguation names (``gpt-5.4-api`` / ``gpt-5.4-or`` /
-# ``gpt-4o-codex`` / 鈥? because Python dict keys must be unique.
-# The *canonical* bare name 鈥?the name users see in the UI, the CLI,
-# and when they type ``controller.llm: gpt-5.4`` 鈥?drops those
+# ``gpt-4o-codex`` / etc.) because Python dict keys must be unique.
+# The *canonical* bare name  - the name users see in the UI, the CLI,
+# and when they type ``controller.llm: gpt-5.4``  - drops those
 # suffixes. Disambiguation is provided by the preset's ``provider``
 # field.
 #
@@ -31,10 +31,10 @@ hard cap. The tables define two mappings:
 # from their dict key. Entries not listed here keep their key as their
 # canonical name (e.g. ``qwen3.5-plus``, ``grok-4``).
 _CANONICAL_NAMES: dict[str, str] = {
-    # OpenAI Codex (ChatGPT-subscription) 鈥?was suffixed to distinguish from -api.
+    # OpenAI Codex (ChatGPT-subscription)  - was suffixed to distinguish from -api.
     "gpt-4o-codex": "gpt-4o",
     "gpt-4o-mini-codex": "gpt-4o-mini",
-    # OpenAI Direct API 鈥?``-api`` suffix.
+    # OpenAI Direct API  - ``-api`` suffix.
     "gpt-5.4-api": "gpt-5.4",
     "gpt-5.4-mini-api": "gpt-5.4-mini",
     "gpt-5.4-nano-api": "gpt-5.4-nano",
@@ -42,7 +42,7 @@ _CANONICAL_NAMES: dict[str, str] = {
     "gpt-5.1-api": "gpt-5.1",
     "gpt-4o-api": "gpt-4o",
     "gpt-4o-mini-api": "gpt-4o-mini",
-    # OpenAI via OpenRouter 鈥?``-or`` suffix.
+    # OpenAI via OpenRouter  - ``-or`` suffix.
     "gpt-5.4-or": "gpt-5.4",
     "gpt-5.4-mini-or": "gpt-5.4-mini",
     "gpt-5.4-nano-or": "gpt-5.4-nano",
@@ -50,7 +50,7 @@ _CANONICAL_NAMES: dict[str, str] = {
     "gpt-5.1-or": "gpt-5.1",
     "gpt-4o-or": "gpt-4o",
     "gpt-4o-mini-or": "gpt-4o-mini",
-    # Anthropic Claude via OpenRouter 鈥?``-or`` suffix.
+    # Anthropic Claude via OpenRouter  - ``-or`` suffix.
     "claude-opus-4.7-or": "claude-opus-4.7",
     "claude-opus-4.6-or": "claude-opus-4.6",
     "claude-sonnet-4.6-or": "claude-sonnet-4.6",
@@ -58,23 +58,23 @@ _CANONICAL_NAMES: dict[str, str] = {
     "claude-haiku-4.5-or": "claude-haiku-4.5",
     "claude-sonnet-4-or": "claude-sonnet-4",
     "claude-opus-4-or": "claude-opus-4",
-    # Gemini via OpenRouter 鈥?``-or`` suffix.
+    # Gemini via OpenRouter  - ``-or`` suffix.
     "gemini-3.1-pro-or": "gemini-3.1-pro",
     "gemini-3-flash-or": "gemini-3-flash",
     "gemini-3.1-flash-lite-or": "gemini-3.1-flash-lite",
-    # MiMo via OpenRouter 鈥?``-or`` suffix.
+    # MiMo via OpenRouter  - ``-or`` suffix.
     "mimo-v2-pro-or": "mimo-v2-pro",
     "mimo-v2-flash-or": "mimo-v2-flash",
 }
 
 
-# 鈹€鈹€ Aliases 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+# -- Aliases ----------------------------------------------------
 # Two roles:
 #   1. Short/friendly names for frequent picks (``gpt5``, ``opus``).
-#   2. Backward-compat for pre-2026 preset names 鈥?legacy identifiers
+#   2. Backward-compat for pre-2026 preset names  - legacy identifiers
 #      resolve to their ``(provider, canonical_name)`` pair.
 ALIASES: dict[str, tuple[str, str]] = {
-    # 鈹€鈹€ Short / friendly names 鈹€鈹€
+    # -- Short / friendly names --
     "gpt5": ("codex", "gpt-5.4"),
     "gpt54": ("codex", "gpt-5.4"),
     "gpt53": ("codex", "gpt-5.3-codex"),
@@ -108,11 +108,11 @@ ALIASES: dict[str, tuple[str, str]] = {
     "magistral": ("openrouter", "magistral-medium"),
     "devstral": ("openrouter", "devstral-2"),
     "ministral": ("openrouter", "ministral-3-14b"),
-    # 鈹€鈹€ Back-compat: pre-2026-04 preset names 鈹€鈹€
+    # -- Back-compat: pre-2026-04 preset names --
     # OpenAI codex.
     "gpt-4o-codex": ("codex", "gpt-4o"),
     "gpt-4o-mini-codex": ("codex", "gpt-4o-mini"),
-    # OpenAI direct (``-direct`` / ``-api`` both 鈫?openai bare name).
+    # OpenAI direct (``-direct`` / ``-api`` both -> openai bare name).
     "gpt-5.4-api": ("openai", "gpt-5.4"),
     "gpt-5.4-mini-api": ("openai", "gpt-5.4-mini"),
     "gpt-5.4-nano-api": ("openai", "gpt-5.4-nano"),
@@ -142,7 +142,7 @@ ALIASES: dict[str, tuple[str, str]] = {
     "or-gpt-5.1": ("openrouter", "gpt-5.1"),
     "or-gpt-4o": ("openrouter", "gpt-4o"),
     "or-gpt-4o-mini": ("openrouter", "gpt-4o-mini"),
-    # Anthropic direct (``-direct`` 鈫?bare under anthropic).
+    # Anthropic direct (``-direct`` -> bare under anthropic).
     "claude-opus-4.6-direct": ("anthropic", "claude-opus-4.6"),
     "claude-sonnet-4.6-direct": ("anthropic", "claude-sonnet-4.6"),
     "claude-haiku-4.5-direct": ("anthropic", "claude-haiku-4.5"),

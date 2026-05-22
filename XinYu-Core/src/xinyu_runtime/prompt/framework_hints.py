@@ -33,7 +33,7 @@ logger = get_logger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Canonical key constants 鈥?use these, not string literals, when looking up
+# Canonical key constants  - use these, not string literals, when looking up
 # hints from the aggregator.
 # ---------------------------------------------------------------------------
 HINT_OUTPUT_MODEL = "framework.output_model"
@@ -46,7 +46,7 @@ HINT_EXECUTION_MODEL_NATIVE = "framework.execution_model.native"
 # Default prose blocks.
 # ``framework.output_model`` retains the ``{named_outputs_section}`` placeholder
 # because that part is populated at aggregation time from the registered
-# named outputs. Override prose does NOT need the placeholder 鈥?if an override
+# named outputs. Override prose does NOT need the placeholder  - if an override
 # is supplied, it is used verbatim (no ``.format(...)`` is applied).
 # ---------------------------------------------------------------------------
 _DEFAULT_OUTPUT_MODEL = """
@@ -72,20 +72,20 @@ Sub-agents run in background by default. Tools can also run in background
 with `run_in_background=true`. Background results arrive automatically in a later turn.
 
 **Critical rule**: Once you delegate a task to background, do NOT do the same work yourself.
-The work is already being done 鈥?doing it again wastes tokens and produces duplicates.
+The work is already being done  - doing it again wastes tokens and produces duplicates.
 
 **Workflow example**:
 1. Dispatch `explore` to investigate the project structure (background)
 2. Dispatch `research` to look up API documentation (background)
-3. **Stop your response and wait** 鈥?both are working in parallel
-4. Results arrive automatically 鈫?synthesize and continue
+3. **Stop your response and wait**  - both are working in parallel
+4. Results arrive automatically -> synthesize and continue
 
 **Direct sub-agents** (set `run_in_background=false`):
 Use when you need the result before continuing and the task is short.
 
 **WRONG** (duplicate work):
-1. Dispatch `explore` to investigate the codebase 鈫?background
-2. Start reading the same codebase yourself 鈫?WRONG, same task!
+1. Dispatch `explore` to investigate the codebase -> background
+2. Start reading the same codebase yourself -> WRONG, same task!
 
 IMPORTANT: When calling a function, output ONLY the function call block. Do not output any extra text, markers, or filler characters (like dashes, dots, etc.) before or after the function call. If you need results before continuing, end with the function call and nothing else.
 IMPORTANT: You may ONLY call functions listed in the "Available Functions" section above. Do NOT call functions that are not listed.
@@ -105,7 +105,7 @@ in a later turn.
 **Critical rule**: Once you delegate a task to background, do NOT do the same
 work yourself. The work is already being done.
 
-**Workflow**: dispatch sub-agents 鈫?do DIFFERENT direct work or stop and wait 鈫?results arrive automatically 鈫?continue.
+**Workflow**: dispatch sub-agents -> do DIFFERENT direct work or stop and wait -> results arrive automatically -> continue.
 
 **Direct sub-agents**: Set `run_in_background=false` when you need the result
 before continuing and the task is short.
@@ -137,7 +137,7 @@ work yourself. The task is already being done.
 **Example workflow**:
 1. Dispatch `explore` sub-agent to investigate module A (background)
 2. Use `read` on a DIFFERENT file (module B) yourself (direct)
-3. Stop 鈥?explore result for module A arrives in next turn
+3. Stop  - explore result for module A arrives in next turn
 
 You may ONLY call tools listed in the "Available Functions" section above.
 """
@@ -169,7 +169,7 @@ def get_framework_hint(
     Args:
         key: A canonical key from :data:`_DEFAULTS` (see module docstring).
         overrides: Optional override map. Unknown keys in this dict are
-            ignored with a WARNING log line 鈥?they won't crash aggregation.
+            ignored with a WARNING log line  - they won't crash aggregation.
 
     Returns:
         The prose for ``key``. An empty string indicates the block should

@@ -29,7 +29,7 @@ class TriggerConfig:
     class_name: str | None = None  # Class name to instantiate
     prompt: str | None = None
     options: dict[str, Any] = field(default_factory=dict)
-    # Optional stable identity 鈥?used as trigger_id and as the identity key for
+    # Optional stable identity  - used as trigger_id and as the identity key for
     # inheritance (child-wins override of a base trigger with the same name).
     name: str | None = None
 
@@ -167,7 +167,7 @@ class AgentConfig:
     subagents: list[SubAgentConfigItem] = field(default_factory=list)
     output: OutputConfig = field(default_factory=OutputConfig)
 
-    # Opt-out list for provider-native tools. Providers (Codex, 鈥?
+    # Opt-out list for provider-native tools. Providers such as Codex
     # auto-inject their native capabilities (``image_gen`` etc.) into
     # every creature that runs on them; names listed here are skipped.
     # Example: ``disable_provider_tools: ["image_gen"]`` on a
@@ -262,5 +262,4 @@ def _interpolate_env_vars(value: Any) -> Any:
     elif isinstance(value, list):
         return [_interpolate_env_vars(v) for v in value]
     return value
-
 

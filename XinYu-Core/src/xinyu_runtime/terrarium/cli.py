@@ -205,7 +205,7 @@ async def _handle_terrarium_command(
 
     # Resolve target agent from the active tab. Channel tabs (prefixed
     # with ``#``) and the non-targeted default both keep root as the
-    # target 鈥?commands don't make sense against a channel, and root is
+    # target  - commands don't make sense against a channel, and root is
     # the "meta" orchestrator the user is controlling via slash.
     target_ctx = cmd_context
     if runtime is not None:
@@ -265,8 +265,8 @@ async def run_terrarium_with_tui(runtime: TerrariumRuntime) -> None:
     # Run runtime as background task (conversations/scratchpad restored inside)
     runtime_task = asyncio.create_task(runtime.run())
 
-    # Wait for runtime to be fully started 鈥?including the root agent's
-    # compact manager (which is initialised inside ``agent.start()`` 鈫?    # ``_init_compact_manager``). The TUI context-bar readout below
+    # Wait for runtime to be fully started  - including the root agent's
+    # compact manager (which is initialised inside ``agent.start()`` ->    # ``_init_compact_manager``). The TUI context-bar readout below
     # reads ``root.compact_manager.config.max_tokens`` and will skip the
     # readout if the manager isn't ready yet, leaving the user staring
     # at a blank context bar until the next refresh. Waiting here keeps
@@ -364,7 +364,7 @@ async def run_terrarium_with_tui(runtime: TerrariumRuntime) -> None:
                     break
                 if cmd_result is True:
                     continue
-                # None means unknown command 鈥?fall through to send as text
+                # None means unknown command  - fall through to send as text
 
             active_tab = tui.get_active_tab()
 

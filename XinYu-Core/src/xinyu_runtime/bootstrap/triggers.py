@@ -88,7 +88,7 @@ def create_trigger(
                 return None
 
         case _:
-            # Bare name 鈥?try to resolve through installed package manifests
+            # Bare name  - try to resolve through installed package manifests
             # before giving up. Mirrors the `io:` lookup in `bootstrap/io.py`.
             package_match = resolve_package_trigger(trigger_config.type)
             if package_match is None:

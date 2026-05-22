@@ -25,7 +25,7 @@ def preset_from_data(name: str, data: dict[str, Any], provider: str = "") -> LLM
     """Build a LLMPreset from raw yaml data.
 
     ``provider`` takes priority over any ``provider`` key already on
-    ``data`` 鈥?callers passing this in have unambiguous knowledge of
+    ``data``  - callers passing this in have unambiguous knowledge of
     which provider bucket the entry came from (new nested YAML shape).
     For legacy flat YAML, falls back to inferring from ``data``.
     """

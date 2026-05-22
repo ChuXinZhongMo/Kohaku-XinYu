@@ -1,7 +1,7 @@
 ﻿"""Pydantic mirror of ``core.config_types.AgentConfig``.
 
 Used at the HTTP boundary to validate creature-save bodies. Not
-the runtime representation 鈥?the framework continues to load
+the runtime representation  - the framework continues to load
 configs through its own dataclass system. Keep fields + defaults
 in sync with ``xinyu_runtime/core/config_types.py``.
 """

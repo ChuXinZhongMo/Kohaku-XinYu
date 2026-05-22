@@ -217,7 +217,7 @@ def aggregate_system_prompt(
         include_tools: Include tool list in prompt
         include_hints: Include framework command hints
         skill_mode: "dynamic" (use [/info]) or "static" (full docs in prompt)
-        tool_format: Tool calling format 鈥?"bracket", "xml", or "native".
+        tool_format: Tool calling format  - "bracket", "xml", or "native".
                      Native mode skips calling syntax examples (API handles it).
         known_outputs: Set of available named output targets (e.g., {"discord"})
         channels: Channel info for prompt injection (list of dicts with
@@ -297,7 +297,7 @@ def aggregate_system_prompt(
     # Add framework hints (different for each mode)
     if include_hints:
         # Build output model section with available outputs
-        # (skip for native mode 鈥?outputs are also API-driven)
+        # (skip for native mode  - outputs are also API-driven)
         if tool_format != "native":
             output_hints = _build_output_hints(
                 known_outputs, overrides=framework_hint_overrides

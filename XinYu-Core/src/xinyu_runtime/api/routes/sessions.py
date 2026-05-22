@@ -396,7 +396,7 @@ async def search_session_memory(
 ) -> dict[str, Any]:
     """Search a session's memory via FTS5 or semantic / hybrid modes.
 
-    Read-only. Wraps the existing ``SessionMemory.search()`` 鈥?no new
+    Read-only. Wraps the existing ``SessionMemory.search()``  - no new
     indexing behavior. Modes: ``auto`` (default), ``fts``, ``semantic``,
     ``hybrid``.
     """
@@ -406,7 +406,7 @@ async def search_session_memory(
 
     try:
         # Find the live agent session (if running) to reuse its store
-        # and embedder 鈥?same pattern as the search_memory builtin tool.
+        # and embedder  - same pattern as the search_memory builtin tool.
         manager = get_manager()
         live_agent = None
         live_store = None
@@ -449,7 +449,7 @@ async def search_session_memory(
 
         memory = SessionMemory(str(path), embedder=embedder, store=store)
 
-        # Index unindexed events (idempotent 鈥?skips already indexed)
+        # Index unindexed events (idempotent  - skips already indexed)
         meta = store.load_meta()
         for agent_name in meta.get("agents", []):
             events = store.get_events(agent_name)
@@ -497,7 +497,7 @@ def _resolve_artifacts_dir(session_name: str) -> Path:
     Mirrors ``SessionStore.artifacts_dir``: sibling directory named
     ``<session-stem>.artifacts`` alongside the ``.xinyu`` file.
     Either an existing session file OR an existing ``.artifacts/``
-    directory is enough 鈥?there are transient runs where the store
+    directory is enough  - there are transient runs where the store
     writes artifacts before the .xinyu is closed.
     """
     # Fast path: ``<name>.artifacts/`` directly under the sessions dir.
@@ -519,7 +519,7 @@ async def get_session_artifact(session_name: str, filepath: str):
 
     ``filepath`` is the path relative to the session's artifacts
     directory (e.g. ``generated_images/cat.png``). The resolved
-    location must stay inside the artifacts dir 鈥?any ``..`` or
+    location must stay inside the artifacts dir  - any ``..`` or
     absolute path is rejected.
     """
     decoded = unquote(filepath)

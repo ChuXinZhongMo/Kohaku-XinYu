@@ -88,7 +88,7 @@ def create_input(
             logger.error("Failed to load custom input", error=str(e))
             return CLIInput(prompt=config.input.prompt)
 
-    # Bare name (e.g. "discord_input") 鈥?try to resolve via package manifest
+    # Bare name (e.g. "discord_input")  - try to resolve via package manifest
     # before giving up. This wires the xinyu.yaml `io:` entries through
     # bootstrap so users can reference packaged inputs by short name.
     package_match = resolve_package_io(input_type)
@@ -161,7 +161,7 @@ def _create_output_module(
             logger.error("Failed to load custom output", error=str(e))
             return StdoutOutput()
 
-    # Bare name (e.g. "discord_output") 鈥?try to resolve via package manifest
+    # Bare name (e.g. "discord_output")  - try to resolve via package manifest
     # before giving up. This wires the xinyu.yaml `io:` entries through
     # bootstrap so users can reference packaged outputs by short name.
     package_match = resolve_package_io(output_type)

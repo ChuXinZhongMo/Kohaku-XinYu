@@ -82,7 +82,7 @@ class AgentInitMixin:
            creature YAML.
         2. ``_drop_unsupported_provider_native_tools`` removes any of
            those user-wired entries that the active provider can't
-           handle (explicit wiring on the wrong provider 鈫?silent drop
+           handle (explicit wiring on the wrong provider -> silent drop
            with an INFO log).
         3. ``_auto_inject_provider_native_tools`` adds every native
            tool the active provider advertises via
@@ -100,7 +100,7 @@ class AgentInitMixin:
 
         Users may explicitly list e.g. ``image_gen`` under ``tools:``.
         If the active provider's ``provider_name`` is not in the
-        tool's ``provider_support`` set, drop the entry 鈥?the tool
+        tool's ``provider_support`` set, drop the entry  - the tool
         can't function here and the provider won't translate it.
         Auto-injection handles the happy path in a separate step.
         """
@@ -126,7 +126,7 @@ class AgentInitMixin:
 
         Every provider declares the builtin tool names it can serve
         via the ``provider_native_tools`` class attribute. Those
-        entries are injected into the registry automatically 鈥?the
+        entries are injected into the registry automatically  - the
         creature does NOT have to list them under ``tools:``. To
         suppress any of them, add the tool name to the creature's
         ``disable_provider_tools`` list.
@@ -150,7 +150,7 @@ class AgentInitMixin:
                 )
                 continue
             if name in existing:
-                # User already wired it with custom config 鈥?respect that.
+                # User already wired it with custom config  - respect that.
                 continue
             tool = get_builtin_tool(name)
             if tool is None:
@@ -446,7 +446,7 @@ class AgentInitMixin:
     def _init_skills(self) -> None:
         """Discover procedural skills and build the runtime registry.
 
-        Scans (in priority order, high 鈫?low):
+        Scans (in priority order, high -> low):
 
         1. ``<cwd>/.kt/skills``, ``.claude/skills``, ``.agents/skills``
         2. ``~/.xinyu/skills``, ``~/.claude/skills``,

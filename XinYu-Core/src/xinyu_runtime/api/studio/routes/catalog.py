@@ -1,13 +1,13 @@
-﻿"""Catalog routes 鈥?read-only module directory for the pool.
+﻿"""Catalog routes  - read-only module directory for the pool.
 
 Each module kind merges three sources:
 
-1. **Builtins** 鈥?framework-registered classes (``read``, ``bash``,
+1. **Builtins**  - framework-registered classes (``read``, ``bash``,
    ``explore``, universal setup-tool triggers, etc.).
-2. **Workspace xinyu.yaml** 鈥?if the open workspace declares its
+2. **Workspace xinyu.yaml**  - if the open workspace declares its
    own tools / subagents / triggers / plugins / io, those get
    listed here so authors can wire them into creatures.
-3. **Installed packages** 鈥?every kt package in
+3. **Installed packages**  - every kt package in
    ``~/.xinyu/packages/`` contributes its manifest
    entries. kt-biome's ``cost_tracker`` plugin and ``database``
    tool arrive here.
@@ -251,7 +251,7 @@ async def list_embedding_presets() -> dict:
     return _list()
 
 
-# The frontend's plugin editor needs the full hook catalog 鈥?each
+# The frontend's plugin editor needs the full hook catalog  - each
 # hook's name, signature, and whether it's a pre/post/lifecycle/
 # event kind. We hard-code the list here because ``BasePlugin``
 # doesn't expose it programmatically. Phase 3 codegen consumes the

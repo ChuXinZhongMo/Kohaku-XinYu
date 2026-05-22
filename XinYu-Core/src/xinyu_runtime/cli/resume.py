@@ -1,4 +1,4 @@
-﻿"""CLI resume command 鈥?resume an agent or terrarium from a session file."""
+﻿"""CLI resume command  - resume an agent or terrarium from a session file."""
 
 import asyncio
 import sys
@@ -30,7 +30,7 @@ def resume_cli(
     configure_utf8_stdio(log=True)
     set_level(log_level)
 
-    # Resolve mode the same way ``kt run`` does 鈥?rich CLI on a TTY,
+    # Resolve mode the same way ``kt run`` does  - rich CLI on a TTY,
     # plain otherwise. Keeps resume behavior consistent with run.
     if io_mode is None:
         io_mode = "cli" if sys.stdout.isatty() else "plain"

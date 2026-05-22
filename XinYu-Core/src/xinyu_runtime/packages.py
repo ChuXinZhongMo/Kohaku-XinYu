@@ -458,7 +458,7 @@ def _resolve_manifest_entry(
     Shared helper for :func:`resolve_package_io` and
     :func:`resolve_package_trigger`. Collisions (two packages exporting the
     same ``entry_name`` for the same ``kind``) raise ``ValueError`` with both
-    package names listed 鈥?per cluster 1.1 of the extension-point decisions,
+    package names listed  - per cluster 1.1 of the extension-point decisions,
     io / trigger name clashes are a hard error at load time.
 
     Args:

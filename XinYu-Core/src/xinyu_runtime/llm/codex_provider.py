@@ -42,12 +42,12 @@ CODEX_BASE_URL = "https://chatgpt.com/backend-api/codex"
 
 
 async def _capture_rate_limit_headers(response: Any) -> None:
-    """httpx response hook 鈥?capture Codex rate-limit headers.
+    """httpx response hook  - capture Codex rate-limit headers.
 
     The Codex backend delivers ``x-codex-*`` rate-limit / credits /
     promo headers on every response. This hook parses them and stores
     the latest snapshot in the process-level cache for ``/codex-usage``
-    to read. Failure is silent 鈥?the hook must never break the request.
+    to read. Failure is silent  - the hook must never break the request.
     """
     try:
         snap = capture_from_headers(response.headers)
@@ -115,7 +115,7 @@ class CodexOAuthProvider(BaseLLMProvider):
             print(chunk, end="")
     """
 
-    # Provider-native tool compatibility key 鈥?matches the
+    # Provider-native tool compatibility key  - matches the
     # ``provider_support`` declaration on ImageGenTool etc.
     provider_name = "codex"
     # Provider-native tools auto-injected into every creature that
@@ -166,7 +166,7 @@ class CodexOAuthProvider(BaseLLMProvider):
         Installs an httpx response event hook that captures rate-limit
         headers from every Codex response into the process-level cache
         (see ``codex_rate_limits.set_cached``). This replaces the dead
-        ``/backend-api/codex/usage`` endpoint 鈥?rate limits now ride on
+        ``/backend-api/codex/usage`` endpoint  - rate limits now ride on
         every real API call's response.
         """
         if not HAS_OPENAI:
@@ -220,7 +220,7 @@ class CodexOAuthProvider(BaseLLMProvider):
 
         Currently supports ``image_gen`` (see
         :mod:`xinyu_runtime.llm.codex_image_gen`). Future Codex
-        built-ins plug in here 鈥?dispatch by tool name, return
+        built-ins plug in here  - dispatch by tool name, return
         ``None`` for anything this provider doesn't handle.
         """
         return translate_image_gen_tool(tool)
@@ -376,7 +376,7 @@ class CodexOAuthProvider(BaseLLMProvider):
                 if call_id in output_by_id:
                     result.append(output_by_id[call_id])
                 else:
-                    # Lost output 鈥?add placeholder so API doesn't reject
+                    # Lost output  - add placeholder so API doesn't reject
                     result.append(
                         {
                             "type": "function_call_output",
@@ -390,7 +390,7 @@ class CodexOAuthProvider(BaseLLMProvider):
                     )
                 used_ids.add(call_id)
 
-        # Log orphans (outputs whose call was compacted away 鈥?already dropped)
+        # Log orphans (outputs whose call was compacted away  - already dropped)
         orphan_ids = set(output_by_id) - used_ids
         if orphan_ids:
             logger.warning(
@@ -433,7 +433,7 @@ class CodexOAuthProvider(BaseLLMProvider):
         # Convert Chat Completions format to Responses API flat array
         api_input = self._to_responses_input(input_messages)
 
-        # Build tools in Responses API format 鈥?normal function tools
+        # Build tools in Responses API format  - normal function tools
         # first, provider-native translations appended after.
         api_tools: list[dict[str, Any]] | None = None
         if tools:
@@ -532,7 +532,7 @@ class CodexOAuthProvider(BaseLLMProvider):
                         )
                     elif itype == "image_generation_call":
                         # Built-in image_generation tool output. Status
-                        # at this event is typically "generating" 鈥?the
+                        # at this event is typically "generating"  - the
                         # image bytes are already in `result`; don't
                         # gate on status == "completed" (see
                         # plans/codex-provider-image-generation-plan.md).

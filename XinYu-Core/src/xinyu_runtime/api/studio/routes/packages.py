@@ -1,4 +1,4 @@
-﻿"""Packages route 鈥?read-only browser for installed kt packages.
+﻿"""Packages route  - read-only browser for installed kt packages.
 
 Used by the creature editor's ``base_config`` autocomplete, the
 "copy template from package" flow, and the package-detail cards

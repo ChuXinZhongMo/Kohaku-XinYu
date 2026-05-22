@@ -2,12 +2,12 @@
 
 Two extension patterns:
 
-**Pre/post hooks** 鈥?wrap existing methods via decoration at init time.
+**Pre/post hooks**  - wrap existing methods via decoration at init time.
 The manager runs pre_* hooks before the real call (can transform input
 or block), then the real call, then post_* hooks (can transform output).
 All plugins run linearly by priority, not nested.
 
-**Callbacks** 鈥?fire-and-forget notifications with data.
+**Callbacks**  - fire-and-forget notifications with data.
 
 Error handling:
   - PluginBlockError in pre_tool_execute / pre_tool_dispatch:
@@ -49,22 +49,22 @@ class PluginContext:
 
     Public accessor surface (read-only properties):
 
-    * ``host_agent`` 鈥?the Agent this plugin is attached to.
-    * ``session_store`` 鈥?persistence layer (may be ``None``).
-    * ``session_memory`` 鈥?FTS/vector memory (may be ``None`` if disabled).
-    * ``registry`` 鈥?tool/sub-agent registry.
-    * ``scratchpad`` 鈥?session-scoped key/value store.
-    * ``compact_manager`` 鈥?auto-compact controller (may be ``None``).
-    * ``controller`` 鈥?LLM conversation loop.
-    * ``subagent_manager`` 鈥?sub-agent lifecycle manager.
+    * ``host_agent``  - the Agent this plugin is attached to.
+    * ``session_store``  - persistence layer (may be ``None``).
+    * ``session_memory``  - FTS/vector memory (may be ``None`` if disabled).
+    * ``registry``  - tool/sub-agent registry.
+    * ``scratchpad``  - session-scoped key/value store.
+    * ``compact_manager``  - auto-compact controller (may be ``None``).
+    * ``controller``  - LLM conversation loop.
+    * ``subagent_manager``  - sub-agent lifecycle manager.
 
     Helpers:
 
-    * ``switch_model(name)`` 鈥?hot-swap the LLM profile.
-    * ``inject_event(event)`` 鈥?push a ``TriggerEvent`` into the queue.
-    * ``inject_message_before_llm(role, content)`` 鈥?queue a message to be
+    * ``switch_model(name)``  - hot-swap the LLM profile.
+    * ``inject_event(event)``  - push a ``TriggerEvent`` into the queue.
+    * ``inject_message_before_llm(role, content)``  - queue a message to be
       prepended to the next LLM call.
-    * ``get_state(key)`` / ``set_state(key, value)`` 鈥?plugin-scoped state.
+    * ``get_state(key)`` / ``set_state(key, value)``  - plugin-scoped state.
 
     The deprecated ``_agent`` alias was removed in Cluster 2 (尾) of the
     extension-point work. Use ``host_agent`` (or the specific typed
@@ -94,7 +94,7 @@ class PluginContext:
             f"plugin={self._plugin_name!r})"
         )
 
-    # 鈹€鈹€ Public accessors 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # -- Public accessors -----------------------------------------------
 
     @property
     def host_agent(self) -> "Agent | None":
@@ -162,7 +162,7 @@ class PluginContext:
             return None
         return getattr(agent, "subagent_manager", None)
 
-    # 鈹€鈹€ Helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # -- Helpers --------------------------------------------------------
 
     def switch_model(self, name: str) -> str:
         """Switch the LLM model. Returns resolved model name."""
@@ -213,7 +213,7 @@ class BasePlugin:
     """Base class for plugins. Override only what you need.
 
     Pre/post hooks run linearly by priority around real methods:
-        pre_xxx  鈫?real method 鈫?post_xxx
+        pre_xxx  -> real method -> post_xxx
 
     Return None from pre/post to keep the value unchanged.
     Return a value to replace it for the next plugin in the chain.
@@ -261,13 +261,13 @@ class BasePlugin:
             self._model_pattern_res = patterns
         return patterns
 
-    # 鈹€鈹€ Gating 鈹€鈹€
+    # -- Gating --
 
     def should_apply(self, context: PluginContext) -> bool:
         """Return True if this plugin should run for the given context.
 
         Default implementation consults the declarative ``applies_to``
-        filter. Override to add dynamic checks 鈥?call
+        filter. Override to add dynamic checks  - call
         ``super().should_apply(context)`` first to keep the declarative
         gate in effect.
         """
@@ -282,17 +282,17 @@ class BasePlugin:
                 return False
         return True
 
-    # 鈹€鈹€ Controller / package commands 鈹€鈹€
+    # -- Controller / package commands --
 
     def contribute_commands(self) -> dict[str, Any]:
-        """Return a mapping of ``##name##`` 鈫?``BaseCommand`` instance.
+        """Return a mapping of ``##name##`` -> ``BaseCommand`` instance.
 
         Called once per plugin after ``on_load``. Built-in command names
-        (``info``, ``read_job``, ``jobs``, ``wait``) are protected 鈥?        attempting to register one without ``override=True`` raises.
+        (``info``, ``read_job``, ``jobs``, ``wait``) are protected - attempting to register one without ``override=True`` raises.
         """
         return {}
 
-    # 鈹€鈹€ Termination voting 鈹€鈹€
+    # -- Termination voting --
 
     def contribute_termination_check(
         self,
@@ -309,7 +309,7 @@ class BasePlugin:
         """
         return None
 
-    # 鈹€鈹€ Lifecycle 鈹€鈹€
+    # -- Lifecycle --
 
     async def on_load(self, context: PluginContext) -> None:
         """Called when plugin is loaded."""
@@ -317,7 +317,7 @@ class BasePlugin:
     async def on_unload(self) -> None:
         """Called when agent shuts down."""
 
-    # 鈹€鈹€ LLM hooks 鈹€鈹€
+    # -- LLM hooks --
 
     async def pre_llm_call(self, messages: list[dict], **kwargs) -> list[dict] | None:
         """Before LLM call. Return modified messages or None.
@@ -333,14 +333,14 @@ class BasePlugin:
 
         Chain-with-return semantics: each plugin sees the previous
         plugin's rewrite. ``None`` means pass through unchanged.
-        Finalize-only 鈥?one fire per complete turn with the full
+        Finalize-only  - one fire per complete turn with the full
         assistant content.
 
         kwargs: model (str)
         """
         return None
 
-    # 鈹€鈹€ Tool hooks 鈹€鈹€
+    # -- Tool hooks --
 
     async def pre_tool_dispatch(self, call: Any, context: PluginContext) -> Any | None:
         """Before the executor sees a tool call.
@@ -371,7 +371,7 @@ class BasePlugin:
         """
         return None
 
-    # 鈹€鈹€ Sub-agent hooks 鈹€鈹€
+    # -- Sub-agent hooks --
 
     async def pre_subagent_run(self, task: str, **kwargs) -> str | None:
         """Before sub-agent run. Return modified task or None.
@@ -388,7 +388,7 @@ class BasePlugin:
         """
         return None
 
-    # 鈹€鈹€ Callbacks (fire-and-forget) 鈹€鈹€
+    # -- Callbacks (fire-and-forget) --
 
     async def on_agent_start(self) -> None:
         """Called after agent.start() completes."""
@@ -408,7 +408,7 @@ class BasePlugin:
     async def on_compact_start(self, context_length: int) -> bool | None:
         """Called before context compaction.
 
-        Return ``False`` to veto this compaction cycle 鈥?the manager
+        Return ``False`` to veto this compaction cycle  - the manager
         will skip compaction entirely and ``on_compact_end`` will not
         fire. Any other return value (``None``, ``True``) proceeds.
 

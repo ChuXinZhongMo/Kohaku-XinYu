@@ -197,7 +197,7 @@ def _format_skill_for_info(doc: "SkillDoc", body: str) -> str:
     """Render a ``SkillDoc`` body with a short ``Tags:`` preamble.
 
     Tags are wired into the info output so that the first-class
-    ``SkillDoc.tags`` field is actually consumed by the agent 鈥?otherwise
+    ``SkillDoc.tags`` field is actually consumed by the agent  - otherwise
     it would just be parsed-and-discarded metadata.
     """
     if not doc.tags:

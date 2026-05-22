@@ -1,4 +1,4 @@
-﻿"""CLI run command 鈥?launch an agent from a config folder."""
+﻿"""CLI run command  - launch an agent from a config folder."""
 
 import asyncio
 from pathlib import Path

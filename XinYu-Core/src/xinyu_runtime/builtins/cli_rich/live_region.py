@@ -1,4 +1,4 @@
-﻿"""Live region 鈥?state holder for the streaming chat region.
+﻿"""Live region  - state holder for the streaming chat region.
 
 Holds:
   - Optional compaction banner (top)
@@ -54,18 +54,18 @@ class LiveRegion:
         self.assistant_msg: AssistantMessageBlock | None = None
         # All tool blocks indexed by job_id (top-level + nested)
         self.tool_blocks: dict[str, ToolCallBlock] = {}
-        # Top-level rendering order 鈥?backgrounded tools STAY here, they
+        # Top-level rendering order  - backgrounded tools STAY here, they
         # just get a (bg) tag. This avoids the input box jumping around
         # when a job is promoted.
         self._top_order: list[str] = []
         self.footer = FooterBlock()
         self._compacting = False
         # TWO activity flags:
-        #   _active       鈥?toggled per LLM call via start_message /
+        #   _active        - toggled per LLM call via start_message /
         #                   finish_message. Goes False when one assistant
         #                   call finishes, even if the whole turn isn't
         #                   done yet (e.g. tool execution between calls).
-        #   _turn_active  鈥?toggled per TURN via set_processing. Stays
+        #   _turn_active   - toggled per TURN via set_processing. Stays
         #                   True from user-submit through full turn
         #                   completion, spanning every LLM call and
         #                   tool execution in between.
@@ -77,7 +77,7 @@ class LiveRegion:
         # Counter for synthetic sub-agent child block ids
         self._sa_child_counter = 0
 
-    # 鈹€鈹€ Assistant message 鈹€鈹€
+    # -- Assistant message --
 
     def start_message(self) -> None:
         if self.assistant_msg is None or self.assistant_msg._finished:
@@ -89,7 +89,7 @@ class LiveRegion:
             self.start_message()
         if self.assistant_msg is not None:
             self.assistant_msg.append(chunk)
-        # Keep the activity indicator on through streaming 鈥?tools may
+        # Keep the activity indicator on through streaming  - tools may
         # still be launched inside this turn and the user needs a
         # persistent "agent is working" signal. The label switches from
         # "thinking" to "generating" automatically (see _activity_label).
@@ -116,11 +116,11 @@ class LiveRegion:
             self._active_started_at = time.monotonic()
         self._active = value
 
-    # Back-compat alias 鈥?external callers still use the old name.
+    # Back-compat alias  - external callers still use the old name.
     def set_thinking(self, value: bool) -> None:
         self.set_active(value)
 
-    # 鈹€鈹€ Tool blocks 鈹€鈹€
+    # -- Tool blocks --
 
     def add_tool(
         self,
@@ -181,7 +181,7 @@ class LiveRegion:
     def _finalize_block(self, block: ToolCallBlock) -> RenderableType | None:
         """Remove the block from tracking and return its committed form.
 
-        Children-of-something don't commit on their own 鈥?their parent
+        Children-of-something don't commit on their own  - their parent
         commits the whole tree.
         """
         job_id = block.job_id
@@ -202,7 +202,7 @@ class LiveRegion:
             self._drop_subtree(child)
         self.tool_blocks.pop(block.job_id, None)
 
-    # 鈹€鈹€ Sub-agent nested tools (subagent_tool_*) 鈹€鈹€
+    # -- Sub-agent nested tools (subagent_tool_*) --
 
     def add_subagent_tool(
         self, parent_id: str, tool_name: str, args_preview: str = ""
@@ -272,7 +272,7 @@ class LiveRegion:
 
     def promote_tool(self, job_id: str) -> None:
         """Mark a tool as backgrounded. The block stays in the live region
-        with a (bg) tag until it actually finishes 鈥?the user keeps full
+        with a (bg) tag until it actually finishes  - the user keeps full
         visibility of the running job."""
         block = self.tool_blocks.get(job_id)
         if block is None:
@@ -332,7 +332,7 @@ class LiveRegion:
                 return job_id, block.name
         return None
 
-    # 鈹€鈹€ Footer pass-through 鈹€鈹€
+    # -- Footer pass-through --
 
     def update_footer_tokens(
         self,
@@ -394,10 +394,10 @@ class LiveRegion:
     def _activity_label(self) -> str:
         """Return a contextual sub-label describing what the agent is doing.
 
-        - Nothing streamed yet, no tools running 鈫?"thinking"
-        - Streaming tokens                         鈫?"generating"
-        - One or more top-level tools running      鈫?"running: <names>"
-        - Anything else while _active              鈫?"working"
+        - Nothing streamed yet, no tools running -> "thinking"
+        - Streaming tokens                         -> "generating"
+        - One or more top-level tools running      -> "running: <names>"
+        - Anything else while _active              -> "working"
         """
         running: list[str] = []
         for job_id in self._top_order:
@@ -462,13 +462,13 @@ class LiveRegion:
     def _build_renderable(self) -> RenderableType:
         """Build a Rich Group of live items (no footer).
 
-        Layout top 鈫?bottom:
+        Layout top -> bottom:
 
           1. Compaction banner (if compacting)
           2. Content stack: streaming message + running tool/sub-agent
              blocks, separated by blank lines so they don't abut one
              another's borders.
-          3. **Standalone activity region** 鈥?XinYu thinking pulse. Always
+          3. **Standalone activity region**  - XinYu thinking pulse. Always
              sits at the bottom of the live region, always separated
              from content above by a blank line. Driven by
              ``_active OR _turn_active`` so it stays visible through
@@ -498,12 +498,12 @@ class LiveRegion:
             block = self.tool_blocks.get(job_id)
             if block is None:
                 continue
-            # Backgrounded jobs collapse into the strip below 鈥?skip here.
+            # Backgrounded jobs collapse into the strip below  - skip here.
             if block.is_background and block.status == "running":
                 continue
             _add(block)
 
-        # Standalone activity region 鈥?sticks at the bottom of the live
+        # Standalone activity region  - sticks at the bottom of the live
         # area while the turn is active, visually separated from all
         # content by its own blank line. This gives XinYu thinking the
         # "always present, never competing for space" behaviour the

@@ -1,20 +1,20 @@
-﻿"""Extra manifest-slot resolvers 鈥?skills, commands, user_commands, prompts.
+﻿"""Extra manifest-slot resolvers  - skills, commands, user_commands, prompts.
 
 Cluster 1 of the extension-point decisions adds four new manifest
 fields to ``xinyu.yaml`` beyond the existing
 ``tools / plugins / llm_presets / io / triggers``:
 
-- ``skills:``         鈥?shared procedural skill bundles (name + path)
-- ``commands:``       鈥?controller ``##xxx##`` command handlers
-- ``user_commands:``  鈥?user-facing slash commands
+- ``skills:``          - shared procedural skill bundles (name + path)
+- ``commands:``        - controller ``##xxx##`` command handlers
+- ``user_commands:``   - user-facing slash commands
 - ``prompts:`` / ``templates:``
-                      鈥?shared prompt fragment files (include target)
+                       - shared prompt fragment files (include target)
 
 These resolvers scan every installed package, enforce the cross-cutting
-collision policy (hard error when two packages declare the same name 鈥?spec 搂1.1), and return the structured entry so the rest of the
+collision policy (hard error when two packages declare the same name  - spec section 1.1), and return the structured entry so the rest of the
 framework can wire it up.
 
-The actual consumers live elsewhere 鈥?this module only ships the
+The actual consumers live elsewhere  - this module only ships the
 manifest-slot plumbing:
 
 - skill discovery reads ``SKILL.md`` from each ``skills:`` entry via
@@ -48,7 +48,7 @@ def _scan_manifest_field(
     """Find a single entry across installed packages.
 
     Args:
-        kind: Manifest field to scan (``"skills"``, ``"commands"``, 鈥?.
+        kind: Manifest field to scan (for example ``"skills"`` or ``"commands"``).
         entry_name: The entry's ``name`` value.
 
     Returns:
@@ -59,7 +59,7 @@ def _scan_manifest_field(
     Raises:
         ValueError: If two or more installed packages declare the same
             ``entry_name`` under ``kind``. Matches the cross-cutting
-            collision policy (decisions 搂1.1).
+            collision policy (decisions section 1.1).
     """
     matches: list[tuple[str, dict]] = []
     for pkg in list_packages():
@@ -85,7 +85,7 @@ def _scan_manifest_field(
 def _list_manifest_field(kind: str) -> dict[str, dict]:
     """Return every declared entry under ``kind`` keyed by ``name``.
 
-    Raises :class:`ValueError` if two packages declare the same name 鈥?    the cross-cutting collision policy applies to bulk enumeration as
+    Raises :class:`ValueError` if two packages declare the same name - the cross-cutting collision policy applies to bulk enumeration as
     well as single-name lookup so callers don't quietly drop one of
     the conflicting entries.
     """
@@ -110,7 +110,7 @@ def _list_manifest_field(kind: str) -> dict[str, dict]:
 
 
 # ---------------------------------------------------------------------------
-# A.2 鈥?skills:
+# A.2  - skills:
 # ---------------------------------------------------------------------------
 
 
@@ -137,30 +137,30 @@ def list_package_skills() -> dict[str, dict]:
     """Return every declared skill across all packages, keyed by name.
 
     Raises :class:`ValueError` if two packages declare a skill with the
-    same name 鈥?collision policy 搂1.1.
+    same name  - collision policy section 1.1.
 
-    Note: per decisions 搂1.1 the collision policy differs for skills
+    Note: per decisions section 1.1 the collision policy differs for skills
     (last-wins documentation) vs commands/user_commands (hard error).
     The *bulk-enumeration* helper here still hard-errors because the
     runtime skill discovery layer (未, Wave 2) needs a consistent view
-    鈥?it can relax this in its consumer if last-wins semantics are
+     - it can relax this in its consumer if last-wins semantics are
     actually desired at that layer.
     """
     return _list_manifest_field("skills")
 
 
 # ---------------------------------------------------------------------------
-# A.3 鈥?commands: (controller ##xxx## commands)
+# A.3  - commands: (controller ##xxx## commands)
 # ---------------------------------------------------------------------------
 
 
 def resolve_package_command(name: str) -> dict | None:
     """Resolve a controller command entry by ``name`` across packages.
 
-    Returns the full entry dict 鈥?expected keys: ``name``, ``module``,
+    Returns the full entry dict  - expected keys: ``name``, ``module``,
     ``class`` (or ``class_name``), ``description``, and optional
     ``override: true`` flag (required to shadow a built-in command per
-    decisions 搂3.1).
+    decisions section 3.1).
     """
     found = _scan_manifest_field("commands", name)
     if found is None:
@@ -174,7 +174,7 @@ def list_package_commands() -> dict[str, dict]:
 
 
 # ---------------------------------------------------------------------------
-# A.4 鈥?user_commands: (slash /xxx commands)
+# A.4  - user_commands: (slash /xxx commands)
 # ---------------------------------------------------------------------------
 
 
@@ -182,7 +182,7 @@ def resolve_package_user_command(name: str) -> dict | None:
     """Resolve a slash-command entry by name across packages.
 
     Same shape as :func:`resolve_package_command`. No built-in
-    overrides are allowed in v1 鈥?decisions 搂A.4.
+    overrides are allowed in v1  - decisions section A.4.
     """
     found = _scan_manifest_field("user_commands", name)
     if found is None:
@@ -196,7 +196,7 @@ def list_package_user_commands() -> dict[str, dict]:
 
 
 # ---------------------------------------------------------------------------
-# A.5 鈥?prompts: / templates: (shared Jinja fragments)
+# A.5  - prompts: / templates: (shared Jinja fragments)
 # ---------------------------------------------------------------------------
 
 
@@ -219,7 +219,7 @@ def resolve_package_prompt(name: str) -> Path | None:
     package declares the fragment.
     """
     # Prompts use a unified namespace; accept both ``prompts`` and
-    # ``templates`` for the same fragment (decisions 搂1.4 ships just
+    # ``templates`` for the same fragment (decisions section 1.4 ships just
     # string fragments, the manifest key is interchangeable).
     for kind in ("prompts", "templates"):
         found = _scan_manifest_field(kind, name)
@@ -285,10 +285,9 @@ def _package_root_for(pkg_name: str) -> Path | None:
     imported lazily to keep the circular-import graph flat (this
     module is imported from ``packages.py`` via re-exports below).
     """
-    # Local import avoids a circular at module load 鈥?packages.py
+    # Local import avoids a circular at module load  - packages.py
     # imports from here at the end of its module body.
     from xinyu_runtime.packages import get_package_path
 
     return get_package_path(pkg_name)
-
 

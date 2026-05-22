@@ -9,11 +9,11 @@ A ``backend_type`` is a tiny enum of transport implementations:
     openai : any OpenAI-compatible ``/chat/completions`` endpoint
              (OpenAI, OpenRouter, Gemini's compat path, Anthropic's compat
              path, MiMo, and user-defined proxies).
-    codex  : OpenAI ChatGPT-subscription via OAuth 鈥?has its own bespoke
+    codex  : OpenAI ChatGPT-subscription via OAuth  - has its own bespoke
              provider (``CodexOAuthProvider``) in :mod:`codex_provider`.
 
 Legacy ``anthropic`` / ``codex-oauth`` values are silently migrated to
-``openai`` / ``codex`` on read 鈥?there is no native Anthropic client.
+``openai`` / ``codex`` on read  - there is no native Anthropic client.
 
 This module intentionally stays read-only + primitive-CRUD so it has no
 dependency on :mod:`profiles`. The write-side operations that touch both
@@ -52,12 +52,12 @@ _LEGACY_BACKEND_TYPE_VALUES: set[str] = {"openai", "codex", "codex-oauth", "anth
 def _normalize_backend_type(value: str) -> str:
     """Map legacy / user-typed backend types onto the current canonical set.
 
-    - ``"codex-oauth"`` 鈫?``"codex"`` (old name for the ChatGPT-OAuth backend)
-    - ``"anthropic"`` 鈫?``"openai"`` (there is no native Anthropic client;
+    - ``"codex-oauth"`` -> ``"codex"`` (old name for the ChatGPT-OAuth backend)
+    - ``"anthropic"`` -> ``"openai"`` (there is no native Anthropic client;
       the anthropic *provider* now points at Anthropic's OpenAI-compat
       endpoint and speaks ``/chat/completions``). Legacy profiles that
       declare ``backend_type: anthropic`` are auto-migrated here.
-    - empty / unknown 鈫?``"openai"`` (safe default for unconfigured data).
+    - empty / unknown -> ``"openai"`` (safe default for unconfigured data).
     """
     if value == "codex-oauth":
         return "codex"
@@ -67,7 +67,7 @@ def _normalize_backend_type(value: str) -> str:
 
 
 def load_yaml_store() -> dict[str, Any]:
-    """Read the shared ``llm_profiles.yaml`` 鈥?returns ``{}`` on missing/bad file."""
+    """Read the shared ``llm_profiles.yaml``  - returns ``{}`` on missing/bad file."""
     path = PROFILES_PATH if PROFILES_PATH.exists() else None
     if path is None:
         return {}
@@ -119,7 +119,7 @@ def _built_in_providers() -> dict[str, LLMBackend]:
             api_key_env="OPENROUTER_API_KEY",
         ),
         # Anthropic's OpenAI-compatible endpoint. No native Anthropic client
-        # in this project 鈥?we speak /chat/completions and pass Claude-specific
+        # in this project  - we speak /chat/completions and pass Claude-specific
         # knobs (``thinking: {type: "adaptive"}``, ``thinking.budget_tokens``)
         # through ``extra_body``. Top-level ``reasoning_effort`` / ``service_tier``
         # and ``speed`` / ``betas`` fields are silently dropped by the compat
@@ -157,7 +157,7 @@ def legacy_provider_from_data(data: dict[str, Any]) -> str:
     if value and value not in _LEGACY_BACKEND_TYPE_VALUES:
         return value
 
-    # Raw (un-normalized) backend_type declaration 鈥?``anthropic`` here is a
+    # Raw (un-normalized) backend_type declaration  - ``anthropic`` here is a
     # legacy signal that the preset was targeting Anthropic direct, which
     # now resolves to the built-in ``anthropic`` provider (backend_type=openai).
     raw_backend_type = data.get("backend_type") or data.get("provider", "openai")
@@ -234,7 +234,7 @@ def validate_backend_type(backend_type: str) -> str:
     """Return the canonical backend_type for a new/updated provider.
 
     Raises ``ValueError`` on anything other than ``openai`` / ``codex``
-    (post-normalization 鈥?``anthropic`` and ``codex-oauth`` are accepted
+    (post-normalization  - ``anthropic`` and ``codex-oauth`` are accepted
     and silently rewritten).
     """
     normalized = _normalize_backend_type(backend_type)

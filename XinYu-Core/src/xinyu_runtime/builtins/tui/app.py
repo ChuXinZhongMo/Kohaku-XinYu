@@ -125,7 +125,7 @@ class AgentTUI(App):
         text = event.value.strip()
         if not text:
             return
-        # Slash commands: don't show in chat 鈥?command system handles display
+        # Slash commands: don't show in chat  - command system handles display
         if text.startswith("/"):
             self._input_queue.put_nowait(text)
             return
@@ -253,7 +253,7 @@ class AgentTUI(App):
         self._input_queue.put_nowait("")  # empty string signals exit
         self.exit()
 
-    # 鈹€鈹€ Thinking animation 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+    # -- Thinking animation --------------------------------------
 
     def start_thinking_animation(self) -> None:
         self._thinking_active = True
@@ -298,7 +298,7 @@ class AgentTUI(App):
             logger.debug("Failed to clear status", error=str(e), exc_info=True)
 
 
-# 鈹€鈹€ Helpers 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+# -- Helpers -----------------------------------------------------
 
 
 def _safe_id(name: str) -> str:

@@ -6,7 +6,7 @@ sub-agents can share a single pool of "turns" (LLM calls). The parent passes
 an :class:`IterationBudget` reference to each child by default; a child
 ``budget_allocation=N`` opts the child out into its own fresh counter.
 When the counter reaches zero, :class:`BudgetExhausted` is raised at the
-next consume site 鈥?inside a sub-agent it becomes a failed
+next consume site  - inside a sub-agent it becomes a failed
 :class:`~xinyu_runtime.modules.subagent.result.SubAgentResult`; in the
 parent's main loop it surfaces as a termination signal.
 """

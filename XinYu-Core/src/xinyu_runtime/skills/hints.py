@@ -19,7 +19,7 @@ def inject_skill_path_hint(agent: "Agent") -> None:
     """Scan cwd for files matching any enabled skill's ``paths`` and
     queue a hint into the agent's controller pending-injection list.
 
-    Safe to call on every ``user_input`` event 鈥?the scanner caches
+    Safe to call on every ``user_input`` event  - the scanner caches
     by ``(cwd, mtime)`` and this function no-ops when there is no
     skill registry, no path scanner, no controller, or no match.
     """

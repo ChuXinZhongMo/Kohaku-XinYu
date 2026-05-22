@@ -13,7 +13,7 @@ import yaml
 
 from xinyu_runtime.packages import list_packages
 
-# Mapping from module "kind" (as used by workspace routes 鈥?plural) to
+# Mapping from module "kind" (as used by workspace routes  - plural) to
 # xinyu.yaml manifest keys. ``io`` is shared between inputs/outputs
 # and classified by ``_classify_io``.
 MANIFEST_KEYS: dict[str, str] = {

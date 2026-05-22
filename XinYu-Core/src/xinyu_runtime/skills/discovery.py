@@ -10,8 +10,8 @@ Priority order (spec 1.3 "more limited scope = higher priority"):
              from :mod:`xinyu_runtime.packages_manifest`)
 
 Skills are **last-wins** across origins (spec 1.1 skills exception).
-The registry is populated in *reverse* priority order 鈥?packages first,
-project last 鈥?so higher-priority origins overwrite lower ones.
+The registry is populated in *reverse* priority order  - packages first,
+project last  - so higher-priority origins overwrite lower ones.
 
 Within a single roots-list, the folder form (``<name>/SKILL.md``) wins
 over the flat form (``<name>.md``) when both exist. Collisions *within*
@@ -64,7 +64,7 @@ def load_skill_from_path(
 ) -> Skill | None:
     """Load one ``SKILL.md`` file into a :class:`Skill`.
 
-    ``default_name`` is used when the frontmatter lacks a ``name`` 鈥?    typically the parent directory name for the folder form, or the
+    ``default_name`` is used when the frontmatter lacks a ``name`` - typically the parent directory name for the folder form, or the
     file stem for the flat form.
     """
     if not skill_md.exists():
@@ -114,7 +114,7 @@ def _as_string_list(value: object) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Roots 鈫?Skill[]
+# Roots ->Skill[]
 # ---------------------------------------------------------------------------
 
 
@@ -189,7 +189,7 @@ def discover_skills(
 ) -> list[Skill]:
     """Return skills from every origin in *registration order*.
 
-    Registration order is lowest-priority first (package 鈫?creature 鈫?    user 鈫?project), so :meth:`SkillRegistry.add` can be called in the
+    Registration order is lowest-priority first (package -> creature -> user -> project), so :meth:`SkillRegistry.add` can be called in the
     returned order and higher-priority origins overwrite lower ones
     thanks to the last-wins semantics.
 
@@ -204,7 +204,7 @@ def discover_skills(
             (spec Qa: "packaged skills default disabled=True unless
             the creature config explicitly enables them"). Passing
             ``"*"`` as one of the entries enables *every* discovered
-            package skill 鈥?opt-in-to-all shorthand.
+            package skill  - opt-in-to-all shorthand.
         default_enabled_origins: Origins that default to enabled=True
             when no scratchpad override exists. Creature / user /
             project are enabled by default; ``package`` is not.
@@ -220,7 +220,7 @@ def discover_skills(
 
     collected: list[Skill] = []
 
-    # 4 鈥?packages (lowest).
+    # 4  - packages (lowest).
     collected.extend(
         _load_package_skills(
             declared_names=declared,
@@ -229,20 +229,20 @@ def discover_skills(
         )
     )
 
-    # 3 鈥?creature.
+    # 3  - creature.
     if agent_path is not None:
         creature_root = Path(agent_path) / CREATURE_SKILL_SUBDIR
         for skill in _scan_root(creature_root, origin="creature"):
             skill.enabled = "creature" in default_enabled_origins
             collected.append(skill)
 
-    # 2 鈥?user.
+    # 2  - user.
     for rel in USER_SKILL_ROOTS:
         for skill in _scan_root(home / rel, origin="user"):
             skill.enabled = "user" in default_enabled_origins
             collected.append(skill)
 
-    # 1 鈥?project (highest).
+    # 1  - project (highest).
     for rel in PROJECT_SKILL_ROOTS:
         for skill in _scan_root(cwd / rel, origin="project"):
             skill.enabled = "project" in default_enabled_origins
@@ -261,7 +261,7 @@ def _load_package_skills(
 
     Skills are *last-wins* across packages (spec 1.1 skills exception),
     so we iterate every ``(package, entry)`` pair instead of using
-    :func:`packages_manifest.list_package_skills` 鈥?which hard-errors
+    :func:`packages_manifest.list_package_skills`  - which hard-errors
     on name collisions.
     """
     try:
@@ -347,7 +347,7 @@ def _resolve_skill_md(candidate: Path) -> Path | None:
     return None
 
 
-# Re-injection helper 鈥?list_package_skills returns entries without the
+# Re-injection helper  - list_package_skills returns entries without the
 # owning-package name, so we also need an alternative enumerator that
 # preserves it. This is mainly used by tests to stub out the packages
 # layer.

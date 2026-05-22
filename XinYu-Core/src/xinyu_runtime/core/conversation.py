@@ -42,7 +42,7 @@ def _is_empty_content(content: Any) -> bool:
     message whose ``tool_calls`` were all dropped can be removed wholesale.
     Treats ``None``, the empty string (after strip), and an empty list as
     empty. A list with any non-trivial part (text with content, image,
-    file) counts as non-empty 鈥?the assistant still has something to say.
+    file) counts as non-empty  - the assistant still has something to say.
     """
     if content is None:
         return True
@@ -54,7 +54,7 @@ def _is_empty_content(content: Any) -> bool:
                 if part.text and part.text.strip():
                     return False
             elif isinstance(part, dict):
-                # Post-serialisation dicts 鈥?treat anything non-text or
+                # Post-serialisation dicts  - treat anything non-text or
                 # non-empty text as meaningful payload.
                 if part.get("type") == "text":
                     text = part.get("text", "")
@@ -63,8 +63,8 @@ def _is_empty_content(content: Any) -> bool:
                 else:
                     return False
             else:
-                # Any non-TextPart object (ImagePart, FilePart, 鈥? is
-                # meaningful 鈥?keep the message.
+                # Any non-TextPart object (ImagePart, FilePart, ...) is
+                # meaningful  - keep the message.
                 return False
         return True
     return False
@@ -242,7 +242,7 @@ class Conversation:
         """Strip unmatched tool_call / tool-result pairs.
 
         Pure function: takes the provider payload, returns a new list
-        with orphan fragments removed. Idempotent 鈥?running twice
+        with orphan fragments removed. Idempotent  - running twice
         yields identical output.
 
         Rules (matches the OpenAI Chat Completions contract):
@@ -307,7 +307,7 @@ class Conversation:
                 if kept_calls:
                     new_msg["tool_calls"] = kept_calls
                 else:
-                    # All tool_calls orphaned 鈥?remove the key so the
+                    # All tool_calls orphaned  - remove the key so the
                     # provider doesn't see an empty list.
                     new_msg.pop("tool_calls", None)
 
@@ -316,7 +316,7 @@ class Conversation:
                 # None, empty string, or empty list.
                 if not kept_calls and _is_empty_content(new_msg.get("content")):
                     logger.warning(
-                        f"dropped assistant message #{idx} 鈥?no content + all tool_calls orphaned",
+                        f"dropped assistant message #{idx}  - no content + all tool_calls orphaned",
                         message_index=idx,
                     )
                     continue

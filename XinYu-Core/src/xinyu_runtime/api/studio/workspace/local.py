@@ -38,7 +38,7 @@ KNOWN_KINDS = ("tools", "subagents", "triggers", "plugins", "inputs", "outputs")
 class LocalWorkspace:
     """Filesystem-backed workspace.
 
-    Constructed via ``open(path)`` 鈥?validates the path exists and
+    Constructed via ``open(path)``  - validates the path exists and
     is a directory. Subdirectories (``creatures/``, ``modules/``)
     are created lazily on first save.
     """
@@ -86,14 +86,14 @@ class LocalWorkspace:
         can surface everything a creature can wire in:
 
         1. Workspace-authored files under ``<root>/modules/<kind>/``
-           (the editable set 鈥?REST endpoints operate on these).
+           (the editable set  - REST endpoints operate on these).
         2. Entries declared in the workspace's ``xinyu.yaml`` manifest.
         3. Entries contributed by every installed kt package.
 
         Each entry carries ``source`` (``workspace`` /
         ``workspace-manifest`` / ``package:<name>``). The REST
         ``GET /api/studio/modules/{kind}`` endpoint still returns only
-        workspace-authored files 鈥?that surface is for editing.
+        workspace-authored files  - that surface is for editing.
         """
         modules = {kind: self._modules_summary(kind) for kind in KNOWN_KINDS}
         return {
@@ -103,7 +103,7 @@ class LocalWorkspace:
         }
 
     def _modules_summary(self, kind: str) -> list[dict]:
-        """Merged module list for the dashboard 鈥?files + manifest + packages.
+        """Merged module list for the dashboard  - files + manifest + packages.
 
         Manifest entries whose ``module:`` path resolves to a file
         *inside* the workspace root are marked ``editable: true``.
@@ -134,7 +134,7 @@ class LocalWorkspace:
         lives inside this workspace root; otherwise None.
 
         Rejects anything outside the root (installed packages, absolute
-        paths, parent-escape attempts) 鈥?the editor must only ever
+        paths, parent-escape attempts)  - the editor must only ever
         touch files the user already considers part of this workspace.
         """
         if not module or not isinstance(module, str):
@@ -152,7 +152,7 @@ class LocalWorkspace:
         return resolved
 
     # ------------------------------------------------------------------
-    # Creatures 鈥?read
+    # Creatures  - read
     # ------------------------------------------------------------------
 
     def list_creatures(self) -> list[dict]:
@@ -209,7 +209,7 @@ class LocalWorkspace:
         }
 
     # ------------------------------------------------------------------
-    # Creatures 鈥?write (Phase 2)
+    # Creatures  - write (Phase 2)
     # ------------------------------------------------------------------
 
     def scaffold_creature(self, name: str, base: str | None) -> dict:
@@ -346,7 +346,7 @@ class LocalWorkspace:
         name = sanitize_name(name)
         kind_dir = self.module_kind_dir(kind)
 
-        # Existing file 鈥?update in place (handles both
+        # Existing file  - update in place (handles both
         # <root>/modules/<kind>/<name>.py and manifest-declared
         # <root>/<pkg>/<kind>/<stem>.py shapes).
         path = self._find_module_file(kind, name)
@@ -399,7 +399,7 @@ class LocalWorkspace:
         path.unlink()
 
     # ------------------------------------------------------------------
-    # Module skill docs 鈥?sidecar .md files
+    # Module skill docs  - sidecar .md files
     # ------------------------------------------------------------------
 
     def load_module_doc(self, kind: str, name: str) -> dict:
@@ -409,7 +409,7 @@ class LocalWorkspace:
         ``.py`` file. Returns the current content (empty string if no
         sidecar exists yet) plus the sidecar path for display. Raises
         ``FileNotFoundError`` when the module itself isn't a
-        workspace-editable file 鈥?studio never surfaces built-in docs
+        workspace-editable file  - studio never surfaces built-in docs
         here (the catalog endpoint serves those read-only for
         reference elsewhere).
         """
@@ -447,10 +447,10 @@ class LocalWorkspace:
 
         Search order:
         1. ``<root>/modules/<kind>/<name>.py`` (or ``.yaml`` / ``.yml``
-           for sub-agents) 鈥?the studio-native location.
+           for sub-agents)  - the studio-native location.
         2. A ``xinyu.yaml`` manifest entry whose ``name`` matches and
            whose ``module:`` dotted path resolves to a file inside the
-           workspace root 鈥?kt-template / kt-biome style packaging.
+           workspace root  - kt-template / kt-biome style packaging.
 
         Returns ``None`` when no file is found; callers decide whether
         to 404 or treat it as a fresh-file save.
@@ -516,8 +516,8 @@ def _collect_prompts(creature_dir: Path) -> dict[str, str]:
 def _compute_effective(cfg_path: Path, data: dict) -> dict:
     """Compute the post-inheritance effective config summary.
 
-    Calls the core config loader in a best-effort way 鈥?if it
-    fails (missing package, broken base ref, 鈥?, returns an
+    Calls the core config loader in a best-effort way. If it
+    fails (missing package, broken base ref, etc.), returns an
     ``error`` key instead of crashing the read.
     """
     try:
@@ -531,7 +531,7 @@ def _compute_effective(cfg_path: Path, data: dict) -> dict:
         return {"error": str(e)}
 
     # Chain reconstruction from raw data (core doesn't expose the
-    # chain as a field 鈥?we re-walk it for display)
+    # chain as a field  - we re-walk it for display)
     chain: list[str] = []
     cur = data
     seen: set[str] = set()
@@ -544,7 +544,7 @@ def _compute_effective(cfg_path: Path, data: dict) -> dict:
             break
         seen.add(base)
         chain.append(base)
-        # We don't follow further 鈥?just surface the first hop is
+        # We don't follow further  - just surface the first hop is
         # usually enough for the UI. Phase 4 can extend this if
         # needed.
         break
@@ -563,7 +563,7 @@ def _coerce_plain(obj: Any) -> Any:
     """Recursively convert ruamel CommentedMap/Seq to plain dict/list.
 
     JSON serialization blows up on CommentedMap via FastAPI's
-    default encoder 鈥?coerce on the way out.
+    default encoder  - coerce on the way out.
     """
     from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
@@ -575,8 +575,7 @@ def _coerce_plain(obj: Any) -> Any:
 
 
 def _rmtree(path: Path) -> None:
-    """Recursive delete 鈥?stdlib shutil.rmtree wrapped for atomicity."""
+    """Recursive delete  - stdlib shutil.rmtree wrapped for atomicity."""
     import shutil
 
     shutil.rmtree(path)
-

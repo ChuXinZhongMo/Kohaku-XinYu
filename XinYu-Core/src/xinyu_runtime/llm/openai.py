@@ -97,7 +97,7 @@ class OpenAIProvider(BaseLLMProvider):
         self._last_usage: dict[str, int] = {}
         self.prompt_cache_key: str | None = None
         # Retained so :mod:`anthropic_cache` can sniff whether caching
-        # applies 鈥?the SDK client stores a trailing-slash-normalised URL
+        # applies  - the SDK client stores a trailing-slash-normalised URL
         # which is fine for ``"anthropic.com" in ...`` matching.
         self.base_url: str = base_url or ""
 
@@ -111,7 +111,7 @@ class OpenAIProvider(BaseLLMProvider):
 
         # Log whether auto-caching will be engaged for this provider. One
         # line per construction (typically once per agent / model switch)
-        # is enough 鈥?the actual per-turn caching path stays silent.
+        # is enough  - the actual per-turn caching path stays silent.
         anthropic = is_anthropic_endpoint(self.base_url, None)
         disabled = bool(self.extra_body.get("disable_prompt_caching"))
         if anthropic and not disabled:
@@ -156,7 +156,7 @@ class OpenAIProvider(BaseLLMProvider):
         ``disable_prompt_caching`` is a XinYu Runtime-level flag (user
         opt-out). Anthropic would reject it as an unknown field, and
         other providers would pass it through verbatim into logs. Drop
-        it here 鈥?the caching branch already read it.
+        it here  - the caching branch already read it.
         """
         if "disable_prompt_caching" not in extra:
             return extra

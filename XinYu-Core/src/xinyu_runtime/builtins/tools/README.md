@@ -26,7 +26,7 @@ the public API from `builtins.tool_catalog`.
 | `info.py` | `info`: load full documentation for a tool or sub-agent on demand |
 | `stop_task.py` | `stop_task`: cancel a running background tool, sub-agent, or trigger by id |
 | `search_memory.py` | `search_memory`: FTS5 + semantic search over the current session's event log |
-| `web_fetch.py` | `web_fetch`: clean-read a URL (crawl4ai 鈫?trafilatura 鈫?jina 鈫?naive fallback) |
+| `web_fetch.py` | `web_fetch`: clean-read a URL (crawl4ai -> trafilatura -> jina -> naive fallback) |
 | `web_search.py` | `web_search`: DuckDuckGo search (optional `duckduckgo-search` dep) |
 | `terrarium_lifecycle.py` | `terrarium_create` / `terrarium_status` / `terrarium_stop` |
 | `terrarium_messaging.py` | `terrarium_send` / `terrarium_observe` / `terrarium_history` |
@@ -40,7 +40,7 @@ names a builtin tool. Imports:
 - `xinyu_runtime.builtins.tool_catalog` (`register_builtin`)
 - `xinyu_runtime.modules.tool.base` (`BaseTool`, `ToolResult`, `ToolContext`, `ExecutionMode`)
 - `xinyu_runtime.core.channel` / `core.session` (channel + scratchpad tools)
-- `xinyu_runtime.terrarium.*` (terrarium_* and creature_* tools 鈥?lazy-loaded
+- `xinyu_runtime.terrarium.*` (terrarium_* and creature_* tools  - lazy-loaded
   via `terrarium/tool_registration.py` to avoid circular imports)
 - `xinyu_runtime.session.memory` / `session.store` (`search_memory`)
 - `xinyu_runtime.utils.logging`
@@ -57,12 +57,12 @@ No tool imports another tool's implementation except `multi_edit` reusing
 
 - Terrarium tools register lazily via
   `terrarium/tool_registration.ensure_terrarium_tools_registered()` to break
-  the `core 鈫?builtins 鈫?terrarium 鈫?core` cycle.
+  the `core -> builtins -> terrarium -> core` cycle.
 - Web tools degrade gracefully when optional deps (crawl4ai, trafilatura,
-  duckduckgo-search) aren't installed 鈥?they log a warning and return a
+  duckduckgo-search) aren't installed  - they log a warning and return a
   useful `ToolResult.error`.
 - Setup-able triggers (`add_timer`, `watch_channel`, `add_schedule`) are
-  not defined here 鈥?they come from
+  not defined here  - they come from
   `modules/trigger/callable.py:CallableTriggerTool` wrapping each
   `universal = True` trigger class. A creature opts in per-entry with
   `- { name: add_timer, type: trigger }` in its `tools:` list. Installed
@@ -71,8 +71,8 @@ No tool imports another tool's implementation except `multi_edit` reusing
 
 ## See also
 
-- `../README.md` 鈥?full builtin catalog (tools + subagents + io + TUI)
-- `../../modules/tool/` 鈥?`BaseTool` protocol + execution modes
-- `../../builtin_skills/` 鈥?full-doc markdown loaded via the `info` tool
-- `../../terrarium/README.md` 鈥?terrarium management tool context
+- `../README.md`  - full builtin catalog (tools + subagents + io + TUI)
+- `../../modules/tool/`  - `BaseTool` protocol + execution modes
+- `../../builtin_skills/`  - full-doc markdown loaded via the `info` tool
+- `../../terrarium/README.md`  - terrarium management tool context
 

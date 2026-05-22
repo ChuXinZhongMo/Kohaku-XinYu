@@ -2,8 +2,8 @@
 Anthropic prompt-caching helper (system + last-3-message strategy).
 
 Anthropic supports up to 4 ``cache_control`` breakpoints per request. The
-accepted recipe 鈥?and the one Hermes-agent and the Anthropic cookbook both
-use 鈥?is:
+accepted recipe  - and the one Hermes-agent and the Anthropic cookbook both
+use  - is:
 
 1. One breakpoint on the system prompt (long, stable prefix).
 2. Up to 3 breakpoints on the tail of the user/assistant dialog, so the
@@ -15,7 +15,7 @@ not on the message envelope. If a message's ``content`` is a plain string
 we convert it into the structured form so we have somewhere to attach the
 marker; lists of parts get tagged on their last text-shaped part.
 
-This module is pure 鈥?no network IO, no state 鈥?and only called from
+This module is pure  - no network IO, no state  - and only called from
 :mod:`xinyu_runtime.llm.openai` after confirming the endpoint is
 Anthropic. For every other provider, messages are passed through unchanged
 by the caller.
@@ -48,7 +48,7 @@ def _mark_last_text_part(parts: list[Any]) -> bool:
 
     Returns True if a marker was placed, False when no suitable part was
     found (e.g. list of ImagePart-only content). The caller is expected to
-    fall through without complaint 鈥?we don't want to break a turn just
+    fall through without complaint  - we don't want to break a turn just
     because the last message was an image-only response.
     """
     for part in reversed(parts):
@@ -56,7 +56,7 @@ def _mark_last_text_part(parts: list[Any]) -> bool:
             part_type = part.get("type", "text")
             # ``text`` is the common case; tool_use / tool_result / image
             # can also carry cache_control in Anthropic's format, but we
-            # deliberately limit ourselves to text to stay conservative 鈥?            # the tail of a turn is almost always a text message anyway.
+            # deliberately limit ourselves to text to stay conservative - the tail of a turn is almost always a text message anyway.
             if part_type == "text":
                 part["cache_control"] = dict(_EPHEMERAL)
                 return True
@@ -66,9 +66,9 @@ def _mark_last_text_part(parts: list[Any]) -> bool:
 def _apply_marker(msg: dict[str, Any]) -> None:
     """Place a ``cache_control`` marker on the message's content.
 
-    - ``content`` is a string 鈫?wrap into a one-part list, mark that part.
-    - ``content`` is a list of parts 鈫?mark the last text-shaped part.
-    - ``content`` is None / empty 鈫?leave the message alone (nothing to
+    - ``content`` is a string -> wrap into a one-part list, mark that part.
+    - ``content`` is a list of parts -> mark the last text-shaped part.
+    - ``content`` is None / empty -> leave the message alone (nothing to
       cache against).
     """
     content = msg.get("content")
@@ -86,7 +86,7 @@ def apply_anthropic_cache_markers(
 ) -> list[dict[str, Any]]:
     """Return a copy of ``messages`` with Anthropic prompt-caching markers.
 
-    The input list is never mutated 鈥?we deep-copy so the caller can keep
+    The input list is never mutated  - we deep-copy so the caller can keep
     using their original messages for logging / session persistence.
 
     Strategy (system_and_3):
@@ -96,7 +96,7 @@ def apply_anthropic_cache_markers(
         tail per Anthropic's guidance) and mark the last 3 non-tool
         messages (up to 3 breakpoints).
 
-    Total breakpoints: at most 4 鈥?matches Anthropic's documented cap.
+    Total breakpoints: at most 4  - matches Anthropic's documented cap.
     """
     if not messages:
         return messages
@@ -117,12 +117,12 @@ def apply_anthropic_cache_markers(
         if role == "system":
             continue
         if role == "tool":
-            # Skip tool messages 鈥?they intercalate but don't count as
+            # Skip tool messages  - they intercalate but don't count as
             # anchor points for the rolling breakpoints.
             continue
         body_indices.append(idx)
 
-    # Mark the last (up to) N body messages 鈥?respecting the 4-breakpoint
+    # Mark the last (up to) N body messages  - respecting the 4-breakpoint
     # cap. With system already taking one slot, we have 3 left.
     remaining_slots = max(0, 4 - used)
     for idx in body_indices[-remaining_slots:]:

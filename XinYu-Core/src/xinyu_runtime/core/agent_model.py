@@ -3,7 +3,7 @@
 Split out of :mod:`agent` to keep that module under the 1000-line
 hard cap. Provides a mixin whose two methods, ``switch_model`` and
 ``llm_identifier``, belong to the :class:`~xinyu_runtime.core.agent.Agent`
-public surface. The mixin has no state of its own 鈥?it reads and
+public surface. The mixin has no state of its own  - it reads and
 writes attributes owned by ``Agent.__init__``.
 """
 
@@ -39,12 +39,12 @@ class AgentModelMixin:
         """Switch the LLM provider to a different model profile.
 
         Args:
-            profile_name: Canonical selector 鈥?``provider/name[@group=option,...]``.
+            profile_name: Canonical selector  - ``provider/name[@group=option,...]``.
                 Bare names are also accepted but will fail on ambiguity
                 if the name exists under multiple providers.
 
         Returns:
-            The canonical ``provider/name[@variations]`` identifier 鈥?            the same string the pickers emit, so a round-trip
+            The canonical ``provider/name[@variations]`` identifier - the same string the pickers emit, so a round-trip
             ``switch_model(picker_output) == picker_output`` is safe.
         """
         profile = resolve_controller_llm({}, llm_override=profile_name)
@@ -99,7 +99,7 @@ class AgentModelMixin:
 
         Populated on every :meth:`switch_model` call. On startup the
         agent goes through the bootstrap path instead, so first access
-        resolves from config and caches the result 鈥?the banner,
+        resolves from config and caches the result  - the banner,
         ``/model`` command, and frontend pill all see the identifier
         the user can paste back into ``/model``.
         """

@@ -7,7 +7,7 @@ REST endpoint handlers. One file per resource. Each module exports a
 
 | File | Prefix | Responsibility |
 |------|--------|----------------|
-| `__init__.py` | 鈥?| Package marker |
+| `__init__.py` |  - | Package marker |
 | `terrariums.py` | `/api/terrariums` | Terrarium CRUD + lifecycle + chat; scratchpad patch for individual creatures |
 | `creatures.py` | `/api/terrariums/{tid}/creatures` | List / add / remove / wire creatures; model switch |
 | `channels.py` | `/api/terrariums/{tid}/channels` | List channels, send a message to a channel |
@@ -29,9 +29,9 @@ Imported by `api/app.py` only. Imports: `fastapi`, `pydantic`; `serving/`
 
 Each file's `router` symbol is the entry point. Shared helpers:
 
-- `agents._redacted_env()` 鈥?scrub secrets from an env dump; reused by `terrariums.py`
-- `configs.set_config_dirs(creatures, terrariums)` 鈥?wired once at startup by `create_app`
-- `settings._load_mcp_config` / `_save_mcp_config` 鈥?reused by `cli/config_mcp.py`
+- `agents._redacted_env()`  - scrub secrets from an env dump; reused by `terrariums.py`
+- `configs.set_config_dirs(creatures, terrariums)`  - wired once at startup by `create_app`
+- `settings._load_mcp_config` / `_save_mcp_config`  - reused by `cli/config_mcp.py`
 
 ## Notes
 
@@ -41,7 +41,7 @@ Each file's `router` symbol is the entry point. Shared helpers:
 - `configs.py` scans directories lazily the first time each endpoint is
   hit; callers trigger a rescan by re-calling `set_config_dirs`.
 - `files.py` resolves paths against each agent's working directory and
-  refuses requests that escape the root 鈥?enforced with
+  refuses requests that escape the root  - enforced with
   `Path.resolve().is_relative_to(root)`.
 - `settings.py` writes to `~/.xinyu/` files (`profiles.yaml`,
   `api_keys.json`, `mcp.json`, `codex_tokens.json`) using the same helpers
@@ -49,8 +49,8 @@ Each file's `router` symbol is the entry point. Shared helpers:
 
 ## See also
 
-- `../README.md` 鈥?api layer overview
-- `../ws/README.md` 鈥?WebSocket counterparts (streaming chat, logs, file watcher)
-- `../../serving/manager.py` 鈥?where the actual work happens
+- `../README.md`  - api layer overview
+- `../ws/README.md`  - WebSocket counterparts (streaming chat, logs, file watcher)
+- `../../serving/manager.py`  - where the actual work happens
 
 
