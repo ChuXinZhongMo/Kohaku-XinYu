@@ -105,6 +105,8 @@ class NativeQQGateway:
         self._chat_coalesce_lock = asyncio.Lock()
         self._chat_coalesce_buffers: dict[str, dict[str, Any]] = {}
         self._recent_sticker_imports: dict[str, RecentStickerImportState] = {}
+        self._recent_group_reply_message_ids: dict[str, dict[str, Any]] = {}
+        self._group_followup_windows: dict[str, dict[str, Any]] = {}
         self._connection_count = 0
 
     _effective_whitelist_user_ids = xinyu_qq_trust_policy.gateway_effective_whitelist_user_ids
@@ -122,6 +124,79 @@ class NativeQQGateway:
     _looks_like_trust_revoke_command = staticmethod(xinyu_qq_trust_policy.is_trust_revoke_command)
 
     _trust_command_target = xinyu_qq_trust_policy.gateway_trust_command_target
+
+    def _group_followup_key(self, target: ReplyTarget) -> str:
+        return f"{target.group_id}:{target.user_id}"
+
+    def _prune_group_reply_state(self) -> None:
+        now = time.monotonic()
+        for key, state in list(self._recent_group_reply_message_ids.items()):
+            if float(state.get("expires_at") or 0.0) <= now:
+                self._recent_group_reply_message_ids.pop(key, None)
+        for key, state in list(self._group_followup_windows.items()):
+            if float(state.get("expires_at") or 0.0) <= now or _as_int(state.get("remaining"), 0) <= 0:
+                self._group_followup_windows.pop(key, None)
+
+    def _group_reply_quote_trigger_reason(self, event: dict[str, Any], target: ReplyTarget) -> str:
+        if target.message_kind != "group":
+            return ""
+        reply_message_id = _safe_str(self._extract_reply_message_id(event)).strip()
+        if not reply_message_id:
+            return ""
+        self._prune_group_reply_state()
+        state = self._recent_group_reply_message_ids.get(reply_message_id)
+        if not state:
+            return ""
+        if _safe_str(state.get("group_id")).strip() != _safe_str(target.group_id).strip():
+            return ""
+        return "group_reply_quote"
+
+    def _group_followup_trigger_reason(self, target: ReplyTarget, *, consume: bool) -> str:
+        if target.message_kind != "group" or self.config.group_followup_window_seconds <= 0:
+            return ""
+        self._prune_group_reply_state()
+        key = self._group_followup_key(target)
+        state = self._group_followup_windows.get(key)
+        if not state:
+            return ""
+        if consume:
+            state["remaining"] = max(0, _as_int(state.get("remaining"), 0) - 1)
+            state["expires_at"] = time.monotonic() + self.config.group_followup_window_seconds
+        return "group_followup_window"
+
+    def _remember_group_followup_window(self, target: ReplyTarget) -> None:
+        if target.message_kind != "group" or self.config.group_followup_window_seconds <= 0:
+            return
+        self._group_followup_windows[self._group_followup_key(target)] = {
+            "expires_at": time.monotonic() + self.config.group_followup_window_seconds,
+            "remaining": self.config.group_followup_max_turns,
+        }
+
+    @staticmethod
+    def _message_ids_from_action_response(action_response: dict[str, Any] | None) -> list[str]:
+        if not isinstance(action_response, dict):
+            return []
+        data = action_response.get("data")
+        if not isinstance(data, dict):
+            return []
+        ids: list[str] = []
+        bubble_ids = data.get("reply_bubble_message_ids")
+        if isinstance(bubble_ids, list):
+            ids.extend(_safe_str(item).strip() for item in bubble_ids)
+        ids.extend(part.strip() for part in _safe_str(data.get("message_id")).replace("，", ",").split(","))
+        return list(dict.fromkeys(item for item in ids if item))
+
+    def _remember_group_visible_reply(self, prepared: PreparedMessage, action_response: dict[str, Any] | None) -> None:
+        if prepared.target.message_kind != "group":
+            return
+        self._remember_group_followup_window(prepared.target)
+        expires_at = time.monotonic() + max(600, self.config.group_followup_window_seconds)
+        for message_id in self._message_ids_from_action_response(action_response):
+            self._recent_group_reply_message_ids[message_id] = {
+                "group_id": prepared.target.group_id,
+                "user_id": prepared.target.user_id,
+                "expires_at": expires_at,
+            }
 
     def _persist_trusted_user_ids(self, trusted_user_ids: set[str]) -> bool:
         if self.config_path is None:
@@ -1024,6 +1099,7 @@ class NativeQQGateway:
                 return
             self._record_direct_visible_send_shadow(prepared, reply, response)
             action_response = await self._send_visible_reply(websocket, prepared, reply, response)
+            self._remember_group_visible_reply(prepared, action_response)
             await self._ack_sent_visible_reply(
                 prepared,
                 reply=reply,
@@ -2215,14 +2291,23 @@ class NativeQQGateway:
                 route="learning_ingest",
             )
 
+        group_trigger_reason = ""
         if message_kind == "group":
             group_ok, normalized_text, reason = xinyu_qq_command_router.group_trigger_result(self, event, text=text)
             if not group_ok:
-                print(f"[xinyu_qq_gateway] ignored group message: {reason}", flush=True)
-                return None
+                quote_reason = self._group_reply_quote_trigger_reason(event, target)
+                followup_reason = "" if quote_reason else self._group_followup_trigger_reason(target, consume=True)
+                if quote_reason or followup_reason:
+                    group_ok = True
+                    normalized_text = text
+                    reason = quote_reason or followup_reason
+                else:
+                    print(f"[xinyu_qq_gateway] ignored group message: {reason}", flush=True)
+                    return None
             text = normalized_text.strip()
             if not text:
                 return None
+            group_trigger_reason = reason
 
         package_text = xinyu_qq_command_router.extract_package_install_command(self, text)
         if package_text is not None:
@@ -2272,9 +2357,16 @@ class NativeQQGateway:
         if xinyu_qq_command_router.is_passthrough_command(self, text):
             return None
 
+        chat_payload = self._build_chat_payload(event, target=target, text=text, rich_context=rich_context)
+        if group_trigger_reason:
+            metadata = chat_payload.get("metadata")
+            metadata = metadata if isinstance(metadata, dict) else {}
+            metadata["qq_group_trigger_reason"] = group_trigger_reason
+            metadata["qq_group_followup_window_seconds"] = self.config.group_followup_window_seconds
+            chat_payload["metadata"] = metadata
         return PreparedMessage(
             target=target,
-            payload=self._build_chat_payload(event, target=target, text=text, rich_context=rich_context),
+            payload=chat_payload,
         )
 
     def _prepare_none_reason(self, event: dict[str, Any]) -> str:
@@ -2317,7 +2409,12 @@ class NativeQQGateway:
         if message_kind == "group":
             group_ok, normalized_text, reason = xinyu_qq_command_router.group_trigger_result(self, event, text=text)
             if not group_ok:
-                return reason
+                target = ReplyTarget(message_kind=message_kind, user_id=sender_id, group_id=group_id)
+                return (
+                    self._group_reply_quote_trigger_reason(event, target)
+                    or self._group_followup_trigger_reason(target, consume=False)
+                    or reason
+                )
             if not normalized_text.strip():
                 return "group_trigger_empty_text"
         package_text = xinyu_qq_command_router.extract_package_install_command(self, text)

@@ -173,7 +173,9 @@ def strip_group_trigger_prefix(gateway: Any, text: str) -> tuple[bool, str]:
         if not stripped.startswith(marker):
             continue
         rest = stripped[len(marker):]
-        if rest and rest[0] not in separators:
+        marker_body = marker.lstrip("@")
+        marker_is_ascii = marker_body.isascii()
+        if rest and rest[0] not in separators and marker_is_ascii:
             continue
         return True, rest.lstrip(separators).strip()
     return False, text

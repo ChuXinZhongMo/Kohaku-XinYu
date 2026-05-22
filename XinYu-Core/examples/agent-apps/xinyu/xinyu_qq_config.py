@@ -170,6 +170,8 @@ class GatewayConfig:
     allowed_group_ids: frozenset[str] = frozenset()
     group_trigger_mode: str = "mention_or_prefix"
     group_trigger_prefixes: tuple[str, ...] = ()
+    group_followup_window_seconds: int = 0
+    group_followup_max_turns: int = 1
     group_shadow_enabled: bool = False
     group_shadow_allowed_group_ids: frozenset[str] = frozenset()
     group_shadow_max_text_chars: int = 260
@@ -275,6 +277,8 @@ class GatewayConfig:
             allowed_group_ids=frozenset(as_str_list(raw.get("allowed_group_ids"))),
             group_trigger_mode=_safe_str(raw.get("group_trigger_mode"), "mention_or_prefix").strip().lower(),
             group_trigger_prefixes=prefixes,
+            group_followup_window_seconds=max(0, min(600, as_int(raw.get("group_followup_window_seconds"), 0))),
+            group_followup_max_turns=max(1, min(20, as_int(raw.get("group_followup_max_turns"), 1))),
             group_shadow_enabled=as_bool(raw.get("group_shadow_enabled"), False),
             group_shadow_allowed_group_ids=frozenset(as_str_list(raw.get("group_shadow_allowed_group_ids"))),
             group_shadow_max_text_chars=max(80, min(1000, as_int(raw.get("group_shadow_max_text_chars"), 260))),
@@ -400,6 +404,8 @@ class GatewayConfig:
             allowed_group_ids=self.allowed_group_ids,
             group_trigger_mode=self.group_trigger_mode,
             group_trigger_prefixes=self.group_trigger_prefixes,
+            group_followup_window_seconds=self.group_followup_window_seconds,
+            group_followup_max_turns=self.group_followup_max_turns,
             group_shadow_enabled=self.group_shadow_enabled,
             group_shadow_allowed_group_ids=self.group_shadow_allowed_group_ids,
             group_shadow_max_text_chars=self.group_shadow_max_text_chars,

@@ -1678,6 +1678,35 @@ def main() -> int:
     assert group_prepared.payload["text"] == "看一下"
     assert group_prepared.payload["session_id"] == "qq:group:7:42"
 
+    compact_name_group = dict(ignored_group)
+    compact_name_group["message"] = [{"type": "text", "data": {"text": "心玉在吗"}}]
+    compact_name_group["raw_message"] = "心玉在吗"
+    compact_prepared = gateway.prepare_message(compact_name_group)
+    assert compact_prepared is not None
+    assert compact_prepared.payload["text"] == "在吗"
+
+    gateway._remember_group_visible_reply(
+        group_prepared,
+        {"status": "ok", "retcode": 0, "data": {"message_id": "9001"}},
+    )
+    followup_group = dict(ignored_group)
+    followup_group["message"] = [{"type": "text", "data": {"text": "继续说"}}]
+    followup_group["raw_message"] = "继续说"
+    followup_prepared = gateway.prepare_message(followup_group)
+    assert followup_prepared is None
+    assert gateway._prepare_none_reason(followup_group) == "group_trigger_required"
+
+    quoted_group = dict(ignored_group)
+    quoted_group["message"] = [
+        {"type": "reply", "data": {"id": "9001"}},
+        {"type": "text", "data": {"text": "那这个呢"}},
+    ]
+    quoted_group["raw_message"] = "[CQ:reply,id=9001]那这个呢"
+    quoted_prepared = gateway.prepare_message(quoted_group)
+    assert quoted_prepared is not None
+    assert quoted_prepared.payload["text"] == "那这个呢"
+    assert quoted_prepared.payload["metadata"]["qq_group_trigger_reason"] == "group_reply_quote"
+
     group_codex = dict(ignored_group)
     group_codex["message"] = [{"type": "text", "data": {"text": "心玉 /codex 不该执行"}}]
     group_codex["raw_message"] = "心玉 /codex 不该执行"
