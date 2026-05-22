@@ -208,7 +208,10 @@ def apply_temporal_memory_context(
         evaluated_at=evaluated_at,
     )
     enhanced_items = tuple(_with_temporal_hint(item, temporal.hint_for(item.recall_id)) for item in result.items)
-    prompt_block = render_recalled_context(list(enhanced_items))
+    prompt_block = render_recalled_context(
+        list(enhanced_items),
+        max_chars=4200 if _is_self_state_recall(result) else None,
+    )
     temporal_block = render_temporal_memory_context(temporal)
     if temporal_block:
         prompt_block = (prompt_block + "\n\n" + temporal_block).strip() if prompt_block else temporal_block
@@ -268,6 +271,12 @@ def bucket_living_memory_recall(result: RecalledContextResult) -> LivingMemoryRe
         uncertainties=tuple(uncertainties),
         trace=tuple(trace),
     )
+
+
+def _is_self_state_recall(result: RecalledContextResult) -> bool:
+    route_plan = getattr(result, "route_plan", None)
+    selected = getattr(route_plan, "selected_experts", ()) if route_plan is not None else ()
+    return "self_state" in set(str(item) for item in selected)
 
 
 # Compatibility names for older callers while the live path migrates.

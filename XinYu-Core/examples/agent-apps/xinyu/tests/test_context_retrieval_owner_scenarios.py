@@ -77,6 +77,65 @@ def test_owner_just_now_recall_prefers_tail_and_records_envelope(tmp_path: Path)
     assert result.envelopes[0].boundary == "recalled_context_only_not_stable_memory"
 
 
+def test_owner_self_state_recall_admits_lived_state_memory_without_project_status(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "memory/context/persona_surface_state.md",
+        """
+        - status: active
+        - last_pressure: style
+        - felt_residue: guarded but still trying to answer as herself
+        """,
+    )
+    _write(
+        tmp_path / "memory/self/learning_closed_loop_state.md",
+        """
+        - status: trial_active
+        - latest_failure_kind: owner_reported_template_voice_failure
+        - expected_next_behavior: answer from present feeling instead of postmortem
+        """,
+    )
+    _write(
+        tmp_path / "memory/self/expression_self_learning_state.md",
+        """
+        - status: active
+        - failure_kind: visible_mechanism_or_template_leak
+        - repair_policy: retry as live speech
+        """,
+    )
+    _write(
+        tmp_path / "memory/relationships/index.md",
+        """
+        - owner_relation: high trust, sensitive to template voice and delayed replies
+        """,
+    )
+
+    result = retrieve_recalled_context(
+        tmp_path,
+        _owner_payload(),
+        user_text="\u4f60\u73b0\u5728\u611f\u89c9\u600e\u4e48\u6837",
+        dialogue_tail=[
+            {
+                "role": "user",
+                "content": "\u521a\u624d\u90a3\u4e2a\u56de\u590d\u6709\u70b9\u50cf\u6a21\u677f",
+            }
+        ],
+        visible_turn=_visible(),
+    )
+
+    refs = {item.memory_ref for item in result.items}
+    selected = set(result.route_plan.selected_experts if result.route_plan else ())
+
+    assert "self_state" in selected
+    assert "owner_relation" in selected
+    assert "emotion_residue" in selected
+    assert "project_task" not in selected
+    assert "memory/context/persona_surface_state.md" in refs
+    assert "memory/self/learning_closed_loop_state.md" in refs
+    assert "memory/self/expression_self_learning_state.md" in refs
+    assert "owner_reported_template_voice_failure" in result.prompt_block
+    assert any(note.startswith("memory_experts:") and "self_state" in note for note in result.notes)
+
+
 def test_owner_project_status_recall_uses_stable_memory_without_group_leak(tmp_path: Path) -> None:
     archive_dialogue_turn(
         tmp_path,

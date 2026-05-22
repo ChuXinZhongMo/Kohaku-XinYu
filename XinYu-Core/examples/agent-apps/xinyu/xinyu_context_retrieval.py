@@ -26,6 +26,7 @@ from xinyu_dialogue_archive import (
 )
 from xinyu_retrieval_envelope import RetrievalCandidateEnvelope, safe_envelope_trace
 from xinyu_retrieval_need_reranker import build_retrieval_need_profile, rerank_recalled_items_with_report
+from xinyu_self_state_capsule import classify_self_state_query
 from xinyu_sparse_memory_router import SparseMemoryRoutePlan, apply_sparse_memory_route, build_sparse_memory_route
 from xinyu_storage_paths import knowledge_file_path, knowledge_ref
 from xinyu_text_variants import readable_markers
@@ -136,6 +137,10 @@ STABLE_MEMORY_TARGETS: tuple[str, ...] = (
     "memory/self/personality_profile.md",
     "memory/self/voice_profile_zh.md",
     "memory/self/personality_change_state.md",
+    "memory/context/persona_surface_state.md",
+    "memory/context/self_state_capsule_state.md",
+    "memory/self/learning_closed_loop_state.md",
+    "memory/self/expression_self_learning_state.md",
     "memory/relationships/index.md",
     "memory/people/owner.md",
     "memory/emotions/current_state.md",
@@ -143,6 +148,16 @@ STABLE_MEMORY_TARGETS: tuple[str, ...] = (
     knowledge_ref("source_materials.md"),
     knowledge_ref("source_notes.md"),
     knowledge_ref("learning_quality_state.md"),
+)
+
+SELF_STATE_STABLE_MEMORY_TARGETS: tuple[str, ...] = (
+    "memory/context/persona_surface_state.md",
+    "memory/context/self_state_capsule_state.md",
+    "memory/self/learning_closed_loop_state.md",
+    "memory/self/expression_self_learning_state.md",
+    "memory/emotions/current_state.md",
+    "memory/relationships/index.md",
+    "memory/people/owner.md",
 )
 
 _KNOWLEDGE_MEMORY_REF_FILENAMES: dict[str, str] = {
@@ -304,6 +319,8 @@ def _build_query_text(user_text: str, dialogue_tail: list[dict[str, str]], visib
 
 
 def _should_retrieve(user_text: str, query_text: str, visible_turn: Any | None) -> bool:
+    if classify_self_state_query(user_text) != "none":
+        return True
     if _contains_any(user_text, RECALL_MARKERS):
         return True
     if _contains_any(query_text, PROJECT_MARKERS):
@@ -495,6 +512,35 @@ def _stable_memory_items(
     return items
 
 
+def _self_state_stable_items(
+    root: Path,
+    *,
+    query_terms: list[str],
+    rel_paths: tuple[str, ...],
+) -> list[RecalledContextItem]:
+    items: list[RecalledContextItem] = []
+    for index, rel_path in enumerate(rel_paths):
+        text = _read_stable_memory(root, rel_path, limit=6000)
+        if not text:
+            continue
+        score = 4.8 - min(index, 4) * 0.25
+        items.append(
+            RecalledContextItem(
+                recall_id="selfstate-" + hashlib.sha256(rel_path.encode("utf-8")).hexdigest()[:8],
+                source="stable_memory",
+                scope="stable",
+                time="stable self-state support file",
+                speaker="memory",
+                summary=_snippet(text, query_terms, limit=220),
+                relevance=f"self-state support memory reference: {rel_path}",
+                confidence=_confidence(score + 2),
+                score=score,
+                memory_ref=rel_path,
+            )
+        )
+    return items
+
+
 def _self_core_architecture_items(root: Path, *, query_terms: list[str]) -> list[RecalledContextItem]:
     items: list[RecalledContextItem] = []
     for rel_path in SELF_CORE_CONTEXT_TARGETS:
@@ -593,6 +639,7 @@ def retrieve_recalled_context(
     query_terms = _tokens(query_text)
     recall_requested = _contains_any(user_text, RECALL_MARKERS)
     self_core_topic = _contains_any(query_text, SELF_CORE_ARCHITECTURE_MARKERS)
+    self_state_topic = classify_self_state_query(user_text) != "none"
     scopes = _scopes_for_payload(payload, user_text)
     current_scope = scope.scope
     route_plan = build_sparse_memory_route(
@@ -610,7 +657,7 @@ def retrieve_recalled_context(
         _tail_items(
             tail,
             query_terms=query_terms,
-            recall_requested=recall_requested,
+            recall_requested=recall_requested or self_state_topic,
             scope=current_scope,
         )
     )
@@ -641,6 +688,18 @@ def retrieve_recalled_context(
         stable_targets = tuple(rel_path for rel_path in STABLE_MEMORY_TARGETS if route_plan.allows_memory_ref(rel_path))
         if route_plan.allows_source("stable_memory") and stable_targets:
             items.extend(_stable_memory_items(root, query_terms=query_terms, rel_paths=stable_targets))
+    if self_state_topic and route_plan.allows_source("stable_memory"):
+        self_state_targets = tuple(
+            rel_path for rel_path in SELF_STATE_STABLE_MEMORY_TARGETS if route_plan.allows_memory_ref(rel_path)
+        )
+        if self_state_targets:
+            items.extend(
+                _self_state_stable_items(
+                    root,
+                    query_terms=query_terms,
+                    rel_paths=self_state_targets,
+                )
+            )
     if self_core_topic and route_plan.allows_source("self_core_architecture_context"):
         items.extend(_self_core_architecture_items(root, query_terms=query_terms))
 
@@ -662,7 +721,7 @@ def retrieve_recalled_context(
         limit=retrieval_max_items(),
     )
     selected = list(rerank_result.items)
-    prompt_block = render_recalled_context(selected)
+    prompt_block = render_recalled_context(selected, max_chars=4200 if self_state_topic else None)
     notes = ["recalled_context_active"] if selected else ["recalled_context_no_matches"]
     notes.extend(route_plan.notes)
     notes.extend(routed_items.notes)

@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass, is_dataclass, replace
 from typing import Any
 
+from xinyu_self_state_capsule import classify_self_state_query
 from xinyu_storage_paths import knowledge_ref
 
 
@@ -186,6 +187,20 @@ _SELF_CORE_MARKERS = (
     "\u672c\u5730\u5c0f\u6a21\u578b",
 )
 
+_SELF_STATE_MARKERS = (
+    "\u4f60\u73b0\u5728",
+    "\u4f60\u8fd9\u8fb9",
+    "\u4f60\u81ea\u5df1",
+    "\u611f\u89c9",
+    "\u611f\u53d7",
+    "\u5fc3\u60c5",
+    "\u72b6\u6001",
+    "\u600e\u4e48\u6837",
+    "\u5982\u4f55",
+    "\u5728\u60f3\u4ec0\u4e48",
+    "\u600e\u4e48\u4e0d\u56de",
+)
+
 _EXPERTS: tuple[SparseMemoryExpertSpec, ...] = (
     SparseMemoryExpertSpec(
         name="recent_dialogue",
@@ -289,6 +304,20 @@ _EXPERTS: tuple[SparseMemoryExpertSpec, ...] = (
         ),
         markers=_SELF_CORE_MARKERS,
     ),
+    SparseMemoryExpertSpec(
+        name="self_state",
+        source_types=("dialogue_tail", "dialogue_archive", "stable_memory"),
+        memory_refs=(
+            "memory/context/persona_surface_state.md",
+            "memory/context/self_state_capsule_state.md",
+            "memory/self/learning_closed_loop_state.md",
+            "memory/self/expression_self_learning_state.md",
+            "memory/emotions/current_state.md",
+            "memory/relationships/index.md",
+            "memory/people/owner.md",
+        ),
+        markers=_SELF_STATE_MARKERS,
+    ),
 )
 
 _EXPERT_BY_NAME = {spec.name: spec for spec in _EXPERTS}
@@ -344,6 +373,7 @@ def build_sparse_memory_route(
 ) -> SparseMemoryRoutePlan:
     text = _norm_space(f"{query_text} {user_text} {' '.join(query_terms)}")
     lowered = text.lower()
+    self_state_topic = classify_self_state_query(text) != "none"
     current_turn_facts = _current_turn_facts(payload, visible_turn)
     scored: list[tuple[SparseMemoryExpertSpec, float, tuple[str, ...]]] = []
     for spec in _EXPERTS:
@@ -353,6 +383,7 @@ def build_sparse_memory_route(
             visible_turn=visible_turn,
             direct_recall=direct_recall,
             self_core_topic=self_core_topic,
+            self_state_topic=self_state_topic,
             current_turn_facts=current_turn_facts,
         )
         scored.append((spec, score, tuple(reasons)))
@@ -362,6 +393,7 @@ def build_sparse_memory_route(
         visible_turn=visible_turn,
         direct_recall=direct_recall,
         self_core_topic=self_core_topic,
+        self_state_topic=self_state_topic,
         max_experts=max_experts,
     )
     decisions = tuple(
@@ -432,6 +464,7 @@ def _score_expert(
     visible_turn: Any | None,
     direct_recall: bool,
     self_core_topic: bool,
+    self_state_topic: bool,
     current_turn_facts: tuple[str, ...],
 ) -> tuple[float, list[str]]:
     score = 0.0
@@ -457,6 +490,15 @@ def _score_expert(
     if self_core_topic and spec.name in {"project_task", "tool_plugin"}:
         score += 0.8
         reasons.append("self_core_support")
+    if self_state_topic and spec.name == "self_state":
+        score += 4.0
+        reasons.append("self_state_topic")
+    if self_state_topic and spec.name in {"owner_relation", "emotion_residue", "identity_voice", "failure_memory"}:
+        score += 1.2
+        reasons.append("self_state_support")
+    if self_state_topic and not _visible_bool(visible_turn, "technical_work") and spec.name in {"project_task", "tool_plugin"}:
+        score -= 1.2
+        reasons.append("self_state_not_project_status")
 
     if _visible_bool(visible_turn, "owner_style_pressure") or _visible_bool(visible_turn, "owner_no_change_pressure"):
         if spec.name in {"failure_memory", "recent_dialogue", "owner_relation"}:
@@ -481,6 +523,7 @@ def _select_experts(
     visible_turn: Any | None,
     direct_recall: bool,
     self_core_topic: bool,
+    self_state_topic: bool,
     max_experts: int,
 ) -> tuple[str, ...]:
     ranked = sorted(scored, key=lambda item: (-item[1], item[0].name))
@@ -489,6 +532,10 @@ def _select_experts(
         _append_missing(selected, "recent_dialogue")
     if self_core_topic:
         _append_missing(selected, "self_core")
+    if self_state_topic:
+        _append_missing(selected, "self_state")
+        _append_missing(selected, "owner_relation")
+        _append_missing(selected, "emotion_residue")
     if _visible_bool(visible_turn, "technical_work"):
         _append_missing(selected, "project_task")
     if not selected:
