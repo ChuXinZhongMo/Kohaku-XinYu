@@ -448,6 +448,21 @@ _PROGRAM_STATE_FILES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "self_state_capsule",
+        "memory/context/self_state_capsule_state.md",
+        (
+            "active",
+            "query_kind",
+            "posture",
+            "recent_pressure",
+            "runtime_feel",
+            "memory_basis",
+            "reply_contract",
+            "raw_user_text_saved",
+            "raw_memory_body_saved",
+        ),
+    ),
+    (
         "continuity_handoff",
         "memory/context/continuity_handoff_state.md",
         (
@@ -1171,6 +1186,7 @@ def _program_awareness_prompt_lines(awareness: dict[str, Any]) -> list[str]:
         "persona_feedback",
         "expression_self_learning",
         "learning_closed_loop",
+        "self_state_capsule",
         "continuity_handoff",
         "uncertainty_pause",
         "async_exploration",
@@ -1275,6 +1291,7 @@ def _render_program_awareness_markdown(root: Path, fields: dict[str, str]) -> st
             "persona_feedback",
             "expression_self_learning",
             "learning_closed_loop",
+            "self_state_capsule",
             "continuity_handoff",
             "uncertainty_pause",
             "async_exploration",

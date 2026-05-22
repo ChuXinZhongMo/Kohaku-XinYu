@@ -33,6 +33,7 @@ TEXT_HEALTH_FILES = (
     "memory/context/memory_braid_state.md",
     "memory/context/turn_coherence_state.md",
     "memory/context/initiative_spine_state.md",
+    "memory/context/self_state_capsule_state.md",
     "memory/context/self_chosen_goal_ecology_state.md",
     "memory/context/self_action_gateway_state.md",
     "memory/context/self_action_gateway_execution_handoff.md",

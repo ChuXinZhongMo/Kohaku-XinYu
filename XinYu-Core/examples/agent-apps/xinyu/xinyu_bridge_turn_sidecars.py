@@ -19,6 +19,7 @@ from xinyu_prompt_pressure import PromptSidecar, select_prompt_sidecars, write_p
 from xinyu_recent_attachment_context import load_recent_attachment_context
 from xinyu_runtime_context import build_goldmark_auth_prompt_block
 from xinyu_scene_frame import build_scene_frame
+from xinyu_self_state_capsule import build_self_state_capsule_prompt_block
 from xinyu_slow_state_modulator import build_slow_state
 from xinyu_slow_state_modulator import render_slow_state_prompt_block
 from xinyu_text_variants import readable_markers
@@ -205,6 +206,24 @@ def inject_live_turn_context(
     )
     if turn_coherence_block:
         add_sidecar("turn_coherence", turn_coherence_block, required=True, admission="core")
+    self_state_capsule_block = build_self_state_capsule_prompt_block(
+        runtime.xinyu_dir,
+        payload,
+        user_text=text,
+        visible_turn=visible_turn,
+        recalled_context=recalled_context,
+        runtime_presence_context=runtime_presence_context,
+        persona_context=persona_context,
+        emotion_council_context=emotion_council_context,
+        write_state=True,
+    )
+    if self_state_capsule_block:
+        add_sidecar(
+            "self_state_capsule",
+            self_state_capsule_block,
+            required=True,
+            admission="current_turn",
+        )
     initiative_spine_block = build_initiative_spine_prompt_block(
         runtime.xinyu_dir,
         trigger="live_turn_prompt",

@@ -435,6 +435,24 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
         """,
     )
     _write(
+        tmp_path / "memory/context/self_state_capsule_state.md",
+        """
+        ---
+        updated_at: 2026-05-23T00:05:00+08:00
+        status: active
+        ---
+        - active: true
+        - query_kind: feeling_inquiry
+        - posture: felt_state_from_current_context
+        - recent_pressure: recent_template_voice_repair_pressure
+        - runtime_feel: steady_with_recent_context
+        - memory_basis: recalled_context,learning_closed_loop
+        - reply_contract: one_or_two_present_tense_owner_private_sentences
+        - raw_user_text_saved: false
+        - raw_memory_body_saved: false
+        """,
+    )
+    _write(
         tmp_path / "runtime/early_visible_segment_shadow.jsonl",
         json.dumps(
             {
@@ -565,6 +583,9 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
     assert "early_visible_segment_shadow:" in block
     assert "accepted_shadow_count=3" in block
     assert "behavior_change=none_shadow_only" in block
+    assert "self_state_capsule:" in block
+    assert "query_kind=feeling_inquiry" in block
+    assert "raw_user_text_saved=false" in block
     assert "[local-path]" not in block
 
     awareness = summary["program_awareness"]
@@ -609,6 +630,8 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
     assert awareness["subsystems"]["initiative_feedback"]["scoring_bias_only"] == "true"
     assert awareness["subsystems"]["early_visible_segment_shadow"]["accepted_shadow_count"] == "3"
     assert awareness["subsystems"]["early_visible_segment_shadow"]["behavior_change"] == "none_shadow_only"
+    assert awareness["subsystems"]["self_state_capsule"]["query_kind"] == "feeling_inquiry"
+    assert awareness["subsystems"]["self_state_capsule"]["raw_user_text_saved"] == "false"
     assert awareness["traces"]["early_visible_segment_shadow"]["last_event_kind"] == "early_visible_segment_shadow"
     assert summary["initiative_lifecycle"]["pending_feedback_count"] == "1"
     assert summary["contextual_self_loop"]["initiative_posture"] == "hold_unless_owner_asks"

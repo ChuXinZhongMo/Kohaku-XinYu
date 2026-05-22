@@ -138,6 +138,39 @@ def test_live_turn_prompt_includes_exact_time_context(tmp_path) -> None:
     assert "event_time_source: payload.timestamp" in content
 
 
+def test_live_turn_injects_self_state_capsule_for_owner_feeling_question(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    agent = FakeAgent()
+    text = "\u4f60\u73b0\u5728\u611f\u89c9\u600e\u4e48\u6837"
+
+    runtime._inject_live_turn_context(
+        agent,
+        payload={
+            "message_type": "private_text",
+            "session_id": "qq:private:owner",
+            "metadata": {"is_owner_user": True},
+        },
+        text=text,
+        turn_id="turn-self-state",
+    )
+
+    content = agent.controller._pending_injections[0]["content"]
+    assert "self state capsule sidecar:" in content
+    assert "query_kind: feeling_inquiry" in content
+    assert "present first-person state" in content
+    assert "backend, model, prompt, bridge, queue, or tool calls" in content
+    assert text not in content
+
+    state = (runtime.xinyu_dir / "memory/context/self_state_capsule_state.md").read_text(encoding="utf-8")
+    assert "- raw_user_text_saved: false" in state
+    assert text not in state
+
+    report = json.loads(
+        (runtime.xinyu_dir / "runtime/prompt_pressure/last_live_prompt_pressure.json").read_text(encoding="utf-8")
+    )
+    assert any(item["name"] == "self_state_capsule" for item in report["admitted_sidecars"])
+
+
 def test_live_turn_injects_owner_continuity_hint_for_three_fix_reference(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     (runtime.xinyu_dir / "memory/context/recent_context_runtime_anchor.md").write_text(
