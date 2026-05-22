@@ -9,14 +9,8 @@ bodies, raw prompts, raw replies, URLs, or tokens.
 
 ## Active
 
-- `XINYU-CLOSEOUT-ITERATION-2026-05-21.md`
-  - Current closeout queue for the remaining finish work after the complete autonomous execution plan reached closure.
-- `XINYU-REMAINING-AUTONOMOUS-COMPLETION-PLAN-2026-05-21.md`
-  - Execution loop for automatically completing remaining safe code work while keeping owner-gated behavior blocked.
 - `XINYU-DESKTOP-SPLIT-READINESS-2026-05-21.md`
   - Desktop renderer/CSS split-readiness note with validation baseline and safe split order.
-- `XINYU-QQ-OBSERVATION-PROBE-CHECKLIST-2026-05-21.md`
-  - Owner-private QQ probe checklist and safe trace fields for no-raw-transcript observation.
 - `XINYU-CROSS-DOMAIN-SYNAESTHESIA-PLAN-2026-05-19.md`
   - Current cross-domain synaesthesia execution plan.
 
@@ -24,6 +18,12 @@ bodies, raw prompts, raw replies, URLs, or tokens.
 
 - `XINYU-COMPLETE-AUTONOMOUS-EXECUTION-PLAN.md`
   - Closed on 2026-05-21; all tasks inside the plan are checked and have focused evidence.
+- `XINYU-REMAINING-AUTONOMOUS-COMPLETION-PLAN-2026-05-21.md`
+  - All automatic lanes are complete; live QQ probe evidence was reviewed through sanitized fields only.
+- `XINYU-CLOSEOUT-ITERATION-2026-05-21.md`
+  - Reconciled with the autonomous completion plan; Real QQ observation is no longer listed as blocked.
+- `XINYU-QQ-OBSERVATION-PROBE-CHECKLIST-2026-05-21.md`
+  - Used for owner-private QQ probe categories and safe trace fields; observation was completed without raw transcript publication.
 
 ## Hold
 

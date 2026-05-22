@@ -7,17 +7,18 @@ Purpose: finish the remaining XinYu closeout work through repeatable Codex execu
 ## Ground Truth
 
 - Current source tree is clean at plan creation.
-- Current validation baseline is `773 passed`.
+- Closeout validation reached `786 passed`; the earlier `773 passed` baseline has been superseded.
 - `xinyu_status.py --json` is green.
 - Live learning quality is stable after q-903 follow-up.
 - v1 canary remains shadow-only until explicit owner approval.
 - Stable personality/profile/relationship writes remain review-only.
+- Post-restart live chat baseline on 2026-05-22 completed 35/35 accepted cases with 0 hard quality failures.
 
-## Remaining Work Count
+## Work Count And Final State
 
-- Auto-code work: 3 tracks.
-- Automatic monitoring/gate validation: 4 tracks.
-- Real QQ observation: 3 tracks.
+- Auto-code work: 3 tracks, all done.
+- Automatic monitoring/gate validation: 4 tracks, done or held at the intended owner-approval gate.
+- Real QQ observation: 3 tracks, completed from owner-provided probes through sanitized fields only.
 
 Completion means all auto-code tracks are finished, all monitoring tracks have fresh evidence, and real QQ observation is either completed from owner-provided live probes or left as an explicit owner-input dependency with tooling ready.
 
@@ -312,6 +313,8 @@ Before this plan can be closed:
 - QQ gateway smoke passed.
 - Runtime readiness smoke passed.
 - `xinyu_status.py --json` returned `"ok": true`.
+- After the 2026-05-22 core restart, `core_bridge_runtime_source_digest` matched source and `runtime_restart_required` was `false`.
+- Live chat baseline `live_chat_baseline_20260522T211158+0800` completed 35/35 cases with 0 errors, 0 empty replies, 0 mechanic leaks, 0 reference misses, and 0 reportish replies. One context-reference case exceeded the soft chat-length threshold and remains follow-up material rather than a hard failure.
 - `owner_simple_canary` remained `false`.
 - `v1_canary_auto_full_switch` remained `false`.
 - Real QQ observation was completed from owner-provided live probes using sanitized trace fields only.
@@ -319,4 +322,4 @@ Before this plan can be closed:
 
 ## Current Next Action
 
-All automatic lanes are complete. Live QQ probe evidence has been reviewed, and the discovered route issue has been fixed without raw transcript storage or stable-memory promotion.
+All automatic lanes are complete. Live QQ probe evidence has been reviewed, the discovered route issue has been fixed without raw transcript storage or stable-memory promotion, and the stale closeout checklist has been reconciled.

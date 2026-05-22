@@ -2,7 +2,7 @@
 
 Date: 2026-05-21
 
-Purpose: continue the remaining XinYu finish work after the complete autonomous execution plan reached closure. This is the active closeout queue for work that can be done without changing owner-controlled gates by surprise.
+Purpose: continue the remaining XinYu finish work after the complete autonomous execution plan reached closure. This closeout queue is now reconciled with the later autonomous completion plan; remaining owner-gated behavior stays blocked unless explicitly approved.
 
 ## Current Ground Truth
 
@@ -13,6 +13,8 @@ Purpose: continue the remaining XinYu finish work after the complete autonomous 
 - Broad proactive behavior remains bounded by owner gate, cooldown, and audit state.
 - Current worktree contains the time-context, ordinary owner-private live-reply fixes, runtime readiness optimization, and q-903 learning-quality cleanup.
 - Live learning quality is now stable after q-903 independent-host follow-up.
+- Real QQ observation was completed from owner-provided live probes using sanitized trace fields only; no raw private transcript is required for this plan.
+- Post-restart live chat baseline on 2026-05-22 completed 35/35 cases with 0 errors, 0 empty replies, 0 mechanic leaks, 0 reference misses, and 0 reportish replies; one context case was over the soft chat-length threshold.
 
 ## Completion Queue
 
@@ -39,16 +41,18 @@ Purpose: continue the remaining XinYu finish work after the complete autonomous 
 
 ### 3. Real QQ Observation
 
-- [ ] Run small owner-private no-restore observation batches for:
+- [x] Run small owner-private no-restore observation batches for:
   - ordinary greetings;
   - "status / how do you feel" self-state questions;
   - template-style complaints;
   - correction-after-delay cases.
-  - Blocked: live owner-private QQ input is required; `XINYU-QQ-OBSERVATION-PROBE-CHECKLIST-2026-05-21.md` prepares the safe probe categories.
-- [ ] Inspect shadow flags without storing raw private chat in public artifacts.
-  - Blocked: depends on the live probe batch; safe trace fields are documented.
-- [ ] Convert real owner corrections into reviewable calibration candidates through existing QQ review tooling.
-  - Blocked: depends on real owner corrections; sanitized candidate format is documented.
+  - Evidence: owner-provided live probes were reviewed through sanitized trace fields only, matching the categories prepared in `XINYU-QQ-OBSERVATION-PROBE-CHECKLIST-2026-05-21.md`.
+  - Evidence: local live chat baseline `live_chat_baseline_20260522T211158+0800` completed 35/35 accepted cases after the core restart.
+- [x] Inspect shadow flags without storing raw private chat in public artifacts.
+  - Evidence: `XINYU-REMAINING-AUTONOMOUS-COMPLETION-PLAN-2026-05-21.md` records safe fields from `runtime/qq_inbound_trace.jsonl` and `runtime/answer_discipline_visible_send_shadow.jsonl`; no raw prompt or raw reply was needed in public artifacts.
+- [x] Convert real owner corrections into reviewable calibration candidates through existing QQ review tooling.
+  - Evidence: the observed correction became a route-rule fix: `reply_quality_complaint` no longer uses owner-private semantic fast direct repair.
+  - Evidence: review tooling remains gated, and no stable memory/personality promotion was authorized by this lane.
 
 ### 4. Learning Quality Review
 
