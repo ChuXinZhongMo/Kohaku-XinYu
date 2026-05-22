@@ -11,6 +11,8 @@ def test_default_runtime_trace_manifest_is_valid() -> None:
     assert traces["impulse_soup"].path == "memory/context/impulse_soup_trace.jsonl"
     assert traces["impulse_soup"].retention_policy == "append_only_pending_rotation"
     assert traces["impulse_soup"].status == "compat_runtime_trace"
+    assert traces["early_visible_segment_shadow"].path == "runtime/early_visible_segment_shadow.jsonl"
+    assert traces["early_visible_segment_shadow"].status == "compat_runtime_trace"
 
 
 def test_runtime_trace_manifest_rejects_body_migration_policy() -> None:

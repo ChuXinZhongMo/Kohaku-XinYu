@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "manifest_id": "stores/runtime_trace_manifest",
-  "updated_at": "2026-05-18",
+  "updated_at": "2026-05-23",
   "privacy_note": "Metadata-only runtime trace boundaries. Do not migrate, print, snapshot, or promote trace bodies into stable memory from these streams.",
   "traces": [
     {
@@ -15,6 +15,23 @@
       "allowed_raw_readers": [
         "xinyu_impulse_soup.py",
         "xinyu_runtime_presence.py"
+      ],
+      "privacy": "internal_runtime_trace",
+      "retention_policy": "append_only_pending_rotation",
+      "body_policy": "no_body_migration",
+      "stable_memory_policy": "runtime_trace_not_stable_memory",
+      "status": "compat_runtime_trace"
+    },
+    {
+      "trace_id": "early_visible_segment_shadow",
+      "path": "runtime/early_visible_segment_shadow.jsonl",
+      "owner_module": "xinyu_early_visible_segment",
+      "owner_symbol": "_record_shadow",
+      "projection_paths": [
+        "memory/context/early_visible_segment_shadow_state.md"
+      ],
+      "allowed_raw_readers": [
+        "xinyu_early_visible_segment.py"
       ],
       "privacy": "internal_runtime_trace",
       "retention_policy": "append_only_pending_rotation",

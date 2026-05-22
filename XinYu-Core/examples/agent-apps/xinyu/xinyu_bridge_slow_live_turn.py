@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable
@@ -10,6 +11,7 @@ from xinyu_continuity_handoff import build_continuity_handoff_prompt_block, refr
 from xinyu_life_reply_policy import build_life_reply_prompt_block
 from xinyu_living_memory_recall import run_living_memory_recall_algorithm
 from xinyu_emotion_council import build_emotion_council_prompt_block
+from xinyu_early_visible_segment import observe_early_visible_segment_shadow
 from xinyu_runtime_presence import build_runtime_presence_prompt_block
 from xinyu_uncertainty_pause import build_uncertainty_pause_prompt_block
 
@@ -158,6 +160,25 @@ async def inject_slow_live_model_event(
     emotion_council_context: str,
     trace_route_stage: TraceRouteStage,
 ) -> None:
+    stop_early_shadow = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    early_shadow_task: asyncio.Task[Any] | None = None
+    session_chunks = getattr(session, "chunks", None)
+    if isinstance(session_chunks, list):
+        early_shadow_task = asyncio.create_task(
+            observe_early_visible_segment_shadow(
+                runtime.xinyu_dir,
+                session_chunks,
+                payload=payload,
+                user_text=text,
+                turn_id=turn_id,
+                session_key=_safe_str(getattr(session, "key", "")),
+                visible_turn=visible_turn,
+                started_monotonic=loop.time(),
+                stop_event=stop_early_shadow,
+            ),
+            name=f"xinyu-early-visible-segment-shadow-{turn_id or 'turn'}",
+        )
     try:
         trace_route_stage("model_inject_started", route="slow_live")
         runtime._inject_live_turn_context(
@@ -197,6 +218,11 @@ async def inject_slow_live_model_event(
             notes=[f"turn_error:{type(exc).__name__}"],
         )
         raise
+    finally:
+        stop_early_shadow.set()
+        if early_shadow_task is not None:
+            with contextlib.suppress(Exception):
+                await asyncio.wait_for(early_shadow_task, timeout=1)
 
 
 async def run_slow_live_finish_sidecars_with_trace(
