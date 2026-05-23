@@ -105,3 +105,28 @@ def test_memory_self_review_routes_conflicting_preference_to_owner_review(tmp_pa
     assert decision["memory_review_recommendation"] == "hold_conflict_review"
     assert decision["conflict_count"] == "1"
     assert decision["conflicting_candidate_ids"] == "pref-positive"
+
+
+def test_memory_self_review_routes_post_reply_growth_to_owner_review(tmp_path: Path) -> None:
+    assert store_memory_candidate(
+        tmp_path,
+        candidate_id="growth-candidate",
+        candidate_type="post_reply_growth_candidate",
+        source_message_ids=[301],
+        source_turn_id="turn-growth",
+        candidate_text="post-reply growth candidate; raw owner/reply text intentionally omitted",
+        confidence_score=76,
+        target_gate="personality_growth_review",
+        target_memory_layer="memory/reflection/growth_log.md",
+        reason="repeated raw-text-safe post-reply observation success plus explicit owner positive feedback",
+        risk_flags=["memory_immune:review", "scope:owner_private"],
+        created_at="2026-05-20T12:10:00+08:00",
+    )
+
+    result = run_memory_self_review(tmp_path, checked_at="2026-05-20T12:11:00+08:00")
+
+    assert _ids_for_status(tmp_path, OWNER_REVIEW_REQUIRED) == {"growth-candidate"}
+    decision = result["decisions"][0]
+    assert decision["candidate_type"] == "post_reply_growth_candidate"
+    assert decision["action"] == "ask_owner_to_confirm_growth_log_draft"
+    assert "never rewrite stable personality" in decision["rationale"]

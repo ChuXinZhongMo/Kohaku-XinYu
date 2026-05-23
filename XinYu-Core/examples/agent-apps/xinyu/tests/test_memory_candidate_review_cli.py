@@ -193,3 +193,49 @@ def test_high_risk_relationship_candidate_requires_explicit_owner_approval(tmp_p
     assert blocked["error"] == "high_risk_candidate_requires_explicit_owner_approval"
     assert approved["ok"] is True
     assert approved["status"] == "approved"
+
+
+def test_post_reply_growth_candidate_requires_explicit_owner_approval(tmp_path) -> None:
+    _store(
+        tmp_path,
+        "memcand-growth-blocked",
+        candidate_type="post_reply_growth_candidate",
+        candidate_text="post-reply growth candidate; raw owner/reply text intentionally omitted",
+        target_memory_layer="memory/reflection/growth_log.md",
+    )
+
+    blocked = decide_candidate(
+        tmp_path,
+        "memcand-growth-blocked",
+        decision="approve",
+        review_notes="looks good for growth log",
+    )
+
+    assert blocked["ok"] is False
+    assert blocked["error"] == "high_risk_candidate_requires_explicit_owner_approval"
+
+
+def test_approved_candidate_writes_promotion_preview_not_stable_memory(tmp_path) -> None:
+    target = tmp_path / "memory/reflection/growth_log.md"
+    _store(
+        tmp_path,
+        "memcand-growth-approved",
+        candidate_type="post_reply_growth_candidate",
+        candidate_text="post-reply growth candidate; raw owner/reply text intentionally omitted",
+        target_memory_layer="memory/reflection/growth_log.md",
+    )
+
+    approved = decide_candidate(
+        tmp_path,
+        "memcand-growth-approved",
+        decision="approve",
+        review_notes="owner_approved_high_risk growth log preview ok",
+    )
+
+    assert approved["ok"] is True
+    assert approved["status"] == "approved"
+    assert approved["stable_memory_write"] == "dry_run_only"
+    assert approved["apply_allowed"] is False
+    assert approved["promotion_preview_blockers"]
+    assert approved["promotion_preview_path"]
+    assert not target.exists()

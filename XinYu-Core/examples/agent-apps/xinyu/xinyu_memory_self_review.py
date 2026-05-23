@@ -217,6 +217,16 @@ def review_memory_candidate(row: dict[str, Any], *, context_rows: list[dict[str,
             memory_review=memory_review,
         )
 
+    if ctype == "post_reply_growth_candidate":
+        return _decision(
+            row,
+            status=OWNER_REVIEW_REQUIRED,
+            action="ask_owner_to_confirm_growth_log_draft",
+            risk="medium",
+            rationale="post-reply growth candidates may become growth-log drafts only after owner review and never rewrite stable personality here",
+            memory_review=memory_review,
+        )
+
     if ctype == "owner_preference":
         if int(memory_review.get("evidence_count", 1) or 1) >= 2:
             return _decision(

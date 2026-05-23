@@ -135,7 +135,19 @@ def decide_candidate(root: Path, candidate_id: str, *, decision: str, review_not
             return {"ok": False, "error": approval_error, "candidate_id": candidate_id, "status": row.get("status", "")}
     if not update_memory_candidate_status(root, candidate_id=candidate_id, status=status, review_notes=review_notes):
         return {"ok": False, "error": "candidate_update_failed", "candidate_id": candidate_id}
-    return {"ok": True, "candidate_id": candidate_id, "status": status, "review_notes": review_notes}
+    result = {"ok": True, "candidate_id": candidate_id, "status": status, "review_notes": review_notes}
+    if decision == "approve":
+        preview = build_stable_memory_promotion_dry_run(root, candidate_id, write_preview=True)
+        result.update(
+            {
+                "stable_memory_write": "dry_run_only",
+                "apply_allowed": False,
+                "promotion_preview_path": preview.get("preview_path", ""),
+                "promotion_preview_blockers": preview.get("blockers", []),
+                "notes": ["approval_recorded", "promotion_preview_written", "stable_memory_not_modified"],
+            }
+        )
+    return result
 
 
 def dry_run_candidate_promotion(
@@ -162,7 +174,13 @@ def _approval_error(row: dict[str, Any], *, review_notes: str, review_context: d
     context = review_context if isinstance(review_context, dict) else {}
     if context.get("conflict_count", 0) and "owner_resolved_conflict" not in review_notes:
         return "candidate_conflict_requires_owner_resolution"
-    high_risk_types = {"relationship_signal", "owner_preference", "personality_change", "voice_correction"}
+    high_risk_types = {
+        "relationship_signal",
+        "owner_preference",
+        "personality_change",
+        "voice_correction",
+        "post_reply_growth_candidate",
+    }
     candidate_type = _safe_str(row.get("candidate_type")).strip()
     if candidate_type in high_risk_types and "owner_approved_high_risk" not in review_notes:
         return "high_risk_candidate_requires_explicit_owner_approval"
