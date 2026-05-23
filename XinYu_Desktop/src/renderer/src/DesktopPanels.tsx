@@ -3,7 +3,7 @@ import { Activity, Bell, Brain, Check, ChevronDown, ChevronRight, Clock3, Compas
 import { EnvironmentValve } from './EnvironmentValve'
 import { SurfacePart } from './AffectiveSurfaceProvider'
 import type { ApiConfigActionState, ApiConfigProfile, ApiConfigProfilePatch, ApiConfigStatus, CommandState, DesktopEvent, ExternalPluginActionState, ExternalPluginConfigPatch, ExternalPluginControl, ExternalPluginInstallRequest, ExternalPluginsStatus, GatewayStatus, GrowthCandidatePromotionStatus, ImpulseSoupState, JsonRecord, ProactiveAction, ProactiveIntent, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, SelfActionSnapshot, Snapshot, StickerActionState, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
-import { actionLabel, asRecord, buildStats, commandStatusLabel, compact, defaultQQRuntimeConfig, defaultQQServices, digestPressureLabel, digestResidueLabel, digestResultLabel, digestThemeLabel, eventLabel, externalPluginInstallStateLabel, externalPluginNoteLabel, formatLatency, formatTime, formatTurnMeta, isCommandRenderedByTurn, memorySummary, platformLabel, qqDetailLabel, qqDiagnosisLabel, qqServiceLabel, riskLabel, runtimeLabel, sourceLabel, statusLabel, stickerClipLabel, stickerCorrectionMoods, stickerMoodLabel, themeOptions } from './desktopModel'
+import { actionLabel, asRecord, buildStats, commandStatusLabel, compact, defaultQQRuntimeConfig, defaultQQServices, digestPressureLabel, digestResidueLabel, digestResultLabel, digestThemeLabel, eventLabel, externalPluginInstallStateLabel, externalPluginNoteLabel, formatLatency, formatTime, formatTurnMeta, isCommandRenderedByTurn, memorySummary, platformLabel, proactiveTextLabel, qqDetailLabel, qqDiagnosisLabel, qqServiceLabel, riskLabel, runtimeLabel, sourceLabel, statusLabel, stickerClipLabel, stickerCorrectionMoods, stickerMoodLabel, themeOptions } from './desktopModel'
 
 const avatarSrc = './xinyu-avatar.png'
 const characterSrc = './xinyu-character.png'
@@ -113,6 +113,34 @@ function impulseDesireGroups(soup: ImpulseSoupState | null): Array<{ key: string
 
 function riskFlagsLabel(flags: string[]): string {
   return flags.length ? flags.map((flag) => impulseLabel(flag)).join(' / ') : '无风险标记'
+}
+
+function memoryCandidateLabel(value: string, fallback = '未标记'): string {
+  if (!value) return fallback
+  const labels: Record<string, string> = {
+    applied_growth_log: '已写入成长日志',
+    approved: '已批准',
+    danger: '风险',
+    'danger:medium': '中等风险',
+    hidden_owner_review_required: '正文已隐藏，等待主人审查',
+    'memory/people/owner.md': '主人长期记忆',
+    'memory/reflection/growth_log.md': '成长日志',
+    memory_immune: '记忆免疫',
+    'memory_immune:observe_more': '需要继续观察',
+    observe_for_repetition: '观察是否重复出现',
+    owner_memory_review: '主人记忆审查',
+    owner_preference: '主人偏好候选',
+    owner_private: '主人私密范围',
+    owner_review_required: '等待主人审查',
+    post_reply_growth_candidate: '回复后的成长候选',
+    'action:observe_for_repetition': '动作：观察是否重复出现',
+    'scope:owner_private': '范围：主人私密'
+  }
+  return labels[value] || value
+}
+
+function memoryCandidateLabels(values: string[]): string {
+  return values.length ? values.map((value) => memoryCandidateLabel(value)).join(' / ') : '无风险标记'
 }
 
 function selfActionKindLabel(value: string): string {
@@ -1181,29 +1209,29 @@ function MemoryGrowthCandidatePanel(props: { status: GrowthCandidatePromotionSta
   const headline = status?.ok === false
     ? '读取失败'
     : pending.length > 0
-      ? `${status?.pendingApplyCount ?? pending.length} 待 apply`
-      : '无待 apply'
+      ? `${status?.pendingApplyCount ?? pending.length} 条待应用`
+      : '无待应用'
   const copyCommand = (command: string): void => {
     if (!command) return
     void navigator.clipboard?.writeText(command).catch(() => undefined)
   }
   return (
-    <section className="memory-growth-panel" aria-label="成长候选提升">
+    <section className="memory-growth-panel" aria-label="记忆审查">
       <div className="self-action-head">
         <span>
           <Brain size={15} />
-          <span>成长候选</span>
+          <span>记忆审查</span>
         </span>
         <strong>{headline}</strong>
       </div>
       <p className="self-action-note">
-        仅展示 review inbox 已批准、可预览写入 growth_log 的候选；稳定记忆写入仍需 CLI apply + owner_apply_confirmed。
+        这里只显示可审查摘要：成长日志候选需要主人确认后才能写入；主人记忆候选只显示编号和风险标签，正文默认隐藏。
       </p>
       <div className="self-action-grid">
         <SelfActionFact label="待应用" value={String(status?.pendingApplyCount ?? pending.length)} />
         <SelfActionFact label="已应用" value={String(status?.appliedCount ?? applied.length)} />
         <SelfActionFact label="待审查" value={String(status?.ownerReviewRequiredCount ?? ownerReview.length)} />
-        <SelfActionFact label="目标" value={compact(status?.targetMemoryLayer || 'memory/reflection/growth_log.md', 38)} />
+        <SelfActionFact label="目标" value={compact(memoryCandidateLabel(status?.targetMemoryLayer || 'memory/reflection/growth_log.md'), 38)} />
         <SelfActionFact label="写入" value="前端阻断" />
       </div>
       {status?.error ? <p className="self-action-note">{compact(status.error, 120)}</p> : null}
@@ -1211,25 +1239,25 @@ function MemoryGrowthCandidatePanel(props: { status: GrowthCandidatePromotionSta
         <div className="evidence-row runtime-row" key={`owner-review-${item.candidateId}`}>
           <ShieldAlert size={13} />
           <span>{compact(item.candidateId, 34)}</span>
-          <strong>需 owner 审查</strong>
-          <small>{compact(item.candidateType || item.targetGate || 'owner_review_required', 48)}</small>
-          <small>{compact(item.targetMemoryLayer || 'memory/people/owner.md', 64)}</small>
-          {item.riskFlags.length ? <small>{compact(item.riskFlags.join(' / '), 96)}</small> : null}
-          <small>正文已隐藏；请在本地 CLI 审查</small>
+          <strong>需主人审查</strong>
+          <small>{compact(memoryCandidateLabel(item.candidateType || item.targetGate || 'owner_review_required'), 48)}</small>
+          <small>{compact(memoryCandidateLabel(item.targetMemoryLayer || 'memory/people/owner.md'), 64)}</small>
+          {item.riskFlags.length ? <small>{compact(memoryCandidateLabels(item.riskFlags), 96)}</small> : null}
+          <small>正文已隐藏；请在本地命令行审查</small>
         </div>
       ))}
       {pending.slice(0, 4).map((item) => (
         <div className="evidence-row runtime-row" key={item.candidateId}>
           <Clipboard size={13} />
           <span>{compact(item.candidateId, 34)}</span>
-          <strong>{compact(item.status || 'approved', 24)}</strong>
-          <small>{compact(item.reasonPreview || item.candidateTextPreview || item.targetMemoryLayer, 96)}</small>
-          {item.previewPath ? <small>preview: {compact(item.previewPath, 96)}</small> : null}
-          {item.beforeHash ? <small>before: {compact(item.beforeHash, 24)}</small> : null}
+          <strong>{compact(memoryCandidateLabel(item.status || 'approved'), 24)}</strong>
+          <small>{compact(memoryCandidateLabel(item.reasonPreview || item.candidateTextPreview || item.targetMemoryLayer), 96)}</small>
+          {item.previewPath ? <small>预览：{compact(item.previewPath, 96)}</small> : null}
+          {item.beforeHash ? <small>写入前校验：{compact(item.beforeHash, 24)}</small> : null}
           {item.applyCommand ? (
             <>
               <code>{item.applyCommand}</code>
-              <button type="button" onClick={() => copyCommand(item.applyCommand)} title="复制 apply 命令">
+              <button type="button" onClick={() => copyCommand(item.applyCommand)} title="复制应用命令">
                 <Clipboard size={13} />
                 <span>复制</span>
               </button>
@@ -2436,16 +2464,16 @@ function IntentRow(props: {
       }}
     >
       <div className="intent-meta">
-        <span>{props.intent.source}</span>
-        <strong>{props.intent.trigger}</strong>
+        <span>{proactiveTextLabel(props.intent.source)}</span>
+        <strong>{proactiveTextLabel(props.intent.trigger)}</strong>
       </div>
-      <p>{props.intent.plannedText}</p>
+      <p>{proactiveTextLabel(props.intent.plannedText)}</p>
       <div className="intent-foot">
         <span className="risk-label">
           <ShieldAlert size={13} />
           {props.intent.riskLabel}
         </span>
-        <span>{props.intent.delivery}</span>
+        <span>{proactiveTextLabel(props.intent.delivery)}</span>
       </div>
       <div className="intent-actions">
         <button disabled={disabled} onClick={() => props.onAck(props.intent.id, 'read_locally')} title="只在本地读过">
@@ -2483,12 +2511,12 @@ function HandledIntentRow(props: { intent: ProactiveIntent; onOpenDetail: (candi
     >
       <div className="intent-meta">
         <span>{handledIntentLabel(props.intent)}</span>
-        <strong>{props.intent.trigger}</strong>
+        <strong>{proactiveTextLabel(props.intent.trigger)}</strong>
       </div>
-      <p>{props.intent.plannedText}</p>
+      <p>{proactiveTextLabel(props.intent.plannedText)}</p>
       <div className="intent-foot">
         <span>{formatTime(props.intent.updatedAt || props.intent.createdAt)}</span>
-        <span>{props.intent.delivery}</span>
+        <span>{proactiveTextLabel(props.intent.delivery)}</span>
       </div>
     </article>
   )
@@ -2563,7 +2591,7 @@ export function IntentDetailDialog(props: {
         <header className="intent-dialog-head">
           <div>
             <p className="label">主动预览</p>
-            <h3 id="intent-dialog-title">{props.intent.trigger}</h3>
+            <h3 id="intent-dialog-title">{proactiveTextLabel(props.intent.trigger)}</h3>
           </div>
           <button type="button" onClick={props.onClose} title="关闭">
             <X size={16} />
@@ -2571,23 +2599,23 @@ export function IntentDetailDialog(props: {
         </header>
 
         <div className="intent-dialog-body">
-          <div className="intent-dialog-message">{text}</div>
+          <div className="intent-dialog-message">{proactiveTextLabel(text)}</div>
           <dl className="intent-dialog-facts">
             <div>
               <dt>来源</dt>
-              <dd>{props.intent.source}</dd>
+              <dd>{proactiveTextLabel(props.intent.source)}</dd>
             </div>
             <div>
               <dt>投递</dt>
-              <dd>{props.intent.delivery}</dd>
+              <dd>{proactiveTextLabel(props.intent.delivery)}</dd>
             </div>
             <div>
               <dt>状态</dt>
-              <dd>{intentStatusLabel(props.intent.status)}</dd>
+              <dd>{intentStatusLabel(proactiveTextLabel(props.intent.status))}</dd>
             </div>
             <div>
               <dt>动作</dt>
-              <dd>{intentRequestedActionLabel(props.intent.requestedAction)}</dd>
+              <dd>{intentRequestedActionLabel(proactiveTextLabel(props.intent.requestedAction))}</dd>
             </div>
             <div>
               <dt>创建</dt>

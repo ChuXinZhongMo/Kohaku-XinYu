@@ -292,19 +292,22 @@ export function buildProactiveIntents(items: unknown[]): ProactiveIntent[] {
       const id = String(row.candidateId || row.id || `intent-${index}`)
       const delivery = deliveryLabel(String(row.deliveryLevel || row.delivery || 'local'))
       const risk = intentRisk(row)
+      const trigger = proactiveTextLabel(String(row.whyNowPreview || row.reason || row.focusLabel || '主动循环生成'))
+      const plannedText = proactiveTextLabel(String(row.candidatePreview || row.message || row.text || '等待核心补全内容'))
+      const fullText = proactiveTextLabel(String(row.candidatePreview || row.message || row.text || row.concreteQuestion || ''))
       return {
         id,
-        source: compact(String(row.source || row.kind || 'initiative'), 32),
-        trigger: compact(String(row.whyNowPreview || row.reason || row.focusLabel || '主动循环生成'), 54),
-        plannedText: compact(String(row.candidatePreview || row.message || row.text || '等待核心补全内容'), 170),
-        fullText: String(row.candidatePreview || row.message || row.text || row.concreteQuestion || ''),
+        source: proactiveTextLabel(String(row.source || row.kind || 'initiative')),
+        trigger: compact(trigger, 54),
+        plannedText: compact(plannedText, 170),
+        fullText,
         risk,
         riskLabel: riskLabel(risk),
         delivery,
         claimable: Boolean(row.claimable),
         status: String(row.status || ''),
-        requestFamily: String(row.requestFamily || ''),
-        requestedAction: String(row.requestedAction || ''),
+        requestFamily: proactiveTextLabel(String(row.requestFamily || '')),
+        requestedAction: proactiveTextLabel(String(row.requestedAction || '')),
         desktopAction: String(row.desktopAction || ''),
         evidenceHash: String(row.evidenceHash || ''),
         createdAt: String(row.createdAt || ''),
@@ -998,6 +1001,57 @@ export function eventLabel(value: string): string {
 export function platformLabel(value: string): string {
   if (value === 'desktop') return '本机'
   if (value === 'qq') return 'QQ'
+  return value
+}
+
+export function proactiveTextLabel(value: string): string {
+  if (!value) return value
+  const exact: Record<string, string> = {
+    active: '进行中',
+    answered: '已回复',
+    blocked: '已阻止',
+    candidate_only: '仅候选',
+    claim_ack: '确认后发送',
+    codex_followup: '代码任务跟进',
+    completion: '完成提醒',
+    external_private: '外部私聊',
+    failed: '失败',
+    group_context: '群聊上下文',
+    initiative: '主动提醒',
+    initiative_lifecycle: '主动性生命周期',
+    local: '本地',
+    low_owner_private: '低风险主人私聊',
+    memory_review: '记忆审查',
+    none: '本地',
+    normal: '普通',
+    owner_action: '主人动作',
+    owner_decision: '需要主人决定',
+    owner_private: '主人私聊',
+    owner_replied: '主人已回复',
+    owner_review: '主人审查',
+    pending: '待处理',
+    preview_only: '仅预览',
+    promise_followup: '承诺跟进',
+    queue_owner_private: '主人私聊队列',
+    ready: '就绪',
+    report_completion: '报告完成',
+    replied: '已回复',
+    self_thought: '自发想法',
+    state_only: '仅状态',
+    system_internal: '系统内部',
+    unknown: '未知',
+    xinyu_proactive_request_loop: '主动提醒循环',
+    initiative_orchestrator: '主动性编排器'
+  }
+  if (exact[value]) return exact[value]
+  const phraseTranslated = value
+    .replace(/background code task finished/g, '后台代码任务已完成')
+    .replace(/Integrate the result or keep it as a report-only completion\./g, '根据主人选择，整合结果或仅保留报告。')
+  const translated = phraseTranslated
+    .split(':')
+    .map((part) => exact[part] || part)
+    .join('：')
+  if (translated !== value) return translated
   return value
 }
 
