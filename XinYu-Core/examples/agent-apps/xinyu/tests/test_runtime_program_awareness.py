@@ -237,6 +237,18 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
         - learning_goal: avoid fake tool posture and fixed fallback templates
         - visible_reply_policy: do not send pseudo tools, file names, or fixed apology templates to owner-private chat.
         - repair_policy: retry the reply as live speech; if retry still leaks mechanism, send no visible reply rather than a canned fallback.
+
+        ## Latest Post Reply Observation
+        - observation_kind: owner_private_reply_self_observation
+        - self_state_kind: feeling_inquiry
+        - alive_voice: medium
+        - mechanical_risk: low
+        - template_risk: medium
+        - over_explained_risk: low
+        - emotional_grounding: present
+        - self_state_grounding: present
+        - raw_text_saved: false
+        - stable_personality_write: no
         """,
     )
     _write(
@@ -560,6 +572,10 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
     assert "persona_trial_feedback=weak_acceptance_continue" in block
     assert "expression_self_learning:" in block
     assert "failure_kind=visible_mechanism_or_template_leak" in block
+    assert "post_reply_self_observation:" in block
+    assert "observation_kind=owner_private_reply_self_observation" in block
+    assert "raw_text_saved=false" in block
+    assert "stable_personality_write=no" in block
     assert "learning_closed_loop:" in block
     assert "latest_failure_kind=owner_reported_template_voice_failure" in block
     assert "self_code_watchdog:" in block
@@ -609,6 +625,8 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
     assert awareness["subsystems"]["personality_self_review"]["autonomy_level"] == "self_can_continue_trial"
     assert awareness["subsystems"]["persona_feedback"]["promotion_signal"] == "false"
     assert awareness["subsystems"]["expression_self_learning"]["source_request_id"] == "request-2026-05-02-expr-001"
+    assert awareness["subsystems"]["post_reply_self_observation"]["alive_voice"] == "medium"
+    assert awareness["subsystems"]["post_reply_self_observation"]["stable_personality_write"] == "no"
     assert awareness["subsystems"]["learning_closed_loop"]["repair_count"] == "2"
     assert awareness["subsystems"]["qq_outbox"]["queued_count"] == "1"
     assert awareness["subsystems"]["codex_delegate"]["status"] == "running"

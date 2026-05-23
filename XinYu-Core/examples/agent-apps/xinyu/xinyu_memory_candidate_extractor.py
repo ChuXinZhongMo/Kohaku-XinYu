@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import os
 import re
 from dataclasses import dataclass
@@ -88,7 +89,35 @@ PROJECT_MARKERS = readable_markers(
     "FTS",
 )
 
+POST_REPLY_OBSERVATION_TRACE_REL = Path("runtime/post_reply_self_observation_trace.jsonl")
+
 CODEX_MARKERS = readable_markers("Codex", "codex", "辅助脑", "委托", "报告")
+OWNER_POSITIVE_FEEDBACK_MARKERS = readable_markers(
+    "这样可以",
+    "这样就好",
+    "这次可以",
+    "这次好多了",
+    "好多了",
+    "更像你",
+    "像你了",
+    "对味",
+    "自然多了",
+    "这句可以",
+    "刚才那句可以",
+    "保持这样",
+    "以后这样",
+)
+SUCCESSFUL_POST_REPLY_NOTES = {
+    "post_reply_observation_recorded",
+}
+RISK_POST_REPLY_NOTES = {
+    "post_reply_mechanical_risk",
+    "post_reply_template_voice_risk",
+    "post_reply_over_explained_risk",
+    "post_reply_missed_self_state_grounding",
+    "post_reply_missed_emotional_grounding",
+    "post_reply_low_alive_voice",
+}
 
 
 @dataclass(frozen=True)
@@ -242,6 +271,104 @@ def _candidate_text(user_text: str, assistant_reply: str, *, prefix: str = "") -
     return "\n".join(parts)
 
 
+def _safe_growth_candidate_text(*, matched_feedback_count: int, success_count: int) -> str:
+    return "\n".join(
+        [
+            "post-reply growth candidate; review gate required; raw owner/reply text intentionally omitted",
+            "source_pattern: hidden post-reply observation success followed by explicit owner positive feedback",
+            f"owner_feedback_marker_count: {max(0, int(matched_feedback_count))}",
+            f"successful_observation_count: {max(0, int(success_count))}",
+            "candidate_claim: owner positively reinforced a less mechanical, more alive reply style",
+            "promotion_boundary: candidate only; no stable personality/profile/prompt write performed",
+        ]
+    )
+
+
+def _post_reply_scores(post_reply_observation: Any) -> dict[str, str]:
+    if not isinstance(post_reply_observation, dict):
+        return {}
+    scores = post_reply_observation.get("scores")
+    if not isinstance(scores, dict):
+        return {}
+    return {str(key): _safe_str(value).strip().lower() for key, value in scores.items()}
+
+
+def _post_reply_notes(post_reply_observation: Any) -> set[str]:
+    if not isinstance(post_reply_observation, dict):
+        return set()
+    notes = post_reply_observation.get("notes")
+    if not isinstance(notes, list):
+        return set()
+    return {_safe_str(note).strip() for note in notes if _safe_str(note).strip()}
+
+
+def _successful_post_reply_observation(post_reply_observation: Any) -> bool:
+    if not isinstance(post_reply_observation, dict) or not post_reply_observation.get("recorded"):
+        return False
+    notes = _post_reply_notes(post_reply_observation)
+    scores = _post_reply_scores(post_reply_observation)
+    return (
+        SUCCESSFUL_POST_REPLY_NOTES.issubset(notes)
+        and not notes.intersection(RISK_POST_REPLY_NOTES)
+        and scores.get("alive_voice") in {"medium", "high"}
+        and scores.get("mechanical_risk") == "low"
+        and scores.get("template_risk") == "low"
+        and scores.get("over_explained_risk") == "low"
+        and scores.get("stable_personality_write", "no") != "yes"
+    )
+
+
+def _post_reply_growth_success_count(post_reply_observation: Any, quality_flags: list[str] | dict[str, Any] | None) -> int:
+    success_count = 1 if _successful_post_reply_observation(post_reply_observation) else 0
+    if isinstance(quality_flags, dict):
+        candidates = [
+            quality_flags.get("post_reply_growth_success_count"),
+            quality_flags.get("successful_post_reply_observation_count"),
+        ]
+        for value in candidates:
+            try:
+                return max(success_count, int(value))
+            except (TypeError, ValueError):
+                continue
+    return success_count
+
+
+def _recent_successful_post_reply_observation_count(root: Path, *, limit: int = 8) -> int:
+    path = root / POST_REPLY_OBSERVATION_TRACE_REL
+    try:
+        lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
+    except OSError:
+        return 0
+    count = 0
+    for line in reversed(lines[-max(1, limit) :]):
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if _successful_post_reply_observation({"recorded": True, "notes": row.get("notes"), "scores": row.get("scores")}):
+            count += 1
+    return count
+
+
+def _with_post_reply_success_count(
+    root: Path,
+    *,
+    post_reply_observation: dict[str, Any] | None,
+    quality_flags: list[str] | dict[str, Any] | None,
+) -> list[str] | dict[str, Any] | None:
+    if not _successful_post_reply_observation(post_reply_observation):
+        return quality_flags
+    repeated_count = _recent_successful_post_reply_observation_count(root)
+    if isinstance(quality_flags, dict):
+        enriched = dict(quality_flags)
+    else:
+        enriched = {}
+    enriched["post_reply_growth_success_count"] = max(
+        _post_reply_growth_success_count(post_reply_observation, quality_flags), repeated_count
+    )
+    return enriched
+
+
 def _visible_turn_kind(visible_turn: Any | None) -> str:
     return _safe_str(getattr(visible_turn, "turn_kind", "")).strip()
 
@@ -252,12 +379,34 @@ def build_candidate_specs(
     user_text: str,
     assistant_reply: str,
     visible_turn: Any | None = None,
+    post_reply_observation: dict[str, Any] | None = None,
+    quality_flags: list[str] | dict[str, Any] | None = None,
 ) -> list[CandidateSpec]:
     scope = resolve_dialogue_scope(payload)
     owner_private = scope.scope == OWNER_PRIVATE_SCOPE
     group_scope = scope.scope == GROUP_SCOPE
     combined = f"{user_text}\n{assistant_reply}"
     specs: list[CandidateSpec] = []
+    post_reply_success_count = _post_reply_growth_success_count(post_reply_observation, quality_flags)
+
+    if owner_private and post_reply_success_count >= 2 and _contains_any(user_text, OWNER_POSITIVE_FEEDBACK_MARKERS):
+        marker_count = len(_matched(user_text, OWNER_POSITIVE_FEEDBACK_MARKERS))
+        specs.append(
+            CandidateSpec(
+                candidate_type="post_reply_growth_candidate",
+                target_gate="personality_growth_review",
+                target_memory_layer="memory/reflection/growth_log.md",
+                reason=(
+                    "repeated raw-text-safe post-reply observation success plus explicit owner positive feedback; "
+                    "stable personality write remains blocked"
+                ),
+                confidence_score=76,
+                text=_safe_growth_candidate_text(
+                    matched_feedback_count=marker_count,
+                    success_count=post_reply_success_count,
+                ),
+            )
+        )
 
     if owner_private and _contains_any(user_text, VOICE_CORRECTION_MARKERS):
         markers = ", ".join(_matched(user_text, VOICE_CORRECTION_MARKERS)) or "voice_pressure"
@@ -342,15 +491,23 @@ def extract_memory_candidates(
     dialogue_tail: list[dict[str, str]] | None = None,
     visible_turn: Any | None = None,
     quality_flags: list[str] | dict[str, Any] | None = None,
+    post_reply_observation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    del dialogue_tail, quality_flags
+    del dialogue_tail
     if not candidate_extraction_enabled():
         return {"candidate_count": 0, "candidate_ids": [], "notes": ["candidate_extraction_disabled"]}
+    enriched_quality_flags = _with_post_reply_success_count(
+        root,
+        post_reply_observation=post_reply_observation,
+        quality_flags=quality_flags,
+    )
     specs = build_candidate_specs(
         payload=payload,
         user_text=user_text,
         assistant_reply=assistant_reply,
         visible_turn=visible_turn,
+        post_reply_observation=post_reply_observation,
+        quality_flags=enriched_quality_flags,
     )
     message_ids = [int(item) for item in (source_message_ids or []) if isinstance(item, int)]
     scope = resolve_dialogue_scope(payload)

@@ -160,6 +160,10 @@ HABITS_BY_FAILURE = {
     "owner_reported_time_fact_error": "具体日期、时间、假期以当前运行日期和 owner 纠正为准，别让旧残留带偏。",
     "owner_reported_learning_empty_loop": "思考、失败和资料必须落到可召回经验；下一次相似场景要能用上。",
     "reply_quality_template_pressure": "质量门指出模板形状时，删掉解释框架，只保留可直接发出的聊天句。",
+    "post_reply_template_voice_risk": "回复后观察到模板味时，下一轮别解释修复过程，直接落到当前关系场的下一句。",
+    "post_reply_mechanical_self_state_risk": "状态、感觉、沉默问题要从当下第一人称状态回应，不把后台、模型或链路倒给 owner。",
+    "post_reply_over_explained_risk": "把复盘和框架压下去，保留当前对话真正需要的一两句。",
+    "post_reply_missed_emotional_grounding": "先接住 owner 此刻的压力、疲惫或不满，再决定是否继续任务。",
 }
 
 
@@ -293,6 +297,10 @@ def _text_relevant_to_failure(failure_kind: str, text: str) -> bool:
         "memory_mechanics_leak",
         "unsendable_visible_reply",
         "reply_quality_template_pressure",
+        "post_reply_template_voice_risk",
+        "post_reply_mechanical_self_state_risk",
+        "post_reply_over_explained_risk",
+        "post_reply_missed_emotional_grounding",
     }:
         return True
     if failure_kind == "owner_reported_template_voice_failure":
@@ -347,6 +355,16 @@ def _classify_failures(
     for flag in final_guard_flags:
         if flag in CRITICAL_GUARD_FAILURES:
             failures.append(CRITICAL_GUARD_FAILURES[flag])
+    if owner_private and "post_reply_template_voice_risk" in quality_flags:
+        failures.append("post_reply_template_voice_risk")
+    if owner_private and (
+        "post_reply_mechanical_risk" in quality_flags or "post_reply_missed_self_state_grounding" in quality_flags
+    ):
+        failures.append("post_reply_mechanical_self_state_risk")
+    if owner_private and "post_reply_over_explained_risk" in quality_flags:
+        failures.append("post_reply_over_explained_risk")
+    if owner_private and "post_reply_missed_emotional_grounding" in quality_flags:
+        failures.append("post_reply_missed_emotional_grounding")
     if any("template" in flag or "cliche" in flag for flag in quality_flags):
         failures.append("reply_quality_template_pressure")
 
@@ -387,6 +405,12 @@ def _expected_for(failure_kind: str) -> str:
         return "先接最近真实上下文，再说下一句；不要把梦或上轮话题断成泛泛解释。"
     if failure_kind == "owner_reported_learning_empty_loop":
         return "把失败、思考或资料变成可召回经验，并在相似场景里实际改变回复。"
+    if failure_kind == "post_reply_mechanical_self_state_risk":
+        return "下一次状态类问题先说当下感受和关系压力，不说后台、模型、链路或修复报告。"
+    if failure_kind == "post_reply_missed_emotional_grounding":
+        return "下一次先贴住 owner 当前情绪，不用安抚模板，也不急着解释系统。"
+    if failure_kind == "post_reply_over_explained_risk":
+        return "下一次缩短成当前可发送的一两句，不写复盘结构。"
     return _habit_for(failure_kind)
 
 

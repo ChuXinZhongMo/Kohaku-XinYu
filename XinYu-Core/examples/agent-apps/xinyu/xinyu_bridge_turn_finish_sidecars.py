@@ -16,6 +16,7 @@ from xinyu_living_memory_recall import log_living_memory_recall
 from xinyu_memory_candidate_extractor import extract_memory_candidates
 from xinyu_memory_candidate_maintenance import run_memory_candidate_maintenance
 from xinyu_memory_self_review import run_memory_self_review
+from xinyu_post_reply_self_observation import observe_post_reply_self_observation
 from xinyu_private_thought_events import record_private_thought_reply_link
 from xinyu_recent_context_guard import ensure_recent_context_health
 from xinyu_sticker_pack import maybe_enqueue_sticker_reply
@@ -64,6 +65,16 @@ async def run_slow_turn_finish_sidecars(
         session_key=session_key,
         visible_turn=visible_turn,
     )
+    post_reply_observation = _observe_post_reply_self_observation(
+        runtime,
+        payload=payload,
+        text=text,
+        reply=reply,
+        visible_turn=visible_turn,
+        final_guard_flags=final_guard_flags,
+        expression_learning=expression_learning,
+        recalled_context=recalled_context,
+    )
     learning_closed_loop = _record_learning_closed_loop(
         runtime,
         payload=payload,
@@ -73,6 +84,7 @@ async def run_slow_turn_finish_sidecars(
         visible_turn=visible_turn,
         final_guard_flags=final_guard_flags,
         expression_learning=expression_learning,
+        post_reply_observation=post_reply_observation,
     )
     residue_written = write_turn_residue(
         runtime.xinyu_dir,
@@ -121,6 +133,7 @@ async def run_slow_turn_finish_sidecars(
         session=session,
         visible_turn=visible_turn,
         final_guard_flags=final_guard_flags,
+        post_reply_observation=post_reply_observation,
     )
     memory_self_review = _run_memory_self_review(runtime)
     interaction_journal = _record_interaction_journal(
@@ -192,6 +205,7 @@ async def run_slow_turn_finish_sidecars(
 
     return {
         "uncertainty_pause": uncertainty_pause,
+        "post_reply_observation": post_reply_observation,
         "learning_closed_loop": learning_closed_loop,
         "residue_written": residue_written,
         "voice_calibrated": voice_calibrated,
@@ -242,6 +256,40 @@ def _record_uncertainty_pause(
         return {"notes": [f"uncertainty_pause_error:{type(exc).__name__}"]}
 
 
+def _observe_post_reply_self_observation(
+    runtime: Any,
+    *,
+    payload: dict[str, Any],
+    text: str,
+    reply: str,
+    visible_turn: Any,
+    final_guard_flags: list[str],
+    expression_learning: dict[str, Any],
+    recalled_context: Any,
+) -> dict[str, Any]:
+    try:
+        quality_flags = (
+            runtime.speech_controller.reply_quality_flags(payload=payload, user_text=text, reply=reply) if reply else []
+        )
+        notes = [_safe_str(note) for note in expression_learning.get("notes", [])]
+        notes.extend(_safe_str(note) for note in quality_flags)
+        expression_learning["notes"] = _dedupe(notes)
+        return observe_post_reply_self_observation(
+            runtime.xinyu_dir,
+            payload,
+            user_text=text,
+            reply=reply,
+            visible_turn=visible_turn,
+            final_guard_flags=final_guard_flags,
+            quality_flags=quality_flags,
+            recalled_context=_safe_str(getattr(recalled_context, "prompt_block", "")),
+        )
+    except Exception as exc:
+        print(f"[xinyu_core_bridge] post-reply self observation failed: {exc}", flush=True)
+        return {"recorded": False, "notes": [f"post_reply_observation_error:{type(exc).__name__}"]}
+
+
+
 def _record_learning_closed_loop(
     runtime: Any,
     *,
@@ -252,11 +300,15 @@ def _record_learning_closed_loop(
     visible_turn: Any,
     final_guard_flags: list[str],
     expression_learning: dict[str, Any],
+    post_reply_observation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     try:
         quality_flags = (
             runtime.speech_controller.reply_quality_flags(payload=payload, user_text=text, reply=reply) if reply else []
         )
+        expression_notes = [_safe_str(note) for note in expression_learning.get("notes", [])]
+        if isinstance(post_reply_observation, dict):
+            expression_notes.extend(_safe_str(note) for note in post_reply_observation.get("notes", []))
         return record_learning_closed_loop_turn(
             runtime.xinyu_dir,
             payload,
@@ -266,7 +318,7 @@ def _record_learning_closed_loop(
             visible_turn_kind=_safe_str(getattr(visible_turn, "turn_kind", "")),
             final_guard_flags=final_guard_flags,
             quality_flags=quality_flags,
-            expression_notes=[_safe_str(note) for note in expression_learning.get("notes", [])],
+            expression_notes=_dedupe(expression_notes),
         )
     except Exception as exc:
         print(f"[xinyu_core_bridge] learning closed loop failed: {exc}", flush=True)
@@ -363,6 +415,7 @@ def _extract_memory_candidates(
     session: Any,
     visible_turn: Any,
     final_guard_flags: list[str],
+    post_reply_observation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     try:
         return extract_memory_candidates(
@@ -374,6 +427,7 @@ def _extract_memory_candidates(
             dialogue_tail=session.dialogue_tail,
             visible_turn=visible_turn,
             quality_flags=final_guard_flags,
+            post_reply_observation=post_reply_observation,
         )
     except Exception as exc:
         print(f"[xinyu_core_bridge] memory candidate extraction failed: {exc}", flush=True)

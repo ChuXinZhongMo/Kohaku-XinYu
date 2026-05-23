@@ -196,6 +196,18 @@ def evaluate_memory_immune_gate(
             review_policy="summarize_or_keep_in_ops_store",
             rationale="raw/runtime state needs a boundary store, not direct memory promotion",
         )
+    if ctype == "post_reply_growth_candidate":
+        return _decision(
+            immune_status=OWNER_REVIEW,
+            danger_level="medium",
+            danger_signals=signals + ("post_reply_growth_review_only",),
+            source_scope=source_scope,
+            target_memory_layer=layer or "memory/reflection/growth_log.md",
+            action="hold_for_personality_growth_review",
+            memory_policy="stable_personality_write_blocked_candidate_only",
+            review_policy="review_repeated_success_and_owner_feedback_before_growth_log",
+            rationale="post-reply success can become a growth candidate only after review, never a direct personality write",
+        )
     if ctype == "voice_correction":
         return _decision(
             immune_status=QUARANTINE,

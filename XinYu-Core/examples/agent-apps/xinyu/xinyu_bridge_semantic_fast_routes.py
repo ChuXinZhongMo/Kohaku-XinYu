@@ -8,6 +8,7 @@ from typing import Any
 import v1_canary_gate
 from xinyu_bridge_memory_snapshot import memory_snapshot as _memory_snapshot
 from xinyu_bridge_reply_text import normalize_bridge_reply
+from xinyu_post_reply_self_observation import observe_post_reply_self_observation
 from xinyu_runtime_presence import record_turn_finished
 from xinyu_sent_reply_index import visible_text_hash
 from xinyu_turn_route_trace import record_turn_route_stage
@@ -459,6 +460,20 @@ async def handle_owner_private_semantic_fast_turn(
     if guard_flags:
         notes.append("final_reply_guard_flags:" + ",".join(guard_flags[:3]))
     notes.extend(_safe_str(note) for note in visible_dedupe.notes[:3])
+    try:
+        quality_flags = runtime.speech_controller.reply_quality_flags(payload=payload, user_text=text, reply=reply)
+        post_reply_observation = observe_post_reply_self_observation(
+            runtime.xinyu_dir,
+            payload,
+            user_text=text,
+            reply=reply,
+            final_guard_flags=guard_flags,
+            quality_flags=quality_flags,
+            recalled_context="",
+        )
+        notes.extend(_safe_str(note) for note in post_reply_observation.get("notes", [])[:3])
+    except Exception as exc:
+        notes.append(f"post_reply_observation_error:{type(exc).__name__}")
     if cleanup.get("cleaned_sessions"):
         notes.append(f"cleaned_idle_sessions:{cleanup['cleaned_sessions']}")
 

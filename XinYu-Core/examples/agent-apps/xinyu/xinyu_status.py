@@ -43,6 +43,7 @@ TEXT_HEALTH_FILES = (
     "memory/context/emotion_council_state.md",
     "memory/context/impulse_soup_state.md",
     "memory/context/early_visible_segment_shadow_state.md",
+    "memory/self/expression_self_learning_state.md",
     "memory/self/learning_closed_loop_state.md",
     "memory/people/owner.md",
     "memory/relationships/index.md",
@@ -342,6 +343,7 @@ def status_fields(root: Path) -> dict[str, str]:
     capability = read_text(root / "memory/context/capability_zones_state.md")
     v1_canary = read_text(root / "memory/context/v1_canary_readiness_state.md")
     initiative_spine = read_text(root / "memory/context/initiative_spine_state.md")
+    expression_self_learning = read_text(root / "memory/self/expression_self_learning_state.md")
     return {
         "proactive_evaluated_at": extract_value(proactive, "evaluated_at", "missing"),
         "proactive_decision": extract_value(proactive, "proactive_decision", "missing"),
@@ -381,6 +383,11 @@ def status_fields(root: Path) -> dict[str, str]:
         "initiative_spine_emergence": extract_value(initiative_spine, "emergence_level", "missing"),
         "initiative_spine_action": extract_value(initiative_spine, "action_permission", "missing"),
         "initiative_spine_next_step": extract_value(initiative_spine, "next_step", "missing"),
+        "post_reply_observation_kind": extract_value(expression_self_learning, "observation_kind", "missing"),
+        "post_reply_alive_voice": extract_value(expression_self_learning, "alive_voice", "missing"),
+        "post_reply_mechanical_risk": extract_value(expression_self_learning, "mechanical_risk", "missing"),
+        "post_reply_template_risk": extract_value(expression_self_learning, "template_risk", "missing"),
+        "post_reply_stable_personality_write": extract_value(expression_self_learning, "stable_personality_write", "missing"),
     }
 
 
@@ -436,6 +443,15 @@ def check_state(root: Path) -> list[Check]:
                 f"{fields['initiative_spine_status']} "
                 f"emergence={fields['initiative_spine_emergence']} "
                 f"action={fields['initiative_spine_action']}"
+            ),
+        ),
+        Check(
+            "post_reply_self_observation",
+            fields["post_reply_observation_kind"] != "missing" or fields["post_reply_alive_voice"] != "missing",
+            (
+                f"kind={fields['post_reply_observation_kind']} alive={fields['post_reply_alive_voice']} "
+                f"mechanical={fields['post_reply_mechanical_risk']} template={fields['post_reply_template_risk']} "
+                f"stable_write={fields['post_reply_stable_personality_write']}"
             ),
         ),
         Check(
