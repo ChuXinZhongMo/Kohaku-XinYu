@@ -93,6 +93,7 @@ from xinyu_bridge_desktop_self_action_routes import (
 )
 import xinyu_bridge_health_snapshot
 from xinyu_bridge_memory_snapshot import memory_snapshot as _memory_snapshot
+from xinyu_memory_promotion import list_growth_candidate_promotions
 from xinyu_bridge_payload_policy import owner_private_payload_matches
 from xinyu_bridge_payload_policy import trusted_private_payload_matches
 from xinyu_bridge_reply_text import normalize_bridge_reply as _normalize_reply
@@ -1280,6 +1281,11 @@ class XinYuBridgeRuntime:
             maximum=500,
             notes=["desktop_memory_recent_v0_runtime_buffer"],
         )
+
+    async def desktop_memory_growth_candidates(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        data = payload or {}
+        limit = max(1, min(_as_int(data.get("limit"), 50), 200))
+        return list_growth_candidate_promotions(self.xinyu_dir, limit=limit)
 
     async def life_metabolism_ticket_get(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         return await _life_metabolism_ticket_get_route(self, payload)

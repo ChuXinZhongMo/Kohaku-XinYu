@@ -101,6 +101,39 @@ export type GatewayStatus = {
   snapshotAt?: string
 }
 
+export type GrowthCandidatePromotionItem = {
+  candidateId: string
+  status: string
+  candidateType: string
+  targetMemoryLayer: string
+  targetPath: string
+  targetGate: string
+  beforeHash: string
+  applyCommand: string
+  previewPath: string
+  blockers: string[]
+  riskFlags: string[]
+  applyAllowed: boolean
+  stableMemoryWrite: string
+  stablePersonalityWrite: string
+  reasonPreview: string
+  candidateTextPreview: string
+}
+
+export type GrowthCandidatePromotionStatus = {
+  ok: boolean
+  pendingApplyCount: number
+  appliedCount: number
+  ownerReviewRequiredCount: number
+  pendingApply: GrowthCandidatePromotionItem[]
+  applied: GrowthCandidatePromotionItem[]
+  ownerReviewRequired: GrowthCandidatePromotionItem[]
+  targetPath: string
+  targetMemoryLayer: string
+  notes: string[]
+  error: string
+}
+
 export type ApiConfigProfile = {
   id: string
   label: string
@@ -319,6 +352,7 @@ export type AppState = {
   impulseSoup: ImpulseSoupState | null
   recentTurns: unknown[]
   recentMemoryEvents: unknown[]
+  memoryGrowthCandidates: GrowthCandidatePromotionStatus | null
   apiConfig: ApiConfigStatus | null
   apiConfigAction: ApiConfigActionState
   externalPlugins: ExternalPluginsStatus | null

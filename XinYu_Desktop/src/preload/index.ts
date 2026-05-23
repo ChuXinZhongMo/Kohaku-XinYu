@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 const api = {
   getSnapshot: () => ipcRenderer.invoke('xinyu:get-snapshot'),
   getProactiveInbox: () => ipcRenderer.invoke('xinyu:get-proactive-inbox'),
+  getMemoryGrowthCandidates: () => ipcRenderer.invoke('xinyu:get-memory-growth-candidates'),
   getImpulseSoupState: () => ipcRenderer.invoke('xinyu:get-impulse-soup-state'),
   getGatewayStatus: () => ipcRenderer.invoke('xinyu:get-gateway-status'),
   getExternalPlugins: () => ipcRenderer.invoke('xinyu:get-external-plugins'),

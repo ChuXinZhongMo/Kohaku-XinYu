@@ -1,4 +1,4 @@
-import type { ApiConfigCurrent, ApiConfigProfile, ApiConfigStatus, AppState, CommandState, DesktopEvent, ExternalPluginControl, ExternalPluginInstallState, ExternalPluginsStatus, ImpulseSoupState, ImpulseThoughtlet, ImpulseTraceEvent, JsonRecord, ProactiveAction, ProactiveIntent, QQEnvironmentStatus, QQRuntimeConfig, ServiceProbe, Snapshot, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
+import type { ApiConfigCurrent, ApiConfigProfile, ApiConfigStatus, AppState, CommandState, DesktopEvent, ExternalPluginControl, ExternalPluginInstallState, ExternalPluginsStatus, GrowthCandidatePromotionItem, GrowthCandidatePromotionStatus, ImpulseSoupState, ImpulseThoughtlet, ImpulseTraceEvent, JsonRecord, ProactiveAction, ProactiveIntent, QQEnvironmentStatus, QQRuntimeConfig, ServiceProbe, Snapshot, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
 
 export const themeOptions: { id: ThemeName; label: string }[] = [
   { id: 'pastel', label: '粉紫' },
@@ -338,6 +338,53 @@ export function buildStats(state: AppState): {
     memories: state.recentMemoryEvents.length,
     proactive: state.proactiveInbox.length,
     events: state.events.length
+  }
+}
+
+export function normalizeMemoryGrowthCandidates(value: unknown): GrowthCandidatePromotionStatus {
+  const data = asRecord(value)
+  return {
+    ok: Boolean(data.ok),
+    pendingApplyCount: Number(data.pendingApplyCount ?? data.pending_apply_count ?? 0),
+    appliedCount: Number(data.appliedCount ?? data.applied_count ?? 0),
+    ownerReviewRequiredCount: Number(data.ownerReviewRequiredCount ?? data.owner_review_required_count ?? 0),
+    pendingApply: Array.isArray(data.pendingApply)
+      ? data.pendingApply.map(normalizeGrowthCandidatePromotionItem)
+      : Array.isArray(data.pending_apply)
+        ? data.pending_apply.map(normalizeGrowthCandidatePromotionItem)
+        : [],
+    applied: Array.isArray(data.applied) ? data.applied.map(normalizeGrowthCandidatePromotionItem) : [],
+    ownerReviewRequired: Array.isArray(data.ownerReviewRequired)
+      ? data.ownerReviewRequired.map(normalizeGrowthCandidatePromotionItem)
+      : Array.isArray(data.owner_review_required)
+        ? data.owner_review_required.map(normalizeGrowthCandidatePromotionItem)
+        : [],
+    targetPath: String(data.targetPath || data.target_path || ''),
+    targetMemoryLayer: String(data.targetMemoryLayer || data.target_memory_layer || ''),
+    notes: stringArray(data.notes),
+    error: String(data.error || '')
+  }
+}
+
+function normalizeGrowthCandidatePromotionItem(value: unknown): GrowthCandidatePromotionItem {
+  const row = asRecord(value)
+  return {
+    candidateId: String(row.candidateId || row.candidate_id || ''),
+    status: String(row.status || ''),
+    candidateType: String(row.candidateType || row.candidate_type || ''),
+    targetMemoryLayer: String(row.targetMemoryLayer || row.target_memory_layer || ''),
+    targetPath: String(row.targetPath || row.target_path || ''),
+    targetGate: String(row.targetGate || row.target_gate || ''),
+    beforeHash: String(row.beforeHash || row.before_hash || ''),
+    applyCommand: String(row.applyCommand || row.apply_command || ''),
+    previewPath: String(row.previewPath || row.preview_path || ''),
+    blockers: stringArray(row.blockers),
+    riskFlags: stringArray(row.riskFlags || row.risk_flags),
+    applyAllowed: Boolean(row.applyAllowed ?? row.apply_allowed),
+    stableMemoryWrite: String(row.stableMemoryWrite || row.stable_memory_write || ''),
+    stablePersonalityWrite: String(row.stablePersonalityWrite || row.stable_personality_write || ''),
+    reasonPreview: String(row.reasonPreview || row.reason_preview || ''),
+    candidateTextPreview: String(row.candidateTextPreview || row.candidate_text_preview || '')
   }
 }
 

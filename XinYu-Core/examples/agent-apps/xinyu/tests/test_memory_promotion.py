@@ -3,7 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from xinyu_dialogue_archive import list_memory_candidates, store_memory_candidate, update_memory_candidate_status
-from xinyu_memory_promotion import apply_stable_memory_promotion, build_stable_memory_promotion_dry_run
+from xinyu_memory_promotion import (
+    apply_stable_memory_promotion,
+    build_stable_memory_promotion_dry_run,
+    list_growth_candidate_promotions,
+)
 
 
 def test_stable_memory_promotion_dry_run_renders_diff_without_writing(tmp_path: Path) -> None:
@@ -74,6 +78,87 @@ def _store_approved_growth_candidate(root: Path, candidate_id: str = "memcand-gr
         status="approved",
         review_notes="owner_approved_high_risk growth log preview ok",
     )
+
+
+def test_list_growth_candidate_promotions_pending_is_read_only(tmp_path: Path) -> None:
+    target = tmp_path / "memory/reflection/growth_log.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("# Growth Log\n", encoding="utf-8")
+    _store_approved_growth_candidate(tmp_path)
+    before = target.read_text(encoding="utf-8")
+
+    result = list_growth_candidate_promotions(tmp_path)
+
+    assert result["ok"] is True
+    assert result["pending_apply_count"] == 1
+    item = result["pending_apply"][0]
+    assert item["candidate_id"] == "memcand-growth-apply"
+    assert item["apply_allowed"] is False
+    assert item["stable_memory_write"] == "dry_run_only"
+    assert item["stable_personality_write"] == "blocked"
+    assert item["before_hash"]
+    assert item["apply_command"] == (
+        "python xinyu_memory_candidate_review_cli.py apply memcand-growth-apply "
+        f"--notes \"owner_apply_confirmed after preview\" --expected-before-hash {item['before_hash']}"
+    )
+    assert target.read_text(encoding="utf-8") == before
+    assert list_memory_candidates(tmp_path, status="approved", limit=5)[0]["candidate_id"] == "memcand-growth-apply"
+    assert not (tmp_path / "runtime/memory_promotion_dry_runs/memcand-growth-apply.md").exists()
+
+
+def test_list_growth_candidate_promotions_surfaces_owner_review_without_body(tmp_path: Path) -> None:
+    assert store_memory_candidate(
+        tmp_path,
+        candidate_id="memcand-owner-review",
+        candidate_type="owner_preference",
+        source_message_ids=[21],
+        source_turn_id="turn-owner-review",
+        candidate_text="private owner preference body must not be exposed on desktop",
+        confidence_score=72,
+        target_gate="owner_memory_review",
+        target_memory_layer="memory/people/owner.md",
+        reason="owner preference needs explicit review",
+        risk_flags=["scope:owner_private", "danger:medium"],
+        created_at="2026-05-20T12:00:00+08:00",
+    )
+    assert update_memory_candidate_status(
+        tmp_path,
+        candidate_id="memcand-owner-review",
+        status="owner_review_required",
+        review_notes="needs owner decision",
+    )
+
+    result = list_growth_candidate_promotions(tmp_path)
+
+    assert result["owner_review_required_count"] == 1
+    item = result["owner_review_required"][0]
+    assert item["candidate_id"] == "memcand-owner-review"
+    assert item["target_memory_layer"] == "memory/people/owner.md"
+    assert item["stable_memory_write"] == "owner_review_required"
+    assert item["candidate_text_preview"] == "hidden_owner_review_required"
+    assert "private owner preference" not in str(item)
+    assert "owner_review_body_hidden" in result["notes"]
+
+
+def test_list_growth_candidate_promotions_counts_applied(tmp_path: Path) -> None:
+    target = tmp_path / "memory/reflection/growth_log.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("# Growth Log\n", encoding="utf-8")
+    _store_approved_growth_candidate(tmp_path)
+    preview = build_stable_memory_promotion_dry_run(tmp_path, "memcand-growth-apply")
+    apply_result = apply_stable_memory_promotion(
+        tmp_path,
+        "memcand-growth-apply",
+        review_notes="owner_apply_confirmed after preview",
+        expected_before_hash=preview["before_hash"],
+    )
+    assert apply_result["ok"] is True
+
+    result = list_growth_candidate_promotions(tmp_path)
+
+    assert result["pending_apply_count"] == 0
+    assert result["applied_count"] == 1
+    assert result["applied"][0]["candidate_id"] == "memcand-growth-apply"
 
 
 def test_apply_growth_candidate_requires_owner_apply_confirmation(tmp_path: Path) -> None:

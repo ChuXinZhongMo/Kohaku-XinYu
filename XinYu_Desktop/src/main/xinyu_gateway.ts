@@ -129,6 +129,18 @@ export type MetabolismDecisionResponse = {
   error?: string
 }
 
+export type MemoryGrowthCandidatesResponse = Record<string, unknown> & {
+  ok?: boolean
+  pending_apply_count?: number
+  applied_count?: number
+  owner_review_required_count?: number
+  pending_apply?: unknown[]
+  applied?: unknown[]
+  owner_review_required?: unknown[]
+  notes?: unknown[]
+  error?: string
+}
+
 export type ExternalPluginConfigPatch = {
   pluginId: string
   enabled?: boolean
@@ -388,6 +400,25 @@ export class XinyuGateway {
       }
     } catch (error) {
       return { accepted: false, queueId, decision, error: errorLabel(error), notes: [] }
+    }
+  }
+
+  async getMemoryGrowthCandidates(): Promise<MemoryGrowthCandidatesResponse> {
+    try {
+      const response = await fetch(`${this.httpUrl}/desktop/memory/growth-candidates`, {
+        headers: this.authHeaders()
+      })
+      const body = (await response.json().catch(() => ({}))) as MemoryGrowthCandidatesResponse
+      if (!response.ok) {
+        throw new Error(String(body.error || body.message || `memory_growth_candidates_http_${response.status}`))
+      }
+      this.status.lastError = ''
+      this.emitStatus()
+      return body
+    } catch (error) {
+      this.status.lastError = errorLabel(error)
+      this.emitStatus()
+      return { ok: false, pending_apply: [], applied: [], owner_review_required: [], pending_apply_count: 0, applied_count: 0, owner_review_required_count: 0, error: errorLabel(error), notes: ['memory_growth_candidates_unavailable'] }
     }
   }
 

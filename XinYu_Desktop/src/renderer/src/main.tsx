@@ -6,7 +6,7 @@ import { AffectiveSurfaceProvider, SurfacePart } from './AffectiveSurfaceProvide
 import { buildAffectiveSurfaceCue } from './affectiveSurface'
 import { ImpulseObserverDialog, IntentDetailDialog, InteractionStream, IntentQueuePanel, MindStatePanel, StatusBadge, SystemControlPanel, ThemeSwitcher } from './DesktopPanels'
 import type { ApiConfigProfilePatch, AppState, CommandState, DesktopEvent, ExternalPluginConfigPatch, ExternalPluginInstallRequest, GatewayStatus, JsonRecord, ProactiveAction, ProactiveIntent, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, ServiceProbe, Snapshot, StickerActionState, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
-import { actionLabel, apiConfigActionLabel, applyEvent, applyProactiveInbox, applySnapshot, asRecord, buildProactiveIntents, buildStats, chatErrorLabel, commandStatusLabel, compact, createCommandId, defaultQQRuntimeConfig, defaultQQServices, deriveXinYuState, digestPressureLabel, digestResidueLabel, digestResultLabel, digestThemeLabel, errorLabel, eventLabel, externalPluginActionLabel, formatLatency, formatTime, formatTurnMeta, initialTheme, isCommandRenderedByTurn, memorySummary, normalizeApiConfigStatus, normalizeExternalPluginsStatus, normalizeImpulseSoupState, normalizeQQEnvironmentStatus, normalizeQQRuntimeConfig, normalizeStickerLibrary, platformLabel, qqActionResultLabel, qqDetailLabel, qqDiagnosisLabel, qqEnvironmentMessage, qqRuntimeResultLabel, qqServiceLabel, riskLabel, runtimeLabel, sourceLabel, statusLabel, stickerClipLabel, stickerCorrectionMoods, stickerMoodLabel, themeOptions, updateCommand } from './desktopModel'
+import { actionLabel, apiConfigActionLabel, applyEvent, applyProactiveInbox, applySnapshot, asRecord, buildProactiveIntents, buildStats, chatErrorLabel, commandStatusLabel, compact, createCommandId, defaultQQRuntimeConfig, defaultQQServices, deriveXinYuState, digestPressureLabel, digestResidueLabel, digestResultLabel, digestThemeLabel, errorLabel, eventLabel, externalPluginActionLabel, formatLatency, formatTime, formatTurnMeta, initialTheme, isCommandRenderedByTurn, memorySummary, normalizeApiConfigStatus, normalizeExternalPluginsStatus, normalizeImpulseSoupState, normalizeMemoryGrowthCandidates, normalizeQQEnvironmentStatus, normalizeQQRuntimeConfig, normalizeStickerLibrary, platformLabel, qqActionResultLabel, qqDetailLabel, qqDiagnosisLabel, qqEnvironmentMessage, qqRuntimeResultLabel, qqServiceLabel, riskLabel, runtimeLabel, sourceLabel, statusLabel, stickerClipLabel, stickerCorrectionMoods, stickerMoodLabel, themeOptions, updateCommand } from './desktopModel'
 
 const avatarSrc = './xinyu-avatar.png'
 
@@ -30,6 +30,7 @@ function App(): JSX.Element {
     impulseSoup: null,
     recentTurns: [],
     recentMemoryEvents: [],
+    memoryGrowthCandidates: null,
     apiConfig: null,
     apiConfigAction: { kind: 'idle', message: '' },
     externalPlugins: null,
@@ -154,6 +155,21 @@ function App(): JSX.Element {
           }))
         })
     }
+    const loadMemoryGrowthCandidates = (): void => {
+      window.xinyu
+        .getMemoryGrowthCandidates()
+        .then((value) => {
+          if (!mounted) return
+          setState((current) => ({ ...current, memoryGrowthCandidates: normalizeMemoryGrowthCandidates(value) }))
+        })
+        .catch((error) => {
+          if (!mounted) return
+          setState((current) => ({
+            ...current,
+            memoryGrowthCandidates: normalizeMemoryGrowthCandidates({ ok: false, error: errorLabel(error) })
+          }))
+        })
+    }
     const loadImpulseSoup = (): void => {
       window.xinyu
         .getImpulseSoupState()
@@ -184,6 +200,7 @@ function App(): JSX.Element {
     loadApiConfig()
     loadExternalPlugins()
     loadStickerLibrary()
+    loadMemoryGrowthCandidates()
     loadImpulseSoup()
     const snapshotTimer = window.setInterval(() => {
       window.xinyu.getSnapshot().then((snapshot) => {
@@ -202,6 +219,7 @@ function App(): JSX.Element {
     const apiConfigTimer = window.setInterval(loadApiConfig, 30_000)
     const externalPluginTimer = window.setInterval(loadExternalPlugins, 30_000)
     const stickerTimer = window.setInterval(loadStickerLibrary, 30_000)
+    const memoryGrowthTimer = window.setInterval(loadMemoryGrowthCandidates, 30_000)
     const impulseTimer = window.setInterval(loadImpulseSoup, 5_000)
     const offEvent = window.xinyu.onCoreEvent((event) => {
       setState((current) => applyEvent(current, event))
@@ -218,6 +236,7 @@ function App(): JSX.Element {
       window.clearInterval(apiConfigTimer)
       window.clearInterval(externalPluginTimer)
       window.clearInterval(stickerTimer)
+      window.clearInterval(memoryGrowthTimer)
       window.clearInterval(impulseTimer)
       offEvent()
       offStatus()
@@ -1019,6 +1038,7 @@ function App(): JSX.Element {
             qqRuntimeAction={state.qqRuntimeAction}
             stickerLibrary={state.stickerLibrary}
             stickerAction={state.stickerAction}
+            memoryGrowthCandidates={state.memoryGrowthCandidates}
             actionDigest={state.snapshot?.actionDigestState}
             recentMemoryEvents={state.recentMemoryEvents}
             lastEvent={state.events[0]}

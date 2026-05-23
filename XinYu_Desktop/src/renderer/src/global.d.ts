@@ -7,6 +7,7 @@ declare global {
     xinyu: {
       getSnapshot: () => Promise<unknown>
       getProactiveInbox: () => Promise<unknown>
+      getMemoryGrowthCandidates: () => Promise<unknown>
       getImpulseSoupState: () => Promise<unknown>
       getGatewayStatus: () => Promise<unknown>
       getExternalPlugins: () => Promise<unknown>

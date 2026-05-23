@@ -2,7 +2,7 @@ import React from 'react'
 import { Activity, Bell, Brain, Check, ChevronDown, ChevronRight, Clock3, Compass, Clipboard, Download, Eye, ExternalLink, Heart, History, MessageCircle, Play, Puzzle, Radio, RefreshCw, Save, Send, ShieldAlert, Sparkles, Terminal, TimerReset, Plus, Trash2, Wifi, X } from 'lucide-react'
 import { EnvironmentValve } from './EnvironmentValve'
 import { SurfacePart } from './AffectiveSurfaceProvider'
-import type { ApiConfigActionState, ApiConfigProfile, ApiConfigProfilePatch, ApiConfigStatus, CommandState, DesktopEvent, ExternalPluginActionState, ExternalPluginConfigPatch, ExternalPluginControl, ExternalPluginInstallRequest, ExternalPluginsStatus, GatewayStatus, ImpulseSoupState, JsonRecord, ProactiveAction, ProactiveIntent, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, SelfActionSnapshot, Snapshot, StickerActionState, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
+import type { ApiConfigActionState, ApiConfigProfile, ApiConfigProfilePatch, ApiConfigStatus, CommandState, DesktopEvent, ExternalPluginActionState, ExternalPluginConfigPatch, ExternalPluginControl, ExternalPluginInstallRequest, ExternalPluginsStatus, GatewayStatus, GrowthCandidatePromotionStatus, ImpulseSoupState, JsonRecord, ProactiveAction, ProactiveIntent, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, SelfActionSnapshot, Snapshot, StickerActionState, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
 import { actionLabel, asRecord, buildStats, commandStatusLabel, compact, defaultQQRuntimeConfig, defaultQQServices, digestPressureLabel, digestResidueLabel, digestResultLabel, digestThemeLabel, eventLabel, externalPluginInstallStateLabel, externalPluginNoteLabel, formatLatency, formatTime, formatTurnMeta, isCommandRenderedByTurn, memorySummary, platformLabel, qqDetailLabel, qqDiagnosisLabel, qqServiceLabel, riskLabel, runtimeLabel, sourceLabel, statusLabel, stickerClipLabel, stickerCorrectionMoods, stickerMoodLabel, themeOptions } from './desktopModel'
 
 const avatarSrc = './xinyu-avatar.png'
@@ -1089,6 +1089,7 @@ export function SystemControlPanel(props: {
   qqRuntimeAction: QQRuntimeActionState
   stickerLibrary: StickerLibrary | null
   stickerAction: StickerActionState
+  memoryGrowthCandidates: GrowthCandidatePromotionStatus | null
   actionDigest?: unknown
   recentMemoryEvents: unknown[]
   lastEvent?: DesktopEvent
@@ -1162,10 +1163,84 @@ export function SystemControlPanel(props: {
         onOpenAssetDir={props.onOpenStickerAssetDir}
       />
 
+      <MemoryGrowthCandidatePanel status={props.memoryGrowthCandidates} />
+
       <ActionDigestPanel digest={props.actionDigest} />
 
       <ContinuityPanel recentMemoryEvents={props.recentMemoryEvents} lastEvent={props.lastEvent} />
     </aside>
+  )
+}
+
+
+function MemoryGrowthCandidatePanel(props: { status: GrowthCandidatePromotionStatus | null }): JSX.Element {
+  const status = props.status
+  const pending = status?.pendingApply || []
+  const applied = status?.applied || []
+  const ownerReview = status?.ownerReviewRequired || []
+  const headline = status?.ok === false
+    ? '读取失败'
+    : pending.length > 0
+      ? `${status?.pendingApplyCount ?? pending.length} 待 apply`
+      : '无待 apply'
+  const copyCommand = (command: string): void => {
+    if (!command) return
+    void navigator.clipboard?.writeText(command).catch(() => undefined)
+  }
+  return (
+    <section className="memory-growth-panel" aria-label="成长候选提升">
+      <div className="self-action-head">
+        <span>
+          <Brain size={15} />
+          <span>成长候选</span>
+        </span>
+        <strong>{headline}</strong>
+      </div>
+      <p className="self-action-note">
+        仅展示 review inbox 已批准、可预览写入 growth_log 的候选；稳定记忆写入仍需 CLI apply + owner_apply_confirmed。
+      </p>
+      <div className="self-action-grid">
+        <SelfActionFact label="待应用" value={String(status?.pendingApplyCount ?? pending.length)} />
+        <SelfActionFact label="已应用" value={String(status?.appliedCount ?? applied.length)} />
+        <SelfActionFact label="待审查" value={String(status?.ownerReviewRequiredCount ?? ownerReview.length)} />
+        <SelfActionFact label="目标" value={compact(status?.targetMemoryLayer || 'memory/reflection/growth_log.md', 38)} />
+        <SelfActionFact label="写入" value="前端阻断" />
+      </div>
+      {status?.error ? <p className="self-action-note">{compact(status.error, 120)}</p> : null}
+      {ownerReview.slice(0, 3).map((item) => (
+        <div className="evidence-row runtime-row" key={`owner-review-${item.candidateId}`}>
+          <ShieldAlert size={13} />
+          <span>{compact(item.candidateId, 34)}</span>
+          <strong>需 owner 审查</strong>
+          <small>{compact(item.candidateType || item.targetGate || 'owner_review_required', 48)}</small>
+          <small>{compact(item.targetMemoryLayer || 'memory/people/owner.md', 64)}</small>
+          {item.riskFlags.length ? <small>{compact(item.riskFlags.join(' / '), 96)}</small> : null}
+          <small>正文已隐藏；请在本地 CLI 审查</small>
+        </div>
+      ))}
+      {pending.slice(0, 4).map((item) => (
+        <div className="evidence-row runtime-row" key={item.candidateId}>
+          <Clipboard size={13} />
+          <span>{compact(item.candidateId, 34)}</span>
+          <strong>{compact(item.status || 'approved', 24)}</strong>
+          <small>{compact(item.reasonPreview || item.candidateTextPreview || item.targetMemoryLayer, 96)}</small>
+          {item.previewPath ? <small>preview: {compact(item.previewPath, 96)}</small> : null}
+          {item.beforeHash ? <small>before: {compact(item.beforeHash, 24)}</small> : null}
+          {item.applyCommand ? (
+            <>
+              <code>{item.applyCommand}</code>
+              <button type="button" onClick={() => copyCommand(item.applyCommand)} title="复制 apply 命令">
+                <Clipboard size={13} />
+                <span>复制</span>
+              </button>
+            </>
+          ) : null}
+        </div>
+      ))}
+      {!pending.length && applied[0] ? (
+        <p className="self-action-note">最近已应用：{compact(applied[0].candidateId, 64)}</p>
+      ) : null}
+    </section>
   )
 }
 

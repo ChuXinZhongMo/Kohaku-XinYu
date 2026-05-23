@@ -405,6 +405,9 @@ app.whenReady().then(() => {
   ipcMain.handle('xinyu:get-proactive-inbox', async () => {
     return await gateway?.getProactiveInbox()
   })
+  ipcMain.handle('xinyu:get-memory-growth-candidates', async () => {
+    return await gateway?.getMemoryGrowthCandidates()
+  })
   ipcMain.handle('xinyu:get-impulse-soup-state', () => {
     return readImpulseSoupState()
   })

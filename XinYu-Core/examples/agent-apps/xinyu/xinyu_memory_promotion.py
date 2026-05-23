@@ -14,6 +14,7 @@ from xinyu_dialogue_archive import list_memory_candidates, update_memory_candida
 
 PROMOTION_DRY_RUN_REL = Path("runtime/memory_promotion_dry_runs")
 APPLIED_GROWTH_LOG_STATUS = "applied_growth_log"
+GROWTH_LOG_TARGET_MEMORY_LAYER = "memory/reflection/growth_log.md"
 PROMOTION_ELIGIBLE_STATUSES = ("approved",)
 REVIEWABLE_STATUSES = (
     "approved",
@@ -174,6 +175,105 @@ def render_promotion_dry_run(result: dict[str, Any]) -> str:
 """.rstrip() + "\n"
 
 
+def list_growth_candidate_promotions(root: Path, *, limit: int = 50) -> dict[str, Any]:
+    root = root.resolve()
+    clean_limit = max(1, min(int(limit or 50), 200))
+    pending_apply: list[dict[str, Any]] = []
+    applied: list[dict[str, Any]] = []
+    owner_review_required: list[dict[str, Any]] = []
+    target_path = root / GROWTH_LOG_TARGET_MEMORY_LAYER
+    seen: set[str] = set()
+
+    for row in list_memory_candidates(root, status="owner_review_required", limit=max(clean_limit * 2, 50)):
+        candidate_id = _safe_str(row.get("candidate_id")).strip()
+        if not candidate_id:
+            continue
+        owner_review_required.append(
+            {
+                "candidate_id": candidate_id,
+                "status": row.get("status"),
+                "candidate_type": row.get("candidate_type"),
+                "target_memory_layer": row.get("target_memory_layer"),
+                "target_gate": row.get("target_gate"),
+                "risk_flags": [_one_line(item, limit=120, default="") for item in row.get("risk_flags", []) if _safe_str(item)],
+                "apply_allowed": False,
+                "stable_memory_write": "owner_review_required",
+                "stable_personality_write": "blocked",
+                "reason_preview": _one_line(row.get("reason"), limit=240, default=""),
+                "candidate_text_preview": "hidden_owner_review_required",
+            }
+        )
+        if len(owner_review_required) >= clean_limit:
+            break
+
+    for status in ("approved", APPLIED_GROWTH_LOG_STATUS):
+        for row in list_memory_candidates(root, status=status, limit=max(clean_limit * 2, 50)):
+            candidate_id = _safe_str(row.get("candidate_id")).strip()
+            if not candidate_id or candidate_id in seen:
+                continue
+            seen.add(candidate_id)
+            if _safe_str(row.get("candidate_type")).strip() != "post_reply_growth_candidate":
+                continue
+            if _safe_str(row.get("target_memory_layer")).strip().replace("\\", "/") != GROWTH_LOG_TARGET_MEMORY_LAYER:
+                continue
+            if status == APPLIED_GROWTH_LOG_STATUS:
+                applied.append(
+                    {
+                        "candidate_id": candidate_id,
+                        "status": status,
+                        "candidate_type": row.get("candidate_type"),
+                        "target_memory_layer": row.get("target_memory_layer"),
+                        "target_path": str(target_path),
+                        "apply_allowed": False,
+                        "stable_memory_write": "already_applied",
+                        "stable_personality_write": "blocked",
+                        "reason_preview": _one_line(row.get("reason"), limit=240, default=""),
+                        "candidate_text_preview": _one_line(row.get("candidate_text"), limit=500, default=""),
+                    }
+                )
+                continue
+
+            preview = build_stable_memory_promotion_dry_run(root, candidate_id, write_preview=False)
+            before_hash = _safe_str(preview.get("before_hash"))
+            item = {
+                "candidate_id": candidate_id,
+                "status": row.get("status"),
+                "candidate_type": row.get("candidate_type"),
+                "target_memory_layer": row.get("target_memory_layer"),
+                "target_path": _safe_str(preview.get("target_path"), str(target_path)),
+                "before_hash": before_hash,
+                "apply_command": (
+                    f'python xinyu_memory_candidate_review_cli.py apply {candidate_id} '
+                    f'--notes "owner_apply_confirmed after preview" --expected-before-hash {before_hash}'
+                ),
+                "blockers": preview.get("blockers") if isinstance(preview.get("blockers"), list) else [],
+                "apply_allowed": False,
+                "stable_memory_write": "dry_run_only",
+                "stable_personality_write": "blocked",
+                "reason_preview": _one_line(row.get("reason"), limit=240, default=""),
+                "candidate_text_preview": _one_line(row.get("candidate_text"), limit=500, default=""),
+            }
+            preview_path = root / PROMOTION_DRY_RUN_REL / f"{_safe_filename(candidate_id, default='unknown')}.md"
+            if preview_path.exists():
+                item["preview_path"] = str(preview_path)
+            pending_apply.append(item)
+            if len(pending_apply) >= clean_limit:
+                break
+
+    return {
+        "ok": True,
+        "pending_apply_count": len(pending_apply),
+        "applied_count": len(applied),
+        "owner_review_required_count": len(owner_review_required),
+        "pending_apply": pending_apply[:clean_limit],
+        "applied": applied[:clean_limit],
+        "owner_review_required": owner_review_required[:clean_limit],
+        "target_path": str(target_path),
+        "target_memory_layer": GROWTH_LOG_TARGET_MEMORY_LAYER,
+        "notes": ["desktop_growth_candidate_status_read_only", "owner_review_body_hidden", "frontend_apply_blocked"],
+    }
+
+
 def _promotion_blockers(row: dict[str, Any], *, allow_unapproved: bool) -> list[str]:
     blockers: list[str] = []
     status = _safe_str(row.get("status"))
@@ -184,7 +284,7 @@ def _promotion_blockers(row: dict[str, Any], *, allow_unapproved: bool) -> list[
     if _safe_str(row.get("candidate_type")).strip() != "post_reply_growth_candidate":
         blockers.append("candidate_type_not_supported_for_stable_apply")
     target_rel = _target_rel(row)
-    if target_rel != Path("memory/reflection/growth_log.md"):
+    if target_rel != Path(GROWTH_LOG_TARGET_MEMORY_LAYER):
         blockers.append("target_memory_layer_not_growth_log")
     return blockers
 

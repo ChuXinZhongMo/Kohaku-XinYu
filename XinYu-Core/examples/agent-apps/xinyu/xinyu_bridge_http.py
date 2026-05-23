@@ -17,6 +17,7 @@ DESKTOP_GET_ROUTES = {
     "/desktop/proactive/inbox",
     "/desktop/chat/recent",
     "/desktop/memory/recent",
+    "/desktop/memory/growth-candidates",
 }
 EXTERNAL_GET_ROUTES = {
     "/external/plugins",
@@ -104,6 +105,8 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
                 data = self._run_on_loop(self.server.runtime.desktop_proactive_inbox(payload), timeout=5)
             elif route == "/desktop/chat/recent":
                 data = self._run_on_loop(self.server.runtime.desktop_chat_recent(payload), timeout=5)
+            elif route == "/desktop/memory/growth-candidates":
+                data = self._run_on_loop(self.server.runtime.desktop_memory_growth_candidates(payload), timeout=5)
             elif route == "/external/plugins":
                 data = self._run_on_loop(self.server.runtime.external_plugin_manifest(payload), timeout=5)
             elif route == "/turn/current":
