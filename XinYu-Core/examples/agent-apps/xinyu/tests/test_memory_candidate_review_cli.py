@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from xinyu_dialogue_archive import list_memory_candidates, store_memory_candidate
-from xinyu_memory_candidate_review_cli import decide_candidate, explain_candidate, list_candidates, show_candidate
+from xinyu_memory_candidate_review_cli import apply_candidate_promotion, decide_candidate, explain_candidate, list_candidates, show_candidate
 
 
 def _store(
@@ -236,6 +236,35 @@ def test_approved_candidate_writes_promotion_preview_not_stable_memory(tmp_path)
     assert approved["status"] == "approved"
     assert approved["stable_memory_write"] == "dry_run_only"
     assert approved["apply_allowed"] is False
-    assert approved["promotion_preview_blockers"]
+    assert approved["promotion_preview_blockers"] == []
     assert approved["promotion_preview_path"]
     assert not target.exists()
+
+
+def test_apply_candidate_promotion_uses_explicit_apply_step(tmp_path) -> None:
+    _store(
+        tmp_path,
+        "memcand-growth-cli-apply",
+        candidate_type="post_reply_growth_candidate",
+        candidate_text="post-reply growth candidate; raw owner/reply text intentionally omitted",
+        target_memory_layer="memory/reflection/growth_log.md",
+    )
+    approved = decide_candidate(
+        tmp_path,
+        "memcand-growth-cli-apply",
+        decision="approve",
+        review_notes="owner_approved_high_risk growth log preview ok",
+    )
+
+    applied = apply_candidate_promotion(
+        tmp_path,
+        "memcand-growth-cli-apply",
+        review_notes="owner_apply_confirmed after preview",
+        expected_before_hash=approved.get("promotion_preview_before_hash", ""),
+    )
+
+    assert applied["ok"] is True
+    assert applied["status"] == "applied_growth_log"
+    assert "Candidate Promotion Draft: memcand-growth-cli-apply" in (
+        tmp_path / "memory/reflection/growth_log.md"
+    ).read_text(encoding="utf-8")

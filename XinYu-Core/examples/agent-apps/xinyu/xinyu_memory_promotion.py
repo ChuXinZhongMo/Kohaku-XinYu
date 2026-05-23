@@ -9,10 +9,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_dialogue_archive import list_memory_candidates
+from xinyu_dialogue_archive import list_memory_candidates, update_memory_candidate_status
 
 
 PROMOTION_DRY_RUN_REL = Path("runtime/memory_promotion_dry_runs")
+APPLIED_GROWTH_LOG_STATUS = "applied_growth_log"
 PROMOTION_ELIGIBLE_STATUSES = ("approved",)
 REVIEWABLE_STATUSES = (
     "approved",
@@ -109,6 +110,7 @@ def build_stable_memory_promotion_dry_run(
             lineterm="",
         )
     )
+    apply_allowed = not blockers
     result = {
         "ok": True,
         "candidate_id": row.get("candidate_id"),
@@ -120,7 +122,7 @@ def build_stable_memory_promotion_dry_run(
         "before_hash": _text_hash(before),
         "after_hash": _text_hash(after),
         "stable_memory_write": "dry_run_only",
-        "apply_allowed": False,
+        "apply_allowed": apply_allowed,
         "blockers": blockers,
         "proposed_entry": proposed_entry,
         "diff": diff,
@@ -173,15 +175,17 @@ def render_promotion_dry_run(result: dict[str, Any]) -> str:
 
 
 def _promotion_blockers(row: dict[str, Any], *, allow_unapproved: bool) -> list[str]:
-    blockers = ["stable_memory_apply_not_implemented_use_dry_run_for_owner_review"]
+    blockers: list[str] = []
     status = _safe_str(row.get("status"))
     if status not in PROMOTION_ELIGIBLE_STATUSES and not allow_unapproved:
         blockers.append(f"candidate_status_not_approved:{status or 'unknown'}")
     if not _target_rel(row):
         blockers.append("target_memory_layer_outside_memory_tree")
-    provenance = row.get("provenance") if isinstance(row.get("provenance"), dict) else {}
-    if provenance.get("stable_memory_write_allowed") is False:
-        blockers.append("provenance_blocks_direct_stable_write")
+    if _safe_str(row.get("candidate_type")).strip() != "post_reply_growth_candidate":
+        blockers.append("candidate_type_not_supported_for_stable_apply")
+    target_rel = _target_rel(row)
+    if target_rel != Path("memory/reflection/growth_log.md"):
+        blockers.append("target_memory_layer_not_growth_log")
     return blockers
 
 
@@ -228,6 +232,72 @@ def _render_proposed_entry(row: dict[str, Any], *, generated_at: str) -> str:
             f"- review_metadata_json: {json.dumps(review_summary, ensure_ascii=False, sort_keys=True)}",
         ]
     ).rstrip() + "\n"
+
+
+def apply_stable_memory_promotion(
+    root: Path,
+    candidate_id: str,
+    *,
+    review_notes: str = "",
+    expected_before_hash: str = "",
+    applied_at: str | None = None,
+) -> dict[str, Any]:
+    root = root.resolve()
+    if "owner_apply_confirmed" not in review_notes:
+        return {"ok": False, "error": "owner_apply_confirmation_required", "candidate_id": candidate_id}
+    generated = applied_at or _now_iso()
+    preview = build_stable_memory_promotion_dry_run(root, candidate_id, generated_at=generated)
+    if not preview.get("ok"):
+        return preview
+    blockers = preview.get("blockers") if isinstance(preview.get("blockers"), list) else []
+    if blockers:
+        return {"ok": False, "error": "promotion_blocked", "candidate_id": candidate_id, "blockers": blockers}
+    if expected_before_hash and expected_before_hash != preview.get("before_hash"):
+        return {
+            "ok": False,
+            "error": "target_changed_since_preview",
+            "candidate_id": candidate_id,
+            "expected_before_hash": expected_before_hash,
+            "actual_before_hash": preview.get("before_hash", ""),
+        }
+    proposed_entry = _safe_str(preview.get("proposed_entry"))
+    if not proposed_entry.strip():
+        return {"ok": False, "error": "empty_proposed_entry", "candidate_id": candidate_id}
+    if any(pattern.search(proposed_entry) for pattern in SECRET_PATTERNS):
+        return {"ok": False, "error": "proposed_entry_contains_secret", "candidate_id": candidate_id}
+    target_path = Path(_safe_str(preview.get("target_path")))
+    before = _read_text(target_path)
+    if _text_hash(before) != preview.get("before_hash"):
+        return {
+            "ok": False,
+            "error": "target_changed_during_apply",
+            "candidate_id": candidate_id,
+            "expected_before_hash": preview.get("before_hash", ""),
+            "actual_before_hash": _text_hash(before),
+        }
+    after = _append_entry(before, proposed_entry)
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    target_path.write_text(after, encoding="utf-8")
+    status_notes = _one_line(f"{review_notes}; applied_at={generated}; stable_personality_write=blocked", limit=1000)
+    if not update_memory_candidate_status(
+        root,
+        candidate_id=candidate_id,
+        status=APPLIED_GROWTH_LOG_STATUS,
+        review_notes=status_notes,
+    ):
+        return {"ok": False, "error": "candidate_status_update_failed", "candidate_id": candidate_id}
+    return {
+        "ok": True,
+        "candidate_id": candidate_id,
+        "status": APPLIED_GROWTH_LOG_STATUS,
+        "target_path": str(target_path),
+        "before_hash": preview.get("before_hash", ""),
+        "after_hash": _text_hash(after),
+        "stable_memory_write": "applied_growth_log_only",
+        "stable_personality_write": "blocked",
+        "applied_at": generated,
+        "notes": ["growth_log_appended", "stable_personality_not_modified"],
+    }
 
 
 def _append_entry(before: str, proposed_entry: str) -> str:

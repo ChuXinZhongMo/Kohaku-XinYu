@@ -7,7 +7,7 @@ from typing import Any
 
 from xinyu_dialogue_archive import list_memory_candidates, update_memory_candidate_status
 from xinyu_memory_candidate_analysis import candidate_review_context
-from xinyu_memory_promotion import build_stable_memory_promotion_dry_run
+from xinyu_memory_promotion import apply_stable_memory_promotion, build_stable_memory_promotion_dry_run
 
 
 STATUSES = (
@@ -25,6 +25,7 @@ STATUSES = (
     "archived_blocked",
     "rejected",
     "approved",
+    "applied_growth_log",
 )
 
 
@@ -143,6 +144,7 @@ def decide_candidate(root: Path, candidate_id: str, *, decision: str, review_not
                 "stable_memory_write": "dry_run_only",
                 "apply_allowed": False,
                 "promotion_preview_path": preview.get("preview_path", ""),
+                "promotion_preview_before_hash": preview.get("before_hash", ""),
                 "promotion_preview_blockers": preview.get("blockers", []),
                 "notes": ["approval_recorded", "promotion_preview_written", "stable_memory_not_modified"],
             }
@@ -162,6 +164,21 @@ def dry_run_candidate_promotion(
         candidate_id,
         allow_unapproved=allow_unapproved,
         write_preview=write_preview,
+    )
+
+
+def apply_candidate_promotion(
+    root: Path,
+    candidate_id: str,
+    *,
+    review_notes: str = "",
+    expected_before_hash: str = "",
+) -> dict[str, Any]:
+    return apply_stable_memory_promotion(
+        root,
+        candidate_id,
+        review_notes=review_notes,
+        expected_before_hash=expected_before_hash,
     )
 
 
@@ -194,14 +211,16 @@ def main(argv: list[str] | None = None) -> int:
     list_parser = sub.add_parser("list")
     list_parser.add_argument("--status", default="pending")
     list_parser.add_argument("--limit", type=int, default=20)
-    for name in ("show", "explain", "approve", "reject", "dry-run"):
+    for name in ("show", "explain", "approve", "reject", "dry-run", "apply"):
         item = sub.add_parser(name)
         item.add_argument("candidate_id")
-        if name in {"approve", "reject"}:
+        if name in {"approve", "reject", "apply"}:
             item.add_argument("--notes", default="")
         if name == "dry-run":
             item.add_argument("--allow-unapproved", action="store_true")
             item.add_argument("--write-preview", action="store_true")
+        if name == "apply":
+            item.add_argument("--expected-before-hash", default="")
     args = parser.parse_args(argv)
     root = args.root.resolve()
     if args.command == "list":
@@ -218,6 +237,13 @@ def main(argv: list[str] | None = None) -> int:
             args.candidate_id,
             allow_unapproved=args.allow_unapproved,
             write_preview=args.write_preview,
+        )
+    elif args.command == "apply":
+        result = apply_candidate_promotion(
+            root,
+            args.candidate_id,
+            review_notes=args.notes,
+            expected_before_hash=args.expected_before_hash,
         )
     else:
         result = decide_candidate(root, args.candidate_id, decision="reject", review_notes=args.notes)
