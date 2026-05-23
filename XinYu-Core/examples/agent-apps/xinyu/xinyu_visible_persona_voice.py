@@ -201,6 +201,8 @@ def compose_review_inbox_card(cursor: dict[str, Any]) -> str:
         title = _compact(item.get("title"), limit=72, default="没写标题")
         summary = _compact(item.get("summary"), limit=140, default="没有摘要")
         lines.append(f"{item.get('index')}. {source}：{title}。{summary}")
+    if any(item.get("action_kind") == "memory_candidate" for item in items):
+        lines.append("记忆候选这里的 !ok 只表示同意候选并生成本地预览，不会直接写稳定记忆；成长日志还要本地 apply。")
     lines.append("想省事就回 !ok all；不想要第 1 条就回 !rej 1；想改第 2 条就回 !mod 2 加你的写法。")
     return " ".join(lines)
 

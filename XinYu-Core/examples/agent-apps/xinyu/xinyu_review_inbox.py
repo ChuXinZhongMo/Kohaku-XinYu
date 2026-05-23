@@ -333,6 +333,12 @@ def _memory_candidate_items(root: Path, decisions: dict[str, Any]) -> list[dict[
         recommendation = _safe_str(review.get("recommendation"), "owner_review_required")
         conflict_count = _safe_str(review.get("conflict_count"), "0")
         evidence_count = _safe_str(review.get("evidence_count"), "1")
+        candidate_type = _safe_str(row.get("candidate_type"), "memory_candidate")
+        target_layer = _safe_str(row.get("target_memory_layer"), "unknown")
+        if candidate_type == "post_reply_growth_candidate":
+            boundary = "ok approves candidate and writes preview only; local apply is required for growth_log"
+        else:
+            boundary = "ok approves candidate only, not stable memory"
         items.append(
             {
                 "action_kind": "memory_candidate",
@@ -340,10 +346,10 @@ def _memory_candidate_items(root: Path, decisions: dict[str, Any]) -> list[dict[
                 "source_path": "runtime/dialogue_archive/dialogue.sqlite3",
                 "item_id": candidate_id,
                 "record_key": candidate_id,
-                "title": f"{row.get('candidate_type', 'memory_candidate')} -> {row.get('target_memory_layer', 'unknown')}",
+                "title": f"{candidate_type} -> {target_layer}",
                 "summary": (
                     f"{recommendation}; evidence={evidence_count}; conflicts={conflict_count}; "
-                    "ok approves candidate only, not stable memory"
+                    f"{boundary}"
                 ),
                 "detail": _one_line(row.get("reason"), limit=260),
                 "content_hash": content_hash,
@@ -460,6 +466,8 @@ tags: [review, qq, control-plane]
 - QQ review commands are control-plane input, not dialogue memory.
 - Cursor indices are batch-local aliases backed by content hashes.
 - Decisions are recorded in an overlay instead of rewriting source warnings directly.
+- Memory candidate !ok records approval and may write a dry-run preview; it does not apply stable memory.
+- Growth-log landing requires a separate local apply command with owner_apply_confirmed.
 """
     _atomic_write_text(root / STATE_REL, text)
 
