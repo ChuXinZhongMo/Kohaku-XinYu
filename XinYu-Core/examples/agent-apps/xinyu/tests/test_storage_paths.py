@@ -18,13 +18,13 @@ def test_storage_boundary_table_declares_canonical_and_legacy_paths() -> None:
     rows = {name: (canonical, legacy, policy) for name, canonical, legacy, policy in storage_boundary_table()}
 
     assert rows["cases.conversation"] == (
-        "cases/conversation",
-        ("data/conversation_experience",),
+        "assets/cases/conversation",
+        ("cases/conversation", "data/conversation_experience"),
         "canonical_preferred_legacy_fallback",
     )
     assert rows["library.datasets"] == (
-        "library/datasets",
-        ("data/external",),
+        "assets/library/datasets",
+        ("library/datasets", "data/external"),
         "canonical_preferred_legacy_fallback",
     )
     assert rows["memory.knowledge"] == (
@@ -43,7 +43,7 @@ def test_cases_conversation_dir_prefers_canonical_and_keeps_legacy_fallback(tmp_
 
     assert cases_conversation_dir(app) == legacy
 
-    canonical = tmp_path / "cases" / "conversation"
+    canonical = tmp_path / "assets" / "cases" / "conversation"
     canonical.mkdir(parents=True)
 
     assert cases_conversation_dir(app) == canonical
@@ -57,7 +57,11 @@ def test_public_dataset_source_dirs_keeps_canonical_before_legacy(tmp_path: Path
     dirs = public_dataset_source_dirs(app)
 
     assert dirs[:3] == (
+        app / "assets" / "library" / "datasets",
+        tmp_path / "assets" / "library" / "datasets",
         app / "library" / "datasets",
+    )
+    assert dirs[3:5] == (
         tmp_path / "library" / "datasets",
         app / "data" / "external",
     )

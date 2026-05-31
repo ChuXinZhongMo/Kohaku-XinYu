@@ -225,6 +225,13 @@
   gap: 6px;
 }
 
+.stage8-decision-strip {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
 .self-action-fact {
   min-width: 0;
   display: grid;
@@ -245,6 +252,26 @@
   font-size: 12px;
   line-height: 1.38;
   overflow-wrap: anywhere;
+}
+
+.stage8-blockers {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stage8-blockers span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 8px;
+  padding: 4px 7px;
+  color: #8a6023;
+  background: #fff4dc;
+  font-size: 11px;
+  font-weight: 750;
 }
 
 .self-action-actions {
@@ -2371,6 +2398,18 @@ html[data-theme='night'] .owner .message-bubble {
   white-space: nowrap;
 }
 
+.runtime-row small,
+.stage8-gate-row small,
+.stage8-cluster-row small {
+  grid-column: 2 / -1;
+  min-width: 0;
+  color: var(--app-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .portrait-stage {
   width: 100%;
   height: var(--portrait-height);
@@ -2550,4 +2589,137 @@ html[data-theme='night'] .owner .message-bubble {
 ::-webkit-scrollbar-thumb {
   background: color-mix(in srgb, var(--app-accent) 34%, transparent);
   background-clip: padding-box;
+}
+
+/* ── Autonomy Gate Panel ─────────────────────────────────────────── */
+.autonomy-gate-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  padding: 5px 14px;
+  max-height: 80px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--app-surface) 96%, var(--app-text) 4%);
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--app-text) 8%, transparent);
+  font-size: 11px;
+}
+
+.gate-section {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.gate-section-label {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: color-mix(in srgb, var(--app-text) 60%, transparent);
+  font-weight: 600;
+  white-space: nowrap;
+  padding-right: 4px;
+}
+
+.gate-cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.gate-cell {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.gate-cell.gate-ok {
+  background: color-mix(in srgb, #22c55e 14%, transparent);
+  border-color: color-mix(in srgb, #22c55e 40%, transparent);
+  color: #15803d;
+}
+.gate-cell.gate-fail {
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+  border-color: color-mix(in srgb, #ef4444 36%, transparent);
+  color: #b91c1c;
+}
+.gate-cell.gate-unknown {
+  background: color-mix(in srgb, var(--app-text) 6%, transparent);
+  border-color: color-mix(in srgb, var(--app-text) 16%, transparent);
+  color: color-mix(in srgb, var(--app-text) 50%, transparent);
+}
+.gate-label { font-size: 10px; }
+.gate-icon { display: flex; }
+
+.gate-summary {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 2px;
+}
+.gate-summary.status-ok {
+  background: color-mix(in srgb, #22c55e 14%, transparent);
+  color: #15803d;
+}
+.gate-summary.status-fail {
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+  color: #b91c1c;
+}
+.gate-summary.status-unknown {
+  background: color-mix(in srgb, var(--app-text) 6%, transparent);
+  color: color-mix(in srgb, var(--app-text) 50%, transparent);
+}
+
+.gate-blocker {
+  width: 100%;
+  font-size: 10px;
+  color: color-mix(in srgb, #ef4444 80%, var(--app-text));
+  padding: 1px 0 0 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gate-empty {
+  color: color-mix(in srgb, var(--app-text) 35%, transparent);
+  font-size: 10px;
+}
+
+.memory-apply-command-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.memory-apply-command-row code {
+  flex: 1;
+  min-width: 0;
+  font-size: 10px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background: color-mix(in srgb, var(--app-text) 6%, transparent);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.memory-apply-command-row button {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--app-accent) 12%, transparent);
+  color: var(--app-accent);
+  cursor: pointer;
 }

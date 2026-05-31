@@ -6,8 +6,10 @@ from typing import Iterable, Sequence
 
 
 APP_REL = Path("XinYu-Core/examples/agent-apps/xinyu")
-CASES_CONVERSATION_REL = Path("cases/conversation")
-LIBRARY_DATASETS_REL = Path("library/datasets")
+CASES_CONVERSATION_REL = Path("assets/cases/conversation")
+LIBRARY_DATASETS_REL = Path("assets/library/datasets")
+WORKSPACE_CASES_CONVERSATION_REL = Path("cases/conversation")
+WORKSPACE_LIBRARY_DATASETS_REL = Path("library/datasets")
 LEGACY_CASES_CONVERSATION_REL = Path("data/conversation_experience")
 LEGACY_EXTERNAL_DATASETS_REL = Path("data/external")
 MEMORY_KNOWLEDGE_REL = Path("memory/knowledge")
@@ -17,13 +19,13 @@ STORAGE_BOUNDARY_TABLE: tuple[tuple[str, str, tuple[str, ...], str], ...] = (
     (
         "cases.conversation",
         CASES_CONVERSATION_REL.as_posix(),
-        (LEGACY_CASES_CONVERSATION_REL.as_posix(),),
+        (WORKSPACE_CASES_CONVERSATION_REL.as_posix(), LEGACY_CASES_CONVERSATION_REL.as_posix()),
         "canonical_preferred_legacy_fallback",
     ),
     (
         "library.datasets",
         LIBRARY_DATASETS_REL.as_posix(),
-        (LEGACY_EXTERNAL_DATASETS_REL.as_posix(),),
+        (WORKSPACE_LIBRARY_DATASETS_REL.as_posix(), LEGACY_EXTERNAL_DATASETS_REL.as_posix()),
         "canonical_preferred_legacy_fallback",
     ),
     (
@@ -66,10 +68,12 @@ def cases_conversation_dir(root: Path | str) -> Path:
     base = Path(root).resolve()
     local_canonical = base / CASES_CONVERSATION_REL
     canonical = workspace_root(root) / CASES_CONVERSATION_REL
+    local_workspace = base / WORKSPACE_CASES_CONVERSATION_REL
+    workspace = workspace_root(root) / WORKSPACE_CASES_CONVERSATION_REL
     local_legacy = base / LEGACY_CASES_CONVERSATION_REL
     legacy = app_root(root) / LEGACY_CASES_CONVERSATION_REL
     return _first_existing(
-        _dedupe_paths((local_canonical, canonical, local_legacy, legacy)),
+        _dedupe_paths((local_canonical, canonical, local_workspace, workspace, local_legacy, legacy)),
         default=local_canonical,
     )
 
@@ -78,10 +82,12 @@ def conversation_case_source_path(root: Path | str, filename: str) -> Path:
     base = Path(root).resolve()
     local_canonical = base / CASES_CONVERSATION_REL / filename
     canonical = workspace_root(root) / CASES_CONVERSATION_REL / filename
+    local_workspace = base / WORKSPACE_CASES_CONVERSATION_REL / filename
+    workspace = workspace_root(root) / WORKSPACE_CASES_CONVERSATION_REL / filename
     local_legacy = base / LEGACY_CASES_CONVERSATION_REL / filename
     legacy = app_root(root) / LEGACY_CASES_CONVERSATION_REL / filename
     return _first_existing(
-        _dedupe_paths((local_canonical, canonical, local_legacy, legacy)),
+        _dedupe_paths((local_canonical, canonical, local_workspace, workspace, local_legacy, legacy)),
         default=local_canonical,
     )
 
@@ -118,9 +124,11 @@ def public_dataset_source_dirs(root: Path | str) -> tuple[Path, ...]:
     base = Path(root).resolve()
     local_canonical = base / LIBRARY_DATASETS_REL
     canonical = workspace_root(root) / LIBRARY_DATASETS_REL
+    local_workspace = base / WORKSPACE_LIBRARY_DATASETS_REL
+    workspace = workspace_root(root) / WORKSPACE_LIBRARY_DATASETS_REL
     local_legacy = base / LEGACY_EXTERNAL_DATASETS_REL
     legacy = app_root(root) / LEGACY_EXTERNAL_DATASETS_REL
-    return _dedupe_paths((local_canonical, canonical, local_legacy, legacy))
+    return _dedupe_paths((local_canonical, canonical, local_workspace, workspace, local_legacy, legacy))
 
 
 def resolve_public_dataset_input_paths(

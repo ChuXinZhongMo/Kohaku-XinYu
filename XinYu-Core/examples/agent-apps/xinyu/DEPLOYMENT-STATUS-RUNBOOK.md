@@ -13,7 +13,7 @@ AstrBot is no longer part of the runtime chain.
 From `D:\XinYu`:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Start-XinYu-QQ.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-XinYu-QQ.ps1
 ```
 
 The script starts:

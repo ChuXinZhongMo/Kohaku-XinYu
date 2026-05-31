@@ -879,6 +879,55 @@ def archive_dialogue_turn(
     }
 
 
+def retract_archived_assistant_message(
+    root: Path,
+    *,
+    message_id: Any,
+    expected_reply: str = "",
+) -> dict[str, Any]:
+    try:
+        clean_message_id = int(_safe_str(message_id).strip())
+    except (TypeError, ValueError):
+        return {"deleted": False, "deleted_count": 0, "notes": ["missing_archive_assistant_message_id"]}
+    if clean_message_id <= 0:
+        return {"deleted": False, "deleted_count": 0, "notes": ["missing_archive_assistant_message_id"]}
+    expected = re.sub(r"\s+", " ", _safe_str(expected_reply).strip())
+    with _connection(root) as conn:
+        _ensure_schema(conn)
+        row = conn.execute(
+            """
+            SELECT id, role, text, session_key_hash, scope
+            FROM dialogue_messages
+            WHERE id = ?
+            """,
+            (clean_message_id,),
+        ).fetchone()
+        if row is None:
+            return {"deleted": False, "deleted_count": 0, "notes": ["archive_message_not_found"]}
+        if _safe_str(row["role"]).strip() != "assistant":
+            return {"deleted": False, "deleted_count": 0, "notes": ["archive_message_not_assistant"]}
+        if expected and re.sub(r"\s+", " ", _safe_str(row["text"]).strip()) != expected:
+            return {"deleted": False, "deleted_count": 0, "notes": ["archive_reply_mismatch"]}
+        if _fts_available(conn):
+            conn.execute("DELETE FROM dialogue_fts WHERE message_id = ?", (clean_message_id,))
+        conn.execute("DELETE FROM dialogue_semantic_index WHERE message_id = ?", (clean_message_id,))
+        cursor = conn.execute("DELETE FROM dialogue_messages WHERE id = ?", (clean_message_id,))
+        if cursor.rowcount:
+            conn.execute(
+                """
+                UPDATE dialogue_sessions
+                SET message_count = CASE WHEN message_count > 0 THEN message_count - 1 ELSE 0 END
+                WHERE session_key_hash = ? AND scope = ?
+                """,
+                (_safe_str(row["session_key_hash"]), _safe_str(row["scope"])),
+            )
+        return {
+            "deleted": bool(cursor.rowcount),
+            "deleted_count": int(cursor.rowcount or 0),
+            "notes": ["archived_assistant_message_retracted"] if cursor.rowcount else ["archive_message_not_deleted"],
+        }
+
+
 def _tokenize_query(text: str) -> list[str]:
     tokens: list[str] = []
     seen: set[str] = set()

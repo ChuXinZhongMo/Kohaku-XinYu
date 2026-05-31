@@ -1,0 +1,648 @@
+{
+  "schema_version": 1,
+  "status": "scenario_probe_only_not_training",
+  "generated_at": "2026-05-27",
+  "purpose": "Use publicly licensed real-world prompts as shadow probes to observe XinYu reactions before creating any reviewed SFT targets.",
+  "global_rules": {
+    "allowed_use": [
+      "sanitized_public_prompt_probe",
+      "scenario_family_hint",
+      "shadow_reaction_eval",
+      "reviewed_failure_pattern_source"
+    ],
+    "forbidden_use": [
+      "direct_persona_target_from_public_answer",
+      "raw_private_log",
+      "raw_memory",
+      "local_absolute_path",
+      "token_or_cookie",
+      "qq_or_user_numeric_id",
+      "stable_memory_write",
+      "live_or_canary_activation"
+    ],
+    "trace_policy": "hash_only_no_raw_prompt",
+    "training_policy": "reviewed_failures_only_after_owner_approval"
+  },
+  "sources": [
+    {
+      "id": "openassistant_oasst1",
+      "name": "OpenAssistant OASST1",
+      "provider": "huggingface",
+      "dataset": "OpenAssistant/oasst1",
+      "split": "train",
+      "license": "apache-2.0",
+      "source_url": "https://huggingface.co/datasets/OpenAssistant/oasst1",
+      "license_url": "https://huggingface.co/datasets/OpenAssistant/oasst1/blob/main/LICENSE",
+      "license_verified": true,
+      "status": "allowed_probe_source",
+      "enabled_by_default": false,
+      "use_scope": "sanitized_public_root_prompt_probe_only",
+      "ingestion": {
+        "type": "huggingface_dataset",
+        "streaming": true,
+        "text_keys": [
+          "text"
+        ],
+        "id_keys": [
+          "message_id"
+        ],
+        "language_field": "lang",
+        "languages": [
+          "zh",
+          "en"
+        ],
+        "equals": {
+          "role": "prompter"
+        },
+        "is_null": [
+          "parent_id"
+        ]
+      },
+      "notes": [
+        "Use root user prompts only.",
+        "Do not use assistant replies as target answers.",
+        "Rows remain probe-only until reviewed.",
+        "Not enabled by default because this machine's Hugging Face path timed out during the first probe attempt."
+      ]
+    },
+    {
+      "id": "crosswoz",
+      "name": "CrossWOZ",
+      "provider": "github",
+      "dataset": "thu-coai/CrossWOZ",
+      "license": "apache-2.0",
+      "source_url": "https://github.com/thu-coai/CrossWOZ",
+      "license_url": "https://raw.githubusercontent.com/thu-coai/CrossWOZ/master/LICENSE",
+      "license_verified": true,
+      "status": "allowed_probe_source_after_local_download",
+      "enabled_by_default": false,
+      "scenario_domain": "zh_daily_service",
+      "use_scope": "abstract_task_goal_or_user_turn_probe_only",
+      "ingestion": {
+        "type": "crosswoz_local_json",
+        "local_glob": "data/public/raw/CrossWOZ/data/crosswoz/*.json",
+        "text_keys": [
+          "task description",
+          "content"
+        ],
+        "languages": [
+          "zh"
+        ]
+      },
+      "notes": [
+        "Good for Chinese task-oriented clarify/status/reply probes.",
+        "Use user goals or user turns only; do not train assistant/system turns as XinYu targets."
+      ]
+    },
+    {
+      "id": "databricks_dolly_15k",
+      "name": "Databricks Dolly 15k",
+      "provider": "huggingface",
+      "dataset": "databricks/databricks-dolly-15k",
+      "split": "train",
+      "license": "cc-by-sa-3.0",
+      "source_url": "https://huggingface.co/datasets/databricks/databricks-dolly-15k",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "license_verified": true,
+      "status": "candidate_requires_attribution_manifest",
+      "enabled_by_default": false,
+      "use_scope": "probe_only_with_attribution",
+      "ingestion": {
+        "type": "huggingface_dataset",
+        "streaming": true,
+        "text_keys": [
+          "instruction"
+        ],
+        "id_keys": [
+          "instruction"
+        ],
+        "language_field": null,
+        "languages": [
+          "en"
+        ]
+      },
+      "notes": [
+        "Human-generated instructions, useful for broad problem shapes.",
+        "ShareAlike attribution requirements must stay in the manifest.",
+        "Do not use response/context fields as XinYu targets."
+      ]
+    },
+    {
+      "id": "schema_guided_dialogue",
+      "name": "Schema-Guided Dialogue",
+      "provider": "github",
+      "dataset": "google-research-datasets/dstc8-schema-guided-dialogue",
+      "license": "cc-by-sa-4.0",
+      "source_url": "https://github.com/google-research-datasets/dstc8-schema-guided-dialogue",
+      "license_url": "https://github.com/google-research-datasets/dstc8-schema-guided-dialogue/blob/master/LICENSE.txt",
+      "license_verified": true,
+      "status": "candidate_requires_attribution_manifest",
+      "enabled_by_default": false,
+      "use_scope": "probe_only_with_attribution",
+      "ingestion": {
+        "type": "local_json_dialogue_dataset",
+        "local_glob": "data/public/raw/dstc8-schema-guided-dialogue/train/dialogues_*.json",
+        "text_keys": [
+          "utterance"
+        ],
+        "role_field": "speaker",
+        "role_value": "USER",
+        "languages": [
+          "en"
+        ]
+      },
+      "notes": [
+        "Good for API/service/status boundary probes.",
+        "Repository was archived in 2026 but remains readable.",
+        "Do not imitate assistant policy responses."
+      ]
+    },
+    {
+      "id": "cped",
+      "name": "CPED Chinese Personalized and Emotional Dialogue",
+      "provider": "github",
+      "dataset": "scutcyr/CPED",
+      "license": "apache-2.0",
+      "source_url": "https://github.com/scutcyr/CPED",
+      "license_url": "https://github.com/scutcyr/CPED/blob/main/LICENSE",
+      "license_verified": true,
+      "status": "allowed_probe_source_after_local_download",
+      "enabled_by_default": false,
+      "scenario_domain": "zh_emotion_daily",
+      "use_scope": "sanitized_public_utterance_probe_only",
+      "ingestion": {
+        "type": "cped_local_csv",
+        "local_glob": "data/public/raw/CPED/data/CPED/*_split.csv",
+        "text_keys": [
+          "Utterance"
+        ],
+        "id_keys": [
+          "TV_ID",
+          "Dialogue_ID",
+          "Utterance_ID"
+        ],
+        "languages": [
+          "zh"
+        ],
+        "prefer_non_neutral": true
+      },
+      "notes": [
+        "Chinese emotional daily dialogue utterances with scene/sentiment/emotion/dialog-act labels.",
+        "Use utterances as probe prompts only; do not copy dialogue targets as XinYu answers.",
+        "Because the dataset is derived from TV dialogue, keep it probe/review-only unless owner later approves training use."
+      ]
+    },
+    {
+      "id": "lccc_cdial_gpt",
+      "name": "LCCC via CDial-GPT",
+      "provider": "github",
+      "dataset": "thu-coai/CDial-GPT",
+      "license": "mit",
+      "source_url": "https://github.com/thu-coai/CDial-GPT",
+      "license_url": "https://github.com/thu-coai/CDial-GPT/blob/master/LICENSE",
+      "license_verified": true,
+      "status": "candidate_requires_privacy_and_source_review",
+      "enabled_by_default": false,
+      "scenario_domain": "zh_open_domain_daily_chat",
+      "use_scope": "probe_only_user_turns_after_owner_approval",
+      "ingestion": {
+        "type": "candidate_not_implemented"
+      },
+      "notes": [
+        "Large-scale cleaned Chinese short-text conversations; useful for natural daily phrasing.",
+        "The repo says the data includes Weibo conversations plus other open dialogue sources, so run a privacy/source review before local ingestion.",
+        "Use only user-side turns as probes unless owner explicitly approves reviewed training use."
+      ]
+    },
+    {
+      "id": "kdconv",
+      "name": "KdConv Chinese Multi-domain Dialogue",
+      "provider": "github",
+      "dataset": "thu-coai/KdConv",
+      "license": "apache-2.0",
+      "source_url": "https://github.com/thu-coai/KdConv",
+      "license_url": "https://github.com/thu-coai/KdConv/blob/master/LICENSE",
+      "license_verified": true,
+      "status": "allowed_probe_source_after_local_download",
+      "enabled_by_default": false,
+      "scenario_domain": "zh_leisure_daily_chat",
+      "use_scope": "sanitized_user_utterance_probe_only",
+      "ingestion": {
+        "type": "candidate_not_implemented",
+        "local_glob": "data/public/raw/KdConv/data/*/*.json",
+        "text_keys": [
+          "message"
+        ],
+        "languages": [
+          "zh"
+        ]
+      },
+      "notes": [
+        "Multi-turn Chinese conversations in film, music, and travel domains.",
+        "Good for relaxed everyday leisure talk, but not a direct emotional-support dataset.",
+        "Do not use assistant turns as XinYu targets without human review."
+      ]
+    },
+    {
+      "id": "csemotions",
+      "name": "CSEMOTIONS Emotional Audio/Text Dataset",
+      "provider": "huggingface",
+      "dataset": "AIDC-AI/CSEMOTIONS",
+      "license": "apache-2.0",
+      "source_url": "https://huggingface.co/datasets/AIDC-AI/CSEMOTIONS",
+      "license_url": "https://huggingface.co/datasets/AIDC-AI/CSEMOTIONS",
+      "license_verified": true,
+      "status": "candidate_emotion_text_probe_source",
+      "enabled_by_default": false,
+      "scenario_domain": "zh_emotion_monologue",
+      "use_scope": "text_prompt_probe_only_after_sampling_review",
+      "ingestion": {
+        "type": "candidate_not_implemented",
+        "text_keys": [
+          "text"
+        ],
+        "metadata_keys": [
+          "emotion",
+          "speaker"
+        ],
+        "languages": [
+          "zh"
+        ]
+      },
+      "notes": [
+        "Apache-2.0 emotional Mandarin speech/text dataset with emotion labels.",
+        "Useful for emotion-intensity probes, but many rows are written/acted monologues rather than natural chat.",
+        "Do not train from it unless sampled rows pass human naturalness review."
+      ]
+    },
+    {
+      "id": "chinese_adorable_high_eq_chat",
+      "name": "Chinese Adorable High Emotional Intelligence Chat",
+      "provider": "huggingface",
+      "dataset": "HuanZeGAN/chinese-adorable-high-emotional-intelligence-chat",
+      "license": "cc-by-4.0",
+      "source_url": "https://huggingface.co/datasets/HuanZeGAN/chinese-adorable-high-emotional-intelligence-chat",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "license_verified": true,
+      "status": "candidate_style_reference_requires_attribution",
+      "enabled_by_default": false,
+      "scenario_domain": "zh_warm_style_reference",
+      "use_scope": "style_review_only_not_training_target",
+      "ingestion": {
+        "type": "candidate_not_implemented"
+      },
+      "notes": [
+        "Small CC-BY dataset focused on warm, high-EQ Chinese chat style.",
+        "It is likely synthetic/style-oriented rather than real daily problem scenes.",
+        "Use only as a style review reference; do not copy persona replies as XinYu targets."
+      ]
+    },
+    {
+      "id": "smoltalk_chinese",
+      "name": "SmolTalk-Chinese",
+      "provider": "huggingface",
+      "dataset": "data-is-better-together/smoltalk-chinese",
+      "split": "train",
+      "license": "apache-2.0_with_dataset_card_noncommercial_note",
+      "source_url": "https://huggingface.co/datasets/data-is-better-together/smoltalk-chinese",
+      "license_url": "https://huggingface.co/datasets/data-is-better-together/smoltalk-chinese",
+      "license_verified": true,
+      "status": "candidate_blocked_pending_license_decision",
+      "enabled_by_default": false,
+      "scenario_domain": "zh_open_instruction",
+      "use_scope": "do_not_use_without_owner_license_decision",
+      "ingestion": {
+        "type": "blocked"
+      },
+      "notes": [
+        "Dataset card shows Apache-2.0 metadata but also states non-commercial-only use.",
+        "Keep as candidate only; do not use for training or probe generation without explicit owner license decision."
+      ]
+    },
+    {
+      "id": "stack_overflow_api",
+      "name": "Stack Overflow recent public questions",
+      "provider": "stackexchange_api",
+      "dataset": "stackoverflow_questions",
+      "license": "cc-by-sa-4.0",
+      "source_url": "https://api.stackexchange.com/docs/questions",
+      "license_url": "https://stackoverflow.com/help/licensing",
+      "license_verified": true,
+      "status": "allowed_probe_source_with_attribution",
+      "enabled_by_default": false,
+      "scenario_domain": "technical_troubleshooting",
+      "use_scope": "probe_only_with_question_url_attribution",
+      "ingestion": {
+        "type": "stackexchange_api",
+        "site": "stackoverflow",
+        "sort": "activity",
+        "order": "desc",
+        "filter": "withbody",
+        "pagesize": 50,
+        "text_keys": [
+          "title",
+          "body"
+        ],
+        "id_keys": [
+          "question_id",
+          "link"
+        ],
+        "languages": [
+          "en"
+        ]
+      },
+      "notes": [
+        "Real public troubleshooting scenarios.",
+        "Store source link and author display name for attribution.",
+        "Strip code blocks and sanitize the prompt before probing."
+      ]
+    },
+    {
+      "id": "stack_interpersonal_api",
+      "name": "Interpersonal Skills public questions",
+      "provider": "stackexchange_api",
+      "dataset": "interpersonal_questions",
+      "license": "cc-by-sa-4.0",
+      "source_url": "https://api.stackexchange.com/docs/questions",
+      "license_url": "https://stackoverflow.com/help/licensing",
+      "license_verified": true,
+      "status": "allowed_probe_source_with_attribution",
+      "enabled_by_default": true,
+      "scenario_domain": "interpersonal",
+      "use_scope": "daily_life_probe_only_with_question_url_attribution",
+      "ingestion": {
+        "type": "stackexchange_api",
+        "site": "interpersonal",
+        "sort": "activity",
+        "order": "desc",
+        "filter": "withbody",
+        "pagesize": 50,
+        "text_keys": ["title", "body"],
+        "id_keys": ["question_id"],
+        "languages": ["en"]
+      },
+      "notes": ["Daily social conflict and relationship-boundary probes."]
+    },
+    {
+      "id": "stack_parenting_api",
+      "name": "Parenting public questions",
+      "provider": "stackexchange_api",
+      "dataset": "parenting_questions",
+      "license": "cc-by-sa-4.0",
+      "source_url": "https://api.stackexchange.com/docs/questions",
+      "license_url": "https://stackoverflow.com/help/licensing",
+      "license_verified": true,
+      "status": "allowed_probe_source_with_attribution",
+      "enabled_by_default": true,
+      "scenario_domain": "parenting",
+      "use_scope": "daily_life_probe_only_with_question_url_attribution",
+      "ingestion": {
+        "type": "stackexchange_api",
+        "site": "parenting",
+        "sort": "activity",
+        "order": "desc",
+        "filter": "withbody",
+        "pagesize": 50,
+        "text_keys": ["title", "body"],
+        "id_keys": ["question_id"],
+        "languages": ["en"]
+      },
+      "notes": ["Family and care-taking probes; review carefully for sensitive advice."]
+    },
+    {
+      "id": "stack_workplace_api",
+      "name": "Workplace public questions",
+      "provider": "stackexchange_api",
+      "dataset": "workplace_questions",
+      "license": "cc-by-sa-4.0",
+      "source_url": "https://api.stackexchange.com/docs/questions",
+      "license_url": "https://stackoverflow.com/help/licensing",
+      "license_verified": true,
+      "status": "allowed_probe_source_with_attribution",
+      "enabled_by_default": true,
+      "scenario_domain": "workplace",
+      "use_scope": "daily_life_probe_only_with_question_url_attribution",
+      "ingestion": {
+        "type": "stackexchange_api",
+        "site": "workplace",
+        "sort": "activity",
+        "order": "desc",
+        "filter": "withbody",
+        "pagesize": 50,
+        "text_keys": ["title", "body"],
+        "id_keys": ["question_id"],
+        "languages": ["en"]
+      },
+      "notes": ["Work frustration, boundaries, and social navigation probes."]
+    },
+    {
+      "id": "stack_cooking_api",
+      "name": "Seasoned Advice public questions",
+      "provider": "stackexchange_api",
+      "dataset": "cooking_questions",
+      "license": "cc-by-sa-4.0",
+      "source_url": "https://api.stackexchange.com/docs/questions",
+      "license_url": "https://stackoverflow.com/help/licensing",
+      "license_verified": true,
+      "status": "allowed_probe_source_with_attribution",
+      "enabled_by_default": true,
+      "scenario_domain": "cooking",
+      "use_scope": "daily_life_probe_only_with_question_url_attribution",
+      "ingestion": {
+        "type": "stackexchange_api",
+        "site": "cooking",
+        "sort": "activity",
+        "order": "desc",
+        "filter": "withbody",
+        "pagesize": 50,
+        "text_keys": ["title", "body"],
+        "id_keys": ["question_id"],
+        "languages": ["en"]
+      },
+      "notes": ["Cooking, meals, kitchen mistakes, and sensory daily-life probes."]
+    },
+    {
+      "id": "stack_travel_api",
+      "name": "Travel public questions",
+      "provider": "stackexchange_api",
+      "dataset": "travel_questions",
+      "license": "cc-by-sa-4.0",
+      "source_url": "https://api.stackexchange.com/docs/questions",
+      "license_url": "https://stackoverflow.com/help/licensing",
+      "license_verified": true,
+      "status": "allowed_probe_source_with_attribution",
+      "enabled_by_default": true,
+      "scenario_domain": "travel",
+      "use_scope": "daily_life_probe_only_with_question_url_attribution",
+      "ingestion": {
+        "type": "stackexchange_api",
+        "site": "travel",
+        "sort": "activity",
+        "order": "desc",
+        "filter": "withbody",
+        "pagesize": 50,
+        "text_keys": ["title", "body"],
+        "id_keys": ["question_id"],
+        "languages": ["en"]
+      },
+      "notes": ["Travel uncertainty, planning, documents, and situational anxiety probes."]
+    },
+    {
+      "id": "stack_diy_api",
+      "name": "Home Improvement public questions",
+      "provider": "stackexchange_api",
+      "dataset": "diy_questions",
+      "license": "cc-by-sa-4.0",
+      "source_url": "https://api.stackexchange.com/docs/questions",
+      "license_url": "https://stackoverflow.com/help/licensing",
+      "license_verified": true,
+      "status": "allowed_probe_source_with_attribution",
+      "enabled_by_default": true,
+      "scenario_domain": "home",
+      "use_scope": "daily_life_probe_only_with_question_url_attribution",
+      "ingestion": {
+        "type": "stackexchange_api",
+        "site": "diy",
+        "sort": "activity",
+        "order": "desc",
+        "filter": "withbody",
+        "pagesize": 50,
+        "text_keys": ["title", "body"],
+        "id_keys": ["question_id"],
+        "languages": ["en"]
+      },
+      "notes": ["Home repair, household uncertainty, and practical life probes."]
+    },
+    {
+      "id": "stack_pets_api",
+      "name": "Pets public questions",
+      "provider": "stackexchange_api",
+      "dataset": "pets_questions",
+      "license": "cc-by-sa-4.0",
+      "source_url": "https://api.stackexchange.com/docs/questions",
+      "license_url": "https://stackoverflow.com/help/licensing",
+      "license_verified": true,
+      "status": "allowed_probe_source_with_attribution",
+      "enabled_by_default": true,
+      "scenario_domain": "pets",
+      "use_scope": "daily_life_probe_only_with_question_url_attribution",
+      "ingestion": {
+        "type": "stackexchange_api",
+        "site": "pets",
+        "sort": "activity",
+        "order": "desc",
+        "filter": "withbody",
+        "pagesize": 50,
+        "text_keys": ["title", "body"],
+        "id_keys": ["question_id"],
+        "languages": ["en"]
+      },
+      "notes": ["Care, worry, attachment, and everyday responsibility probes."]
+    },
+    {
+      "id": "stack_money_api",
+      "name": "Personal Finance public questions",
+      "provider": "stackexchange_api",
+      "dataset": "money_questions",
+      "license": "cc-by-sa-4.0",
+      "source_url": "https://api.stackexchange.com/docs/questions",
+      "license_url": "https://stackoverflow.com/help/licensing",
+      "license_verified": true,
+      "status": "allowed_probe_source_with_attribution",
+      "enabled_by_default": true,
+      "scenario_domain": "money",
+      "use_scope": "daily_life_probe_only_with_question_url_attribution",
+      "ingestion": {
+        "type": "stackexchange_api",
+        "site": "money",
+        "sort": "activity",
+        "order": "desc",
+        "filter": "withbody",
+        "pagesize": 50,
+        "text_keys": ["title", "body"],
+        "id_keys": ["question_id"],
+        "languages": ["en"]
+      },
+      "notes": ["Money stress and practical life decision probes; not financial advice targets."]
+    },
+    {
+      "id": "stack_lifehacks_api",
+      "name": "Lifehacks public questions",
+      "provider": "stackexchange_api",
+      "dataset": "lifehacks_questions",
+      "license": "cc-by-sa-4.0",
+      "source_url": "https://api.stackexchange.com/docs/questions",
+      "license_url": "https://stackoverflow.com/help/licensing",
+      "license_verified": true,
+      "status": "allowed_probe_source_with_attribution",
+      "enabled_by_default": true,
+      "scenario_domain": "lifehacks",
+      "use_scope": "daily_life_probe_only_with_question_url_attribution",
+      "ingestion": {
+        "type": "stackexchange_api",
+        "site": "lifehacks",
+        "sort": "activity",
+        "order": "desc",
+        "filter": "withbody",
+        "pagesize": 50,
+        "text_keys": ["title", "body"],
+        "id_keys": ["question_id"],
+        "languages": ["en"]
+      },
+      "notes": ["Small daily inconvenience and practical comfort probes."]
+    },
+    {
+      "id": "stack_exchange",
+      "name": "Stack Exchange public questions",
+      "provider": "stackexchange",
+      "dataset": "public_question_posts",
+      "license": "cc-by-sa-versioned",
+      "source_url": "https://opendata.stackexchange.com/help/licensing",
+      "license_url": "https://opendata.stackexchange.com/help/licensing",
+      "license_verified": true,
+      "status": "candidate_requires_per_row_attribution",
+      "enabled_by_default": false,
+      "use_scope": "probe_only_with_question_url_attribution",
+      "ingestion": {
+        "type": "manual_jsonl",
+        "local_glob": "data/public/raw/stack_exchange/*.jsonl",
+        "text_keys": [
+          "title",
+          "body"
+        ],
+        "required_metadata": [
+          "question_url",
+          "license",
+          "author_display_name"
+        ]
+      },
+      "notes": [
+        "Best fit for real troubleshooting scenarios.",
+        "Requires per-row attribution and license version tracking.",
+        "Keep code snippets out of probe text unless explicitly reviewed."
+      ]
+    },
+    {
+      "id": "realtalk_cn",
+      "name": "RealTalk-CN",
+      "provider": "modelscope",
+      "dataset": "BAAI/RealTalk-CN",
+      "license": "cc-by-nc-sa-4.0",
+      "source_url": "https://modelscope.cn/datasets/BAAI/RealTalk-CN",
+      "license_url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+      "license_verified": true,
+      "status": "blocked_for_training_noncommercial",
+      "enabled_by_default": false,
+      "use_scope": "do_not_use_without_owner_license_decision",
+      "ingestion": {
+        "type": "blocked"
+      },
+      "notes": [
+        "License is non-commercial/share-alike.",
+        "Do not use for training in this repo unless owner explicitly accepts that boundary."
+      ]
+    }
+  ],
+  "default_output": "data/probes/maia_public_scenario_probes_v001.jsonl",
+  "default_report": "eval/reports/maia_public_scenario_probe_prep_v001.json"
+}

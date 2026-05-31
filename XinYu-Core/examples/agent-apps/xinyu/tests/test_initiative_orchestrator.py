@@ -214,6 +214,10 @@ def test_high_scoring_candidate_creates_local_only_desktop_item(tmp_path: Path) 
     assert desktop_item["claimable"] is False
     assert event["delivery"]["level"] == "desktop_inbox"
     assert event["delivery"]["claimable"] is False
+    assert event["feedback"]["status"] == "pending"
+    assert event["feedback"]["requires_owner_feedback"] is True
+    metrics = json.loads((tmp_path / "runtime/initiative_metrics.json").read_text(encoding="utf-8"))
+    assert metrics["pending_feedback_count"] == 1
 
 
 def test_context_gate_quiet_by_default_holds_ordinary_initiative(tmp_path: Path) -> None:
@@ -233,7 +237,12 @@ def test_context_gate_quiet_by_default_holds_ordinary_initiative(tmp_path: Path)
     assert result["context_gate"]["current_scene"] == "casual_chat"
     assert "context_gate_quiet_by_default" in result["reasons_negative"]
     assert event["context_gate"]["initiative_posture"] == "quiet_by_default"
+    assert event["delivery"]["level"] == "private_bias"
+    assert event["feedback"]["status"] == "private_only"
+    assert event["feedback"]["requires_owner_feedback"] is False
     assert "context_scene: casual_chat" in state
+    metrics = json.loads((tmp_path / "runtime/initiative_metrics.json").read_text(encoding="utf-8"))
+    assert metrics["pending_feedback_count"] == 0
 
 
 def test_context_gate_feedback_scene_with_recall_allows_desktop_candidate(tmp_path: Path) -> None:
@@ -308,7 +317,34 @@ def test_dry_run_records_decision_without_desktop_item(tmp_path: Path) -> None:
     )
 
     assert result["desktop_item"] == {}
-    assert _events(tmp_path)[-1]["delivery"]["level"] == "dry_run"
+    event = _events(tmp_path)[-1]
+    assert event["delivery"]["level"] == "dry_run"
+    assert event["feedback"]["status"] == "not_requested"
+    assert event["feedback"]["requires_owner_feedback"] is False
+    metrics = json.loads((tmp_path / "runtime/initiative_metrics.json").read_text(encoding="utf-8"))
+    assert metrics["pending_feedback_count"] == 0
+
+
+def test_expired_desktop_candidate_no_longer_counts_as_pending_feedback(tmp_path: Path) -> None:
+    _seed_proactive_request(tmp_path)
+
+    first = run_initiative_orchestrator(
+        tmp_path,
+        checked_at="2026-05-13T02:00:00+08:00",
+        trigger="test",
+    )
+    assert first["delivery_level"] == "desktop_inbox"
+
+    run_initiative_orchestrator(
+        tmp_path,
+        checked_at="2026-05-15T02:00:00+08:00",
+        trigger="test",
+    )
+
+    metrics = json.loads((tmp_path / "runtime/initiative_metrics.json").read_text(encoding="utf-8"))
+    state = (tmp_path / "memory/context/initiative_lifecycle_state.md").read_text(encoding="utf-8")
+    assert metrics["pending_feedback_count"] == 0
+    assert "pending_feedback_count: 0" in state
 
 
 def test_internal_marker_candidate_is_blocked(tmp_path: Path) -> None:

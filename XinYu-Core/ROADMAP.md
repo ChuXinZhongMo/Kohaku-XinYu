@@ -38,7 +38,7 @@ Status: in progress
 - Harden Core bridge restart behavior.
 - Keep native QQ gateway restart behavior simple and observable.
 - Make status checks stricter around stale proactive dispatch state.
-- Keep `Start-XinYu-QQ.ps1` as the practical one-command local startup path.
+- Keep `XinYu.ps1` as the practical one-command local operator path.
 - Keep `deployment_status_smoke.py` and `runtime_readiness_smoke.py` green.
 - Expand smoke tests for repeated proactive cycles and failed-send retries.
 - Add runtime scheduling around `xinyu_learning_library.py` so approved learning

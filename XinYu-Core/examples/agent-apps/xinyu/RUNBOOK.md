@@ -64,7 +64,7 @@ python xinyu_status.py --json
 从 `D:\XinYu` 使用一键脚本：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Start-XinYu-QQ.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Start-XinYu-QQ.ps1
 ```
 
 该脚本负责启动：

@@ -1,0 +1,17 @@
+{
+  "current_probe_count": 225,
+  "current_probe_profile": "zh_crosswoz_daily_service_v001",
+  "eval_report": "eval/reports/maia_zh_public_scenario_probe_validate_v001.json",
+  "input_probes": "data/probes/maia_zh_public_scenario_probes_v001.jsonl",
+  "license": "apache-2.0",
+  "method": "maia_zh_public_scenario_probe_v001",
+  "prep_report": "eval/reports/maia_zh_public_scenario_probe_prep_v001.json",
+  "prep_script": "scripts/prepare_maia_public_scenario_probes.py",
+  "review_slice": "data/probes/maia_zh_review_slice_v001.jsonl",
+  "review_slice_report": "eval/reports/maia_zh_review_slice_v001.json",
+  "shadow_eval_started": false,
+  "source": "crosswoz",
+  "source_url": "https://github.com/thu-coai/CrossWOZ",
+  "status": "prepared_zh_probe_only_not_training",
+  "training_allowed": false
+}

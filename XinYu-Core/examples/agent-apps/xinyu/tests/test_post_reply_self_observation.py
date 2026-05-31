@@ -87,6 +87,37 @@ def test_post_reply_observation_feeds_learning_closed_loop_as_hidden_signal(tmp_
     assert "expected_next_behavior" in prompt
 
 
+def test_post_reply_observation_flags_bare_ack_as_low_information_risk(tmp_path: Path) -> None:
+    raw_private = "RAW_LOW_INFORMATION_ACK_SHOULD_NOT_SURFACE_2719"
+    observation = observe_post_reply_self_observation(
+        tmp_path,
+        OWNER_PRIVATE,
+        user_text=f"{raw_private} 接下来继续做什么，别只嗯一声",
+        reply="嗯。",
+        observed_at="2026-05-23T01:02:30+08:00",
+    )
+    result = record_learning_closed_loop_turn(
+        tmp_path,
+        OWNER_PRIVATE,
+        user_text=f"{raw_private} 接下来继续做什么，别只嗯一声",
+        reply="嗯。",
+        session_key="qq:private:owner",
+        visible_turn_kind="ordinary_owner_chat",
+        quality_flags=observation["notes"],
+        observed_at="2026-05-23T01:02:31+08:00",
+    )
+    trace_text = (tmp_path / "runtime/post_reply_self_observation_trace.jsonl").read_text(encoding="utf-8")
+    state = (tmp_path / "memory/self/learning_closed_loop_state.md").read_text(encoding="utf-8")
+
+    assert observation["scores"]["low_information_ack_risk"] == "high"
+    assert observation["scores"]["alive_voice"] == "low"
+    assert "post_reply_low_information_ack_risk" in observation["notes"]
+    assert result["failures"] == ["post_reply_low_information_ack_risk"]
+    assert "latest_failure_kind: post_reply_low_information_ack_risk" in state
+    assert raw_private not in trace_text
+    assert raw_private not in state
+
+
 def _successful_observation(root: Path, *, observed_at: str) -> dict[str, object]:
     return observe_post_reply_self_observation(
         root,

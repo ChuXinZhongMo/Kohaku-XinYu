@@ -6,3 +6,4 @@ datasets
 sentencepiece
 protobuf
 safetensors
+bitsandbytes

@@ -1,0 +1,15 @@
+﻿{
+    "tool":  "sentrux-lite",
+    "saved_at":  "2026-05-31T17:01:55.2000645Z",
+    "path":  "D:\\XinYu",
+    "quality_signal":  0,
+    "coupling_score":  81.19,
+    "cycle_count":  0,
+    "god_file_count":  7054,
+    "complex_fn_count":  1351,
+    "cross_module_edges":  471237,
+    "total_import_edges":  471237,
+    "files":  58041,
+    "functions":  602801,
+    "max_complexity":  2876
+}

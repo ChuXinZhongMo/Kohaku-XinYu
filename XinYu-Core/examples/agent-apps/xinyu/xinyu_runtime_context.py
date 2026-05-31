@@ -92,6 +92,7 @@ RENDERER_CONTEXT_FILES: tuple[RuntimeContextFile, ...] = (
     RuntimeContextFile("memory/context/initiative_state.md", 1400, "initiative"),
     RuntimeContextFile("memory/context/initiative_lifecycle_state.md", 1200, "initiative_lifecycle"),
     RuntimeContextFile("memory/context/initiative_feedback_state.md", 900, "initiative_feedback"),
+    RuntimeContextFile("memory/context/action_feedback_state.md", 900, "action_feedback"),
     RuntimeContextFile("memory/context/self_chosen_goal_ecology_state.md", 1200, "goal_ecology"),
     RuntimeContextFile("memory/context/self_action_gateway_state.md", 1200, "self_action_gateway"),
     RuntimeContextFile("memory/context/self_action_gateway_execution_handoff.md", 1200, "self_action_gateway_handoff"),

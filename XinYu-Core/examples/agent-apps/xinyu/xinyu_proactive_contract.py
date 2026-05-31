@@ -56,6 +56,8 @@ def should_surface_runtime_error(*, label: Any, detail: Any = "") -> bool:
     text = f"{subsystem} {detail or ''}".lower()
     if "fetch_error_connecttimeout" in text and subsystem == "watched_source":
         return False
+    if subsystem in {"proactive_request", "proactive_dispatch"} and "adapter_error=dry_run_not_enqueued" in text:
+        return False
     return True
 
 

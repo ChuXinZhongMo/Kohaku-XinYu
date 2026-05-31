@@ -17,6 +17,12 @@ TRACE_REL = Path("runtime/learning_closed_loop_trace.jsonl")
 MAX_REPLAY_CASES = 40
 REPAIR_PRESSURE_SILENCE_THRESHOLD = 8
 CASE_SECTION_RE = re.compile(r"(?ms)^## (loopcase-[^\n]+)\n.*?(?=^## loopcase-|\Z)")
+REPAIR_PRESSURE_LIMITED_FAILURES = {
+    "owner_reported_template_voice_failure",
+    "owner_reported_context_discontinuity",
+    "owner_reported_time_fact_error",
+    "owner_reported_learning_empty_loop",
+}
 
 CRITICAL_GUARD_FAILURES = {
     "pseudo_tool_call_naturalized": "visible_pseudo_tool_leak",
@@ -124,11 +130,38 @@ SUCCESS_MARKERS = readable_markers(
     "这句可以",
     "这样可以",
     "这次可以",
+    "这次修复有效",
+    "修复有效",
+    "改对了",
+    "改好了",
+    "这次对了",
+    "这次没问题",
     "接住了",
+    "接上了",
+    "没断了",
+    "不断了",
     "有变化",
     "好多了",
     "对味",
     "继续这样",
+    "没模板味了",
+    "没有模板味了",
+    "不模板了",
+    "不是模板了",
+    "不再模板",
+    "没那么模板",
+    "没有那么模板",
+    "模板味少了",
+    "不像客服了",
+    "没有客服腔了",
+    "不机械了",
+    "没那么机械",
+    "没有那么机械",
+    "没AI味了",
+    "没有AI味了",
+    "没gpt味了",
+    "没有gpt味了",
+    "不像假人了",
 )
 
 GENERIC_SUCCESS_MARKERS = readable_markers("好多了")
@@ -150,6 +183,47 @@ SUCCESS_REPLY_CONTEXT_MARKERS = readable_markers(
     "对味",
 )
 
+STYLE_REPAIR_SUCCESS_MARKERS = readable_markers(
+    "没模板味了",
+    "没有模板味了",
+    "不模板了",
+    "不是模板了",
+    "不再模板",
+    "没那么模板",
+    "没有那么模板",
+    "模板味少了",
+    "不像客服了",
+    "没有客服腔了",
+    "不机械了",
+    "没那么机械",
+    "没有那么机械",
+    "没AI味了",
+    "没有AI味了",
+    "没gpt味了",
+    "没有gpt味了",
+    "不像假人了",
+    "修复有效",
+    "改对了",
+    "改好了",
+)
+
+SUCCESS_CANCEL_MARKERS = readable_markers(
+    "但是",
+    "但还是",
+    "不过",
+    "可还是",
+    "然而",
+    "仍然",
+    "依旧",
+    "依然",
+    "还有点",
+    "还是有",
+    "还不行",
+    "没改",
+    "没变化",
+    "不行",
+)
+
 HABITS_BY_FAILURE = {
     "visible_pseudo_tool_leak": "先按当前上下文说下一句人话，不展示能力、XML、函数名或读记忆姿势。",
     "machine_posture_leak": "把运行状态消化成感受和判断，不把后台动作倒给 owner 看。",
@@ -164,6 +238,7 @@ HABITS_BY_FAILURE = {
     "post_reply_mechanical_self_state_risk": "状态、感觉、沉默问题要从当下第一人称状态回应，不把后台、模型或链路倒给 owner。",
     "post_reply_over_explained_risk": "把复盘和框架压下去，保留当前对话真正需要的一两句。",
     "post_reply_missed_emotional_grounding": "先接住 owner 此刻的压力、疲惫或不满，再决定是否继续任务。",
+    "post_reply_low_information_ack_risk": "不要只回嗯/好/在；如果 owner 不是单纯收尾，就接住当前句子里的具体点。",
 }
 
 
@@ -290,6 +365,16 @@ def _owner_reported_learning_empty_loop(text: str) -> bool:
     return _contains_any(text, LEARNING_TOPIC_MARKERS) and _contains_any(text, LEARNING_EMPTY_CONTEXT_MARKERS)
 
 
+def _owner_reported_style_repair_success(text: str) -> bool:
+    return _contains_any(text, STYLE_REPAIR_SUCCESS_MARKERS) and not _contains_any(text, SUCCESS_CANCEL_MARKERS)
+
+
+def _owner_reported_style_failure(text: str) -> bool:
+    if not _contains_any(text, STYLE_REPAIR_MARKERS):
+        return False
+    return not _owner_reported_style_repair_success(text)
+
+
 def _text_relevant_to_failure(failure_kind: str, text: str) -> bool:
     if failure_kind in {
         "visible_pseudo_tool_leak",
@@ -301,6 +386,7 @@ def _text_relevant_to_failure(failure_kind: str, text: str) -> bool:
         "post_reply_mechanical_self_state_risk",
         "post_reply_over_explained_risk",
         "post_reply_missed_emotional_grounding",
+        "post_reply_low_information_ack_risk",
     }:
         return True
     if failure_kind == "owner_reported_template_voice_failure":
@@ -318,7 +404,7 @@ def _text_directly_reports_failure(failure_kind: str, text: str) -> bool:
     if failure_kind == "owner_reported_context_discontinuity":
         return _contains_any(text, CONTEXT_REPAIR_MARKERS)
     if failure_kind == "owner_reported_template_voice_failure":
-        return _contains_any(text, STYLE_REPAIR_MARKERS)
+        return _owner_reported_style_failure(text)
     if failure_kind == "owner_reported_time_fact_error":
         return _owner_reported_time_error(text)
     if failure_kind == "owner_reported_learning_empty_loop":
@@ -336,11 +422,18 @@ def _int_value(value: Any, default: int = 0) -> int:
         return default
 
 
-def _repair_pressure_overloaded(fields: dict[str, str]) -> bool:
+def _repair_pressure_overloaded(fields: dict[str, str], *, failure_kind: str = "") -> bool:
+    if failure_kind and failure_kind not in REPAIR_PRESSURE_LIMITED_FAILURES:
+        return False
     repair_count = _int_value(fields.get("repair_count"), 0)
-    success_count = _int_value(fields.get("success_count"), 0)
     success_streak = _int_value(fields.get("success_streak"), 0)
-    return repair_count >= REPAIR_PRESSURE_SILENCE_THRESHOLD and success_count <= 0 and success_streak <= 0
+    trial_success_streak = _int_value(fields.get("trial_success_streak"), success_streak)
+    success_evidence = _safe_str(fields.get("success_evidence_status"), "none")
+    return (
+        repair_count >= REPAIR_PRESSURE_SILENCE_THRESHOLD
+        and trial_success_streak < 2
+        and success_evidence != "same_trial_explicit_owner_success"
+    )
 
 
 def _classify_failures(
@@ -365,10 +458,12 @@ def _classify_failures(
         failures.append("post_reply_over_explained_risk")
     if owner_private and "post_reply_missed_emotional_grounding" in quality_flags:
         failures.append("post_reply_missed_emotional_grounding")
+    if owner_private and "post_reply_low_information_ack_risk" in quality_flags:
+        failures.append("post_reply_low_information_ack_risk")
     if any("template" in flag or "cliche" in flag for flag in quality_flags):
         failures.append("reply_quality_template_pressure")
 
-    if owner_private and _contains_any(user_text, STYLE_REPAIR_MARKERS):
+    if owner_private and _owner_reported_style_failure(user_text):
         failures.append("owner_reported_template_voice_failure")
     if owner_private and _contains_any(user_text, CONTEXT_REPAIR_MARKERS):
         failures.append("owner_reported_context_discontinuity")
@@ -393,6 +488,18 @@ def _success_observed(owner_private: bool, text: str, fields: dict[str, str]) ->
     return _contains_any(text, GENERIC_SUCCESS_MARKERS) and _contains_any(text, SUCCESS_REPLY_CONTEXT_MARKERS)
 
 
+def _filter_failures_for_explicit_success(failures: list[str], text: str, fields: dict[str, str]) -> list[str]:
+    active_trial = fields.get("active_trial_key", "none")
+    if active_trial in {"", "none", "unknown"}:
+        active_trial = fields.get("latest_failure_kind", "none")
+    filtered: list[str] = []
+    for failure in failures:
+        if failure == active_trial and failure == "owner_reported_template_voice_failure" and _owner_reported_style_repair_success(text):
+            continue
+        filtered.append(failure)
+    return filtered
+
+
 def _habit_for(failure_kind: str) -> str:
     return HABITS_BY_FAILURE.get(
         failure_kind,
@@ -411,6 +518,8 @@ def _expected_for(failure_kind: str) -> str:
         return "下一次先贴住 owner 当前情绪，不用安抚模板，也不急着解释系统。"
     if failure_kind == "post_reply_over_explained_risk":
         return "下一次缩短成当前可发送的一两句，不写复盘结构。"
+    if failure_kind == "post_reply_low_information_ack_risk":
+        return "下一次不能只回嗯/好/在；至少接住 owner 当前句子里的一个具体点。"
     return _habit_for(failure_kind)
 
 
@@ -535,14 +644,24 @@ tags: [self, learning, feedback, replay]
 - latest_case_id: {fields['latest_case_id']}
 - latest_failure_at: {fields['latest_failure_at']}
 - latest_failure_kind: {fields['latest_failure_kind']}
+- active_trial_key: {fields['active_trial_key']}
 - active_trial_habit: {fields['active_trial_habit']}
 - expected_next_behavior: {fields['expected_next_behavior']}
 - next_action: {fields['next_action']}
 - repair_count: {fields['repair_count']}
 - success_count: {fields['success_count']}
 - success_streak: {fields['success_streak']}
+- trial_success_count: {fields['trial_success_count']}
+- trial_success_streak: {fields['trial_success_streak']}
 - promotion_signal: {fields['promotion_signal']}
 - last_owner_reaction: {fields['last_owner_reaction']}
+
+## Success Evidence
+- latest_success_at: {fields['latest_success_at']}
+- latest_success_event_id: {fields['latest_success_event_id']}
+- latest_success_trial_key: {fields['latest_success_trial_key']}
+- success_evidence_status: {fields['success_evidence_status']}
+- success_evidence_ref: {fields['success_evidence_ref']}
 
 ## Self Thought Link
 - last_self_thought_at: {fields['last_self_thought_at']}
@@ -570,14 +689,22 @@ def _load_state_fields(root: Path) -> dict[str, str]:
         "latest_case_id": _field(text, "latest_case_id", "none"),
         "latest_failure_at": _field(text, "latest_failure_at", _field(text, "updated_at", "none")),
         "latest_failure_kind": _field(text, "latest_failure_kind", "none"),
+        "active_trial_key": _field(text, "active_trial_key", _field(text, "latest_failure_kind", "none")),
         "active_trial_habit": _field(text, "active_trial_habit", "none"),
         "expected_next_behavior": _field(text, "expected_next_behavior", "none"),
         "next_action": _field(text, "next_action", "observe_next_owner_reaction"),
         "repair_count": str(_int_field(text, "repair_count", 0)),
         "success_count": str(_int_field(text, "success_count", 0)),
         "success_streak": str(_int_field(text, "success_streak", 0)),
+        "trial_success_count": str(_int_field(text, "trial_success_count", _int_field(text, "success_count", 0))),
+        "trial_success_streak": str(_int_field(text, "trial_success_streak", _int_field(text, "success_streak", 0))),
         "promotion_signal": _field(text, "promotion_signal", "false"),
         "last_owner_reaction": _field(text, "last_owner_reaction", "none"),
+        "latest_success_at": _field(text, "latest_success_at", "none"),
+        "latest_success_event_id": _field(text, "latest_success_event_id", "none"),
+        "latest_success_trial_key": _field(text, "latest_success_trial_key", "none"),
+        "success_evidence_status": _field(text, "success_evidence_status", "none"),
+        "success_evidence_ref": _field(text, "success_evidence_ref", "none"),
         "last_self_thought_at": _field(text, "last_self_thought_at", "none"),
         "last_self_thought_focus": _field(text, "last_self_thought_focus", "none"),
         "last_self_thought_outcome": _field(text, "last_self_thought_outcome", "none"),
@@ -615,16 +742,27 @@ def record_learning_closed_loop_turn(
     )
     fields = _load_state_fields(root)
     success = _success_observed(owner_private, user_text, fields)
+    classification_notes: list[str] = []
+    if success and failures:
+        filtered_failures = _filter_failures_for_explicit_success(failures, user_text, fields)
+        if filtered_failures != failures:
+            classification_notes.append("learning_closed_loop_success_overrode_resolved_trial_failure")
+        failures = filtered_failures
+        if failures:
+            success = False
+            classification_notes.append("learning_closed_loop_success_suppressed_by_concurrent_failure")
     if not failures and not success and not expression_notes:
         return {"recorded": False, "notes": ["learning_closed_loop_no_signal"]}
 
     event_id = "learnloop-" + _hash(f"{observed}|{user_text}|{reply}|{time.time_ns()}", 18)
     latest_case_id = fields["latest_case_id"]
     case_ids: list[str] = []
-    notes = ["learning_closed_loop_recorded"]
+    notes = ["learning_closed_loop_recorded", *classification_notes]
 
     if failures:
         failure_kind = failures[0]
+        previous_trial_key = fields.get("active_trial_key", "none")
+        same_trial = previous_trial_key in {"", "none", "unknown"} or previous_trial_key == failure_kind
         case_key = _case_key(failure_kind, user_text)
         latest_case_id = _case_id(observed, failure_kind, user_text, reply)
         rendered_case = _render_case(
@@ -652,29 +790,43 @@ def record_learning_closed_loop_turn(
                 "status": "trial_active",
                 "latest_failure_at": observed,
                 "latest_failure_kind": failure_kind,
+                "active_trial_key": failure_kind,
                 "active_trial_habit": _habit_for(failure_kind),
                 "expected_next_behavior": _expected_for(failure_kind),
                 "next_action": "apply_trial_habit_on_similar_turn",
                 "repair_count": str(int(fields["repair_count"]) + 1),
+                "trial_success_count": fields["trial_success_count"] if same_trial else "0",
+                "trial_success_streak": "0",
                 "success_streak": "0",
                 "promotion_signal": "false",
                 "last_owner_reaction": "repair_pressure" if owner_private else "system_guard",
+                "success_evidence_status": "reset_by_failure",
             }
         )
-        if _repair_pressure_overloaded(fields):
+        if _repair_pressure_overloaded(fields, failure_kind=failure_kind):
             fields["next_action"] = "cooldown_direct_failure_only"
             fields["last_owner_reaction"] = "repair_pressure_overloaded"
     elif success:
+        success_trial_key = fields.get("active_trial_key", "none")
+        if success_trial_key in {"", "none", "unknown"}:
+            success_trial_key = fields.get("latest_failure_kind", "none")
         fields.update(
             {
                 "status": "trial_supported",
                 "next_action": "keep_trial_and_wait_for_repeated_success",
                 "success_count": str(int(fields["success_count"]) + 1),
                 "success_streak": str(int(fields["success_streak"]) + 1),
+                "trial_success_count": str(int(fields["trial_success_count"]) + 1),
+                "trial_success_streak": str(int(fields["trial_success_streak"]) + 1),
+                "latest_success_at": observed,
+                "latest_success_event_id": event_id,
+                "latest_success_trial_key": success_trial_key,
+                "success_evidence_status": "same_trial_explicit_owner_success",
+                "success_evidence_ref": "sha256:" + _hash(event_id, 16),
                 "last_owner_reaction": "explicit_success",
             }
         )
-        if int(fields["success_streak"]) >= 2:
+        if int(fields["trial_success_streak"]) >= 2:
             fields["promotion_signal"] = "possible_after_self_review"
 
     fields["updated_at"] = _timestamp_or_now_iso(observed)
@@ -693,7 +845,10 @@ def record_learning_closed_loop_turn(
             "final_guard_flags": guard_flags,
             "quality_flags": q_flags,
             "expression_notes": list(expression_notes)[:6],
+            "active_trial_key": fields["active_trial_key"],
             "active_trial_habit": fields["active_trial_habit"],
+            "latest_success_trial_key": fields["latest_success_trial_key"],
+            "success_evidence_status": fields["success_evidence_status"],
         },
     )
     notes.append(f"learning_closed_loop_status:{fields['status']}")
@@ -784,7 +939,12 @@ def build_learning_closed_loop_prompt_block(root: Path, *, user_text: str = "", 
             "repair_count": str(_int_field(state, "repair_count", 0)),
             "success_count": str(_int_field(state, "success_count", 0)),
             "success_streak": str(_int_field(state, "success_streak", 0)),
-        }
+            "trial_success_streak": str(
+                _int_field(state, "trial_success_streak", _int_field(state, "success_streak", 0))
+            ),
+            "success_evidence_status": _field(state, "success_evidence_status", "none"),
+        },
+        failure_kind=failure_kind,
     )
     if overloaded and not _text_directly_reports_failure(failure_kind, user_text):
         return ""
@@ -796,8 +956,10 @@ def build_learning_closed_loop_prompt_block(root: Path, *, user_text: str = "", 
         f"- latest_failure_kind: {_compact(failure_kind, limit=100)}",
         f"- active_trial_habit: {_compact(habit, limit=260)}",
         f"- expected_next_behavior: {_compact(expected, limit=260)}",
-        "- visible_rule: do not mention learning loops, cases, files, gates, or scores in ordinary chat",
     ]
+    if overloaded:
+        lines.append("- realtime_pressure_limit: direct_failure_only; keep ordinary turns anchored instead of repair-focused")
+    lines.append("- visible_rule: do not mention learning loops, cases, files, gates, or scores in ordinary chat")
     text = "\n".join(lines)
     return text[:limit].rstrip()
 

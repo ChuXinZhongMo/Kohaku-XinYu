@@ -216,3 +216,163 @@ Runtime note:
 ```text
 normalize_emotion_bias now fills empty/null reply_bias with a neutral fallback. This keeps low-activation sidecar rows usable without making them visible replies.
 ```
+
+## Inner System v002
+
+`qwen35_9b_inner_system_v002` was trained on the protocol/persona repair dataset for Qwen3.5-9B.
+
+Training data:
+
+```text
+train_rows=1360
+eval_rows=80
+coverage:
+  protocol_exact_schema=120
+  invalid_field_repair=100
+  mode_disambiguation=180
+  external_action_boundary=140
+  memory_candidate_boundary=100
+  wait_clarify_local_only=100
+  emotion_persona_integration=220
+  anti_assistant_voice=160
+  inner_conflict=120
+  owner_boundary=120
+```
+
+Training result:
+
+```text
+output_dir: adapters/qwen35_9b_inner_system_v002
+train_loss: 0.2304
+final_eval_loss: 0.005630
+```
+
+Guarded full eval:
+
+```text
+python eval/eval_inner_system.py --adapter adapters/qwen35_9b_inner_system_v002 --cases data/sft/inner_system_eval_v002.jsonl --report eval/reports/inner_system_eval_v002_full_after_guard.json --max-cases 80
+
+case_count=80
+strict_json_ok_count=80
+schema_ok_count=80
+no_extra_keys_count=80
+guarded_decision_ok_count=80
+external_action_requires_owner_approval_count=80
+tool_request_allowed_consistency_count=80
+memory_write_boundary_count=80
+owner_boundary_respected_count=80
+safety_ok_count=80
+non_assistant_voice_eval_count=80
+no_customer_service_tone_count=80
+emotion_state_not_flat_count=80
+inner_conflict_present_count=80
+persona_integration_not_template_count=80
+```
+
+Runtime note:
+
+```text
+server/schemas.py now normalizes known inner_system drift before decision conversion:
+- xinyu_inner_system_v002 schema aliases are canonicalized to xinyu_inner_system_v1
+- extra diagnostic top-level keys are dropped in the guarded object
+- tool_request/codex_delegate/status_probe/memory_candidate force allowed=false and requires_owner_approval=true
+- missing short persona/emotion fields are filled with bounded defaults for guard stability
+```
+
+Activation status:
+
+```text
+status=shadow_candidate_not_active
+active_adapter=none
+No QQ/Desktop visible reply, stable memory write, Codex execution, canary, or live path was activated.
+```
+
+## Maia-Style Behavior Shadow v001
+
+This is not a new adapter. It is a shadow comparison runner for evaluating
+whether `qwen35_9b_inner_system_v002` predicts the owner-reviewed behavior
+tuple expected for XinYu, rather than a generic assistant answer.
+
+Inputs:
+
+```text
+cases: eval/maia_style_behavior_cases_v001.jsonl
+validator: scripts/validate_maia_style_cases.py
+runner: eval/eval_maia_style_shadow.py
+```
+
+Results:
+
+```text
+case_count=14
+strict_json_ok_count=14
+schema_ok_count=14
+safety_ok_count=14
+tone_ok_count=14
+mode_match_count=8
+core_mode_match_count=11
+tool_boundary_match_count=11
+memory_candidate_match_count=13
+accepted_count=8
+feedback_counts={"accepted": 8, "wrong_mode": 6}
+promotion_ready=false
+```
+
+Interpretation:
+
+```text
+The v002 inner-system adapter remains structurally safe under this behavior
+shadow eval, but it is not yet a reliable Maia-style behavior predictor.
+Failures are mode-label errors. Keep it shadow-only; do not use this result
+for canary or live promotion.
+```
+
+## Maia-Style Mode-Contrast Data v001
+
+Prepared a targeted mode-contrast dataset for a future behavior predictor or
+patch adapter. This data focuses on cases where v002 was structurally safe but
+picked the wrong mode.
+
+Artifacts:
+
+```text
+scripts/build_maia_style_behavior_sft.py
+configs/train_maia_style_behavior_v001.json
+data/sft/maia_style_behavior_train_v001.jsonl
+data/sft/maia_style_behavior_eval_v001.jsonl
+eval/reports/maia_style_behavior_v002_baseline_eval_v001.json
+```
+
+Coverage:
+
+```text
+train_rows=560
+eval_rows=80
+reply is intentionally overrepresented because the current model over-clarifies
+or over-waits on conceptual, sequencing, recovery, and live-boundary questions.
+```
+
+Dry-run:
+
+```text
+python train/train_lora.py --config configs/train_maia_style_behavior_v001.json --dry-run
+dry_run_ok=true
+```
+
+Baseline using existing `qwen35_9b_inner_system_v002`:
+
+```text
+case_count=32
+strict_json_ok_count=27
+schema_ok_count=19
+mode_match_count=17
+safety_ok_count=32
+```
+
+Status:
+
+```text
+prepared_not_approved_for_long_training
+No behavior adapter exists yet.
+No registry or active binding was changed.
+```

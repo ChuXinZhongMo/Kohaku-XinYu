@@ -1,0 +1,78 @@
+{
+  "allowed_use": [
+    "owner_behavior_review_queue",
+    "zh_emotion_behavior_distribution_analysis",
+    "over_clarify_repair_planning",
+    "future_owner_approved_training_candidate_source"
+  ],
+  "assistant_answers_used": false,
+  "canary_allowed": false,
+  "candidate_origin_counts": {
+    "raw_cped_rule_suggested_v001": 473,
+    "reviewed_seed_v001": 27
+  },
+  "forbidden_use": [
+    "direct_sft_training",
+    "public_dialogue_reply_as_xinyu_target",
+    "stable_memory_write",
+    "adapter_activation",
+    "canary_or_live_activation",
+    "qq_or_desktop_visible_reply_replacement"
+  ],
+  "generated_at": "2026-05-28",
+  "method": "xinyu_maia_zh_behavior_candidate_pool_v001",
+  "mode_counts": {
+    "clarify": 100,
+    "reply": 350,
+    "wait": 50
+  },
+  "notes": [
+    "This expands the XinYu Maia Chinese behavior lane from 27 seed rows to a 500-row candidate pool.",
+    "Only 27 rows are reviewed_delegated behavior seed rows.",
+    "The remaining 473 rows are assistant-suggested review candidates from CPED raw public utterances.",
+    "No public dialogue replies were used as XinYu targets.",
+    "No formal target_reply_bias values were written.",
+    "Do not train until owner reviews selected rows and explicitly promotes them."
+  ],
+  "outputs": {
+    "jsonl": "data/review/xinyu_maia_zh_behavior_candidate_pool_v001.jsonl",
+    "markdown": "eval/reports/xinyu_maia_zh_behavior_candidate_pool_v001.md",
+    "report": "eval/reports/xinyu_maia_zh_behavior_candidate_pool_v001.json"
+  },
+  "review_slice": {
+    "jsonl": "data/review/xinyu_maia_zh_behavior_candidate_review_slice_v001.jsonl",
+    "markdown": "eval/reports/xinyu_maia_zh_behavior_candidate_review_slice_v001.md",
+    "report": "eval/reports/xinyu_maia_zh_behavior_candidate_review_slice_v001.json",
+    "row_count": 96,
+    "mode_counts": {
+      "clarify": 24,
+      "reply": 60,
+      "wait": 12
+    }
+  },
+  "public_replies_used_as_targets": false,
+  "reply_bias_source_counts": {
+    "assistant_draft_needs_owner_review": 21,
+    "assistant_suggested_rule_needs_owner_review": 473,
+    "review_label_default_needs_owner_review": 6
+  },
+  "review_level_counts": {
+    "assistant_suggested_needs_owner_review": 473,
+    "reviewed_delegated_behavior_seed": 27
+  },
+  "row_count": 500,
+  "schema_version": 1,
+  "source_inputs": {
+    "raw_cped_dir": "data/public/raw/CPED/data/CPED",
+    "seed_jsonl": "data/review/xinyu_maia_zh_behavior_seed_v001.jsonl"
+  },
+  "status": "candidate_pool_review_only_not_training",
+  "train_ready": false,
+  "training_allowed": false,
+  "training_candidates_marked_true": 0,
+  "training_targets_created": false,
+  "validation": {
+    "script": "scripts/validate_xinyu_maia_behavior_candidate_pool.py",
+    "status": "pass"
+  }
+}

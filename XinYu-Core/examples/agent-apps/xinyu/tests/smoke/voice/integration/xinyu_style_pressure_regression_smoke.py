@@ -176,24 +176,30 @@ def _run_empty_fallback_matrix() -> list[str]:
     failures: list[str] = []
     runtime = XinYuBridgeRuntime.__new__(XinYuBridgeRuntime)
     cases = (
-        ("style_pressure", _owner_payload(), STYLE_PRESSURE_USER_TEXT, ""),
+        ("style_pressure", _owner_payload(), STYLE_PRESSURE_USER_TEXT, "", "我在。刚才那句没接上。"),
         ("codex_delegate", _owner_payload(), "Codex 那边跑完了吗", "codex"),
-        ("short_ping", _owner_payload(), "？", ""),
+        ("short_ping", _owner_payload(), "？", "", "嗯，我在。"),
         (
             "coalesced_owner_messages",
             {**_owner_payload(), "metadata": {"is_owner_user": True, "qq_coalesced_owner_messages": True}},
             "等等，我刚才不是这个意思",
             "",
+            "我在。刚才那句没接上。",
         ),
     )
-    for name, payload, user_text, delegate_note in cases:
+    for case in cases:
+        if len(case) == 4:
+            name, payload, user_text, delegate_note = case
+            expected = ""
+        else:
+            name, payload, user_text, delegate_note, expected = case
         reply = runtime._empty_visible_reply_fallback(
             payload=payload,
             user_text=user_text,
             delegate_note=delegate_note,
         )
-        if reply != "":
-            failures.append(f"fallback/{name}: fallback should be disabled, got: {reply}")
+        if reply != expected:
+            failures.append(f"fallback/{name}: expected {expected!r}, got: {reply!r}")
     return failures
 
 

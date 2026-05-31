@@ -375,7 +375,7 @@ def classify_visible_turn(
             rest_silence=False,
             pressure_level="high",
             max_visible_chars=80,
-            draft_bias="do not explain why change failed; answer with the changed short surface line itself, with 知道了 when natural",
+            draft_bias="do not explain why change failed; answer with the changed short surface line itself; do not lead with 知道了, 我会改, or 我会调整",
             memory_write_bias="style-pressure residue only; do not rewrite stable personality from one correction",
             proactive_constraint="block proactive until pressure cools",
         )

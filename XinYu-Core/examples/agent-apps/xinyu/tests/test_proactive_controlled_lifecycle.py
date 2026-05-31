@@ -6,6 +6,7 @@ from pathlib import Path
 from xinyu_core_bridge import XinYuBridgeRuntime
 from xinyu_proactive_presence import acknowledge_proactive_qq_message, claim_proactive_qq_message
 from xinyu_proactive_request_loop import run_proactive_request_loop
+from xinyu_proactivity_scorer import run_proactivity_scorer_shadow
 
 
 def _write(path: Path, text: str) -> None:
@@ -105,6 +106,35 @@ def test_proactive_request_schema_records_reason_risk_channel_and_expiration(tmp
     assert event["channel"] == "owner_private"
 
 
+def test_proactive_shadow_holds_style_repair_when_realtime_pressure_is_capped(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "memory/context/runtime_program_awareness.md",
+        "- learning_closed_loop: status=trial_active failure_kind=owner_reported_template_voice_failure repair_count=94\n",
+    )
+    _write(
+        tmp_path / "memory/self/learning_closed_loop_state.md",
+        """
+        - status: trial_active
+        - latest_failure_kind: owner_reported_template_voice_failure
+        - repair_count: 94
+        - success_count: 3
+        - success_streak: 0
+        - trial_success_count: 3
+        - trial_success_streak: 0
+        - success_evidence_status: none
+        """,
+    )
+
+    result = run_proactivity_scorer_shadow(tmp_path, checked_at="2026-05-28T01:50:00+08:00")
+    state = (tmp_path / "memory/context/proactive_decision_state.md").read_text(encoding="utf-8")
+
+    assert result["source_type"] == "style_repair"
+    assert result["status"] == "hold"
+    assert "style_repair_realtime_pressure_capped_hold" in result["hard_blocks"]
+    assert "- recommendation: hold" in state
+    assert "- preferred_channel: silent" in state
+
+
 def test_failed_proactive_ack_enters_retry_cooldown_then_retries(tmp_path: Path) -> None:
     _seed_self_thought(tmp_path)
     run_proactive_request_loop(
@@ -180,7 +210,8 @@ updated_at: 2026-05-01T15:32:00+08:00
 - channel: owner_private
 - expiration: 2026-05-02T15:30:00+08:00
 - delivery_level: queue_owner_private
-- request_answer_state: pending
+- request_answer_state: sent_waiting_owner_reply
+- last_ack_status: sent
 """,
     )
     _write(
@@ -211,5 +242,8 @@ updated_at: 2026-05-01T15:32:00+08:00
     assert marked is True
     assert "- status: answered" in state
     assert "- request_answer_state: owner_replied" in state
+    assert "- owner_reply_ref: sha256:" in state
+    assert "- raw_owner_reply_retained: false" in state
+    assert "yes continue" not in state
     assert event["event_kind"] == "proactive_owner_reply_closed"
     assert event["ack_status"] == "owner_replied"

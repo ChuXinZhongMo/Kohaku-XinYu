@@ -114,6 +114,256 @@ function readJsonlTail(path: string, limit: number): Record<string, unknown>[] {
   }
 }
 
+function readMarkdownFields(path: string): Record<string, string> {
+  if (!existsSync(path)) {
+    return {}
+  }
+  const fields: Record<string, string> = {}
+  for (const line of readFileSync(path, 'utf-8').split(/\r?\n/)) {
+    const match = line.match(/^-\s*([A-Za-z0-9_]+):\s*(.*)$/) || line.match(/^([A-Za-z0-9_]+):\s*(.*)$/)
+    if (match) {
+      fields[match[1]] = match[2].trim()
+    }
+  }
+  return fields
+}
+
+function markdownBool(value: unknown): boolean {
+  return String(value || '').trim().toLowerCase() === 'true'
+}
+
+function markdownNumber(value: unknown): number {
+  const number = Number(String(value || '').trim())
+  return Number.isFinite(number) ? number : 0
+}
+
+function parsePacketDuplicateClusters(path: string): Record<string, unknown>[] {
+  if (!existsSync(path)) {
+    return []
+  }
+  const clusters: Record<string, unknown>[] = []
+  for (const line of readFileSync(path, 'utf-8').split(/\r?\n/)) {
+    const match = line.match(
+      /^-\s*topic=([^;]+);\s*size=(\d+);\s*conflicts=(\d+);\s*private_or_hidden_samples=(\d+);\s*recommendation=([^;]+);\s*statuses=(\{.*\})$/
+    )
+    if (!match) {
+      continue
+    }
+    let statuses: Record<string, unknown> = {}
+    try {
+      statuses = JSON.parse(match[6]) as Record<string, unknown>
+    } catch {
+      statuses = {}
+    }
+    clusters.push({
+      topic: match[1],
+      size: Number(match[2]),
+      conflicts: Number(match[3]),
+      privateOrHiddenSamples: Number(match[4]),
+      recommendation: match[5],
+      statuses
+    })
+  }
+  return clusters
+}
+
+function parsePacketBlockedGates(path: string): Record<string, unknown>[] {
+  if (!existsSync(path)) {
+    return []
+  }
+  const gates: Record<string, unknown>[] = []
+  for (const line of readFileSync(path, 'utf-8').split(/\r?\n/)) {
+    const match = line.match(/^- gate=([^;]+);\s*status=([^;]+);\s*count=(\d+);\s*reason=(.+)$/)
+    if (!match) {
+      continue
+    }
+    gates.push({
+      gate: match[1],
+      status: match[2],
+      count: Number(match[3]),
+      reason: match[4]
+    })
+  }
+  return gates
+}
+
+function latestMemoryReviewDecision(coreDir: string): Record<string, unknown> | null {
+  const decisions = readJsonFile(join(coreDir, 'memory', 'context', 'review_inbox_decisions.json'))
+  const items = Array.isArray(decisions.decisions) ? decisions.decisions : []
+  const latest = items
+    .map((item) => (item && typeof item === 'object' ? (item as Record<string, unknown>) : {}))
+    .filter((item) => String(item.action_kind || '') === 'memory_candidate')
+    .pop()
+  if (!latest) {
+    return null
+  }
+  return {
+    actionKind: String(latest.action_kind || ''),
+    command: String(latest.command || ''),
+    decidedAt: String(latest.decided_at || ''),
+    decision: String(latest.decision || ''),
+    decisionId: String(latest.decision_id || ''),
+    itemId: String(latest.item_id || ''),
+    recordKey: String(latest.record_key || '')
+  }
+}
+
+function readPromotionDryRunSummary(coreDir: string, candidateId: string): Record<string, unknown> | null {
+  if (!candidateId) {
+    return null
+  }
+  const path = join(coreDir, 'runtime', 'memory_promotion_dry_runs', `${candidateId}.md`)
+  if (!existsSync(path)) {
+    return null
+  }
+  const fields = readMarkdownFields(path)
+  const blockers: string[] = []
+  let inBlockers = false
+  for (const line of readFileSync(path, 'utf-8').split(/\r?\n/)) {
+    if (line.startsWith('## ')) {
+      inBlockers = line.trim() === '## Blockers'
+      continue
+    }
+    if (!inBlockers) {
+      continue
+    }
+    const match = line.match(/^-\s+(.+)$/)
+    if (match) {
+      blockers.push(match[1].trim())
+    }
+  }
+  return {
+    candidateId: String(fields.candidate_id || candidateId),
+    status: String(fields.status || ''),
+    candidateType: String(fields.candidate_type || ''),
+    targetMemoryLayer: String(fields.target_memory_layer || ''),
+    stableMemoryWrite: String(fields.stable_memory_write || ''),
+    applyAllowed: markdownBool(fields.apply_allowed),
+    blockers
+  }
+}
+
+function readStage8MemoryGovernanceStatus(): Record<string, unknown> {
+  const coreDir = resolveXinYuCoreDir()
+  const statePath = join(coreDir, 'memory', 'context', 'stage8_memory_governance_state.md')
+  const packetStatePath = join(coreDir, 'memory', 'context', 'stage8_memory_review_packet_state.md')
+  const packetPath = join(coreDir, 'worklog', 'xinyu-stage8-memory-review-packet-latest.md')
+  const reviewStatePath = join(coreDir, 'memory', 'context', 'review_inbox_state.md')
+  const state = readMarkdownFields(statePath)
+  const packet = readMarkdownFields(packetStatePath)
+  const reviewState = readMarkdownFields(reviewStatePath)
+  const latestDecision = latestMemoryReviewDecision(coreDir)
+  const latestDryRun = latestDecision
+    ? readPromotionDryRunSummary(coreDir, String(latestDecision.recordKey || latestDecision.itemId || ''))
+    : null
+
+  return {
+    ok: existsSync(statePath),
+    loadedAt: new Date().toISOString(),
+    updatedAt: String(state.updated_at || packet.updated_at || ''),
+    status: String(state.stage8_memory_governance_status || packet.stage8_memory_governance_status || 'missing'),
+    readyForStage9: markdownBool(state.stage8_memory_ready_for_stage9 || packet.stage8_memory_ready_for_stage9),
+    reason: String(state.stage8_memory_governance_reason || ''),
+    nextStep: String(state.stage8_next_step || packet.stage8_next_step || ''),
+    stage7ReadyForStage8: markdownBool(state.stage8_stage7_ready_for_stage8),
+    stage7Reason: String(state.stage8_stage7_reason || ''),
+    candidateTotal: markdownNumber(state.stage8_candidate_total),
+    ownerReviewRequiredCount: markdownNumber(state.stage8_owner_review_required_count || packet.owner_review_required_count),
+    privateOrOwnerScopedCount: markdownNumber(state.stage8_private_or_owner_scoped_count || packet.private_or_owner_scoped_count),
+    duplicateClusterCount: markdownNumber(state.stage8_duplicate_cluster_count || packet.duplicate_cluster_count),
+    learningTrialSuccessGate: String(state.stage8_learning_trial_success_gate || packet.learning_trial_success_gate || ''),
+    stableProfileWrite: String(state.stage8_stable_profile_write || ''),
+    ownerMemoryWrite: String(state.stage8_owner_memory_write || ''),
+    ownerReviewCandidateText: String(state.stage8_owner_review_candidate_text || ''),
+    stablePersonalityWrite: String(state.stage8_stable_personality_write || ''),
+    growthApplyMode: String(state.stage8_growth_apply_mode || ''),
+    stableIdentityProfileApply: String(state.stage8_stable_identity_profile_apply || packet.stable_identity_profile_apply || ''),
+    packetStatus: String(packet.packet_status || ''),
+    packetPath,
+    duplicateClusters: parsePacketDuplicateClusters(packetPath),
+    blockedGates: parsePacketBlockedGates(packetPath),
+    reviewInboxPendingCount: markdownNumber(reviewState.pending_count),
+    reviewInboxProcessedCount: markdownNumber(reviewState.processed),
+    latestDecision,
+    latestDryRun,
+    boundaries: {
+      rawOwnerTextInPacket: markdownBool(packet.raw_owner_text_in_packet),
+      visibleReplyTextInPacket: markdownBool(packet.visible_reply_text_in_packet),
+      candidateBodyInPacket: markdownBool(packet.candidate_body_in_packet),
+      stableMemoryWrite: String(packet.stable_memory_write || state.stage8_stable_profile_write || ''),
+      consciousnessClaim: markdownBool(packet.consciousness_claim || state.consciousness_claim)
+    }
+  }
+}
+
+function readAsyncExplorationState(): Record<string, unknown> {
+  const coreDir = resolveXinYuCoreDir()
+  const statePath = join(coreDir, 'memory', 'context', 'async_exploration_state.md')
+  const s = readMarkdownFields(statePath)
+  return {
+    ok: existsSync(statePath),
+    loadedAt: new Date().toISOString(),
+    updatedAt: String(s.updated_at || ''),
+    status: String(s.status || 'missing'),
+    resumeId: String(s.resume_id || ''),
+    sessionKey: String(s.session_key || ''),
+    delegationReason: String(s.delegation_reason || ''),
+    taskSummary: String(s.task_summary || ''),
+    failureKind: String(s.failure_kind || ''),
+    resultQuality: String(s.result_quality || ''),
+    ownerIntervention: String(s.owner_intervention || ''),
+    ownerVisibleResumeHint: String(s.owner_visible_resume_hint || ''),
+  }
+}
+
+function readStage12GateStatus(): Record<string, unknown> {
+  const coreDir = resolveXinYuCoreDir()
+  const statePath = join(coreDir, 'memory', 'context', 'stage12_long_term_evaluation_state.md')
+  const s = readMarkdownFields(statePath)
+  return {
+    ok: existsSync(statePath),
+    loadedAt: new Date().toISOString(),
+    updatedAt: String(s.updated_at || ''),
+    status: String(s.stage12_long_term_evaluation_status || 'missing'),
+    readyForStage13: markdownBool(s.stage12_ready_for_stage13),
+    reason: String(s.stage12_reason || ''),
+    liveLoopStatus: String(s.stage12_live_loop_status || 'missing'),
+    liveLoopPassRatePct: markdownNumber(s.stage12_live_loop_required_pass_rate_pct),
+    liveLoopPassedCount: markdownNumber(s.stage12_live_loop_passed_required_check_count),
+    liveLoopRequiredCount: markdownNumber(s.stage12_live_loop_required_check_count),
+    liveLoopFailingChecks: String(s.stage12_live_loop_failing_required_checks || ''),
+    liveLoopFailingDetail: String(s.stage12_live_loop_failing_required_check_detail || ''),
+    gateStage11Ready: markdownBool(s.stage12_gate_stage11_ready_for_stage12),
+    gateLiveLoopPass: markdownBool(s.stage12_gate_live_loop_required_checks_pass),
+    gateFeedbackClean: markdownBool(s.stage12_gate_feedback_consumption_window_clean),
+    gatePrivacyClean: markdownBool(s.stage12_gate_raw_private_boundary_clean),
+    gateStableClean: markdownBool(s.stage12_gate_stable_memory_boundary_clean),
+    gateCanaryReady: markdownBool(s.stage12_gate_owner_visible_canary_ready),
+    gateShortTermClean: markdownBool(s.stage12_gate_short_term_recall_window_clean),
+    nextStep: String(s.stage12_next_step || ''),
+  }
+}
+
+function readStage13GateStatus(): Record<string, unknown> {
+  const coreDir = resolveXinYuCoreDir()
+  const statePath = join(coreDir, 'memory', 'context', 'stage13_self_narrative_state.md')
+  const s = readMarkdownFields(statePath)
+  return {
+    ok: existsSync(statePath),
+    loadedAt: new Date().toISOString(),
+    updatedAt: String(s.updated_at || ''),
+    status: String(s.stage13_self_narrative_status || 'missing'),
+    available: markdownBool(s.stage13_available),
+    reason: String(s.stage13_reason || ''),
+    stage12ReadyForStage13: markdownBool(s.stage13_stage12_ready_for_stage13),
+    behaviorMode: String(s.stage13_behavior_mode || ''),
+    selectedIntent: String(s.stage13_behavior_selected_intent || ''),
+    behaviorGate: String(s.stage13_behavior_gate || ''),
+    memoryGovernanceStatus: String(s.stage13_memory_governance_status || ''),
+    nextStep: String(s.stage13_next_step || ''),
+  }
+}
+
 function readImpulseSoupState(): Record<string, unknown> {
   const coreDir = resolveXinYuCoreDir()
   const contextDir = join(coreDir, 'memory', 'context')
@@ -153,7 +403,9 @@ function parseCommandJson(stdout: string): Record<string, unknown> {
 }
 
 function resolveStickerAssetDir(): string {
-  return join(resolveXinYuWorkspace(), '素材库', '心玉', '表情')
+  const workspace = resolveXinYuWorkspace()
+  const preferred = join(workspace, 'assets', '素材库', '心玉', '表情')
+  return existsSync(preferred) ? preferred : join(workspace, '素材库', '心玉', '表情')
 }
 
 async function runStickerMaintenance(action: unknown): Promise<Record<string, unknown>> {
@@ -408,6 +660,18 @@ app.whenReady().then(() => {
   ipcMain.handle('xinyu:get-memory-growth-candidates', async () => {
     return await gateway?.getMemoryGrowthCandidates()
   })
+  ipcMain.handle('xinyu:get-stage8-memory-governance', () => {
+    return readStage8MemoryGovernanceStatus()
+  })
+  ipcMain.handle('xinyu:get-async-exploration-state', () => {
+    return readAsyncExplorationState()
+  })
+  ipcMain.handle('xinyu:get-stage12-gate-status', () => {
+    return readStage12GateStatus()
+  })
+  ipcMain.handle('xinyu:get-stage13-gate-status', () => {
+    return readStage13GateStatus()
+  })
   ipcMain.handle('xinyu:get-impulse-soup-state', () => {
     return readImpulseSoupState()
   })
@@ -456,7 +720,7 @@ app.whenReady().then(() => {
   })
   ipcMain.handle('xinyu:restart-core-bridge', async () => {
     const status = getApiConfigStatus(resolveXinYuCoreDir())
-    return await restartCoreBridge(resolveXinYuWorkspace(), resolveXinYuCoreDir(), status.current.allowInsecureHttp)
+    return await restartCoreBridge(resolveXinYuWorkspace(), resolveXinYuCoreDir(), status.current.llm.allowInsecureHttp)
   })
   ipcMain.handle('xinyu:get-sticker-library', () => {
     return readStickerLibrarySummary()

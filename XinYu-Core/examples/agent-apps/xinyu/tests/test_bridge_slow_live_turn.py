@@ -140,10 +140,12 @@ def test_run_slow_live_memory_recall_records_error_without_raising() -> None:
 def test_inject_slow_live_model_event_records_success(tmp_path, monkeypatch) -> None:
     rows, trace_route_stage = _trace_rows()
     injected_context: dict[str, object] = {}
+    chunks: list[str] = []
 
     class Agent:
         async def inject_event(self, event) -> None:
             injected_context["event"] = event
+            chunks.append("hello")
 
     class Runtime:
         xinyu_dir = tmp_path
@@ -162,7 +164,7 @@ def test_inject_slow_live_model_event_records_success(tmp_path, monkeypatch) -> 
         inject_slow_live_model_event(
             Runtime(),
             {"platform": "qq"},
-            session=SimpleNamespace(agent=Agent(), dialogue_tail=[]),
+            session=SimpleNamespace(agent=Agent(), dialogue_tail=[], chunks=chunks),
             event={"event": "user"},
             text="hello",
             turn_id="turn-inject-test",
@@ -180,7 +182,114 @@ def test_inject_slow_live_model_event_records_success(tmp_path, monkeypatch) -> 
     assert injected_context["turn_id"] == "turn-inject-test"
     assert injected_context["continuity_context"] == "continuity"
     assert injected_context["event"] == {"event": "user"}
-    assert rows[-1] == {"stage": "model_inject_finished", "route": "slow_live", "status": "ok"}
+    assert rows[-1] == {
+        "stage": "model_inject_finished",
+        "route": "slow_live",
+        "status": "ok",
+        "notes": [
+            "chunk_count:1",
+            "visible_chars:5",
+            "raw_assistant_chars:0",
+            "completion_tokens:0",
+            "tool_call_count:0",
+        ],
+    }
+
+
+def test_inject_slow_live_model_event_retries_empty_owner_private_output(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    rows, trace_route_stage = _trace_rows()
+    injected_events: list[object] = []
+    chunks: list[str] = []
+
+    class Agent:
+        controller = SimpleNamespace(_last_assistant_content="")
+        llm = SimpleNamespace(last_usage={"completion_tokens": 0}, last_tool_calls=[])
+
+        async def inject_event(self, event) -> None:
+            injected_events.append(event)
+            if len(injected_events) == 2:
+                chunks.append("补上了")
+
+    class Runtime:
+        xinyu_dir = tmp_path
+        turn_timeout_seconds = 1
+
+        @staticmethod
+        def _inject_live_turn_context(agent, **kwargs):
+            del agent, kwargs
+
+        @staticmethod
+        def _owner_private_payload_matches(payload):
+            return payload.get("message_type") == "private_text"
+
+        @staticmethod
+        def _create_user_input_event(content, source="test", **kwargs):
+            return SimpleNamespace(content=content, context={"source": source, **kwargs})
+
+    monkeypatch.setattr(
+        slow_live,
+        "build_continuity_handoff_prompt_block",
+        lambda *args, **kwargs: "continuity",
+    )
+    monkeypatch.setattr(
+        slow_live,
+        "build_uncertainty_pause_prompt_block",
+        lambda *args, **kwargs: "uncertainty",
+    )
+    monkeypatch.setattr(
+        slow_live,
+        "build_life_reply_prompt_block",
+        lambda *args, **kwargs: "life",
+    )
+
+    asyncio.run(
+        inject_slow_live_model_event(
+            Runtime(),
+            {"platform": "qq", "message_type": "private_text"},
+            session=SimpleNamespace(
+                agent=Agent(),
+                dialogue_tail=[],
+                chunks=chunks,
+                key="qq:private:owner",
+            ),
+            event=SimpleNamespace(content="原始消息"),
+            text="原始消息",
+            turn_id="turn-empty-retry-test",
+            visible_turn=SimpleNamespace(turn_kind="ordinary"),
+            persona_sidecar={},
+            curiosity_eval={},
+            recalled_context=None,
+            runtime_presence_context="presence",
+            life_reply_policy={"notes": []},
+            emotion_council_context="",
+            trace_route_stage=trace_route_stage,
+        )
+    )
+
+    assert len(injected_events) == 2
+    retry_event = injected_events[1]
+    assert retry_event.context["source"] == "qq_gateway_empty_visible_retry"
+    assert retry_event.context["original_text_len"] == 4
+    assert "原始消息" not in retry_event.content
+    assert rows[-4]["stage"] == "model_inject_empty_visible"
+    assert rows[-3]["stage"] == "model_inject_empty_visible_retry_started"
+    assert rows[-2] == {
+        "stage": "model_inject_empty_visible_retry_finished",
+        "route": "slow_live",
+        "status": "ok",
+        "notes": [
+            "chunk_count:1",
+            "visible_chars:3",
+            "raw_assistant_chars:0",
+            "completion_tokens:0",
+            "tool_call_count:0",
+        ],
+    }
+    assert rows[-1]["stage"] == "model_inject_finished"
+    assert "empty_visible_retry_recovered" in rows[-1]["notes"]
 
 
 def test_build_slow_live_model_contexts_collects_prompt_inputs(tmp_path, monkeypatch) -> None:

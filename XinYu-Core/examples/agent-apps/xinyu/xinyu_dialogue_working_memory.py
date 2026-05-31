@@ -85,8 +85,116 @@ def _load_rows(path: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def inspect_dialogue_tail_storage(root: Path, session_key: str) -> dict[str, Any]:
+    safe_session_key = _safe_str(session_key).strip()
+    if not safe_session_key:
+        return {
+            "status": "session_unscoped",
+            "reason": "missing_session_key",
+            "usable_row_count": 0,
+            "filtered_row_count": 0,
+            "invalid_line_count": 0,
+        }
+
+    path = _session_path(root, safe_session_key)
+    if not path.exists():
+        return {
+            "status": "missing_file",
+            "reason": "working_memory_file_missing",
+            "usable_row_count": 0,
+            "filtered_row_count": 0,
+            "invalid_line_count": 0,
+        }
+
+    try:
+        raw = path.read_text(encoding="utf-8-sig", errors="replace")
+    except OSError as exc:
+        return {
+            "status": "read_error",
+            "reason": f"working_memory_read_error:{type(exc).__name__}",
+            "usable_row_count": 0,
+            "filtered_row_count": 0,
+            "invalid_line_count": 0,
+        }
+
+    nonempty_line_count = 0
+    usable_row_count = 0
+    filtered_row_count = 0
+    invalid_line_count = 0
+    json_row_count = 0
+
+    for raw_line in raw.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        nonempty_line_count += 1
+        try:
+            data = json.loads(line)
+        except json.JSONDecodeError:
+            invalid_line_count += 1
+            continue
+        if not isinstance(data, dict):
+            filtered_row_count += 1
+            continue
+        json_row_count += 1
+        role = _safe_str(data.get("role")).strip()
+        content = _safe_str(data.get("content")).strip()
+        if role == "assistant":
+            content = sanitize_visible_text(content).strip()
+        if role in {"user", "assistant"} and content:
+            usable_row_count += 1
+        else:
+            filtered_row_count += 1
+
+    if nonempty_line_count == 0:
+        status = "empty_file"
+        reason = "working_memory_file_empty"
+    elif usable_row_count > 0 and (filtered_row_count > 0 or invalid_line_count > 0):
+        status = "available_with_filtered_rows"
+        reason = "working_memory_rows_available_with_filtered_lines"
+    elif usable_row_count > 0:
+        status = "available"
+        reason = "working_memory_rows_available"
+    elif json_row_count > 0 or filtered_row_count > 0:
+        status = "filtered_only"
+        reason = "working_memory_rows_filtered"
+    elif invalid_line_count > 0:
+        status = "decode_failed"
+        reason = "working_memory_decode_failed"
+    else:
+        status = "empty_file"
+        reason = "working_memory_file_empty"
+
+    return {
+        "status": status,
+        "reason": reason,
+        "usable_row_count": usable_row_count,
+        "filtered_row_count": filtered_row_count,
+        "invalid_line_count": invalid_line_count,
+    }
+
+
 def _normalize_content(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
+
+
+def _content_hash(text: str) -> str:
+    clean = _normalize_content(sanitize_visible_text(text))
+    if not clean:
+        return ""
+    return "sha256:" + hashlib.sha256(clean.encode("utf-8", errors="replace")).hexdigest()
+
+
+def _assistant_reply_matches(row: dict[str, Any], *, reply: str, reply_hash: str) -> bool:
+    if _safe_str(row.get("role")).strip() != "assistant":
+        return False
+    content = sanitize_visible_text(_safe_str(row.get("content")).strip())
+    if not content:
+        return False
+    clean_reply = sanitize_visible_text(reply)
+    if clean_reply and _normalize_content(content) == _normalize_content(clean_reply):
+        return True
+    return bool(reply_hash and _content_hash(content) == reply_hash)
 
 
 def _truncate(text: str, limit: int) -> str:
@@ -157,6 +265,60 @@ def save_dialogue_tail(
     except OSError:
         return False
     return True
+
+
+def remove_matching_assistant_reply_from_tail(
+    tail: list[dict[str, str]],
+    *,
+    reply: str = "",
+    reply_hash: str = "",
+    max_scan_entries: int = 16,
+) -> dict[str, Any]:
+    clean_hash = _safe_str(reply_hash).strip()
+    clean_reply = sanitize_visible_text(reply).strip()
+    if not clean_reply and not clean_hash:
+        return {"removed": False, "removed_count": 0, "notes": ["missing_reply_identity"]}
+    scan = max(1, int(max_scan_entries))
+    start = max(0, len(tail) - scan)
+    for index in range(len(tail) - 1, start - 1, -1):
+        item = tail[index]
+        if not isinstance(item, dict):
+            continue
+        if _assistant_reply_matches(item, reply=clean_reply, reply_hash=clean_hash):
+            del tail[index]
+            return {"removed": True, "removed_count": 1, "notes": ["dialogue_tail_assistant_reply_removed"]}
+    return {"removed": False, "removed_count": 0, "notes": ["matching_assistant_reply_not_found"]}
+
+
+def remove_matching_assistant_reply(
+    root: Path,
+    session_key: str,
+    *,
+    reply: str = "",
+    reply_hash: str = "",
+    max_scan_entries: int = 16,
+) -> dict[str, Any]:
+    path = _session_path(root, session_key)
+    rows = _load_rows(path)
+    if not rows:
+        return {"removed": False, "removed_count": 0, "notes": ["dialogue_tail_empty_or_missing"]}
+    result = remove_matching_assistant_reply_from_tail(
+        rows,
+        reply=reply,
+        reply_hash=reply_hash,
+        max_scan_entries=max_scan_entries,
+    )
+    if not result.get("removed"):
+        return result
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            "\n".join(json.dumps(row, ensure_ascii=False, sort_keys=True) for row in rows) + ("\n" if rows else ""),
+            encoding="utf-8",
+        )
+    except OSError:
+        return {"removed": False, "removed_count": 0, "notes": ["dialogue_tail_write_failed"]}
+    return result
 
 
 def compact_tail_for_prompt(

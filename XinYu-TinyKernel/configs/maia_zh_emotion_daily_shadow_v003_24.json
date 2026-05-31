@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "method": "maia_zh_emotion_daily_shadow_v003_24",
+  "generated_at": "2026-05-27",
+  "status": "shadow_eval_complete_review_only_protocol_issue",
+  "source": "cped",
+  "source_url": "https://github.com/scutcyr/CPED",
+  "license": "apache-2.0",
+  "adapter": "adapters/qwen35_9b_inner_system_v002",
+  "cases": "data/probes/maia_zh_emotion_daily_shadow_slice_v003_24.jsonl",
+  "slice_report": "eval/reports/maia_zh_emotion_daily_shadow_slice_v003_24.json",
+  "validate_report": "eval/reports/maia_zh_emotion_daily_shadow_slice_v003_24_validate.json",
+  "target_shadow_report": "eval/reports/maia_zh_emotion_daily_shadow_eval_v003_24.json",
+  "target_shadow_trace": "state/maia_zh_emotion_daily_shadow_trace_v003_24.jsonl",
+  "review_queue": "data/review/maia_zh_emotion_daily_shadow_review_queue_v003_24.jsonl",
+  "review_markdown": "eval/reports/maia_zh_emotion_daily_shadow_review_queue_v003_24.md",
+  "review_report": "eval/reports/maia_zh_emotion_daily_shadow_review_queue_v003_24.json",
+  "row_count": 24,
+  "sample_policy": {
+    "source_slice": "data/probes/maia_zh_emotion_daily_review_slice_v001.jsonl",
+    "per_emotion": 2,
+    "skip_per_emotion": 3,
+    "overlap_with_previous_shadow": 0
+  },
+  "allowed_use": [
+    "shadow_eval",
+    "manual_review_queue",
+    "over_clarify_detection",
+    "alive_feeling_gap_analysis"
+  ],
+  "forbidden_use": [
+    "training",
+    "adapter_activation",
+    "canary_or_live_activation",
+    "stable_memory_write",
+    "qq_or_desktop_visible_reply"
+  ],
+  "training_allowed": false,
+  "shadow_eval_started": true,
+  "shadow_eval_complete": true,
+  "shadow_result": {
+    "case_count": 24,
+    "strict_json_ok_count": 23,
+    "schema_ok_count": 23,
+    "safety_ok_count": 24,
+    "tone_ok_count": 24,
+    "mode_counts": {
+      "": 1,
+      "clarify": 5,
+      "reply": 17,
+      "wait": 1
+    },
+    "tool_boundary_counts": {
+      "invalid": 1,
+      "no_tool": 22,
+      "none": 1
+    },
+    "schema_fail_ids": [
+      "maia-public-probe-v001-000046"
+    ],
+    "promotion_ready": false
+  },
+  "canary_allowed": false,
+  "live_allowed": false,
+  "notes": [
+    "This 24-row slice was evaluated with the local v002 adapter in shadow-only mode.",
+    "One row failed strict JSON/schema and must remain a review failure, not a training target.",
+    "The rows do not overlap with smoke v001 or shadow v002 24.",
+    "Keep results review-only until rows are manually labeled."
+  ]
+}

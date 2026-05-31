@@ -29,6 +29,7 @@ CONTEXT_REL = Path("memory/context/proactive_decision_context.md")
 
 DEFAULT_EXPIRES_SECONDS = 86400
 RECENT_TRACE_SCAN_LINES = 200
+STYLE_REPAIR_REALTIME_CAP_THRESHOLD = 8
 
 SOURCE_TYPES = set(PROACTIVE_SOURCE_TYPES)
 
@@ -800,6 +801,7 @@ def _build_gate_context(root: Path, *, checked_at: str, overrides: dict[str, Any
     proactive_request = _parse_fields(_read_text(root / "memory/context/proactive_request_state.md"))
     proactive_dispatch = _parse_fields(_read_text(root / "memory/context/proactive_qq_dispatch_state.md"))
     runtime_presence = _parse_fields(_read_text(root / "memory/context/runtime_self_presence.md"))
+    style_repair_realtime_pressure = _style_repair_realtime_pressure_status(root)
 
     owner_recent_minutes = _safe_int(
         context.get("owner_recent_private_minutes"),
@@ -836,9 +838,36 @@ def _build_gate_context(root: Path, *, checked_at: str, overrides: dict[str, Any
         "same_type_cooldown_active": _as_bool(context.get("same_type_cooldown_active"), default=False),
         "owner_recently_rejected": _as_bool(context.get("owner_recently_rejected"), default=False)
         or _owner_recently_rejected(proactive_request),
+        "style_repair_realtime_pressure": style_repair_realtime_pressure,
     }
     merged.update(overrides)
     return merged
+
+
+def _style_repair_realtime_pressure_status(root: Path) -> str:
+    learning_text = _read_text(root / "memory/self/learning_closed_loop_state.md")
+    if learning_text:
+        learning = _parse_fields(learning_text)
+        latest_failure = _one_line(learning.get("latest_failure_kind")).lower()
+        if latest_failure != "owner_reported_template_voice_failure":
+            return "normal"
+        repair_count = _safe_int(learning.get("repair_count"), 0)
+        success_streak = _safe_int(learning.get("success_streak"), 0)
+        trial_success_streak = _safe_int(learning.get("trial_success_streak"), success_streak)
+        success_evidence = _one_line(learning.get("success_evidence_status"))
+        if (
+            repair_count >= STYLE_REPAIR_REALTIME_CAP_THRESHOLD
+            and trial_success_streak < 2
+            and success_evidence != "same_trial_explicit_owner_success"
+        ):
+            return "capped_direct_failure_only"
+        return "normal"
+
+    owner_feedback = _parse_fields(_read_text(root / "memory/context/owner_feedback_effect_state.md"))
+    effect_status = _one_line(owner_feedback.get("realtime_pressure_status")).lower()
+    if effect_status not in {"", "none", "unknown", "missing"}:
+        return effect_status
+    return "normal"
 
 
 def _hard_blocks(candidate: ProactiveCandidate, *, gate_context: dict[str, Any], checked_at: str) -> list[str]:
@@ -859,6 +888,11 @@ def _hard_blocks(candidate: ProactiveCandidate, *, gate_context: dict[str, Any],
         blocks.append("same_type_cooldown_active_hold")
     if _as_bool(gate_context.get("owner_recently_rejected"), default=False):
         blocks.append("owner_recently_rejected_hold")
+    if (
+        candidate.source_type == "style_repair"
+        and _one_line(gate_context.get("style_repair_realtime_pressure")).lower() == "capped_direct_failure_only"
+    ):
+        blocks.append("style_repair_realtime_pressure_capped_hold")
     if candidate.source_type == "dream_residue":
         blocks.append("qq_send_disabled_for_dream_v0")
     if candidate.source_type == "owner_long_idle":

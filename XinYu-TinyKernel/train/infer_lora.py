@@ -20,6 +20,7 @@ def main() -> int:
     parser.add_argument("--adapter", default=str(ROOT / "adapters" / "smoke_lora"))
     parser.add_argument("--prompt", default="use Codex check this project")
     parser.add_argument("--max-new-tokens", type=int, default=120)
+    parser.add_argument("--full-precision", action="store_true", help="Disable 4bit adapter loading.")
     args = parser.parse_args()
 
     os.environ.setdefault("PYTHONUTF8", "1")
@@ -29,7 +30,7 @@ def main() -> int:
     try:
         import torch
         from peft import AutoPeftModelForCausalLM
-        from transformers import AutoTokenizer
+        from transformers import AutoTokenizer, BitsAndBytesConfig
     except Exception as exc:
         print(f"dependency_error={type(exc).__name__}: {exc}")
         return 2
@@ -40,12 +41,22 @@ def main() -> int:
         return 2
 
     tokenizer = AutoTokenizer.from_pretrained(str(adapter), trust_remote_code=True)
-    model = AutoPeftModelForCausalLM.from_pretrained(
-        str(adapter),
-        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-        device_map="auto",
-        trust_remote_code=True,
-    )
+    model_kwargs = {
+        "torch_dtype": torch.bfloat16
+        if torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+        else torch.float16
+        if torch.cuda.is_available()
+        else torch.float32,
+        "device_map": "auto",
+        "trust_remote_code": True,
+    }
+    if not args.full_precision:
+        model_kwargs["quantization_config"] = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+        )
+    model = AutoPeftModelForCausalLM.from_pretrained(str(adapter), **model_kwargs)
     user_payload = {
         "user_text": args.prompt,
         "context": {"recent_turns": [], "persona_state": "", "owner_profile": "", "runtime_state": "", "memory_recall": []},

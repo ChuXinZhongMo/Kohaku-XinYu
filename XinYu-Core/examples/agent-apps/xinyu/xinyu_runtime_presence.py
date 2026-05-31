@@ -1788,7 +1788,7 @@ def _format_trace_line(value: Any) -> str:
 
 def _is_meaningful_error_value(value: Any) -> bool:
     text = _safe_str(value).strip().lower()
-    return text not in {"", "none", "unknown", "0", "false", "ok", "sent", "success"}
+    return text not in {"", "none", "unknown", "0", "false", "ok", "sent", "success", "dry_run_not_enqueued"}
 
 
 def _render_presence_markdown(fields: dict[str, str]) -> str:

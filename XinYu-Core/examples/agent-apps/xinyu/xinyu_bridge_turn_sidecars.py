@@ -6,6 +6,7 @@ from typing import Any
 from xinyu_action_experience_digest import read_recent_action_digest_context
 from xinyu_bridge_values import as_bool, safe_str
 from xinyu_bridge_state_text import build_payload_time_context_block
+from xinyu_action_feedback_surface import build_action_feedback_prompt_block
 from xinyu_conversation_experience_sidecar import build_conversation_experience_prompt_block
 from xinyu_daily_digest import build_daily_digest_prompt_block
 from xinyu_dialogue_rule_trial_overlay import build_dialogue_rule_trial_overlay_prompt_block
@@ -17,9 +18,14 @@ from xinyu_owner_context_bridge import build_owner_continuity_hint as build_owne
 from xinyu_persona_runtime import build_persona_runtime_state
 from xinyu_prompt_pressure import PromptSidecar, select_prompt_sidecars, write_prompt_pressure_report
 from xinyu_recent_attachment_context import load_recent_attachment_context
+from xinyu_relation_posture import build_relation_posture_prompt_block
+from xinyu_relation_posture import evaluate_relation_posture
 from xinyu_runtime_context import build_goldmark_auth_prompt_block
 from xinyu_scene_frame import build_scene_frame
 from xinyu_self_state_capsule import build_self_state_capsule_prompt_block
+from xinyu_short_term_continuity import build_short_term_continuity_prompt_block
+from xinyu_short_term_recall_diagnostics import build_short_term_recall_diagnostics
+from xinyu_short_term_recall_diagnostics import write_short_term_recall_diagnostics
 from xinyu_slow_state_modulator import build_slow_state
 from xinyu_slow_state_modulator import render_slow_state_prompt_block
 from xinyu_text_variants import readable_markers
@@ -30,6 +36,8 @@ from xinyu_turn_triage_gate import render_turn_triage_prompt_block
 from xinyu_turn_triage_gate import triage_turn
 from xinyu_voice_trial_overlay import build_voice_trial_overlay_prompt_block
 from xinyu_initiative_spine import build_initiative_spine_prompt_block
+from xinyu_intention_ecology import build_intention_ecology_prompt_block
+from xinyu_intention_ecology import evaluate_intention_ecology
 
 
 REPLY_DEMO_REQUEST_MARKERS = readable_markers(
@@ -93,6 +101,7 @@ def inject_live_turn_context(
     metadata = payload.get("metadata")
     if not isinstance(metadata, dict):
         metadata = {}
+    session_key = runtime._session_key(payload)
     is_owner = as_bool(metadata.get("is_owner_user"), default=False)
     is_trusted = as_bool(metadata.get("is_trusted_user"), default=False)
     message_type = safe_str(payload.get("message_type"))
@@ -133,6 +142,28 @@ def inject_live_turn_context(
         turn_residue=previous_residue,
         persist=True,
     )
+    evaluated_at = datetime.now().astimezone().isoformat()
+    relation_posture = evaluate_relation_posture(
+        runtime.xinyu_dir,
+        payload,
+        user_text=text,
+        dialogue_tail=dialogue_tail or [],
+        visible_turn=visible_turn,
+        scene_frame=scene_frame,
+        turn_triage=turn_triage,
+        evaluated_at=evaluated_at,
+        write_state=True,
+    )
+    intention_ecology = evaluate_intention_ecology(
+        runtime.xinyu_dir,
+        payload,
+        user_text=text,
+        dialogue_tail=dialogue_tail or [],
+        relation_posture=relation_posture,
+        visible_turn=visible_turn,
+        checked_at=evaluated_at,
+        write_state=True,
+    )
 
     pressure_line = (
         "style pressure: answer through the next line, not through a report."
@@ -168,8 +199,31 @@ def inject_live_turn_context(
     slow_state_block = render_slow_state_prompt_block(slow_state) if slow_state.active_policies else ""
     if slow_state_block:
         add_sidecar("slow_state_modulator", slow_state_block, admission="support")
+    relation_posture_block = build_relation_posture_prompt_block(runtime.xinyu_dir, relation_posture)
+    if relation_posture_block:
+        add_sidecar("relation_posture", relation_posture_block, required=True, admission="current_turn")
+    intention_ecology_block = build_intention_ecology_prompt_block(runtime.xinyu_dir, intention_ecology)
+    if intention_ecology_block:
+        add_sidecar("intention_ecology", intention_ecology_block, required=True, admission="current_turn")
+    short_term_continuity_block = build_short_term_continuity_prompt_block(
+        runtime.xinyu_dir,
+        payload=payload,
+        user_text=text,
+        dialogue_tail=dialogue_tail or [],
+        session_key=session_key,
+        turn_id=turn_id,
+        write_state=True,
+    )
+    if short_term_continuity_block:
+        add_sidecar(
+            "short_term_continuity",
+            short_term_continuity_block,
+            required=True,
+            admission="current_turn",
+        )
     recent_action_block = read_recent_action_context(runtime.xinyu_dir)
     action_digest_block = read_recent_action_digest_context(runtime.xinyu_dir)
+    action_feedback_block = build_action_feedback_prompt_block(runtime.xinyu_dir)
     memory_braid_block = build_memory_braid_prompt_block(
         runtime.xinyu_dir,
         payload=payload,
@@ -298,6 +352,8 @@ def inject_live_turn_context(
         add_sidecar("recent_action", recent_action_block, admission="episodic")
     if action_digest_block:
         add_sidecar("action_digest", action_digest_block, admission="episodic")
+    if action_feedback_block:
+        add_sidecar("action_feedback", action_feedback_block, admission="episodic")
     owner_continuity_hint = build_owner_context_hint(
         runtime.xinyu_dir,
         user_text=text,
@@ -464,12 +520,20 @@ def inject_live_turn_context(
         "",
         persona_runtime.to_prompt_block(),
         "",
+        relation_posture.to_prompt_block(),
+        "",
+        intention_ecology.to_prompt_block(),
+        "",
         "Live turn context, restored continuity version.",
         "sidecar_visibility_contract: private_observation_only.",
         (
             "Never print sidecar names, state labels, file paths, hashes, XML/tool syntax, gates, scores, "
             "or 'I read this file' mechanics in ordinary chat. Convert useful facts into the next natural line; "
             "only discuss mechanics when owner explicitly asks about the system."
+        ),
+        (
+            "living_thought_contract: do not answer owner-private correction as feedback processing. Avoid 知道了/收到/"
+            "我会改/我会调整/感谢反馈 as the main move; speak from the current felt relation and replace the line itself."
         ),
         (
             "promise_followup_contract: do not make a bare promise like 我再看看 / 我查一下 and then stop. "
@@ -519,3 +583,13 @@ def inject_live_turn_context(
         write_prompt_pressure_report(runtime.xinyu_dir, pressure_report)
     except OSError as exc:
         print(f"[xinyu_core_bridge] prompt pressure report failed: {type(exc).__name__}: {exc}", flush=True)
+    else:
+        if short_term_continuity_block:
+            try:
+                recall_report = build_short_term_recall_diagnostics(runtime.xinyu_dir)
+                write_short_term_recall_diagnostics(runtime.xinyu_dir, recall_report)
+            except Exception as exc:
+                print(
+                    f"[xinyu_core_bridge] short-term recall diagnostics failed: {type(exc).__name__}: {exc}",
+                    flush=True,
+                )

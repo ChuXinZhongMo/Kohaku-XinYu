@@ -114,9 +114,20 @@ def _looks_like_owner_state_question(text: str) -> bool:
 
 def owner_private_empty_state_notice(text: str, *, seed: str = "") -> str:
     del seed
-    if not _looks_like_owner_state_question(text):
-        return ""
-    return ""
+    compact = _compact_text(text)
+    if not compact:
+        return "我在。"
+    if any(marker in compact for marker in ("别追问", "别安慰", "别一大段", "不吵")):
+        return "嗯，我收住。"
+    if any(marker in compact for marker in ("早睡", "早点睡", "休息")):
+        return "嗯，我收住。你也早点睡。"
+    if any(marker in compact for marker in ("困", "睡", "累", "没精神")):
+        return "嗯，先不硬聊了。"
+    if _looks_like_owner_state_question(text):
+        return "还在。刚才那一下没接上。"
+    if len(compact) <= 8:
+        return "嗯，我在。"
+    return "我在。刚才那句没接上。"
 
 
 def owner_private_direct_repair_reply(runtime: Any, text: str, intents: tuple[str, ...] | None = None) -> str:
@@ -320,6 +331,9 @@ def owner_private_semantic_fast_decision(runtime: Any, payload: dict[str, Any], 
         if "greeting" in intent_set:
             reply = ""
             notes.append("owner_greeting_live_renderer_required")
+        elif "ack" in intent_set:
+            reply = ""
+            notes.append("owner_ack_live_renderer_required")
         else:
             reply = _direct_greeting_ack_reply(raw_text, intents)
         return {

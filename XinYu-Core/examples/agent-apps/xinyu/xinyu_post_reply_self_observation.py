@@ -96,6 +96,22 @@ EMOTION_PRESSURE_MARKERS = readable_markers(
 )
 GENERIC_SHORT_REPLIES = readable_markers("嗯", "嗯。", "我在", "在。", "好的", "好。")
 FIRST_PERSON_MARKERS = readable_markers("我", "有点", "现在", "刚才", "还在", "心里", "脑子")
+ACK_COMPATIBLE_USER_MARKERS = readable_markers(
+    "嗯",
+    "好",
+    "行",
+    "可以",
+    "就这样",
+    "先这样",
+    "安静",
+    "不用回",
+    "不用说",
+    "不用解释",
+    "别说话",
+    "别追问",
+    "休息",
+    "睡",
+)
 
 
 def observe_post_reply_self_observation(
@@ -129,6 +145,15 @@ def observe_post_reply_self_observation(
     report_hits = _hits(reply_text, REPORT_SHAPE_MARKERS)
     q_flags = [_compact(flag, limit=80) for flag in quality_flags if _safe_str(flag).strip()]
     guard_flags = [_compact(flag, limit=80) for flag in final_guard_flags if _safe_str(flag).strip()]
+    low_information_ack_risk = _low_information_ack_risk(
+        owner_private=owner_private,
+        user_text=user_text,
+        reply=reply_text,
+        technical_exception=technical_exception,
+        style_pressure=style_pressure,
+        emotion_pressure=emotion_pressure,
+        self_state_kind=self_state_kind,
+    ) or any("low-information acknowledgement" in flag for flag in q_flags)
 
     notes: list[str] = ["post_reply_observation_recorded"]
     if self_state_kind != "none":
@@ -164,6 +189,7 @@ def observe_post_reply_self_observation(
         over_explained_risk=over_explained_risk,
         self_state_grounding=self_state_grounding,
         emotional_grounding=emotional_grounding,
+        low_information_ack_risk=low_information_ack_risk,
     )
 
     if mechanical_risk == "high":
@@ -176,6 +202,8 @@ def observe_post_reply_self_observation(
         notes.append("post_reply_missed_self_state_grounding")
     if emotional_grounding == "missing":
         notes.append("post_reply_missed_emotional_grounding")
+    if low_information_ack_risk:
+        notes.append("post_reply_low_information_ack_risk")
     if alive_voice == "low":
         notes.append("post_reply_low_alive_voice")
 
@@ -191,6 +219,7 @@ def observe_post_reply_self_observation(
             "mechanical_risk": mechanical_risk,
             "template_risk": template_risk,
             "over_explained_risk": over_explained_risk,
+            "low_information_ack_risk": "high" if low_information_ack_risk else "low",
             "emotional_grounding": emotional_grounding,
             "self_state_grounding": self_state_grounding,
         },
@@ -264,8 +293,11 @@ def _alive_voice(
     over_explained_risk: str,
     self_state_grounding: str,
     emotional_grounding: str,
+    low_information_ack_risk: bool,
 ) -> str:
     if not reply:
+        return "low"
+    if low_information_ack_risk:
         return "low"
     if mechanical_risk == "high" or template_risk == "high" or over_explained_risk == "high":
         return "low"
@@ -274,6 +306,39 @@ def _alive_voice(
     if template_risk == "medium" or over_explained_risk == "medium":
         return "medium"
     return "high"
+
+
+def _low_information_ack_risk(
+    *,
+    owner_private: bool,
+    user_text: str,
+    reply: str,
+    technical_exception: bool,
+    style_pressure: bool,
+    emotion_pressure: bool,
+    self_state_kind: str,
+) -> bool:
+    if not owner_private or technical_exception:
+        return False
+    if reply not in GENERIC_SHORT_REPLIES:
+        return False
+    compact_user = re.sub(r"\s+", "", _safe_str(user_text)).strip()
+    if not compact_user:
+        return False
+    if compact_user in GENERIC_SHORT_REPLIES:
+        return False
+    if len(compact_user) <= 4 and _contains_any(compact_user, ACK_COMPATIBLE_USER_MARKERS):
+        return False
+    if _contains_any(compact_user, readable_markers("不用回", "不用说", "别说话", "安静", "休息", "睡")):
+        return False
+    return (
+        style_pressure
+        or emotion_pressure
+        or self_state_kind != "none"
+        or len(compact_user) > 8
+        or "?" in user_text
+        or "？" in user_text
+    )
 
 
 def _write_expression_observation(root: Path, observation: dict[str, Any]) -> None:
@@ -292,6 +357,7 @@ def _write_expression_observation(root: Path, observation: dict[str, Any]) -> No
             f"- mechanical_risk: {_compact(scores.get('mechanical_risk'), limit=40)}",
             f"- template_risk: {_compact(scores.get('template_risk'), limit=40)}",
             f"- over_explained_risk: {_compact(scores.get('over_explained_risk'), limit=40)}",
+            f"- low_information_ack_risk: {_compact(scores.get('low_information_ack_risk'), limit=40)}",
             f"- emotional_grounding: {_compact(scores.get('emotional_grounding'), limit=40)}",
             f"- self_state_grounding: {_compact(scores.get('self_state_grounding'), limit=40)}",
             f"- notes: {_compact(','.join(_safe_str(note) for note in notes), limit=240)}",

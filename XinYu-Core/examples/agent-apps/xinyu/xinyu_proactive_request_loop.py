@@ -497,7 +497,7 @@ tags: [proactive, request, owner-private, boundary]
 - memory_feedback_target: {_one_line(request['memory_feedback_target'])}
 - owner_reply_feedback: {_one_line(request['owner_reply_feedback'])}
 - stable_memory_permission: {_one_line(request['stable_memory_permission'])}
-- request_answer_state: pending
+- request_answer_state: not_requested
 
 ## Gates
 - has_concrete_question: {gates.get('has_concrete_question', 'false')}

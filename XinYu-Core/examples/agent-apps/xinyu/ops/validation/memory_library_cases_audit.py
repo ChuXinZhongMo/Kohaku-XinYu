@@ -39,6 +39,8 @@ def collect_boundary_records(repo_root: Path) -> list[BoundaryRecord]:
     app = app_root(repo_root)
     candidates = (
         app / "memory",
+        repo_root / "assets" / "cases",
+        repo_root / "assets" / "library",
         repo_root / "cases",
         repo_root / "library",
         app / "data",
@@ -69,9 +71,9 @@ def classify_zone(repo_root: Path, path: Path) -> str:
     rel = _rel(repo_root, path)
     app_prefix = APP_REL.as_posix() + "/"
     app_rel = rel[len(app_prefix) :] if rel.startswith(app_prefix) else rel
-    if rel.startswith("cases/"):
+    if rel.startswith("assets/cases/") or rel.startswith("cases/"):
         return "cases"
-    if rel.startswith("library/"):
+    if rel.startswith("assets/library/") or rel.startswith("library/"):
         return "library"
     if app_rel.startswith("memory/"):
         if app_rel.startswith("memory/knowledge/"):

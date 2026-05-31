@@ -9,6 +9,7 @@ from typing import Any
 
 STATE_REL = "memory/self/personality_self_review_state.md"
 PROFILE_REL = "memory/self/personality_profile.md"
+LEARNING_CLOSED_LOOP_REL = "memory/self/learning_closed_loop_state.md"
 
 DECISION_REJECT = "reject_change"
 DECISION_CONTINUE = "continue_trial"
@@ -47,6 +48,23 @@ OWNER_VETO_MARKERS = (
     "还是没变",
     "不像人",
 )
+
+LEARNING_PROMOTION_SIGNALS = {"true", "possible_after_self_review"}
+
+LEARNING_TRIAL_KEYS_BY_PERSONALITY_HABIT = {
+    "replace_explanations_with_one_concrete_owner-facing_line_under_style_pressure": {
+        "owner_reported_template_voice_failure",
+        "reply_quality_template_pressure",
+        "post_reply_template_voice_risk",
+        "post_reply_over_explained_risk",
+    },
+    "carry_recent_residue_across_turns_without_claiming_new_facts": {
+        "owner_reported_context_discontinuity",
+    },
+    "soften_after_return_without_erasing_hurt_or_becoming_service_voice": {
+        "post_reply_missed_emotional_grounding",
+    },
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,6 +161,90 @@ def _feedback_rejects_change(feedback: str, self_model: str) -> bool:
     return status == "evaluated" and _contains_any(feedback + "\n" + self_model, OWNER_VETO_MARKERS)
 
 
+def _learning_trial_success_gate(learning_state: str, active_trial_habit: str) -> dict[str, Any]:
+    if active_trial_habit in {"", "none", "unknown"}:
+        return {
+            "required": False,
+            "ok": True,
+            "summary": "not_required:no_active_trial_habit",
+            "reason": "no_active_trial_habit",
+        }
+
+    if not learning_state.strip():
+        return {
+            "required": True,
+            "ok": False,
+            "summary": "missing_learning_closed_loop_state",
+            "reason": "learning_trial_success_gate_not_satisfied:missing_learning_closed_loop_state",
+        }
+
+    status = _field(learning_state, "status", "none")
+    learning_habit = _field(learning_state, "active_trial_habit", "none")
+    active_trial_key = _field(learning_state, "active_trial_key", _field(learning_state, "latest_failure_kind", "none"))
+    repair_count = _int_field(learning_state, "repair_count", 0)
+    success_count = _int_field(learning_state, "success_count", 0)
+    success_streak = _int_field(learning_state, "success_streak", 0)
+    trial_success_count = _int_field(learning_state, "trial_success_count", success_count)
+    trial_success_streak = _int_field(learning_state, "trial_success_streak", success_streak)
+    latest_success_trial_key = _field(learning_state, "latest_success_trial_key", "none")
+    success_evidence_status = _field(learning_state, "success_evidence_status", "none")
+    promotion_signal = _field(learning_state, "promotion_signal", "false").lower()
+    last_owner_reaction = _field(learning_state, "last_owner_reaction", "none")
+    repair_overloaded = repair_count >= 8 and trial_success_streak < 2
+    expected_trial_keys = LEARNING_TRIAL_KEYS_BY_PERSONALITY_HABIT.get(active_trial_habit, set())
+
+    reasons: list[str] = []
+    if repair_overloaded:
+        reasons.append(f"repair_pressure_overloaded:{repair_count}")
+    if status != "trial_supported":
+        reasons.append(f"status_not_trial_supported:{status}")
+    if learning_habit in {"", "none", "unknown"}:
+        reasons.append("missing_learning_trial_habit")
+    if active_trial_key in {"", "none", "unknown"}:
+        reasons.append("missing_active_trial_key")
+    if expected_trial_keys and active_trial_key not in expected_trial_keys:
+        reasons.append(f"active_trial_key_mismatch:{active_trial_key}")
+    if expected_trial_keys and latest_success_trial_key not in expected_trial_keys:
+        reasons.append(f"success_trial_key_mismatch:{latest_success_trial_key}")
+    if trial_success_count < 2:
+        reasons.append(f"trial_success_count_below_2:{trial_success_count}")
+    if trial_success_streak < 2:
+        reasons.append(f"trial_success_streak_below_2:{trial_success_streak}")
+    if success_evidence_status != "same_trial_explicit_owner_success":
+        reasons.append(f"success_evidence_not_same_trial:{success_evidence_status}")
+    if promotion_signal not in LEARNING_PROMOTION_SIGNALS and trial_success_streak < 2:
+        reasons.append(f"promotion_signal_not_ready:{promotion_signal}")
+    if last_owner_reaction != "explicit_success":
+        reasons.append(f"last_owner_reaction_not_explicit_success:{last_owner_reaction}")
+
+    summary = (
+        f"status={status}; "
+        f"active_trial_key={active_trial_key}; "
+        f"success_trial_key={latest_success_trial_key}; "
+        f"repair={repair_count}; "
+        f"success={success_count}; "
+        f"streak={success_streak}; "
+        f"trial_success={trial_success_count}; "
+        f"trial_streak={trial_success_streak}; "
+        f"success_evidence={success_evidence_status}; "
+        f"promotion_signal={promotion_signal}; "
+        f"last_owner_reaction={last_owner_reaction}"
+    )
+    if reasons:
+        return {
+            "required": True,
+            "ok": False,
+            "summary": summary,
+            "reason": "learning_trial_success_gate_not_satisfied:" + ",".join(reasons[:6]),
+        }
+    return {
+        "required": True,
+        "ok": True,
+        "summary": summary,
+        "reason": "learning_trial_success_gate_satisfied",
+    }
+
+
 def _major_change_required(candidate_theme: str, active_trial_habit: str, private_state: str) -> bool:
     return _contains_any(
         "\n".join((candidate_theme, active_trial_habit, private_state)),
@@ -200,6 +302,7 @@ def _decide(
     feedback: str,
     self_model: str,
     private_state: str,
+    learning_gate: dict[str, Any],
 ) -> tuple[str, str, str, str]:
     stage = _field(evolution, "evolution_stage", "baseline_observation")
     gate = _field(evolution, "gate_decision", _field(change_state, "gate_decision", "no_candidate"))
@@ -237,6 +340,13 @@ def _decide(
             "self_can_continue_trial",
             "The candidate has pressure, but the visible-behavior feedback loop is not complete yet.",
         )
+    if bool(learning_gate.get("required")) and not bool(learning_gate.get("ok")):
+        return (
+            DECISION_CONTINUE,
+            "keep_runtime_trial_only",
+            "self_can_continue_trial",
+            _compact(str(learning_gate.get("reason", "learning_trial_success_gate_not_satisfied")), limit=260),
+        )
     if gate == "profile_review_ready" and pressure >= 70 and growth_entries >= 3 and reflection_entries >= 2:
         return (
             DECISION_PROMOTE_MINOR,
@@ -263,6 +373,8 @@ def _render_state(
     active_trial_habit: str,
     deprecated_reaction: str,
     evidence_summary: str,
+    learning_trial_gate: str,
+    learning_trial_gate_reason: str,
     reason: str,
     profile_changed: bool,
 ) -> str:
@@ -297,6 +409,8 @@ tags: [personality, self-review, autonomy, boundary]
 - active_trial_habit: {_compact(active_trial_habit)}
 - deprecated_reaction: {_compact(deprecated_reaction)}
 - evidence_summary: {_compact(evidence_summary, limit=240)}
+- learning_trial_gate: {_compact(learning_trial_gate, limit=220)}
+- learning_trial_gate_reason: {_compact(learning_trial_gate_reason, limit=260)}
 - reason: {_compact(reason, limit=260)}
 
 ## Decision Contract
@@ -328,10 +442,12 @@ def run_personality_self_review(
     feedback = read_text(root / "memory/self/private_thought_feedback_state.md")
     self_model = read_text(root / "memory/self/self_model_state.md")
     private_state = read_text(root / "memory/self/private_thought_state.md")
+    learning_state = read_text(root / LEARNING_CLOSED_LOOP_REL)
 
     candidate_theme = _field(evolution, "candidate_theme", _field(change_state, "candidate_theme", "none"))
     active_trial_habit = _field(evolution, "active_trial_habit", "none")
     deprecated_reaction = _field(evolution, "deprecated_reaction", "none")
+    learning_gate = _learning_trial_success_gate(learning_state, active_trial_habit)
     evidence_summary = (
         f"stage={_field(evolution, 'evolution_stage', 'unknown')}; "
         f"gate={_field(evolution, 'gate_decision', _field(change_state, 'gate_decision', 'unknown'))}; "
@@ -341,7 +457,8 @@ def run_personality_self_review(
         f"feedback={_field(feedback, 'status', _field(self_model, 'feedback_status', 'none'))}/"
         f"{_field(feedback, 'outcome', _field(self_model, 'latest_outcome', 'none'))}; "
         f"persona_trial_feedback={_field(feedback, 'persona_trial_feedback', _field(self_model, 'persona_trial_feedback', 'none'))}; "
-        f"promotion_signal={_field(feedback, 'promotion_signal', _field(self_model, 'promotion_signal', 'false'))}"
+        f"promotion_signal={_field(feedback, 'promotion_signal', _field(self_model, 'promotion_signal', 'false'))}; "
+        f"learning_trial={learning_gate['summary']}"
     )
 
     decision, action, autonomy_level, reason = _decide(
@@ -350,6 +467,7 @@ def run_personality_self_review(
         feedback=feedback,
         self_model=self_model,
         private_state=private_state,
+        learning_gate=learning_gate,
     )
     profile_changed = False
     if decision == DECISION_PROMOTE_MINOR and apply_profile_patch:
@@ -370,6 +488,8 @@ def run_personality_self_review(
         active_trial_habit=active_trial_habit,
         deprecated_reaction=deprecated_reaction,
         evidence_summary=evidence_summary,
+        learning_trial_gate=str(learning_gate["summary"]),
+        learning_trial_gate_reason=str(learning_gate["reason"]),
         reason=reason,
         profile_changed=profile_changed,
     )
@@ -382,6 +502,7 @@ def run_personality_self_review(
         "candidate_theme": candidate_theme,
         "active_trial_habit": active_trial_habit,
         "deprecated_reaction": deprecated_reaction,
+        "learning_trial_gate": learning_gate,
         "profile_changed": profile_changed,
         "reason": reason,
     }
@@ -402,6 +523,8 @@ def read_personality_self_review_state(root: Path) -> str:
         active_trial_habit="none",
         deprecated_reaction="none",
         evidence_summary="none",
+        learning_trial_gate="not_required:no_runtime_review_yet",
+        learning_trial_gate_reason="none",
         reason="No runtime personality self-review has been written yet.",
         profile_changed=False,
     )

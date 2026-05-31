@@ -50,8 +50,8 @@ p {
   height: 100vh;
   min-height: 620px;
   display: grid;
-  grid-template-rows: 64px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-rows: 64px auto minmax(0, 1fr);
+  gap: 10px;
   padding: 14px;
   overflow: hidden;
   animation: app-enter 260ms ease both;

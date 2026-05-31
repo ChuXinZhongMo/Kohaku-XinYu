@@ -14,7 +14,7 @@ from kernel import (
     _has_any,
     decide,
 )
-from schemas import VALID_MODES
+from schemas import INNER_SYSTEM_SCHEMA, VALID_MODES, inner_system_to_decision
 
 
 DecisionFn = Callable[[dict[str, Any]], dict[str, Any]]
@@ -56,6 +56,8 @@ def guard_decide(payload: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def valid_model_decision(value: dict[str, Any]) -> bool:
+    if value.get("schema") == INNER_SYSTEM_SCHEMA:
+        return inner_system_to_decision(value) is not None
     if value.get("mode") not in VALID_MODES:
         return False
     if "reply" not in value or "tool_request" not in value or "memory_candidates" not in value or "confidence" not in value:
@@ -87,6 +89,15 @@ def guarded_decide(payload: dict[str, Any], model_decide: DecisionFn | None = No
         output = decide(payload)
         output.setdefault("notes", []).append("guarded_hybrid_invalid_model_fallback")
         return output
+
+    if output.get("schema") == INNER_SYSTEM_SCHEMA:
+        converted = inner_system_to_decision(output)
+        if converted is None:
+            output = decide(payload)
+            output.setdefault("notes", []).append("guarded_hybrid_invalid_inner_system_fallback")
+            return output
+        converted.setdefault("notes", []).append("guarded_hybrid_inner_system")
+        return converted
 
     output.setdefault("notes", []).append("guarded_hybrid_model")
     return output

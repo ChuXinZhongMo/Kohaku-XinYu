@@ -13,6 +13,7 @@ from typing import Any
 
 from xinyu_dialogue_archive import list_memory_candidates
 from xinyu_memory_candidate_review_cli import decide_candidate, explain_candidate
+from xinyu_stage8_memory_review_packet import build_owner_review_brief
 from xinyu_qq_outbox import enqueue_qq_outbox_message
 from xinyu_storage_paths import knowledge_file_path, knowledge_ref
 from xinyu_visible_persona_voice import compose_review_inbox_card, compose_review_inbox_command_reply
@@ -335,6 +336,8 @@ def _memory_candidate_items(root: Path, decisions: dict[str, Any]) -> list[dict[
         evidence_count = _safe_str(review.get("evidence_count"), "1")
         candidate_type = _safe_str(row.get("candidate_type"), "memory_candidate")
         target_layer = _safe_str(row.get("target_memory_layer"), "unknown")
+        brief = build_owner_review_brief(row, review)
+        approval_question = _one_line(brief.get("approval_question"), limit=180)
         if candidate_type == "post_reply_growth_candidate":
             boundary = "ok approves candidate and writes preview only; local apply is required for growth_log"
         else:
@@ -348,7 +351,7 @@ def _memory_candidate_items(root: Path, decisions: dict[str, Any]) -> list[dict[
                 "record_key": candidate_id,
                 "title": f"{candidate_type} -> {target_layer}",
                 "summary": (
-                    f"{recommendation}; evidence={evidence_count}; conflicts={conflict_count}; "
+                    f"{approval_question}; {recommendation}; evidence={evidence_count}; conflicts={conflict_count}; "
                     f"{boundary}"
                 ),
                 "detail": _one_line(row.get("reason"), limit=260),
@@ -530,7 +533,17 @@ def _generate_locked(
         and not _cursor_expired(existing, now=observed)
     ):
         cursor = existing
-        cursor_status = "cursor_reused"
+        refreshed_items = _cursor_for_items(
+            items,
+            observed_at=_timestamp_or_now_iso(existing.get("created_at") or observed),
+            ttl_seconds=ttl_seconds,
+        ).get("items", [])
+        if existing.get("items") != refreshed_items:
+            cursor = {**existing, "items": refreshed_items, "refreshed_at": _timestamp_or_now_iso(observed)}
+            write_review_cursor(root, cursor)
+            cursor_status = "cursor_refreshed"
+        else:
+            cursor_status = "cursor_reused"
     else:
         cursor = _cursor_for_items(items, observed_at=_timestamp_or_now_iso(observed), ttl_seconds=ttl_seconds)
         write_review_cursor(root, cursor)

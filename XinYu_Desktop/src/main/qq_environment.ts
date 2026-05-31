@@ -1,5 +1,6 @@
 import { BrowserWindow, clipboard } from 'electron'
 import { spawn } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { Socket } from 'node:net'
@@ -18,6 +19,7 @@ export type QQEnvironmentStatus = {
   webuiUrl: string
   webuiLoginUrl: string
   tokenAvailable: boolean
+  napcatQQLoggedIn: boolean | null
   diagnosis: string
   services: ServiceProbe[]
   lastError: string
@@ -69,13 +71,29 @@ export type QQRuntimeConfigActionResult = QQEnvironmentActionResult & {
 const XINYU_ROOT = process.env.XINYU_ROOT || 'D:\\XinYu'
 const XINYU_CORE_DIR = join(XINYU_ROOT, 'XinYu-Core', 'examples', 'agent-apps', 'xinyu')
 const QQ_GATEWAY_CONFIG_PATH = join(XINYU_CORE_DIR, 'xinyu_qq_gateway.config.json')
-const START_SCRIPT = join(XINYU_ROOT, 'Start-XinYu-QQ.ps1')
-const NAPCAT_ROOT = process.env.XINYU_NAPCAT_ROOT || join(XINYU_ROOT, 'NapCatQQ', 'NapCat.44498.Shell')
+const START_SCRIPT_CANDIDATES = [
+  join(XINYU_ROOT, 'Start-XinYu-QQ.ps1'),
+  join(XINYU_ROOT, 'scripts', 'Start-XinYu-QQ.ps1')
+]
+const NAPCAT_ROOT =
+  process.env.XINYU_NAPCAT_ROOT ||
+  firstExistingPath([
+    join(XINYU_ROOT, 'runtime', 'deps', 'NapCatQQ', 'NapCat.44498.Shell'),
+    join(XINYU_ROOT, 'NapCatQQ', 'NapCat.44498.Shell')
+  ])
 const NAPCAT_WEBUI_URL = process.env.XINYU_NAPCAT_WEBUI_URL || 'http://127.0.0.1:6099/webui/'
 const NAPCAT_WEBUI_LOGIN_URL =
   process.env.XINYU_NAPCAT_WEBUI_LOGIN_URL || 'http://127.0.0.1:6099/webui/web_login'
 
 let napCatWebUIWindow: BrowserWindow | null = null
+
+function firstExistingPath(candidates: string[]): string {
+  return candidates.find((candidate) => existsSync(candidate)) || candidates[0]
+}
+
+function resolveStartScriptPath(): string {
+  return START_SCRIPT_CANDIDATES.find((candidate) => existsSync(candidate)) || ''
+}
 
 export function getQQRuntimeConfig(): QQRuntimeConfig {
   return normalizeQQRuntimeConfig(readQQGatewayConfig())
@@ -216,14 +234,17 @@ export async function getQQEnvironmentStatus(): Promise<QQEnvironmentStatus> {
     establishedProbe()
   ])
   const services = [coreBridge, qqGateway, napcatWebui, napcatReverseWs]
-  const tokenAvailable = Boolean(readNapCatWebUIToken())
+  const webuiToken = readNapCatWebUIToken()
+  const tokenAvailable = Boolean(webuiToken)
+  const napcatQQLoggedIn = napcatWebui.ok && webuiToken ? await getNapCatQQLoggedIn(webuiToken) : null
   return {
     checkedAt: new Date().toISOString(),
     allReady: services.every((service) => service.ok),
     webuiUrl: NAPCAT_WEBUI_URL,
     webuiLoginUrl: NAPCAT_WEBUI_LOGIN_URL,
     tokenAvailable,
-    diagnosis: qqEnvironmentDiagnosis(services, tokenAvailable),
+    napcatQQLoggedIn,
+    diagnosis: qqEnvironmentDiagnosis(services, tokenAvailable, napcatQQLoggedIn),
     services,
     lastError: ''
   }
@@ -301,12 +322,17 @@ function idList(value: unknown): string[] {
   return stringList(value).filter((item) => /^\d{5,20}$/.test(item))
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
+}
+
 export async function startQQEnvironment(): Promise<QQEnvironmentActionResult> {
-  if (!existsSync(START_SCRIPT)) {
+  const startScript = resolveStartScriptPath()
+  if (!startScript) {
     return {
       accepted: false,
       message: 'start_script_missing',
-      error: START_SCRIPT,
+      error: START_SCRIPT_CANDIDATES.join(' | '),
       status: await getQQEnvironmentStatus()
     }
   }
@@ -314,7 +340,7 @@ export async function startQQEnvironment(): Promise<QQEnvironmentActionResult> {
   try {
     const child = spawn(
       'powershell.exe',
-      ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', START_SCRIPT, '-NapCatConsoleWindowStyle', 'Hidden'],
+      ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', startScript, '-NapCatConsoleWindowStyle', 'Hidden'],
       {
         cwd: XINYU_ROOT,
         detached: true,
@@ -406,7 +432,7 @@ function getNapCatWebUIWindow(): BrowserWindow {
   return napCatWebUIWindow
 }
 
-function qqEnvironmentDiagnosis(services: ServiceProbe[], tokenAvailable: boolean): string {
+function qqEnvironmentDiagnosis(services: ServiceProbe[], tokenAvailable: boolean, napcatQQLoggedIn: boolean | null): string {
   const byKey = Object.fromEntries(services.map((service) => [service.key, service])) as Partial<
     Record<ServiceProbe['key'], ServiceProbe>
   >
@@ -422,6 +448,9 @@ function qqEnvironmentDiagnosis(services: ServiceProbe[], tokenAvailable: boolea
   if (!byKey.napcatWebui?.ok) {
     return 'napcat_offline'
   }
+  if (!byKey.napcatReverseWs?.ok && napcatQQLoggedIn === false) {
+    return 'napcat_qq_login_required'
+  }
   if (!byKey.napcatReverseWs?.ok && tokenAvailable) {
     return 'napcat_login_required'
   }
@@ -429,6 +458,41 @@ function qqEnvironmentDiagnosis(services: ServiceProbe[], tokenAvailable: boolea
     return 'napcat_ws_waiting'
   }
   return 'partial'
+}
+
+async function getNapCatQQLoggedIn(token: string): Promise<boolean | null> {
+  try {
+    const hash = createHash('sha256').update(`${token}.napcat`).digest('hex')
+    const login = await postNapCatApi('/auth/login', { hash })
+    const credential = String(asRecord(login.data).Credential || '').trim()
+    if (!credential) {
+      return null
+    }
+    const status = await postNapCatApi('/QQLogin/CheckLoginStatus', {}, credential)
+    const data = asRecord(status.data)
+    return typeof data.isLogin === 'boolean' ? data.isLogin : null
+  } catch {
+    return null
+  }
+}
+
+async function postNapCatApi(path: string, body: Record<string, unknown>, credential = ''): Promise<Record<string, unknown>> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  }
+  if (credential) {
+    headers.Authorization = `Bearer ${credential}`
+  }
+  const response = await fetch(`http://127.0.0.1:6099/api${path}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(3000)
+  })
+  if (!response.ok) {
+    throw new Error(`napcat_api_http_${response.status}`)
+  }
+  return (await response.json()) as Record<string, unknown>
 }
 
 function readNapCatWebUIToken(): string {

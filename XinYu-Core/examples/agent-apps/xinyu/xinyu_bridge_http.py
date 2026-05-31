@@ -145,6 +145,7 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
             "/qq/outbox/claim",
             "/qq/outbox/ack",
             "/internal/message/ack",
+            "/internal/message/drop",
             "/review/inbox/command",
             "/review/goldmark/mark_request",
             "/learning/ingest",
@@ -168,6 +169,7 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
             "/qq/outbox/claim",
             "/qq/outbox/ack",
             "/internal/message/ack",
+            "/internal/message/drop",
             "/review/inbox/command",
             "/review/goldmark/mark_request",
             "/sticker/import",
@@ -224,6 +226,8 @@ class XinYuBridgeRequestHandler(BaseHTTPRequestHandler):
                     result = self._run_on_loop(self.server.runtime.qq_outbox_ack(payload), timeout=10)
             elif route == "/internal/message/ack":
                 result = self._run_on_loop(self.server.runtime.message_ack(payload), timeout=10)
+            elif route == "/internal/message/drop":
+                result = self._run_on_loop(self.server.runtime.message_drop(payload), timeout=10)
             elif route == "/review/inbox/command":
                 result = self._run_on_loop(self.server.runtime.review_inbox_command(payload), timeout=10)
             elif route == "/review/goldmark/mark_request":

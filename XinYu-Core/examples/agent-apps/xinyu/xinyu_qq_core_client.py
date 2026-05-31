@@ -80,6 +80,9 @@ class CoreBridgeClient:
     async def message_ack(self, payload: dict[str, Any]) -> dict[str, Any]:
         return await asyncio.to_thread(self._post_json, self.message_ack_url, payload)
 
+    async def message_drop(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return await asyncio.to_thread(self._post_json, self._route_url("/internal/message/drop"), payload)
+
     def _route_url(self, route: str) -> str:
         trimmed = self.chat_url.rstrip("/")
         if trimmed.endswith("/chat"):

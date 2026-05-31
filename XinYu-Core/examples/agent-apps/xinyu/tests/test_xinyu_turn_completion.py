@@ -17,6 +17,15 @@ def test_explicit_hold_waits_without_generation() -> None:
     assert decision.should_generate is False
 
 
+def test_expanded_thinking_hold_waits_without_generation() -> None:
+    for text in ["\u6211\u770b\u770b", "\u5148\u60f3\u60f3", "\u7b49\u6211\u60f3\u60f3"]:
+        decision = evaluate_turn_completion([text])
+
+        assert decision.state == STATE_WAITING_THOUGHT
+        assert decision.reason == "explicit_hold"
+        assert decision.should_generate is False
+
+
 def test_continuation_waits_for_more_segments() -> None:
     decision = evaluate_turn_completion(["\u4e0d\u662f\uff0c\u6211\u7684\u610f\u601d\u662f\u8981\u770b\u540e\u9762\u8865\u5145"])
 

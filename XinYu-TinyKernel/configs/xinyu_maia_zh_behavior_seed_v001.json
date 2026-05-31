@@ -1,0 +1,64 @@
+{
+  "allowed_use": [
+    "maia_style_behavior_seed_review",
+    "zh_emotion_mode_distribution_analysis",
+    "over_clarify_repair_planning",
+    "future_owner_approved_training_candidate_source"
+  ],
+  "canary_allowed": false,
+  "generated_at": "2026-05-28",
+  "method": "xinyu_maia_zh_behavior_seed_v001",
+  "minimum_recommended_train_rows": 500,
+  "notes": [
+    "This is the first XinYu Maia-style Chinese behavior seed lane.",
+    "Rows are review-only behavior labels, not SFT rows.",
+    "21 rows use assistant_draft_target_reply_bias as needs-owner-review reply_bias source.",
+    "6 rows use default review-label behavior bias for clarify/wait-positive examples.",
+    "No formal target_reply_bias values were written.",
+    "Do not train until owner approves or rewrites selected target_reply_bias rows and explicitly promotes them."
+  ],
+  "outputs": {
+    "jsonl": "data/review/xinyu_maia_zh_behavior_seed_v001.jsonl",
+    "markdown": "eval/reports/xinyu_maia_zh_behavior_seed_v001.md",
+    "report": "eval/reports/xinyu_maia_zh_behavior_seed_v001.json"
+  },
+  "expanded_candidate_pool": {
+    "config": "configs/xinyu_maia_zh_behavior_candidate_pool_v001.json",
+    "jsonl": "data/review/xinyu_maia_zh_behavior_candidate_pool_v001.jsonl",
+    "markdown": "eval/reports/xinyu_maia_zh_behavior_candidate_pool_v001.md",
+    "report": "eval/reports/xinyu_maia_zh_behavior_candidate_pool_v001.json"
+  },
+  "preferred_train_rows": 2000,
+  "reply_bias_source_counts": {
+    "assistant_draft_needs_owner_review": 21,
+    "review_label_default_needs_owner_review": 6
+  },
+  "row_count": 27,
+  "schema_version": 1,
+  "source_inputs": {
+    "reply_bias_drafts": "data/review/maia_zh_emotion_daily_repair_reply_bias_drafts_v001.jsonl",
+    "review_table": "data/review/maia_zh_emotion_daily_review_table_v001.jsonl"
+  },
+  "status": "review_only_not_training",
+  "train_ready": false,
+  "training_allowed": false,
+  "training_candidates_marked_true": 0,
+  "training_targets_created": false,
+  "validation": {
+    "script": "scripts/validate_xinyu_maia_behavior_seed.py",
+    "status": "pass"
+  },
+  "mode_counts": {
+    "clarify": 5,
+    "reply": 20,
+    "wait": 2
+  },
+  "forbidden_use": [
+    "direct_sft_training",
+    "public_dialogue_reply_as_xinyu_target",
+    "stable_memory_write",
+    "adapter_activation",
+    "canary_or_live_activation",
+    "qq_or_desktop_visible_reply_replacement"
+  ]
+}

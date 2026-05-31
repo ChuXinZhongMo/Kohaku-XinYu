@@ -228,15 +228,26 @@ def _update_request_delivery_state(
     if _one_line(extract_value(state, "concrete_question", "")) != _one_line(candidate):
         return False
 
-    request_id = extract_value(state, "request_id", "")
-    message_id = f"proactive:{request_id}" if request_id not in {"", "none", "unknown"} else "none"
+    existing_message_id = extract_value(state, "qq_outbox_message_id", "none")
+    if request_status in {"sent", "queued_qq", "claimed"}:
+        message_id = _one_line(adapter_message_id) or existing_message_id
+        answer_state = "sent_waiting_owner_reply"
+    elif request_status == "failed":
+        message_id = existing_message_id if existing_message_id not in {"", "none", "unknown"} else "none"
+        answer_state = "not_requested_failed"
+    else:
+        message_id = "none"
+        answer_state = "not_requested"
     updated = _replace_frontmatter_field(state, "updated_at", updated_at)
     updated = _replace_list_field(updated, "status", request_status)
+    updated = _replace_list_field(updated, "request_answer_state", answer_state)
     updated = _replace_list_field(updated, "qq_outbox_message_id", message_id)
     if claim_id:
         updated = _replace_list_field(updated, "last_claim_id", claim_id)
     if ack_status:
         updated = _replace_list_field(updated, "last_ack_status", ack_status)
+        if ack_status != "pending":
+            updated = _replace_list_field(updated, "last_acked_at", updated_at)
     if adapter_message_id:
         updated = _replace_list_field(updated, "adapter_message_id", adapter_message_id)
     if adapter_error:
@@ -516,6 +527,7 @@ tags: [initiative, proactive, qq, dispatch, boundary]
 - The bridge does not bypass owner-enabled proactive QQ permission.
 - Repeated claims for the same candidate are blocked after a successful send.
 - A failed ack enters the same bounded retry cooldown; the bridge must not loop the same candidate.
+- A dry_run ack records a no-send probe and must not count as adapter failure.
 """
 
 
@@ -834,7 +846,7 @@ def acknowledge_proactive_qq_message(
     ack_status = ack_status.strip().lower()
     notes = ["no_agent_turn", "no_session_created"]
 
-    if ack_status not in {"sent", "failed"}:
+    if ack_status not in {"sent", "failed", "dry_run"}:
         append_proactive_lifecycle_event(
             root,
             event_kind="proactive_ack_rejected",
@@ -906,10 +918,13 @@ def acknowledge_proactive_qq_message(
             adapter_error=adapter_error,
         ),
     )
+    request_status = extract_value(state, "last_claim_status", "ready") if ack_status == "dry_run" else ack_status
+    if request_status in {"claimed", "none", "unknown", ""}:
+        request_status = "ready" if ack_status == "dry_run" else ack_status
     request_updated = _update_request_delivery_state(
         root,
         candidate=extract_value(state, "last_claimed_message", ""),
-        request_status=ack_status,
+        request_status=request_status,
         claim_id=last_claim_id,
         ack_status=ack_status,
         adapter_message_id=adapter_message_id,

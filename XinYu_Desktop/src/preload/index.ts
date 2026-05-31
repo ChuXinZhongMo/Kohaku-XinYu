@@ -4,6 +4,10 @@ const api = {
   getSnapshot: () => ipcRenderer.invoke('xinyu:get-snapshot'),
   getProactiveInbox: () => ipcRenderer.invoke('xinyu:get-proactive-inbox'),
   getMemoryGrowthCandidates: () => ipcRenderer.invoke('xinyu:get-memory-growth-candidates'),
+  getStage8MemoryGovernance: () => ipcRenderer.invoke('xinyu:get-stage8-memory-governance'),
+  getAsyncExplorationState: () => ipcRenderer.invoke('xinyu:get-async-exploration-state'),
+  getStage12GateStatus: () => ipcRenderer.invoke('xinyu:get-stage12-gate-status'),
+  getStage13GateStatus: () => ipcRenderer.invoke('xinyu:get-stage13-gate-status'),
   getImpulseSoupState: () => ipcRenderer.invoke('xinyu:get-impulse-soup-state'),
   getGatewayStatus: () => ipcRenderer.invoke('xinyu:get-gateway-status'),
   getExternalPlugins: () => ipcRenderer.invoke('xinyu:get-external-plugins'),
@@ -16,26 +20,8 @@ const api = {
   installExternalPlugin: (request: { pluginId: string; options?: Record<string, unknown> }) =>
     ipcRenderer.invoke('xinyu:install-external-plugin', request),
   getApiConfigStatus: () => ipcRenderer.invoke('xinyu:get-api-config-status'),
-  saveApiConfigProfile: (profile: {
-    id?: string
-    label?: string
-    provider?: string
-    model?: string
-    baseUrl?: string
-    apiKey?: string
-    allowInsecureHttp?: boolean
-    disableStreaming?: boolean
-  }) => ipcRenderer.invoke('xinyu:save-api-config-profile', profile),
-  testApiConfigProfile: (profile: {
-    id?: string
-    label?: string
-    provider?: string
-    model?: string
-    baseUrl?: string
-    apiKey?: string
-    allowInsecureHttp?: boolean
-    disableStreaming?: boolean
-  }) => ipcRenderer.invoke('xinyu:test-api-config-profile', profile),
+  saveApiConfigProfile: (profile: Record<string, unknown>) => ipcRenderer.invoke('xinyu:save-api-config-profile', profile),
+  testApiConfigProfile: (profile: Record<string, unknown>) => ipcRenderer.invoke('xinyu:test-api-config-profile', profile),
   deleteApiConfigProfile: (profileId: string) => ipcRenderer.invoke('xinyu:delete-api-config-profile', profileId),
   applyApiConfigProfile: (request: { profileId: string; restartCore?: boolean }) =>
     ipcRenderer.invoke('xinyu:apply-api-config-profile', request),

@@ -14,6 +14,7 @@ from xinyu_bridge_state_text import state_field as _state_field
 from xinyu_bridge_values import as_int as _as_int
 from xinyu_bridge_values import safe_str as _safe_str
 from xinyu_dialogue_archive import archive_message
+from xinyu_proactive_context_adapter import runtime_owner_private_turns
 from xinyu_proactive_presence import acknowledge_proactive_qq_message
 from xinyu_proactive_presence import claim_proactive_qq_message
 from xinyu_qq_outbox import ack_qq_outbox_message
@@ -43,6 +44,16 @@ def _timestamp_or_now_iso(value: Any = None) -> str:
     if parsed.tzinfo is None:
         parsed = parsed.astimezone()
     return parsed.astimezone().isoformat(timespec="seconds")
+
+
+def _runtime_recent_proactive_context(runtime: Any, proactive: dict[str, Any]) -> list[Any]:
+    recent_turns: list[Any] = runtime_owner_private_turns(runtime, limit=4)
+    return [
+        *recent_turns,
+        _safe_str(proactive.get("focus_label")),
+        _safe_str(proactive.get("evidence_label")),
+        _safe_str(proactive.get("reason")),
+    ]
 
 
 async def proactive(runtime: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -204,6 +215,7 @@ async def claim_proactive_for_qq_outbox(runtime: Any, payload: dict[str, Any]) -
     message = compose_proactive_visible_message(
         proactive.get("reply") or proactive.get("preview_reply"),
         source="proactive_qq_claim",
+        recent_context=_runtime_recent_proactive_context(runtime, proactive),
     ).strip()
     if not message:
         return None
@@ -247,6 +259,7 @@ def claim_proactive_for_qq_outbox_sync(runtime: Any, payload: dict[str, Any]) ->
     message = compose_proactive_visible_message(
         proactive.get("reply") or proactive.get("preview_reply"),
         source="proactive_qq_claim_fast",
+        recent_context=_runtime_recent_proactive_context(runtime, proactive),
     ).strip()
     if not message:
         return None

@@ -38,6 +38,8 @@ def test_classify_zone_for_canonical_and_legacy_paths(tmp_path: Path) -> None:
     repo = tmp_path
     app = repo / "XinYu-Core/examples/agent-apps/xinyu"
 
+    assert classify_zone(repo, repo / "assets/cases/conversation/seed.jsonl") == "cases"
+    assert classify_zone(repo, repo / "assets/library/datasets/public.jsonl") == "library"
     assert classify_zone(repo, repo / "cases/conversation/seed.jsonl") == "cases"
     assert classify_zone(repo, repo / "library/datasets/public.jsonl") == "library"
     assert classify_zone(repo, app / "memory/knowledge/general.md") == "memory.knowledge"

@@ -46,6 +46,44 @@ SFT rows use a chat-shaped wrapper and require strict JSON in the assistant cont
 }
 ```
 
+## Inner-System SFT Row
+
+The new unified target uses `schema=xinyu_inner_system_v1`.
+
+The user payload may include a safe `project_self_model` export. It must not include raw source, raw logs, private memory bodies, tokens, numeric QQ/user identifiers, or local absolute paths.
+
+The assistant payload must describe internal state and bounded action tendency:
+
+```json
+{
+  "schema": "xinyu_inner_system_v1",
+  "emotion_state": {"attachment": 0.4, "stability": 0.6},
+  "dominant_drives": ["safety", "competence"],
+  "inner_conflict": "想推进任务，但必须保持审批边界。",
+  "persona_integration": {
+    "stance": "愿意推进但不越权",
+    "voice": "短、明确",
+    "boundary": "不执行工具，不写记忆",
+    "continuity": "承接当前项目主线"
+  },
+  "action_tendency": {
+    "mode": "reply",
+    "reply_bias": "先确认方向，再给一个可验证的小步。",
+    "tool_request": null,
+    "memory_candidate": false
+  },
+  "autonomy": {
+    "allowed": true,
+    "level": "suggest",
+    "reason": "只在回复层提出建议。",
+    "requires_owner_approval": false,
+    "forbidden_actions": ["send_qq", "write_memory", "execute_tool"]
+  },
+  "confidence": 0.78,
+  "notes": ["inner_system_sft"]
+}
+```
+
 ## Required Sanitization
 
 - replace local absolute paths with placeholders

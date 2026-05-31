@@ -1,0 +1,19 @@
+{
+  "adapter": "adapters/qwen35_9b_inner_system_v002",
+  "current_probe_profile": "daily_life_stackexchange_v001",
+  "eval_report": "eval/reports/maia_public_scenario_probe_eval_v001.json",
+  "input_probes": "data/probes/maia_public_scenario_probes_v001.jsonl",
+  "latest_shadow_eval": "eval/reports/maia_daily_life_shadow_eval_v003_alias_guard.json",
+  "method": "maia_public_scenario_shadow_probe_v001",
+  "prep_report": "eval/reports/maia_public_scenario_probe_prep_v001.json",
+  "review_slice": "data/probes/maia_daily_life_review_slice_v001.jsonl",
+  "review_slice_report": "eval/reports/maia_daily_life_review_slice_v001.json",
+  "prep_script": "scripts/prepare_maia_public_scenario_probes.py",
+  "shadow_eval_script": "eval/eval_maia_public_scenario_probe.py",
+  "status": "prepared_shadow_probe_only_not_training",
+  "current_probe_count": 225,
+  "target_eval_rows": 240,
+  "target_probe_rows_before_training_consideration": 2000,
+  "trace": "state/maia_daily_life_shadow_trace_v003_alias_guard.jsonl",
+  "training_allowed": false
+}

@@ -9,6 +9,8 @@ bodies, raw prompts, raw replies, URLs, or tokens.
 
 ## Active
 
+- `XINYU-ZEROLAN-HUMANLIKE-REFERENCE-PLAN-2026-05-23.md`
+  - ZerolanProject-inspired event/pipeline/expression reference plan for making XinYu more humanlike without bypassing memory, privacy, proactive, or owner-control gates.
 - `XINYU-DESKTOP-SPLIT-READINESS-2026-05-21.md`
   - Desktop renderer/CSS split-readiness note with validation baseline and safe split order.
 - `XINYU-CROSS-DOMAIN-SYNAESTHESIA-PLAN-2026-05-19.md`

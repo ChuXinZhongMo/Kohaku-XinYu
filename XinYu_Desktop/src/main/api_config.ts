@@ -19,33 +19,96 @@ type ApiProfileStore = {
   profiles: ApiConfigProfile[]
 }
 
-export type ApiConfigProfile = {
-  id: string
-  label: string
+export type ApiLlmConfig = {
   provider: string
   model: string
   baseUrl: string
   apiKey: string
   allowInsecureHttp: boolean
   disableStreaming: boolean
+}
+
+export type ApiVisionConfig = {
+  enabled: boolean
+  model: string
+  baseUrl: string
+  apiKey: string
+  timeoutSeconds: number
+  maxBytes: number
+}
+
+export type ApiHearingConfig = {
+  enabled: boolean
+  command: string
+  model: string
+  baseUrl: string
+  apiKey: string
+  language: string
+  timeoutSeconds: number
+  recordFormat: string
+}
+
+export type ApiTtsConfig = {
+  enabled: boolean
+  model: string
+  baseUrl: string
+  apiKey: string
+  voice: string
+  format: string
+  requestMode: string
+  timeoutSeconds: number
+}
+
+export type ApiOtherConfig = {
+  openAIApiKey: string
+}
+
+export type ApiConfigProfile = {
+  id: string
+  label: string
+  llm: ApiLlmConfig
+  vision: ApiVisionConfig
+  hearing: ApiHearingConfig
+  tts: ApiTtsConfig
+  other: ApiOtherConfig
   updatedAt: string
 }
 
-export type ApiConfigProfileSummary = Omit<ApiConfigProfile, 'apiKey'> & {
-  active: boolean
+type ApiSecretSummary = {
   hasApiKey: boolean
   apiKeyPreview: string
+}
+
+type ApiOpenAiSecretSummary = {
+  hasOpenAIApiKey: boolean
+  openAIApiKeyPreview: string
+}
+
+export type ApiLlmConfigSummary = Omit<ApiLlmConfig, 'apiKey'> & ApiSecretSummary
+export type ApiVisionConfigSummary = Omit<ApiVisionConfig, 'apiKey'> & ApiSecretSummary
+export type ApiHearingConfigSummary = Omit<ApiHearingConfig, 'apiKey'> & ApiSecretSummary
+export type ApiTtsConfigSummary = Omit<ApiTtsConfig, 'apiKey'> & ApiSecretSummary
+export type ApiOtherConfigSummary = ApiOpenAiSecretSummary
+
+export type ApiConfigProfileSummary = {
+  id: string
+  label: string
+  llm: ApiLlmConfigSummary
+  vision: ApiVisionConfigSummary
+  hearing: ApiHearingConfigSummary
+  tts: ApiTtsConfigSummary
+  other: ApiOtherConfigSummary
+  updatedAt: string
+  active: boolean
 }
 
 export type ApiConfigCurrent = {
   configPath: string
-  provider: string
-  model: string
-  baseUrl: string
-  allowInsecureHttp: boolean
-  disableStreaming: boolean
-  hasApiKey: boolean
-  apiKeyPreview: string
+  llm: ApiLlmConfigSummary
+  vision: ApiVisionConfigSummary
+  hearing: ApiHearingConfigSummary
+  tts: ApiTtsConfigSummary
+  other: ApiOtherConfigSummary
 }
 
 export type ApiConfigStatus = {
@@ -68,6 +131,11 @@ export type ApiConfigProfilePatch = {
   apiKey?: unknown
   allowInsecureHttp?: unknown
   disableStreaming?: unknown
+  llm?: unknown
+  vision?: unknown
+  hearing?: unknown
+  tts?: unknown
+  other?: unknown
 }
 
 export type ApiConfigTestResult = {
@@ -85,6 +153,10 @@ export type ApiConfigTestResult = {
 
 const LOCAL_ENV_NAME = 'xinyu.local.env'
 const PROFILE_STORE_NAME = 'xinyu-api-profiles.json'
+const DEFAULT_VISION_TIMEOUT_SECONDS = 45
+const DEFAULT_VISION_MAX_BYTES = 4 * 1024 * 1024
+const DEFAULT_HEARING_TIMEOUT_SECONDS = 120
+const DEFAULT_TTS_TIMEOUT_SECONDS = 60
 
 const ENV_KEYS = [
   'XINYU_API_KEY',
@@ -92,7 +164,30 @@ const ENV_KEYS = [
   'XINYU_LLM_PROVIDER',
   'XINYU_LLM_MODEL',
   'XINYU_ALLOW_INSECURE_LLM_HTTP',
-  'XINYU_DISABLE_STREAMING'
+  'XINYU_DISABLE_STREAMING',
+  'XINYU_IMAGE_VISION_ENABLED',
+  'XINYU_IMAGE_VISION_MODEL',
+  'XINYU_IMAGE_VISION_BASE_URL',
+  'XINYU_IMAGE_VISION_API_KEY',
+  'XINYU_IMAGE_VISION_TIMEOUT_SECONDS',
+  'XINYU_IMAGE_VISION_MAX_BYTES',
+  'XINYU_VOICE_STT_ENABLED',
+  'XINYU_VOICE_STT_COMMAND',
+  'XINYU_VOICE_STT_API_KEY',
+  'XINYU_VOICE_STT_BASE_URL',
+  'XINYU_VOICE_STT_MODEL',
+  'XINYU_VOICE_STT_LANGUAGE',
+  'XINYU_VOICE_STT_TIMEOUT_SECONDS',
+  'XINYU_VOICE_STT_RECORD_FORMAT',
+  'XINYU_TTS_ENABLED',
+  'XINYU_TTS_BASE_URL',
+  'XINYU_TTS_API_KEY',
+  'XINYU_TTS_MODEL',
+  'XINYU_TTS_VOICE',
+  'XINYU_TTS_FORMAT',
+  'XINYU_TTS_REQUEST_MODE',
+  'XINYU_TTS_TIMEOUT_SECONDS',
+  'XINYU_OPENAI_API_KEY'
 ] as const
 
 export function getApiConfigStatus(coreDir: string): ApiConfigStatus {
@@ -108,7 +203,7 @@ export function getApiConfigStatus(coreDir: string): ApiConfigStatus {
     activeProfileId: matchedActiveProfileId,
     current: envToCurrent(envPath, env),
     profiles: store.profiles.map((profile) => summarizeProfile(profile, profile.id === matchedActiveProfileId)),
-    notes: existsSync(envPath) ? [] : [`未找到 ${LOCAL_ENV_NAME}；应用资料时会自动创建。`]
+    notes: existsSync(envPath) ? [] : [`未找到 ${LOCAL_ENV_NAME}，应用配置时会自动创建。`]
   }
 }
 
@@ -136,14 +231,15 @@ export async function testApiConfigProfile(coreDir: string, patch: ApiConfigProf
   const id = safeProfileId(patch.id)
   const existing = id ? store.profiles.find((profile) => profile.id === id) : undefined
   const profile = normalizeProfilePatch(patch, existing, env)
+  const llm = profile.llm
   const started = Date.now()
   const checkedAt = new Date().toISOString()
-  const baseUrl = profile.baseUrl.replace(/\/+$/, '')
+  const baseUrl = llm.baseUrl.replace(/\/+$/, '')
   if (!baseUrl) {
-    return apiConfigTestResult(profile, checkedAt, started, 0, '', 'missing_base_url')
+    return apiConfigTestResult(llm, checkedAt, started, 0, '', 'missing_base_url')
   }
-  if (!profile.model) {
-    return apiConfigTestResult(profile, checkedAt, started, 0, '', 'missing_model')
+  if (!llm.model) {
+    return apiConfigTestResult(llm, checkedAt, started, 0, '', 'missing_model')
   }
 
   const controller = new AbortController()
@@ -154,10 +250,10 @@ export async function testApiConfigProfile(coreDir: string, patch: ApiConfigProf
       signal: controller.signal,
       headers: {
         'content-type': 'application/json',
-        ...(profile.apiKey ? { authorization: `Bearer ${profile.apiKey}` } : {})
+        ...(llm.apiKey ? { authorization: `Bearer ${llm.apiKey}` } : {})
       },
       body: JSON.stringify({
-        model: profile.model,
+        model: llm.model,
         messages: [
           { role: 'system', content: 'Return exactly: ok' },
           { role: 'user', content: 'ping' }
@@ -185,8 +281,8 @@ export async function testApiConfigProfile(coreDir: string, patch: ApiConfigProf
         ok: false,
         checkedAt,
         elapsedMs: Date.now() - started,
-        provider: profile.provider,
-        model: profile.model,
+        provider: llm.provider,
+        model: llm.model,
         baseUrl,
         status: response.status,
         replyPreview,
@@ -199,8 +295,8 @@ export async function testApiConfigProfile(coreDir: string, patch: ApiConfigProf
         ok: false,
         checkedAt,
         elapsedMs: Date.now() - started,
-        provider: profile.provider,
-        model: profile.model,
+        provider: llm.provider,
+        model: llm.model,
         baseUrl,
         status: response.status,
         replyPreview,
@@ -212,8 +308,8 @@ export async function testApiConfigProfile(coreDir: string, patch: ApiConfigProf
       ok: response.ok,
       checkedAt,
       elapsedMs: Date.now() - started,
-      provider: profile.provider,
-      model: profile.model,
+      provider: llm.provider,
+      model: llm.model,
       baseUrl,
       status: response.status,
       replyPreview,
@@ -221,7 +317,7 @@ export async function testApiConfigProfile(coreDir: string, patch: ApiConfigProf
     }
   } catch (error) {
     return apiConfigTestResult(
-      profile,
+      llm,
       checkedAt,
       started,
       0,
@@ -236,7 +332,7 @@ export async function testApiConfigProfile(coreDir: string, patch: ApiConfigProf
 export function deleteApiConfigProfile(coreDir: string, profileId: unknown): Record<string, unknown> {
   const id = safeProfileId(profileId)
   if (!id) {
-    throw new Error('缺少 API 资料 ID')
+    throw new Error('缺少 API 配置 ID')
   }
   const store = readProfileStore()
   const nextProfiles = store.profiles.filter((profile) => profile.id !== id)
@@ -261,18 +357,18 @@ export async function applyApiConfigProfile(
 ): Promise<Record<string, unknown>> {
   const id = safeProfileId(profileId)
   if (!id) {
-    throw new Error('缺少 API 资料 ID')
+    throw new Error('缺少 API 配置 ID')
   }
   const store = readProfileStore()
   const profile = store.profiles.find((item) => item.id === id)
   if (!profile) {
-    throw new Error(`未找到 API 资料：${id}`)
+    throw new Error(`未找到 API 配置：${id}`)
   }
 
   writeLocalEnv(resolveLocalEnvPath(coreDir), profileToEnvUpdates(profile))
   applyProfileToProcessEnv(profile)
   writeProfileStore({ ...store, activeProfileId: id })
-  const restart = restartCore ? await restartCoreBridge(workspaceDir, coreDir, profile.allowInsecureHttp) : null
+  const restart = restartCore ? await restartCoreBridge(workspaceDir, coreDir, profile.llm.allowInsecureHttp) : null
   return {
     accepted: true,
     message: restart ? 'api_profile_applied_core_restarted' : 'api_profile_applied',
@@ -327,12 +423,12 @@ function readProfileStore(): ApiProfileStore {
   try {
     const data = JSON.parse(readFileSync(path, 'utf-8')) as Partial<ApiProfileStore>
     return {
-      version: 1,
+      version: 3,
       activeProfileId: String(data.activeProfileId || ''),
       profiles: Array.isArray(data.profiles) ? data.profiles.map(normalizeStoredProfile).filter(isApiConfigProfile) : []
     }
   } catch {
-    return { version: 1, activeProfileId: '', profiles: [] }
+    return { version: 3, activeProfileId: '', profiles: [] }
   }
 }
 
@@ -343,24 +439,84 @@ function writeProfileStore(store: ApiProfileStore): void {
 }
 
 function normalizeStoredProfile(value: unknown): ApiConfigProfile | null {
-  if (!value || typeof value !== 'object') {
-    return null
-  }
-  const raw = value as Record<string, unknown>
+  const raw = asRecord(value)
   const id = safeProfileId(raw.id)
   if (!id) {
     return null
   }
+  const llm = normalizeStoredLlm(raw.llm && typeof raw.llm === 'object' ? raw.llm : raw)
+  const other = normalizeStoredOther(raw.other)
+  const vision = normalizeStoredVision(raw.vision, llm)
+  const hearing = normalizeStoredHearing(raw.hearing, llm, other)
   return {
     id,
     label: safeText(raw.label, id),
+    llm,
+    vision,
+    hearing,
+    tts: normalizeStoredTts(raw.tts, llm, hearing, other),
+    other,
+    updatedAt: safeText(raw.updatedAt, '')
+  }
+}
+
+function normalizeStoredLlm(value: unknown): ApiLlmConfig {
+  const raw = asRecord(value)
+  return {
     provider: safeText(raw.provider, 'ciallo'),
     model: safeText(raw.model, 'mimo-v2.5-pro'),
-    baseUrl: safeText(raw.baseUrl, ''),
+    baseUrl: stripTrailingSlash(safeText(raw.baseUrl, '')),
     apiKey: safeText(raw.apiKey, ''),
-    allowInsecureHttp: Boolean(raw.allowInsecureHttp),
-    disableStreaming: raw.disableStreaming !== false,
-    updatedAt: safeText(raw.updatedAt, '')
+    allowInsecureHttp: safeBool(raw.allowInsecureHttp, false),
+    disableStreaming: safeBool(raw.disableStreaming, true)
+  }
+}
+
+function normalizeStoredVision(value: unknown, llm: ApiLlmConfig): ApiVisionConfig {
+  const raw = asRecord(value)
+  return {
+    enabled: safeBool(raw.enabled, false),
+    model: safeText(raw.model, llm.model || 'gpt-4o-mini'),
+    baseUrl: stripTrailingSlash(safeText(raw.baseUrl, llm.baseUrl || 'https://api.openai.com/v1')),
+    apiKey: safeText(raw.apiKey, llm.apiKey),
+    timeoutSeconds: safeInteger(raw.timeoutSeconds, DEFAULT_VISION_TIMEOUT_SECONDS, 1, 3600),
+    maxBytes: safeInteger(raw.maxBytes, DEFAULT_VISION_MAX_BYTES, 1024, 64 * 1024 * 1024)
+  }
+}
+
+function normalizeStoredHearing(value: unknown, llm: ApiLlmConfig, other: ApiOtherConfig): ApiHearingConfig {
+  const raw = asRecord(value)
+  return {
+    enabled: safeBool(raw.enabled, true),
+    command: safeText(raw.command, ''),
+    model: safeText(raw.model, 'whisper-1'),
+    baseUrl: stripTrailingSlash(safeText(raw.baseUrl, llm.baseUrl || 'https://api.openai.com/v1')),
+    apiKey: safeText(raw.apiKey, other.openAIApiKey || llm.apiKey),
+    language: safeText(raw.language, 'zh'),
+    timeoutSeconds: safeInteger(raw.timeoutSeconds, DEFAULT_HEARING_TIMEOUT_SECONDS, 1, 3600),
+    recordFormat: safeText(raw.recordFormat, 'mp3')
+  }
+}
+
+function normalizeStoredOther(value: unknown): ApiOtherConfig {
+  const raw = asRecord(value)
+  return {
+    openAIApiKey: safeText(raw.openAIApiKey, '')
+  }
+}
+
+function normalizeStoredTts(value: unknown, llm: ApiLlmConfig, hearing: ApiHearingConfig, other: ApiOtherConfig): ApiTtsConfig {
+  const raw = asRecord(value)
+  const model = safeText(raw.model, defaultTtsModel(llm.model))
+  return {
+    enabled: safeBool(raw.enabled, false),
+    model,
+    baseUrl: stripTrailingSlash(safeText(raw.baseUrl, hearing.baseUrl || llm.baseUrl || 'https://api.openai.com/v1')),
+    apiKey: safeText(raw.apiKey, hearing.apiKey || other.openAIApiKey || llm.apiKey),
+    voice: safeText(raw.voice, defaultTtsVoice(model)),
+    format: safeText(raw.format, 'wav'),
+    requestMode: safeText(raw.requestMode, 'auto'),
+    timeoutSeconds: safeInteger(raw.timeoutSeconds, DEFAULT_TTS_TIMEOUT_SECONDS, 1, 3600)
   }
 }
 
@@ -374,17 +530,75 @@ function normalizeProfilePatch(
   env: EnvMap
 ): ApiConfigProfile {
   const now = new Date().toISOString()
-  const label = safeText(patch.label, existing?.label || '本地 API')
-  const apiKeyPatch = typeof patch.apiKey === 'string' ? patch.apiKey.trim() : ''
+  const envFallback = configFromEnv(env)
+  const llmPatch = asRecord(patch.llm)
+  const visionPatch = asRecord(patch.vision)
+  const hearingPatch = asRecord(patch.hearing)
+  const ttsPatch = asRecord(patch.tts)
+  const otherPatch = asRecord(patch.other)
+  const label = safeText(
+    patch.label,
+    existing?.label || `${existing?.llm.provider || envFallback.llm.provider} ${existing?.llm.model || envFallback.llm.model}`.trim() || '本地 API'
+  )
+
   return {
     id: existing?.id || makeProfileId(label),
     label,
-    provider: safeText(patch.provider, existing?.provider || env.XINYU_LLM_PROVIDER || 'ciallo'),
-    model: safeText(patch.model, existing?.model || env.XINYU_LLM_MODEL || 'mimo-v2.5-pro'),
-    baseUrl: safeText(patch.baseUrl, existing?.baseUrl || env.XINYU_BASE_URL || ''),
-    apiKey: apiKeyPatch || existing?.apiKey || env.XINYU_API_KEY || '',
-    allowInsecureHttp: Boolean(patch.allowInsecureHttp ?? existing?.allowInsecureHttp ?? env.XINYU_ALLOW_INSECURE_LLM_HTTP === '1'),
-    disableStreaming: Boolean(patch.disableStreaming ?? existing?.disableStreaming ?? env.XINYU_DISABLE_STREAMING !== '0'),
+    llm: {
+      provider: safeText(llmPatch.provider ?? patch.provider, existing?.llm.provider || envFallback.llm.provider),
+      model: safeText(llmPatch.model ?? patch.model, existing?.llm.model || envFallback.llm.model),
+      baseUrl: stripTrailingSlash(safeText(llmPatch.baseUrl ?? patch.baseUrl, existing?.llm.baseUrl || envFallback.llm.baseUrl)),
+      apiKey: mergeSecret(llmPatch.apiKey ?? patch.apiKey, existing?.llm.apiKey || envFallback.llm.apiKey),
+      allowInsecureHttp: safeBool(
+        llmPatch.allowInsecureHttp ?? patch.allowInsecureHttp,
+        existing?.llm.allowInsecureHttp ?? envFallback.llm.allowInsecureHttp
+      ),
+      disableStreaming: safeBool(
+        llmPatch.disableStreaming ?? patch.disableStreaming,
+        existing?.llm.disableStreaming ?? envFallback.llm.disableStreaming
+      )
+    },
+    vision: {
+      enabled: safeBool(visionPatch.enabled, existing?.vision.enabled ?? envFallback.vision.enabled),
+      model: safeText(visionPatch.model, existing?.vision.model || envFallback.vision.model),
+      baseUrl: stripTrailingSlash(safeText(visionPatch.baseUrl, existing?.vision.baseUrl || envFallback.vision.baseUrl)),
+      apiKey: mergeSecret(visionPatch.apiKey, existing?.vision.apiKey || envFallback.vision.apiKey),
+      timeoutSeconds: safeInteger(
+        visionPatch.timeoutSeconds,
+        existing?.vision.timeoutSeconds ?? envFallback.vision.timeoutSeconds,
+        1,
+        3600
+      ),
+      maxBytes: safeInteger(visionPatch.maxBytes, existing?.vision.maxBytes ?? envFallback.vision.maxBytes, 1024, 64 * 1024 * 1024)
+    },
+    hearing: {
+      enabled: safeBool(hearingPatch.enabled, existing?.hearing.enabled ?? envFallback.hearing.enabled),
+      command: safeText(hearingPatch.command, existing?.hearing.command || envFallback.hearing.command),
+      model: safeText(hearingPatch.model, existing?.hearing.model || envFallback.hearing.model),
+      baseUrl: stripTrailingSlash(safeText(hearingPatch.baseUrl, existing?.hearing.baseUrl || envFallback.hearing.baseUrl)),
+      apiKey: mergeSecret(hearingPatch.apiKey, existing?.hearing.apiKey || envFallback.hearing.apiKey),
+      language: safeText(hearingPatch.language, existing?.hearing.language || envFallback.hearing.language),
+      timeoutSeconds: safeInteger(
+        hearingPatch.timeoutSeconds,
+        existing?.hearing.timeoutSeconds ?? envFallback.hearing.timeoutSeconds,
+        1,
+        3600
+      ),
+      recordFormat: safeText(hearingPatch.recordFormat, existing?.hearing.recordFormat || envFallback.hearing.recordFormat)
+    },
+    tts: {
+      enabled: safeBool(ttsPatch.enabled, existing?.tts.enabled ?? envFallback.tts.enabled),
+      model: safeText(ttsPatch.model, existing?.tts.model || envFallback.tts.model),
+      baseUrl: stripTrailingSlash(safeText(ttsPatch.baseUrl, existing?.tts.baseUrl || envFallback.tts.baseUrl)),
+      apiKey: mergeSecret(ttsPatch.apiKey, existing?.tts.apiKey || envFallback.tts.apiKey),
+      voice: safeText(ttsPatch.voice, existing?.tts.voice || envFallback.tts.voice),
+      format: safeText(ttsPatch.format, existing?.tts.format || envFallback.tts.format),
+      requestMode: safeText(ttsPatch.requestMode, existing?.tts.requestMode || envFallback.tts.requestMode),
+      timeoutSeconds: safeInteger(ttsPatch.timeoutSeconds, existing?.tts.timeoutSeconds ?? envFallback.tts.timeoutSeconds, 1, 3600)
+    },
+    other: {
+      openAIApiKey: mergeSecret(otherPatch.openAIApiKey, existing?.other.openAIApiKey || envFallback.other.openAIApiKey)
+    },
     updatedAt: now
   }
 }
@@ -426,7 +640,7 @@ function writeLocalEnv(path: string, updates: EnvMap): void {
         remaining.delete(line.key)
         return `${line.key}=${quoteEnvValue(updates[line.key])}`
       })
-    : ['# XinYu local API configuration', '# Managed by XinYu Desktop API Profile panel.', '']
+    : ['# XinYu local API configuration', '# Managed by XinYu Desktop API center.', '']
 
   for (const key of ENV_KEYS) {
     if (remaining.has(key)) {
@@ -445,12 +659,35 @@ function writeLocalEnv(path: string, updates: EnvMap): void {
 
 function profileToEnvUpdates(profile: ApiConfigProfile): EnvMap {
   return {
-    XINYU_API_KEY: profile.apiKey,
-    XINYU_BASE_URL: profile.baseUrl,
-    XINYU_LLM_PROVIDER: profile.provider,
-    XINYU_LLM_MODEL: profile.model,
-    XINYU_ALLOW_INSECURE_LLM_HTTP: profile.allowInsecureHttp ? '1' : '0',
-    XINYU_DISABLE_STREAMING: profile.disableStreaming ? '1' : '0'
+    XINYU_API_KEY: profile.llm.apiKey,
+    XINYU_BASE_URL: profile.llm.baseUrl,
+    XINYU_LLM_PROVIDER: profile.llm.provider,
+    XINYU_LLM_MODEL: profile.llm.model,
+    XINYU_ALLOW_INSECURE_LLM_HTTP: profile.llm.allowInsecureHttp ? '1' : '0',
+    XINYU_DISABLE_STREAMING: profile.llm.disableStreaming ? '1' : '0',
+    XINYU_IMAGE_VISION_ENABLED: profile.vision.enabled ? '1' : '0',
+    XINYU_IMAGE_VISION_MODEL: profile.vision.model,
+    XINYU_IMAGE_VISION_BASE_URL: profile.vision.baseUrl,
+    XINYU_IMAGE_VISION_API_KEY: profile.vision.apiKey,
+    XINYU_IMAGE_VISION_TIMEOUT_SECONDS: String(profile.vision.timeoutSeconds),
+    XINYU_IMAGE_VISION_MAX_BYTES: String(profile.vision.maxBytes),
+    XINYU_VOICE_STT_ENABLED: profile.hearing.enabled ? '1' : '0',
+    XINYU_VOICE_STT_COMMAND: profile.hearing.command,
+    XINYU_VOICE_STT_API_KEY: profile.hearing.apiKey,
+    XINYU_VOICE_STT_BASE_URL: profile.hearing.baseUrl,
+    XINYU_VOICE_STT_MODEL: profile.hearing.model,
+    XINYU_VOICE_STT_LANGUAGE: profile.hearing.language,
+    XINYU_VOICE_STT_TIMEOUT_SECONDS: String(profile.hearing.timeoutSeconds),
+    XINYU_VOICE_STT_RECORD_FORMAT: profile.hearing.recordFormat,
+    XINYU_TTS_ENABLED: profile.tts.enabled ? '1' : '0',
+    XINYU_TTS_BASE_URL: profile.tts.baseUrl,
+    XINYU_TTS_API_KEY: profile.tts.apiKey,
+    XINYU_TTS_MODEL: profile.tts.model,
+    XINYU_TTS_VOICE: profile.tts.voice,
+    XINYU_TTS_FORMAT: profile.tts.format,
+    XINYU_TTS_REQUEST_MODE: profile.tts.requestMode,
+    XINYU_TTS_TIMEOUT_SECONDS: String(profile.tts.timeoutSeconds),
+    XINYU_OPENAI_API_KEY: profile.other.openAIApiKey
   }
 }
 
@@ -465,16 +702,14 @@ function applyProfileToProcessEnv(profile: ApiConfigProfile): void {
 }
 
 function envToCurrent(path: string, env: EnvMap): ApiConfigCurrent {
-  const key = env.XINYU_API_KEY || ''
+  const config = configFromEnv(env)
   return {
     configPath: path,
-    provider: env.XINYU_LLM_PROVIDER || 'ciallo',
-    model: env.XINYU_LLM_MODEL || 'mimo-v2.5-pro',
-    baseUrl: env.XINYU_BASE_URL || '',
-    allowInsecureHttp: env.XINYU_ALLOW_INSECURE_LLM_HTTP === '1',
-    disableStreaming: env.XINYU_DISABLE_STREAMING !== '0',
-    hasApiKey: Boolean(key),
-    apiKeyPreview: maskSecret(key)
+    llm: summarizeLlm(config.llm),
+    vision: summarizeVision(config.vision),
+    hearing: summarizeHearing(config.hearing),
+    tts: summarizeTts(config.tts),
+    other: summarizeOther(config.other)
   }
 }
 
@@ -482,44 +717,184 @@ function summarizeProfile(profile: ApiConfigProfile, active: boolean): ApiConfig
   return {
     id: profile.id,
     label: profile.label,
-    provider: profile.provider,
-    model: profile.model,
-    baseUrl: profile.baseUrl,
-    allowInsecureHttp: profile.allowInsecureHttp,
-    disableStreaming: profile.disableStreaming,
+    llm: summarizeLlm(profile.llm),
+    vision: summarizeVision(profile.vision),
+    hearing: summarizeHearing(profile.hearing),
+    tts: summarizeTts(profile.tts),
+    other: summarizeOther(profile.other),
     updatedAt: profile.updatedAt,
-    active,
-    hasApiKey: Boolean(profile.apiKey),
-    apiKeyPreview: maskSecret(profile.apiKey)
+    active
+  }
+}
+
+function summarizeLlm(config: ApiLlmConfig): ApiLlmConfigSummary {
+  return {
+    provider: config.provider,
+    model: config.model,
+    baseUrl: config.baseUrl,
+    allowInsecureHttp: config.allowInsecureHttp,
+    disableStreaming: config.disableStreaming,
+    hasApiKey: Boolean(config.apiKey),
+    apiKeyPreview: maskSecret(config.apiKey)
+  }
+}
+
+function summarizeVision(config: ApiVisionConfig): ApiVisionConfigSummary {
+  return {
+    enabled: config.enabled,
+    model: config.model,
+    baseUrl: config.baseUrl,
+    timeoutSeconds: config.timeoutSeconds,
+    maxBytes: config.maxBytes,
+    hasApiKey: Boolean(config.apiKey),
+    apiKeyPreview: maskSecret(config.apiKey)
+  }
+}
+
+function summarizeHearing(config: ApiHearingConfig): ApiHearingConfigSummary {
+  return {
+    enabled: config.enabled,
+    command: config.command,
+    model: config.model,
+    baseUrl: config.baseUrl,
+    language: config.language,
+    timeoutSeconds: config.timeoutSeconds,
+    recordFormat: config.recordFormat,
+    hasApiKey: Boolean(config.apiKey),
+    apiKeyPreview: maskSecret(config.apiKey)
+  }
+}
+
+function summarizeTts(config: ApiTtsConfig): ApiTtsConfigSummary {
+  return {
+    enabled: config.enabled,
+    model: config.model,
+    baseUrl: config.baseUrl,
+    voice: config.voice,
+    format: config.format,
+    requestMode: config.requestMode,
+    timeoutSeconds: config.timeoutSeconds,
+    hasApiKey: Boolean(config.apiKey),
+    apiKeyPreview: maskSecret(config.apiKey)
+  }
+}
+
+function summarizeOther(config: ApiOtherConfig): ApiOtherConfigSummary {
+  return {
+    hasOpenAIApiKey: Boolean(config.openAIApiKey),
+    openAIApiKeyPreview: maskSecret(config.openAIApiKey)
   }
 }
 
 function matchActiveProfileId(store: ApiProfileStore, env: EnvMap): string {
-  const current = {
-    provider: env.XINYU_LLM_PROVIDER || 'ciallo',
-    model: env.XINYU_LLM_MODEL || 'mimo-v2.5-pro',
-    baseUrl: env.XINYU_BASE_URL || '',
-    apiKey: env.XINYU_API_KEY || '',
+  const current = configFromEnv(env)
+  const active = store.activeProfileId ? store.profiles.find((profile) => profile.id === store.activeProfileId) : undefined
+  if (active && profilesMatch(active, current)) {
+    return active.id
+  }
+  const exact = store.profiles.find((profile) => profilesMatch(profile, current))
+  return exact?.id || ''
+}
+
+function profilesMatch(
+  profile: ApiConfigProfile,
+  current: {
+    llm: ApiLlmConfig
+    vision: ApiVisionConfig
+    hearing: ApiHearingConfig
+    tts: ApiTtsConfig
+    other: ApiOtherConfig
+  }
+): boolean {
+  return (
+    profile.llm.provider === current.llm.provider &&
+    profile.llm.model === current.llm.model &&
+    profile.llm.baseUrl === current.llm.baseUrl &&
+    profile.llm.apiKey === current.llm.apiKey &&
+    profile.llm.allowInsecureHttp === current.llm.allowInsecureHttp &&
+    profile.llm.disableStreaming === current.llm.disableStreaming &&
+    profile.vision.enabled === current.vision.enabled &&
+    profile.vision.model === current.vision.model &&
+    profile.vision.baseUrl === current.vision.baseUrl &&
+    profile.vision.apiKey === current.vision.apiKey &&
+    profile.vision.timeoutSeconds === current.vision.timeoutSeconds &&
+    profile.vision.maxBytes === current.vision.maxBytes &&
+    profile.hearing.enabled === current.hearing.enabled &&
+    profile.hearing.command === current.hearing.command &&
+    profile.hearing.model === current.hearing.model &&
+    profile.hearing.baseUrl === current.hearing.baseUrl &&
+    profile.hearing.apiKey === current.hearing.apiKey &&
+    profile.hearing.language === current.hearing.language &&
+    profile.hearing.timeoutSeconds === current.hearing.timeoutSeconds &&
+    profile.hearing.recordFormat === current.hearing.recordFormat &&
+    profile.tts.enabled === current.tts.enabled &&
+    profile.tts.model === current.tts.model &&
+    profile.tts.baseUrl === current.tts.baseUrl &&
+    profile.tts.apiKey === current.tts.apiKey &&
+    profile.tts.voice === current.tts.voice &&
+    profile.tts.format === current.tts.format &&
+    profile.tts.requestMode === current.tts.requestMode &&
+    profile.tts.timeoutSeconds === current.tts.timeoutSeconds &&
+    profile.other.openAIApiKey === current.other.openAIApiKey
+  )
+}
+
+function configFromEnv(env: EnvMap): {
+  llm: ApiLlmConfig
+  vision: ApiVisionConfig
+  hearing: ApiHearingConfig
+  tts: ApiTtsConfig
+  other: ApiOtherConfig
+} {
+  const llm: ApiLlmConfig = {
+    provider: safeText(env.XINYU_LLM_PROVIDER, 'ciallo'),
+    model: safeText(env.XINYU_LLM_MODEL, 'mimo-v2.5-pro'),
+    baseUrl: stripTrailingSlash(safeText(env.XINYU_BASE_URL, '')),
+    apiKey: safeText(env.XINYU_API_KEY, ''),
     allowInsecureHttp: env.XINYU_ALLOW_INSECURE_LLM_HTTP === '1',
     disableStreaming: env.XINYU_DISABLE_STREAMING !== '0'
   }
-  const exact = store.profiles.find(
-    (profile) =>
-      profile.provider === current.provider &&
-      profile.model === current.model &&
-      profile.baseUrl === current.baseUrl &&
-      profile.apiKey === current.apiKey &&
-      profile.allowInsecureHttp === current.allowInsecureHttp &&
-      profile.disableStreaming === current.disableStreaming
-  )
-  if (exact) {
-    return exact.id
+  const other: ApiOtherConfig = {
+    openAIApiKey: safeText(env.XINYU_OPENAI_API_KEY || env.OPENAI_API_KEY, '')
   }
-  return ''
+  const vision: ApiVisionConfig = {
+    enabled: env.XINYU_IMAGE_VISION_ENABLED === '1',
+    model: safeText(env.XINYU_IMAGE_VISION_MODEL, llm.model || 'gpt-4o-mini'),
+    baseUrl: stripTrailingSlash(safeText(env.XINYU_IMAGE_VISION_BASE_URL, llm.baseUrl || 'https://api.openai.com/v1')),
+    apiKey: safeText(env.XINYU_IMAGE_VISION_API_KEY || llm.apiKey || other.openAIApiKey, ''),
+    timeoutSeconds: safeInteger(env.XINYU_IMAGE_VISION_TIMEOUT_SECONDS, DEFAULT_VISION_TIMEOUT_SECONDS, 1, 3600),
+    maxBytes: safeInteger(env.XINYU_IMAGE_VISION_MAX_BYTES, DEFAULT_VISION_MAX_BYTES, 1024, 64 * 1024 * 1024)
+  }
+  const hearing: ApiHearingConfig = {
+    enabled: env.XINYU_VOICE_STT_ENABLED !== '0',
+    command: safeText(env.XINYU_VOICE_STT_COMMAND, ''),
+    model: safeText(env.XINYU_VOICE_STT_MODEL, 'whisper-1'),
+    baseUrl: stripTrailingSlash(
+      safeText(env.XINYU_VOICE_STT_BASE_URL || env.OPENAI_BASE_URL, llm.baseUrl || 'https://api.openai.com/v1')
+    ),
+    apiKey: safeText(env.XINYU_VOICE_STT_API_KEY || other.openAIApiKey || llm.apiKey, ''),
+    language: safeText(env.XINYU_VOICE_STT_LANGUAGE, 'zh'),
+    timeoutSeconds: safeInteger(env.XINYU_VOICE_STT_TIMEOUT_SECONDS, DEFAULT_HEARING_TIMEOUT_SECONDS, 1, 3600),
+    recordFormat: safeText(env.XINYU_VOICE_STT_RECORD_FORMAT, 'mp3')
+  }
+  const ttsModel = safeText(env.XINYU_TTS_MODEL, defaultTtsModel(llm.model))
+  const tts: ApiTtsConfig = {
+    enabled: env.XINYU_TTS_ENABLED === '1',
+    model: ttsModel,
+    baseUrl: stripTrailingSlash(
+      safeText(env.XINYU_TTS_BASE_URL || env.OPENAI_BASE_URL, hearing.baseUrl || llm.baseUrl || 'https://api.openai.com/v1')
+    ),
+    apiKey: safeText(env.XINYU_TTS_API_KEY || hearing.apiKey || other.openAIApiKey || llm.apiKey, ''),
+    voice: safeText(env.XINYU_TTS_VOICE, defaultTtsVoice(ttsModel)),
+    format: safeText(env.XINYU_TTS_FORMAT, 'wav'),
+    requestMode: safeText(env.XINYU_TTS_REQUEST_MODE, 'auto'),
+    timeoutSeconds: safeInteger(env.XINYU_TTS_TIMEOUT_SECONDS, DEFAULT_TTS_TIMEOUT_SECONDS, 1, 3600)
+  }
+  return { llm, vision, hearing, tts, other }
 }
 
 function apiConfigTestResult(
-  profile: ApiConfigProfile,
+  llm: ApiLlmConfig,
   checkedAt: string,
   started: number,
   status: number,
@@ -531,9 +906,9 @@ function apiConfigTestResult(
     ok: false,
     checkedAt,
     elapsedMs: Date.now() - started,
-    provider: profile.provider,
-    model: profile.model,
-    baseUrl: profile.baseUrl.replace(/\/+$/, ''),
+    provider: llm.provider,
+    model: llm.model,
+    baseUrl: llm.baseUrl.replace(/\/+$/, ''),
     status,
     replyPreview,
     message: compactTestMessage(message)
@@ -565,9 +940,59 @@ function compactTestMessage(value: unknown): string {
   return safeText(value, 'api_test_failed').replace(/\s+/g, ' ').trim().slice(0, 220) || 'api_test_failed'
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
+}
+
 function safeText(value: unknown, fallback: string): string {
   const text = String(value ?? '').trim()
   return text || fallback
+}
+
+function mergeSecret(value: unknown, fallback: string): string {
+  if (typeof value === 'string') {
+    const text = value.trim()
+    return text || fallback
+  }
+  return fallback
+}
+
+function safeBool(value: unknown, fallback: boolean): boolean {
+  if (typeof value === 'boolean') {
+    return value
+  }
+  const text = String(value ?? '').trim().toLowerCase()
+  if (['1', 'true', 'yes', 'on'].includes(text)) {
+    return true
+  }
+  if (['0', 'false', 'no', 'off'].includes(text)) {
+    return false
+  }
+  return fallback
+}
+
+function safeInteger(value: unknown, fallback: number, min: number, max: number): number {
+  const number = Number(String(value ?? '').trim())
+  if (!Number.isFinite(number)) {
+    return fallback
+  }
+  return Math.min(max, Math.max(min, Math.round(number)))
+}
+
+function stripTrailingSlash(value: string): string {
+  return value.replace(/\/+$/, '')
+}
+
+function defaultTtsModel(llmModel: string): string {
+  const normalized = llmModel.trim().toLowerCase()
+  if (normalized.startsWith('mimo-')) {
+    return 'mimo-v2.5-tts'
+  }
+  return 'tts-1'
+}
+
+function defaultTtsVoice(model: string): string {
+  return model.trim().toLowerCase().startsWith('mimo-') ? 'mimo_default' : 'alloy'
 }
 
 function safeProfileId(value: unknown): string {

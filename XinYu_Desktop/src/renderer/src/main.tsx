@@ -4,9 +4,9 @@ import { Activity, Clock3 } from 'lucide-react'
 import './style.css'
 import { AffectiveSurfaceProvider, SurfacePart } from './AffectiveSurfaceProvider'
 import { buildAffectiveSurfaceCue } from './affectiveSurface'
-import { ImpulseObserverDialog, IntentDetailDialog, InteractionStream, IntentQueuePanel, MindStatePanel, StatusBadge, SystemControlPanel, ThemeSwitcher } from './DesktopPanels'
-import type { ApiConfigProfilePatch, AppState, CommandState, DesktopEvent, ExternalPluginConfigPatch, ExternalPluginInstallRequest, GatewayStatus, JsonRecord, ProactiveAction, ProactiveIntent, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, ServiceProbe, Snapshot, StickerActionState, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
-import { actionLabel, apiConfigActionLabel, applyEvent, applyProactiveInbox, applySnapshot, asRecord, buildProactiveIntents, buildStats, chatErrorLabel, commandStatusLabel, compact, createCommandId, defaultQQRuntimeConfig, defaultQQServices, deriveXinYuState, digestPressureLabel, digestResidueLabel, digestResultLabel, digestThemeLabel, errorLabel, eventLabel, externalPluginActionLabel, formatLatency, formatTime, formatTurnMeta, initialTheme, isCommandRenderedByTurn, memorySummary, normalizeApiConfigStatus, normalizeExternalPluginsStatus, normalizeImpulseSoupState, normalizeMemoryGrowthCandidates, normalizeQQEnvironmentStatus, normalizeQQRuntimeConfig, normalizeStickerLibrary, platformLabel, qqActionResultLabel, qqDetailLabel, qqDiagnosisLabel, qqEnvironmentMessage, qqRuntimeResultLabel, qqServiceLabel, riskLabel, runtimeLabel, sourceLabel, statusLabel, stickerClipLabel, stickerCorrectionMoods, stickerMoodLabel, themeOptions, updateCommand } from './desktopModel'
+import { AutonomyGatePanel, ImpulseObserverDialog, IntentDetailDialog, InteractionStream, IntentQueuePanel, MindStatePanel, StatusBadge, SystemControlPanel, ThemeSwitcher } from './DesktopPanels'
+import type { ApiConfigProfilePatch, AppState, AsyncExplorationState, CommandState, DesktopEvent, ExternalPluginConfigPatch, ExternalPluginInstallRequest, GatewayStatus, JsonRecord, ProactiveAction, ProactiveIntent, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, ServiceProbe, Snapshot, StickerActionState, StickerLibrary, StickerRecord, Stage12GateStatus, Stage13GateStatus, ThemeName, XinYuState } from './desktopTypes'
+import { actionLabel, apiConfigActionLabel, applyEvent, applyProactiveInbox, applySnapshot, asRecord, buildProactiveIntents, buildStats, chatErrorLabel, commandStatusLabel, compact, createCommandId, defaultQQRuntimeConfig, defaultQQServices, deriveXinYuState, digestPressureLabel, digestResidueLabel, digestResultLabel, digestThemeLabel, errorLabel, eventLabel, externalPluginActionLabel, formatLatency, formatTime, formatTurnMeta, initialTheme, isCommandRenderedByTurn, memorySummary, normalizeApiConfigStatus, normalizeAsyncExplorationState, normalizeExternalPluginsStatus, normalizeImpulseSoupState, normalizeMemoryGrowthCandidates, normalizeQQEnvironmentStatus, normalizeQQRuntimeConfig, normalizeStage8MemoryGovernance, normalizeStage12GateStatus, normalizeStage13GateStatus, normalizeStickerLibrary, platformLabel, qqActionResultLabel, qqDetailLabel, qqDiagnosisLabel, qqEnvironmentMessage, qqRuntimeResultLabel, qqServiceLabel, riskLabel, runtimeLabel, sourceLabel, statusLabel, stickerClipLabel, stickerCorrectionMoods, stickerMoodLabel, themeOptions, updateCommand } from './desktopModel'
 
 const avatarSrc = './xinyu-avatar.png'
 
@@ -31,6 +31,10 @@ function App(): JSX.Element {
     recentTurns: [],
     recentMemoryEvents: [],
     memoryGrowthCandidates: null,
+    stage8MemoryGovernance: null,
+    asyncExploration: null,
+    stage12Gate: null,
+    stage13Gate: null,
     apiConfig: null,
     apiConfigAction: { kind: 'idle', message: '' },
     externalPlugins: null,
@@ -170,6 +174,57 @@ function App(): JSX.Element {
           }))
         })
     }
+    const loadStage8MemoryGovernance = (): void => {
+      window.xinyu
+        .getStage8MemoryGovernance()
+        .then((value) => {
+          if (!mounted) return
+          setState((current) => ({ ...current, stage8MemoryGovernance: normalizeStage8MemoryGovernance(value) }))
+        })
+        .catch((error) => {
+          if (!mounted) return
+          setState((current) => ({
+            ...current,
+            stage8MemoryGovernance: normalizeStage8MemoryGovernance({ ok: false, status: 'unavailable', reason: errorLabel(error) })
+          }))
+        })
+    }
+    const loadAsyncExploration = (): void => {
+      window.xinyu
+        .getAsyncExplorationState()
+        .then((value) => {
+          if (!mounted) return
+          setState((current) => ({ ...current, asyncExploration: normalizeAsyncExplorationState(value) }))
+        })
+        .catch(() => {
+          if (!mounted) return
+          setState((current) => ({ ...current, asyncExploration: normalizeAsyncExplorationState({ ok: false, status: 'unavailable' }) }))
+        })
+    }
+    const loadStage12Gate = (): void => {
+      window.xinyu
+        .getStage12GateStatus()
+        .then((value) => {
+          if (!mounted) return
+          setState((current) => ({ ...current, stage12Gate: normalizeStage12GateStatus(value) }))
+        })
+        .catch(() => {
+          if (!mounted) return
+          setState((current) => ({ ...current, stage12Gate: normalizeStage12GateStatus({ ok: false, status: 'unavailable' }) }))
+        })
+    }
+    const loadStage13Gate = (): void => {
+      window.xinyu
+        .getStage13GateStatus()
+        .then((value) => {
+          if (!mounted) return
+          setState((current) => ({ ...current, stage13Gate: normalizeStage13GateStatus(value) }))
+        })
+        .catch(() => {
+          if (!mounted) return
+          setState((current) => ({ ...current, stage13Gate: normalizeStage13GateStatus({ ok: false, status: 'unavailable' }) }))
+        })
+    }
     const loadImpulseSoup = (): void => {
       window.xinyu
         .getImpulseSoupState()
@@ -201,6 +256,10 @@ function App(): JSX.Element {
     loadExternalPlugins()
     loadStickerLibrary()
     loadMemoryGrowthCandidates()
+    loadStage8MemoryGovernance()
+    loadAsyncExploration()
+    loadStage12Gate()
+    loadStage13Gate()
     loadImpulseSoup()
     const snapshotTimer = window.setInterval(() => {
       window.xinyu.getSnapshot().then((snapshot) => {
@@ -220,6 +279,7 @@ function App(): JSX.Element {
     const externalPluginTimer = window.setInterval(loadExternalPlugins, 30_000)
     const stickerTimer = window.setInterval(loadStickerLibrary, 30_000)
     const memoryGrowthTimer = window.setInterval(loadMemoryGrowthCandidates, 30_000)
+    const stage8MemoryTimer = window.setInterval(loadStage8MemoryGovernance, 30_000)
     const impulseTimer = window.setInterval(loadImpulseSoup, 5_000)
     const offEvent = window.xinyu.onCoreEvent((event) => {
       setState((current) => applyEvent(current, event))
@@ -237,6 +297,7 @@ function App(): JSX.Element {
       window.clearInterval(externalPluginTimer)
       window.clearInterval(stickerTimer)
       window.clearInterval(memoryGrowthTimer)
+      window.clearInterval(stage8MemoryTimer)
       window.clearInterval(impulseTimer)
       offEvent()
       offStatus()
@@ -310,23 +371,27 @@ function App(): JSX.Element {
     }
   }
 
-  async function saveApiConfigProfileFromPanel(profile: ApiConfigProfilePatch): Promise<void> {
+  async function saveApiConfigProfileFromPanel(profile: ApiConfigProfilePatch): Promise<string | null> {
     setState((current) => ({
       ...current,
       apiConfigAction: { kind: 'saving', message: '正在保存 API 资料' }
     }))
     try {
       const result = asRecord(await window.xinyu.saveApiConfigProfile(profile))
+      const savedProfile = asRecord(result.profile)
+      const savedProfileId = String(savedProfile.id || '')
       setState((current) => ({
         ...current,
         apiConfig: normalizeApiConfigStatus(result.status || {}),
         apiConfigAction: { kind: 'idle', message: apiConfigActionLabel(String(result.message || 'api_profile_saved'), true, result.error) }
       }))
+      return savedProfileId || null
     } catch (error) {
       setState((current) => ({
         ...current,
         apiConfigAction: { kind: 'idle', message: `保存失败：${compact(errorLabel(error), 72)}` }
       }))
+      return null
     }
   }
 
@@ -635,6 +700,36 @@ function App(): JSX.Element {
     }
   }
 
+  function scheduleQQEnvironmentRefreshes(attempts = 12, intervalMs = 5000): void {
+    let remaining = attempts
+    const refreshOnce = (): void => {
+      if (remaining <= 0) return
+      remaining -= 1
+      void window.xinyu
+        .getQQEnvironmentStatus()
+        .then((value) => {
+          const status = normalizeQQEnvironmentStatus(value)
+          setState((current) => ({
+            ...current,
+            qqEnvironment: status,
+            qqAction:
+              current.qqAction.kind === 'idle' && current.qqAction.message.startsWith('启动已提交')
+                ? { kind: 'idle', message: `启动已提交，${qqEnvironmentMessage(status)}` }
+                : current.qqAction
+          }))
+          if (!status.allReady && remaining > 0) {
+            window.setTimeout(refreshOnce, intervalMs)
+          }
+        })
+        .catch(() => {
+          if (remaining > 0) {
+            window.setTimeout(refreshOnce, intervalMs)
+          }
+        })
+    }
+    window.setTimeout(refreshOnce, intervalMs)
+  }
+
   async function startQQEnvironmentFromPanel(): Promise<void> {
     setState((current) => ({
       ...current,
@@ -644,22 +739,22 @@ function App(): JSX.Element {
     try {
       const result = asRecord(await window.xinyu.startQQEnvironment())
       const status = normalizeQQEnvironmentStatus(result.status || (await window.xinyu.getQQEnvironmentStatus()))
+      const resultMessage = String(result.message || '')
+      const actionMessage =
+        resultMessage === 'start_requested'
+          ? `启动已提交，${qqEnvironmentMessage(status)}`
+          : qqActionResultLabel(resultMessage, result.accepted !== false, result.error)
       setState((current) => ({
         ...current,
         qqEnvironment: status,
         qqAction: {
           kind: 'idle',
-          message: qqActionResultLabel(String(result.message || ''), result.accepted !== false, result.error)
+          message: actionMessage
         }
       }))
-      window.setTimeout(() => {
-        void window.xinyu
-          .getQQEnvironmentStatus()
-          .then((value) => {
-            setState((current) => ({ ...current, qqEnvironment: normalizeQQEnvironmentStatus(value) }))
-          })
-          .catch(() => undefined)
-      }, 6000)
+      if (resultMessage === 'start_requested' && !status.allReady) {
+        scheduleQQEnvironmentRefreshes()
+      }
     } catch (error) {
       setState((current) => ({
         ...current,
@@ -956,6 +1051,14 @@ function App(): JSX.Element {
           </div>
         </header>
 
+        <AutonomyGatePanel
+          stage12={state.stage12Gate}
+          stage13={state.stage13Gate}
+          qqEnvironment={state.qqEnvironment}
+          stage8={state.stage8MemoryGovernance}
+          asyncExploration={state.asyncExploration}
+        />
+
         <section className="presence-workspace">
           <MindStatePanel
             state={xinyuState}
@@ -1039,6 +1142,7 @@ function App(): JSX.Element {
             stickerLibrary={state.stickerLibrary}
             stickerAction={state.stickerAction}
             memoryGrowthCandidates={state.memoryGrowthCandidates}
+            stage8MemoryGovernance={state.stage8MemoryGovernance}
             actionDigest={state.snapshot?.actionDigestState}
             recentMemoryEvents={state.recentMemoryEvents}
             lastEvent={state.events[0]}

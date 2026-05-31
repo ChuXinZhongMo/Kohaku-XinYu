@@ -3,11 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from xinyu_learning_closed_loop import (
+    SUCCESS_MARKERS,
     build_learning_closed_loop_prompt_block,
     record_learning_closed_loop_self_thought,
     record_learning_closed_loop_turn,
 )
 from xinyu_self_thought_loop import run_self_thought_loop
+from xinyu_text_variants import legacy_mojibake_variants, readable_markers
 
 
 def _owner_payload() -> dict[str, object]:
@@ -69,7 +71,101 @@ def test_closed_loop_turn_feedback_updates_trial_counts(tmp_path: Path) -> None:
     assert "repair_count: 1" in state
     assert "success_count: 1" in state
     assert "success_streak: 1" in state
+    assert "active_trial_key: owner_reported_template_voice_failure" in state
+    assert "trial_success_count: 1" in state
+    assert "trial_success_streak: 1" in state
+    assert "latest_success_trial_key: owner_reported_template_voice_failure" in state
+    assert "success_evidence_status: same_trial_explicit_owner_success" in state
     assert "status: trial_supported" in state
+
+
+def test_readable_markers_keeps_clean_form_first() -> None:
+    markers = readable_markers("自然多了")
+    # The clean literal stays the first element; legacy mojibake variants are
+    # appended for matching, never substituted in.
+    assert markers[0] == "自然多了"
+    assert len(markers) > 1
+    assert SUCCESS_MARKERS[0] == "自然多了"
+    assert "自然多了" in SUCCESS_MARKERS
+
+
+def test_closed_loop_success_matches_legacy_mojibake_feedback(tmp_path: Path) -> None:
+    record_learning_closed_loop_turn(
+        tmp_path,
+        _owner_payload(),
+        user_text="不是哥们，现在哪像人了，模板味太重",
+        reply="嗯，我会继续调整。",
+        session_key="qq:private:owner",
+        observed_at="2026-05-02T05:00:00+08:00",
+    )
+    variants = legacy_mojibake_variants("自然多了")
+    assert variants, "expected legacy mojibake variants to exist"
+    mojibaked = variants[0]
+    assert mojibaked != "自然多了"
+
+    result = record_learning_closed_loop_turn(
+        tmp_path,
+        _owner_payload(),
+        # Owner praise that arrived through an old wrongly-decoded pipeline must
+        # still register as success via the legacy variant matchers.
+        user_text=mojibaked,
+        reply="嗯。",
+        session_key="qq:private:owner",
+        observed_at="2026-05-02T05:01:00+08:00",
+    )
+    state = (tmp_path / "memory/self/learning_closed_loop_state.md").read_text(encoding="utf-8")
+
+    assert result["success"] is True
+    assert "trial_success_streak: 1" in state
+    assert "success_evidence_status: same_trial_explicit_owner_success" in state
+
+
+def test_closed_loop_memory_mechanics_guard_suppresses_concurrent_success(tmp_path: Path) -> None:
+    state_path = tmp_path / "memory/self/learning_closed_loop_state.md"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(
+        """# Learning Closed Loop State
+
+## Current Loop
+- status: trial_supported
+- latest_failure_kind: memory_mechanics_leak
+- active_trial_key: memory_mechanics_leak
+- active_trial_habit: 需要记忆时先接住对话，只说记得/不确定/想确认什么，不念文件和状态卡。
+- expected_next_behavior: 需要记忆时先接住对话，只说记得/不确定/想确认什么，不念文件和状态卡。
+- repair_count: 5
+- success_count: 1
+- success_streak: 1
+- trial_success_count: 1
+- trial_success_streak: 1
+- promotion_signal: false
+- last_owner_reaction: explicit_success
+
+## Success Evidence
+- latest_success_trial_key: memory_mechanics_leak
+- success_evidence_status: same_trial_explicit_owner_success
+""",
+        encoding="utf-8",
+    )
+
+    # Same turn: owner praise (clean success marker) AND a memory-mechanics guard
+    # failure. The concurrent critical failure must suppress the success.
+    result = record_learning_closed_loop_turn(
+        tmp_path,
+        _owner_payload(),
+        user_text="这句自然多了",
+        reply="（先读一下记忆文件再说）",
+        session_key="qq:private:owner",
+        final_guard_flags=["visible_memory_mechanics_naturalized"],
+        observed_at="2026-05-02T06:00:00+08:00",
+    )
+    state = state_path.read_text(encoding="utf-8")
+
+    assert result["failures"][0] == "memory_mechanics_leak"
+    assert result["success"] is False
+    assert "learning_closed_loop_success_suppressed_by_concurrent_failure" in result["notes"]
+    assert "trial_success_streak: 0" in state
+    assert "success_evidence_status: reset_by_failure" in state
+    assert "active_trial_key: memory_mechanics_leak" in state
 
 
 def test_closed_loop_ignores_loose_time_and_learning_words(tmp_path: Path) -> None:
@@ -132,6 +228,125 @@ def test_closed_loop_success_feedback_requires_active_trial_context(tmp_path: Pa
     assert first["failures"] == ["owner_reported_template_voice_failure"]
     assert vague["recorded"] is False
     assert bound["success"] is True
+
+
+def test_closed_loop_success_evidence_resets_when_trial_key_changes(tmp_path: Path) -> None:
+    record_learning_closed_loop_turn(
+        tmp_path,
+        _owner_payload(),
+        user_text="不要模板话",
+        reply="我会调整。",
+        session_key="qq:private:owner",
+        observed_at="2026-05-02T04:02:57+08:00",
+    )
+    first_success = record_learning_closed_loop_turn(
+        tmp_path,
+        _owner_payload(),
+        user_text="这句自然多了",
+        reply="嗯。",
+        session_key="qq:private:owner",
+        observed_at="2026-05-02T04:02:58+08:00",
+    )
+    second_success = record_learning_closed_loop_turn(
+        tmp_path,
+        _owner_payload(),
+        user_text="这样可以",
+        reply="好。",
+        session_key="qq:private:owner",
+        observed_at="2026-05-02T04:02:59+08:00",
+    )
+
+    supported = (tmp_path / "memory/self/learning_closed_loop_state.md").read_text(encoding="utf-8")
+
+    assert first_success["success"] is True
+    assert second_success["success"] is True
+    assert "trial_success_count: 2" in supported
+    assert "trial_success_streak: 2" in supported
+    assert "latest_success_trial_key: owner_reported_template_voice_failure" in supported
+    assert "success_evidence_status: same_trial_explicit_owner_success" in supported
+    assert "promotion_signal: possible_after_self_review" in supported
+
+    changed = record_learning_closed_loop_turn(
+        tmp_path,
+        _owner_payload(),
+        user_text="上下文不连通，怎么聊下去",
+        reply="",
+        session_key="qq:private:owner",
+        observed_at="2026-05-02T04:03:00+08:00",
+    )
+
+    state = (tmp_path / "memory/self/learning_closed_loop_state.md").read_text(encoding="utf-8")
+
+    assert changed["failures"] == ["owner_reported_context_discontinuity"]
+    assert "active_trial_key: owner_reported_context_discontinuity" in state
+    assert "trial_success_count: 0" in state
+    assert "trial_success_streak: 0" in state
+    assert "success_evidence_status: reset_by_failure" in state
+    assert "promotion_signal: false" in state
+
+
+def test_closed_loop_treats_resolved_template_feedback_as_same_trial_success(tmp_path: Path) -> None:
+    record_learning_closed_loop_turn(
+        tmp_path,
+        _owner_payload(),
+        user_text="不要模板话",
+        reply="我会调整。",
+        session_key="qq:private:owner",
+        observed_at="2026-05-02T04:03:01+08:00",
+    )
+    resolved = record_learning_closed_loop_turn(
+        tmp_path,
+        _owner_payload(),
+        user_text="这次没模板味了",
+        reply="嗯。",
+        session_key="qq:private:owner",
+        observed_at="2026-05-02T04:03:02+08:00",
+    )
+    effective = record_learning_closed_loop_turn(
+        tmp_path,
+        _owner_payload(),
+        user_text="这次修复有效",
+        reply="好。",
+        session_key="qq:private:owner",
+        observed_at="2026-05-02T04:03:03+08:00",
+    )
+
+    state = (tmp_path / "memory/self/learning_closed_loop_state.md").read_text(encoding="utf-8")
+
+    assert resolved["success"] is True
+    assert resolved["failures"] == []
+    assert effective["success"] is True
+    assert "trial_success_count: 2" in state
+    assert "trial_success_streak: 2" in state
+    assert "latest_success_trial_key: owner_reported_template_voice_failure" in state
+    assert "promotion_signal: possible_after_self_review" in state
+
+
+def test_closed_loop_keeps_mixed_template_feedback_as_failure(tmp_path: Path) -> None:
+    record_learning_closed_loop_turn(
+        tmp_path,
+        _owner_payload(),
+        user_text="不要模板话",
+        reply="我会调整。",
+        session_key="qq:private:owner",
+        observed_at="2026-05-02T04:03:04+08:00",
+    )
+    mixed = record_learning_closed_loop_turn(
+        tmp_path,
+        _owner_payload(),
+        user_text="这句自然多了，但是还是有模板味",
+        reply="嗯。",
+        session_key="qq:private:owner",
+        observed_at="2026-05-02T04:03:05+08:00",
+    )
+
+    state = (tmp_path / "memory/self/learning_closed_loop_state.md").read_text(encoding="utf-8")
+
+    assert mixed["success"] is False
+    assert mixed["failures"] == ["owner_reported_template_voice_failure"]
+    assert "learning_closed_loop_success_suppressed_by_concurrent_failure" in mixed["notes"]
+    assert "trial_success_streak: 0" in state
+    assert "success_evidence_status: reset_by_failure" in state
 
 
 def test_closed_loop_dedupes_replay_cases(tmp_path: Path) -> None:
@@ -205,6 +420,63 @@ memory_type: learning_closed_loop_state
 
     assert soft_callback == ""
     assert "owner_reported_context_discontinuity" in direct_repair
+    assert "realtime_pressure_limit: direct_failure_only" in direct_repair
+
+
+def test_prompt_block_cools_context_pressure_despite_old_global_successes(tmp_path: Path) -> None:
+    state_path = tmp_path / "memory/self/learning_closed_loop_state.md"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(
+        """# Learning Closed Loop State
+
+## Current Loop
+- status: trial_active
+- latest_failure_kind: owner_reported_context_discontinuity
+- active_trial_habit: answer from recent real context first
+- expected_next_behavior: connect to the latest real turn before explaining
+- repair_count: 94
+- success_count: 3
+- success_streak: 0
+- trial_success_count: 3
+- trial_success_streak: 0
+- success_evidence_status: none
+""",
+        encoding="utf-8",
+    )
+
+    soft_callback = build_learning_closed_loop_prompt_block(tmp_path, user_text="刚才那个呢")
+    direct_repair = build_learning_closed_loop_prompt_block(tmp_path, user_text="上下文不连贯，没接住")
+
+    assert soft_callback == ""
+    assert "owner_reported_context_discontinuity" in direct_repair
+    assert "realtime_pressure_limit: direct_failure_only" in direct_repair
+
+
+def test_prompt_block_keeps_low_information_ack_canary_under_high_repair_count(tmp_path: Path) -> None:
+    state_path = tmp_path / "memory/self/learning_closed_loop_state.md"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(
+        """# Learning Closed Loop State
+
+## Current Loop
+- status: trial_active
+- latest_failure_kind: post_reply_low_information_ack_risk
+- active_trial_habit: do not answer a live owner probe with a bare ack
+- expected_next_behavior: anchor one concrete point from the current owner turn
+- repair_count: 94
+- success_count: 3
+- success_streak: 0
+- trial_success_count: 3
+- trial_success_streak: 0
+- success_evidence_status: none
+""",
+        encoding="utf-8",
+    )
+
+    prompt = build_learning_closed_loop_prompt_block(tmp_path, user_text="所以现在怎么做")
+
+    assert "post_reply_low_information_ack_risk" in prompt
+    assert "realtime_pressure_limit" not in prompt
 
 
 def test_closed_loop_links_self_thought_to_memory_route(tmp_path: Path) -> None:

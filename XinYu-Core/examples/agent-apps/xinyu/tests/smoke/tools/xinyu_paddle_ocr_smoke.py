@@ -26,7 +26,9 @@ def _find_python() -> str:
     configured = os.environ.get("XINYU_OCR_PYTHON", "").strip()
     if configured:
         return configured
-    local_python = Path("D:/XinYu/Python312/python.exe")
+    local_python = Path("D:/XinYu/runtime/deps/Python312/python.exe")
+    if not local_python.exists():
+        local_python = Path("D:/XinYu/Python312/python.exe")
     if local_python.is_file():
         return str(local_python)
     return sys.executable
@@ -34,6 +36,7 @@ def _find_python() -> str:
 
 def _find_existing_test_image() -> Path | None:
     candidates = [
+        Path("D:/XinYu/assets/ocr/ocr-test-cn.png"),
         Path("D:/XinYu/ocr-test-cn.png"),
         PROJECT_ROOT / "runtime" / "paddle_ocr_test.png",
     ]
@@ -70,8 +73,13 @@ def _create_test_image(path: Path) -> bool:
 
 
 def main() -> int:
-    paddleocr = Path(os.environ.get("XINYU_PADDLEOCR_EXE", "D:/XinYu/ocr-venv/Scripts/paddleocr.exe"))
-    if not paddleocr.is_file() and shutil.which("paddleocr") is None:
+    paddleocr = Path(
+        os.environ.get("XINYU_PADDLEOCR_EXE", "D:/XinYu/runtime/deps/ocr-venv/Scripts/paddleocr.exe")
+    )
+    if not paddleocr.exists():
+        paddleocr = Path("D:/XinYu/ocr-venv/Scripts/paddleocr.exe")
+    ocr_python = Path("D:/XinYu/runtime/deps/ocr-venv/Scripts/python.exe")
+    if not paddleocr.is_file() and not ocr_python.is_file() and shutil.which("paddleocr") is None:
         print("xinyu_paddle_ocr_smoke: skipped (paddleocr executable not found)")
         return 0
 

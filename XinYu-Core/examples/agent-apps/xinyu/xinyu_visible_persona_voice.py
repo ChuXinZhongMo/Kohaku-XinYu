@@ -4,6 +4,14 @@ import hashlib
 import re
 from typing import Any
 
+from xinyu_proactive_context_adapter import (
+    context_line_signal_score,
+    is_low_signal_context_line,
+    normalize_proactive_recent_context,
+)
+from xinyu_voice_style_observations import CONTEXTUAL_TOPIC_REWRITES, proactive_style_guard
+from xinyu_voice_style_sampler import infer_proactive_scene, proactive_scene_templates
+
 
 def visible_codex_reply_variant(seed: str, options: tuple[str, ...]) -> str:
     if not options:
@@ -222,18 +230,29 @@ def compose_review_inbox_command_reply(*, processed_count: int, stale_count: int
     return "".join(parts)
 
 
-def compose_proactive_visible_message(raw_text: Any, *, source: str = "", reason: str = "") -> str:
+def compose_proactive_visible_message(
+    raw_text: Any,
+    *,
+    source: str = "",
+    reason: str = "",
+    recent_context: Any = "",
+) -> str:
     del source, reason
     text = _strip_control_lines(_safe_str(raw_text))
     text = naturalize_internal_visible_text(text)
     text = _visible_summary(text, limit=300)
+    context_text = normalize_proactive_recent_context(recent_context)
     if not text:
-        return "我有一点想法想让你看一眼。"
+        return "我刚才还在想这个。"
     if _looks_like_personal_voice(text):
         return text
-    if text.endswith(("?", "？")) or "要不要" in text or "能不能" in text:
-        return f"我想问你一件小事：{text}"
-    return f"我想把这点先给你看：{text}"
+    shortened = _shorten_proactive_question(text, recent_context=context_text)
+    if shortened:
+        return shortened
+    scene_reply = _scene_proactive_reply(text, recent_context=context_text)
+    if scene_reply:
+        return scene_reply
+    return "这个还接吗"
 
 
 def compose_async_exploration_outbox_message(update: dict[str, Any]) -> str:
@@ -358,6 +377,99 @@ def _scrub_sensitive(text: str) -> str:
 def _looks_like_personal_voice(text: str) -> bool:
     compact = text.strip()
     return compact.startswith(("我", "嗯", "刚才", "这次", "那边", "留下的是", "进了", "可以", "不用"))
+
+
+def _shorten_proactive_question(text: str, *, recent_context: str = "") -> str:
+    compact = text.strip()
+    if not compact.endswith(("?", "？")):
+        return ""
+    if "主动直发检查" in compact and "接上" in compact:
+        return "主动直发检查接上吗"
+    topic = _proactive_question_topic(compact)
+    if not topic and recent_context:
+        topic = _proactive_topic_from_context(compact, recent_context)
+    if not topic and len(compact) <= 14 and compact.startswith(("要不要", "能不能", "可不可以", "可以", "你要不要", "我要不要", "我能不能")):
+        return compact
+    if not topic:
+        return ""
+    return _scene_proactive_reply(compact, topic=topic, recent_context=recent_context) or _guarded_proactive_reply(
+        compact,
+        visible_codex_reply_variant(compact, proactive_scene_templates("继续/收束", topic)),
+    )
+
+
+def _proactive_question_topic(text: str) -> str:
+    compact = text.strip().rstrip("?？。.")
+    patterns = (
+        r"^要不要我(?:现在|先)?跑一遍(.+)$",
+        r"^要不要我(?:现在|先)?把(.+?接到\s*[A-Za-z0-9_ -]+)$",
+        r"^要不要我(?:现在|先)?把(.+?)(?:接上|接起来|继续|跑一遍|改(?:得|成).+|弄一下|试一下|处理一下)$",
+        r"^要不要我(?:现在|先)?(.+?)(?:接上|接起来|继续|跑一遍|改(?:得|成).+|弄一下|试一下|处理一下)$",
+        r"^我(?:现在|先)?要不要把(.+?)(?:接上|接起来|继续|跑一遍|改(?:得|成).+|弄一下|试一下|处理一下)$",
+    )
+    for pattern in patterns:
+        match = re.match(pattern, compact)
+        if match:
+            topic = match.group(1).strip(" ，,：:")
+            topic = re.sub(r"^(这些|这个|那个|刚才的|刚才那条)", "", topic).strip(" ，,：:")
+            topic = _compress_proactive_topic(topic)
+            if topic:
+                return topic
+    return ""
+
+
+def _compress_proactive_topic(text: str) -> str:
+    topic = _visible_summary(text, limit=80).strip(" ，,：:")
+    if not topic:
+        return ""
+    topic = re.sub(r"^(主人|owner|用户|你)\s*[:：]\s*", "", topic, flags=re.I).strip()
+    topic = re.sub(r"^(系统|XinYu|心玉)\s*[:：]\s*", "", topic, flags=re.I).strip()
+    for pattern, replacement in CONTEXTUAL_TOPIC_REWRITES:
+        if re.match(pattern, topic, flags=re.I):
+            return replacement
+    topic = re.sub(r"(?:的)?闭环$", "那条链", topic)
+    topic = re.sub(r"(?:的)?链路$", "那条链", topic)
+    topic = re.sub(r"(?:这个|这块|这件事|那件事)$", "", topic).strip(" ，,：:")
+    if len(topic) > 14:
+        topic = topic[:14].rstrip()
+    return topic or "这个"
+
+
+def _proactive_topic_from_context(text: str, recent_context: str = "") -> str:
+    candidates = [line for line in re.split(r"[\r\n]+", recent_context or "") if line.strip()]
+    candidates = [line for line in candidates if not is_low_signal_context_line(line)]
+    candidates.reverse()
+    candidates.append(text)
+    candidates.sort(key=lambda line: context_line_signal_score(line), reverse=True)
+    for candidate in candidates:
+        topic = _compress_proactive_topic(candidate)
+        if topic and topic != "这个":
+            return topic
+    return "这个"
+
+
+
+def _scene_proactive_reply(text: str, *, topic: str = "", recent_context: str = "") -> str:
+    scene = infer_proactive_scene("\n".join(part for part in (recent_context, text) if part))
+    topic = topic or _proactive_topic_from_context(text, recent_context)
+    seed = "|".join(part for part in (recent_context, text, topic) if part)
+    return _guarded_proactive_reply(
+        seed,
+        visible_codex_reply_variant(seed, proactive_scene_templates(scene, topic)),
+    )
+
+
+
+def _guarded_proactive_reply(seed: str, candidate: str) -> str:
+    guard = proactive_style_guard(candidate)
+    if guard["accepted"]:
+        return candidate
+    topic = _compress_proactive_topic(seed)
+    fallback = f"{topic}还接吗" if topic and topic != "这个" else "这个还接吗"
+    if proactive_style_guard(fallback)["accepted"]:
+        return fallback
+    return "这个还接吗"
+
 
 
 def _compact(value: Any, *, limit: int = 220, default: str = "") -> str:

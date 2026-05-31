@@ -1,0 +1,471 @@
+{
+  "autonomy_boundary": {
+    "model_may": [
+      "observe",
+      "summarize",
+      "suggest",
+      "draft",
+      "request_owner_approval"
+    ],
+    "model_must_not": [
+      "execute tools directly",
+      "send QQ messages directly",
+      "write stable memory directly",
+      "bypass XinYu-Core",
+      "train on raw private state"
+    ]
+  },
+  "components": [
+    {
+      "name": "XinYu-TinyKernel",
+      "path": "<xinyu_workspace>/XinYu-TinyKernel",
+      "public_entrypoints": [
+        "<xinyu_workspace>/XinYu-TinyKernel/Eval-Lora.ps1",
+        "<xinyu_workspace>/XinYu-TinyKernel/Infer-Smoke.ps1",
+        "<xinyu_workspace>/XinYu-TinyKernel/README.md",
+        "<xinyu_workspace>/XinYu-TinyKernel/Setup-TrainEnv.ps1",
+        "<xinyu_workspace>/XinYu-TinyKernel/Start-TinyKernel.ps1",
+        "<xinyu_workspace>/XinYu-TinyKernel/Stop-TinyKernel.ps1",
+        "<xinyu_workspace>/XinYu-TinyKernel/Train-Smoke.ps1",
+        "<xinyu_workspace>/XinYu-TinyKernel/configs/data_sources.json",
+        "<xinyu_workspace>/XinYu-TinyKernel/configs/server.json",
+        "<xinyu_workspace>/XinYu-TinyKernel/configs/train.json",
+        "<xinyu_workspace>/XinYu-TinyKernel/configs/train_emotion_attachment_v001.json",
+        "<xinyu_workspace>/XinYu-TinyKernel/configs/train_emotion_attachment_v002.json",
+        "<xinyu_workspace>/XinYu-TinyKernel/configs/train_emotion_curiosity_v001.json",
+        "<xinyu_workspace>/XinYu-TinyKernel/configs/train_emotion_fatigue_v001.json",
+        "<xinyu_workspace>/XinYu-TinyKernel/configs/train_emotion_fatigue_v002.json",
+        "<xinyu_workspace>/XinYu-TinyKernel/configs/train_emotion_guardedness_v001.json",
+        "<xinyu_workspace>/XinYu-TinyKernel/configs/train_emotion_hurt_v001.json",
+        "<xinyu_workspace>/XinYu-TinyKernel/configs/train_emotion_hurt_v002.json",
+        "<xinyu_workspace>/XinYu-TinyKernel/configs/train_emotion_irritation_v001.json",
+        "<xinyu_workspace>/XinYu-TinyKernel/configs/train_emotion_irritation_v002.json"
+      ],
+      "role": "Inner emotional drive, persona integration, bounded action tendency, and local decision kernel.",
+      "safe_docs": [
+        {
+          "path": "<xinyu_workspace>/XinYu-TinyKernel/PLAN.md",
+          "summary": [
+            "# XinYu TinyKernel Plan",
+            "日期：2026-05-13",
+            "## 0. 核心目标",
+            "- 判断当前消息应该聊天、澄清、等待、写记忆候选，还是交给工具。",
+            "- 生成短、自然、稳定的 XinYu 风格回复。",
+            "- 判断是否应该调用 Codex、状态检查、日志扫描等外部能力。",
+            "- 在外部 API 不可用时保持最低限度的本地人格和连续性。",
+            "- 把运行反馈转成可审查的训练样本，为后续 LoRA 小步迭代做准备。",
+            "- 直接替代 `<local_path>` 主系统。",
+            "- 直接操作 QQ/NapCat/Desktop/Codex。",
+            "- 直接执行任意 shell。",
+            "- 从零训练大语言模型。",
+            "- 随时无审查地修改自己的权重。",
+            "## 1. 总体架构",
+            "## 2. 第一版边界",
+            "## 3. 项目目录规划"
+          ]
+        },
+        {
+          "path": "<xinyu_workspace>/XinYu-TinyKernel/README.md",
+          "summary": [
+            "# XinYu TinyKernel",
+            "TinyKernel is a standalone local project for building XinYu's small inner decision kernel.",
+            "It is not the live XinYu runtime. It does not own QQ, Desktop, Codex, memory persistence, or tool execution. Its job is to learn and serve a narrow decision layer:",
+            "- model inner emotional state and dominant drives",
+            "- integrate those drives into the main persona stance",
+            "- choose reply / clarify / wait / tool intent / memory candidate modes",
+            "- suggest bounded action tendencies without executing them",
+            "- run locally when external APIs are unavailable",
+            "- collect feedback for reviewed adapter iteration",
+            "## Boundaries",
+            "- Read from `<local_path>` only through explicit export scripts.",
+            "- Write only under `<local_path>`.",
+            "- Never train directly on raw private runtime files.",
+            "- Never expose secrets, local absolute paths, IDs, or internal state filenames in training rows.",
+            "- Never let the model execute tools directly.",
+            "- Treat project-wide training as a safe self-model export, not raw source/log ingestion."
+          ]
+        },
+        {
+          "path": "<xinyu_workspace>/XinYu-TinyKernel/docs/adapter_evaluation.md",
+          "summary": [
+            "# Adapter Evaluation",
+            "Date: 2026-05-13",
+            "## Current Decision",
+            "## Registry Schema",
+            "## Results",
+            "## Root Cause Found",
+            "## Practical Route",
+            "## Main Persona v001",
+            "## Emotion Sidecar v001"
+          ]
+        },
+        {
+          "path": "<xinyu_workspace>/XinYu-TinyKernel/docs/api_contract.md",
+          "summary": [
+            "# TinyKernel API Contract",
+            "## `GET /health`",
+            "Returns local service readiness.",
+            "## `POST /decide`",
+            "## `POST /feedback`"
+          ]
+        },
+        {
+          "path": "<xinyu_workspace>/XinYu-TinyKernel/docs/data_contract.md",
+          "summary": [
+            "# TinyKernel Data Contract",
+            "## Candidate Row",
+            "Candidate rows are intermediate, reviewable records exported from XinYu. They are not training rows until sanitized and approved.",
+            "## SFT Row",
+            "## Inner-System SFT Row",
+            "## Required Sanitization",
+            "- replace local absolute paths with placeholders",
+            "- replace IDs with placeholders",
+            "- remove secrets and tokens",
+            "- reject rows that leak internal tool syntax or state filenames",
+            "- reject rows with empty or low-value assistant replies"
+          ]
+        },
+        {
+          "path": "<xinyu_workspace>/XinYu-TinyKernel/docs/emotion_bias_contract.md",
+          "summary": [
+            "# Emotion Bias Contract",
+            "Date: 2026-05-13",
+            "## Purpose",
+            "## Legacy Status",
+            "## Allowed Lenses",
+            "## Output Shape",
+            "## Bounds",
+            "## Boundary Rules",
+            "## Fallback",
+            "## Training Targets"
+          ]
+        },
+        {
+          "path": "<xinyu_workspace>/XinYu-TinyKernel/docs/handoff.md",
+          "summary": [
+            "# Handoff Log",
+            "## 2026-05-13",
+            "Created project folder and initial plan.",
+            "## 2026-05-13 Continued"
+          ]
+        },
+        {
+          "path": "<xinyu_workspace>/XinYu-TinyKernel/docs/inner_system_contract.md",
+          "summary": [
+            "# XinYu Inner System Contract",
+            "Date: 2026-05-25",
+            "## 核心定位",
+            "## 输出 Schema",
+            "## 情感轴",
+            "## 驱动力",
+            "## 自主性边界",
+            "## 训练整个 XinYu 项目的方式"
+          ]
+        },
+        {
+          "path": "<xinyu_workspace>/XinYu-TinyKernel/docs/main_persona_data_contract.md",
+          "summary": [
+            "# Main Persona Data Contract",
+            "Date: 2026-05-13",
+            "## Purpose",
+            "## Base",
+            "## Input Message Shape",
+            "## Output Shape",
+            "## Positive Targets",
+            "## Rejection Rules",
+            "## Data Sources",
+            "## Evaluation"
+          ]
+        },
+        {
+          "path": "<xinyu_workspace>/XinYu-TinyKernel/docs/shadow_integration_plan.md",
+          "summary": [
+            "# XinYu Shadow Integration Plan",
+            "This document describes how `<local_path>` should call TinyKernel later without changing visible behavior.",
+            "Current status:",
+            "## Goal",
+            "## Non-Goals",
+            "- Do not let TinyKernel send QQ messages.",
+            "- Do not let TinyKernel execute tools.",
+            "- Do not let TinyKernel write stable memory.",
+            "- Do not block live replies on TinyKernel.",
+            "- Do not switch to TinyKernel output during shadow.",
+            "## Request Shape",
+            "## Timeout And Fallback",
+            "## Trace Row",
+            "## Promotion Criteria",
+            "## Canary Scope",
+            "## Candidate XinYu Files To Inspect Later"
+          ]
+        },
+        {
+          "path": "<xinyu_workspace>/XinYu-TinyKernel/docs/training_environment.md",
+          "summary": [
+            "# Training Environment",
+            "Detected local Python interpreters:",
+            "Use Python 3.12 for training:"
+          ]
+        },
+        {
+          "path": "<xinyu_workspace>/XinYu-TinyKernel/docs/training_readiness.md",
+          "summary": [
+            "# Training Readiness",
+            "Current status: adapter training is possible, but activation is blocked intentionally.",
+            "Training should not start until all gates are satisfied.",
+            "## Current Dataset",
+            "## Training Environment",
+            "## Adapter Results",
+            "## Required Activation Gates",
+            "- JSONL validation passes.",
+            "- Safety scan passes.",
+            "- Rule eval passes 10/10.",
+            "- Model protocol eval passes 10/10.",
+            "- Guarded model eval passes 10/10. Current v004 guarded eval passes.",
+            "- HTTP smoke passes.",
+            "- Shadow-only logging passes.",
+            "- At least 100 rows are manually reviewed.",
+            "- `state/adapter_registry.json` is updated manually."
+          ]
+        },
+        {
+          "path": "<xinyu_workspace>/XinYu-TinyKernel/docs/xinyu_shadow_integration_design.md",
+          "summary": [
+            "# XinYu TinyKernel Compose Shadow Integration Design",
+            "Date: 2026-05-13",
+            "## Goal",
+            "## Runtime Boundary",
+            "## Endpoint",
+            "## Timeout",
+            "## Trace Row",
+            "## Kill Switch",
+            "## Canary Gate",
+            "## Non-Goals"
+          ]
+        }
+      ],
+      "safe_inventory": {
+        "dir_count_excluding_heavy_private_dirs": 16,
+        "file_count_excluding_heavy_private_dirs": 164
+      }
+    },
+    {
+      "name": "XinYu-Core",
+      "path": "<xinyu_workspace>/XinYu-Core",
+      "public_entrypoints": [
+        "<xinyu_workspace>/XinYu-Core/README.md",
+        "<xinyu_workspace>/XinYu-Core/pyproject.toml"
+      ],
+      "role": "Core runtime and orchestration layer that owns live tool and memory boundaries.",
+      "safe_docs": [
+        {
+          "path": "<xinyu_workspace>/XinYu-Core/README.md",
+          "summary": [
+            "# XinYu Core",
+            "`<local_path>` 是心玉核心运行目录。",
+            "主要入口：",
+            "- `src/xinyu_runtime/`：XinYu Runtime 主实现包。",
+            "- `examples/agent-apps/xinyu/`：心玉本地核心 app、QQ gateway、memory、runtime、learning 数据和 smoke 脚本。",
+            "- `examples/agent-apps/xinyu/.venv/`：当前运行用 Python 环境。",
+            "- 新代码优先写入 `xinyu_runtime` 或 `examples/agent-apps/xinyu`。",
+            "- 不再依赖旧框架目录作为运行路径。",
+            "- `LICENSE` 保留来源和授权信息；日常运行只使用当前目录。"
+          ]
+        }
+      ],
+      "safe_inventory": {
+        "dir_count_excluding_heavy_private_dirs": 515,
+        "file_count_excluding_heavy_private_dirs": 2793
+      }
+    },
+    {
+      "name": "XinYu-Autonomy",
+      "path": "<xinyu_workspace>/XinYu-Autonomy",
+      "public_entrypoints": [
+        "<xinyu_workspace>/XinYu-Autonomy/README.md"
+      ],
+      "role": "Autonomy experiments and policy work. It must remain approval-bound until reviewed.",
+      "safe_docs": [
+        {
+          "path": "<xinyu_workspace>/XinYu-Autonomy/README.md",
+          "summary": [
+            "# XinYu Autonomy",
+            "这个目录是 `<local_path>` 工作区里 owner 可见的自主性表面。",
+            "- `thoughts/`：桌面侧可见的私有时间想法。",
+            "- `dreams/`：梦境日志导出和最新梦境视图。",
+            "- `journal/`：较早的自主性审计导出，保留用于连续性。",
+            "- `system/`：指向实时自主性状态 `memory/self/autonomy/` 的 junction。"
+          ]
+        }
+      ],
+      "safe_inventory": {
+        "dir_count_excluding_heavy_private_dirs": 41,
+        "file_count_excluding_heavy_private_dirs": 525
+      }
+    },
+    {
+      "name": "XinYu-Local-Scope",
+      "path": "<xinyu_workspace>/XinYu-Local-Scope",
+      "public_entrypoints": [
+        "<xinyu_workspace>/XinYu-Local-Scope/README.md"
+      ],
+      "role": "Local scope and environment boundary layer.",
+      "safe_docs": [
+        {
+          "path": "<xinyu_workspace>/XinYu-Local-Scope/README.md",
+          "summary": [
+            "# XinYu Local Scope",
+            "This folder is the only project-outside local area currently approved for XinYu-facing file work.",
+            "- `Inbox`: files the owner explicitly places here for XinYu to read.",
+            "- `Outbox`: files XinYu writes for the owner to inspect.",
+            "- `Workspace`: temporary drafts or safe working material.",
+            "- `Requests`: permission requests or proposed local actions."
+          ]
+        }
+      ],
+      "safe_inventory": {
+        "dir_count_excluding_heavy_private_dirs": 225,
+        "file_count_excluding_heavy_private_dirs": 1017
+      }
+    },
+    {
+      "name": "XinYu_Desktop",
+      "path": "<xinyu_workspace>/XinYu_Desktop",
+      "public_entrypoints": [
+        "<xinyu_workspace>/XinYu_Desktop/README.md",
+        "<xinyu_workspace>/XinYu_Desktop/package.json"
+      ],
+      "role": "Desktop user interface and local client surface.",
+      "safe_docs": [
+        {
+          "path": "<xinyu_workspace>/XinYu_Desktop/README.md",
+          "summary": [
+            "# XinYu Desktop",
+            "`XinYu_Desktop` 是心玉的本机桌面壳。它只负责本机界面、状态呈现和桌面侧交互，",
+            "不保存核心人格、QQ gateway 或长期记忆。",
+            "## 命令",
+            "## 边界",
+            "- `src/` 是桌面壳源码。",
+            "- `out/` 是构建产物，可以重新生成。",
+            "- `node_modules/` 是依赖目录，不属于项目源码。",
+            "- 桌面壳通过本地 bridge 读取心玉状态，不直接改核心运行时身份。"
+          ]
+        }
+      ],
+      "safe_inventory": {
+        "dir_count_excluding_heavy_private_dirs": 7,
+        "file_count_excluding_heavy_private_dirs": 31
+      }
+    },
+    {
+      "name": "scripts",
+      "path": "<xinyu_workspace>/scripts",
+      "public_entrypoints": [
+        "<xinyu_workspace>/scripts/Start-XinYu-Desktop.ps1",
+        "<xinyu_workspace>/scripts/Start-XinYu-Frontend.ps1",
+        "<xinyu_workspace>/scripts/Start-XinYu-QQ.ps1",
+        "<xinyu_workspace>/scripts/Start-XinYu-TinyKernel.ps1",
+        "<xinyu_workspace>/scripts/Stop-XinYu-Desktop.ps1",
+        "<xinyu_workspace>/scripts/Stop-XinYu-TinyKernel.ps1",
+        "<xinyu_workspace>/scripts/Write-XinYu-Autonomy-Journal.ps1",
+        "<xinyu_workspace>/scripts/Write-XinYu-Thoughts.ps1"
+      ],
+      "role": "Workspace-level operational scripts.",
+      "safe_docs": [],
+      "safe_inventory": {
+        "dir_count_excluding_heavy_private_dirs": 0,
+        "file_count_excluding_heavy_private_dirs": 13
+      }
+    },
+    {
+      "name": "docs",
+      "path": "<xinyu_workspace>/docs",
+      "public_entrypoints": [
+        "<xinyu_workspace>/docs/README.md"
+      ],
+      "role": "Workspace-level documentation.",
+      "safe_docs": [
+        {
+          "path": "<xinyu_workspace>/docs/README.md",
+          "summary": [
+            "# XinYu Docs",
+            "This directory keeps root-level planning and audit material out of the runtime",
+            "surface.",
+            "- `system/` - architecture notes and system-shape documents.",
+            "- `plans/` - active and historical work plans.",
+            "- `reports/` - validation, audit, operations, and refactor reports."
+          ]
+        }
+      ],
+      "safe_inventory": {
+        "dir_count_excluding_heavy_private_dirs": 3,
+        "file_count_excluding_heavy_private_dirs": 20
+      }
+    },
+    {
+      "name": "assets",
+      "path": "<xinyu_workspace>/assets",
+      "public_entrypoints": [],
+      "role": "Non-secret assets and reference material.",
+      "safe_docs": [],
+      "safe_inventory": {
+        "dir_count_excluding_heavy_private_dirs": 58,
+        "file_count_excluding_heavy_private_dirs": 143
+      }
+    },
+    {
+      "name": "artifacts",
+      "path": "<xinyu_workspace>/artifacts",
+      "public_entrypoints": [],
+      "role": "Generated artifacts and snapshots, not a source of private training truth.",
+      "safe_docs": [],
+      "safe_inventory": {
+        "dir_count_excluding_heavy_private_dirs": 3,
+        "file_count_excluding_heavy_private_dirs": 4
+      }
+    },
+    {
+      "name": "diagnostics",
+      "path": "<xinyu_workspace>/diagnostics",
+      "public_entrypoints": [],
+      "role": "Diagnostics output. It is metadata only and not raw runtime memory.",
+      "safe_docs": [],
+      "safe_inventory": {
+        "dir_count_excluding_heavy_private_dirs": 0,
+        "file_count_excluding_heavy_private_dirs": 1
+      }
+    },
+    {
+      "name": "worklog",
+      "path": "<xinyu_workspace>/worklog",
+      "public_entrypoints": [],
+      "role": "Work notes. Use summaries only; do not train on raw private logs.",
+      "safe_docs": [],
+      "safe_inventory": {
+        "dir_count_excluding_heavy_private_dirs": 0,
+        "file_count_excluding_heavy_private_dirs": 404
+      }
+    }
+  ],
+  "generated_at": "2026-05-24T18:22:04+00:00",
+  "purpose": "A safe self-model export for training XinYu to understand her own project shape, component boundaries, and autonomy limits without ingesting raw private state.",
+  "schema": "xinyu_project_self_model_v1",
+  "training_policy": {
+    "allowed": [
+      "component names and roles",
+      "public documentation summaries",
+      "entrypoint names",
+      "interface and contract descriptions",
+      "safety and autonomy boundary rules"
+    ],
+    "forbidden": [
+      "raw private dialogue",
+      "runtime memory bodies",
+      "tokens or API keys",
+      "QQ/user numeric identifiers",
+      "raw logs",
+      "large dependency trees",
+      "direct source-code memorization"
+    ]
+  },
+  "workspace": "<xinyu_workspace>"
+}

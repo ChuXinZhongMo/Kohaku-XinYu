@@ -723,3 +723,20 @@ def test_qq_outbox_stale_dead_count_is_not_known_error(tmp_path: Path) -> None:
     assert qq_outbox["last_dead_at"] == "2000-01-01T00:00:00+08:00"
     assert "qq_outbox.dead_count=1" not in summary["program_awareness"]["known_errors"]
     assert "qq_outbox.recent_dead_count=1" not in summary["program_awareness"]["known_errors"]
+
+
+def test_dry_run_not_enqueued_is_not_known_adapter_error(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "memory/context/proactive_qq_dispatch_state.md",
+        """
+        - last_claim_status: failed
+        - last_ack_status: failed
+        - last_acked_at: 2026-05-24T01:15:00+08:00
+        - adapter_error: dry_run_not_enqueued
+        - min_interval_seconds: 0
+        """,
+    )
+
+    summary = read_runtime_presence_summary(tmp_path)
+
+    assert "proactive_dispatch.adapter_error=dry_run_not_enqueued" not in summary["program_awareness"]["known_errors"]

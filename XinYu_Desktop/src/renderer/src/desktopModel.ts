@@ -1,4 +1,4 @@
-import type { ApiConfigCurrent, ApiConfigProfile, ApiConfigStatus, AppState, CommandState, DesktopEvent, ExternalPluginControl, ExternalPluginInstallState, ExternalPluginsStatus, GrowthCandidatePromotionItem, GrowthCandidatePromotionStatus, ImpulseSoupState, ImpulseThoughtlet, ImpulseTraceEvent, JsonRecord, ProactiveAction, ProactiveIntent, QQEnvironmentStatus, QQRuntimeConfig, ServiceProbe, Snapshot, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
+import type { ApiConfigCurrent, ApiConfigProfile, ApiConfigStatus, AppState, AsyncExplorationState, CommandState, DesktopEvent, ExternalPluginControl, ExternalPluginInstallState, ExternalPluginsStatus, GrowthCandidatePromotionItem, GrowthCandidatePromotionStatus, ImpulseSoupState, ImpulseThoughtlet, ImpulseTraceEvent, JsonRecord, ProactiveAction, ProactiveIntent, QQEnvironmentStatus, QQRuntimeConfig, ServiceProbe, Snapshot, Stage8BlockedGate, Stage8DuplicateCluster, Stage8MemoryGovernanceStatus, Stage8PromotionDryRun, Stage8ReviewDecision, Stage12GateStatus, Stage13GateStatus, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
 
 export const themeOptions: { id: ThemeName; label: string }[] = [
   { id: 'pastel', label: '粉紫' },
@@ -369,6 +369,100 @@ export function normalizeMemoryGrowthCandidates(value: unknown): GrowthCandidate
   }
 }
 
+export function normalizeStage8MemoryGovernance(value: unknown): Stage8MemoryGovernanceStatus {
+  const data = asRecord(value)
+  return {
+    ok: Boolean(data.ok),
+    loadedAt: String(data.loadedAt || ''),
+    updatedAt: String(data.updatedAt || ''),
+    status: String(data.status || 'missing'),
+    readyForStage9: Boolean(data.readyForStage9),
+    reason: String(data.reason || ''),
+    nextStep: String(data.nextStep || ''),
+    stage7ReadyForStage8: Boolean(data.stage7ReadyForStage8),
+    stage7Reason: String(data.stage7Reason || ''),
+    candidateTotal: numberValue(data.candidateTotal, 0),
+    ownerReviewRequiredCount: numberValue(data.ownerReviewRequiredCount, 0),
+    privateOrOwnerScopedCount: numberValue(data.privateOrOwnerScopedCount, 0),
+    duplicateClusterCount: numberValue(data.duplicateClusterCount, 0),
+    learningTrialSuccessGate: String(data.learningTrialSuccessGate || ''),
+    stableProfileWrite: String(data.stableProfileWrite || ''),
+    ownerMemoryWrite: String(data.ownerMemoryWrite || ''),
+    ownerReviewCandidateText: String(data.ownerReviewCandidateText || ''),
+    stablePersonalityWrite: String(data.stablePersonalityWrite || ''),
+    growthApplyMode: String(data.growthApplyMode || ''),
+    stableIdentityProfileApply: String(data.stableIdentityProfileApply || ''),
+    packetStatus: String(data.packetStatus || ''),
+    packetPath: String(data.packetPath || ''),
+    duplicateClusters: Array.isArray(data.duplicateClusters) ? data.duplicateClusters.map(normalizeStage8DuplicateCluster) : [],
+    blockedGates: Array.isArray(data.blockedGates) ? data.blockedGates.map(normalizeStage8BlockedGate) : [],
+    reviewInboxPendingCount: numberValue(data.reviewInboxPendingCount, 0),
+    reviewInboxProcessedCount: numberValue(data.reviewInboxProcessedCount, 0),
+    latestDecision: data.latestDecision ? normalizeStage8ReviewDecision(data.latestDecision) : null,
+    latestDryRun: data.latestDryRun ? normalizeStage8PromotionDryRun(data.latestDryRun) : null,
+    boundaries: normalizeStage8Boundaries(data.boundaries)
+  }
+}
+
+function normalizeStage8DuplicateCluster(value: unknown): Stage8DuplicateCluster {
+  const row = asRecord(value)
+  return {
+    topic: String(row.topic || ''),
+    size: numberValue(row.size, 0),
+    conflicts: numberValue(row.conflicts, 0),
+    privateOrHiddenSamples: numberValue(row.privateOrHiddenSamples, 0),
+    recommendation: String(row.recommendation || ''),
+    statuses: asRecord(row.statuses)
+  }
+}
+
+function normalizeStage8BlockedGate(value: unknown): Stage8BlockedGate {
+  const row = asRecord(value)
+  return {
+    gate: String(row.gate || ''),
+    status: String(row.status || ''),
+    count: numberValue(row.count, 0),
+    reason: String(row.reason || '')
+  }
+}
+
+function normalizeStage8ReviewDecision(value: unknown): Stage8ReviewDecision {
+  const row = asRecord(value)
+  return {
+    actionKind: String(row.actionKind || ''),
+    command: String(row.command || ''),
+    decidedAt: String(row.decidedAt || ''),
+    decision: String(row.decision || ''),
+    decisionId: String(row.decisionId || ''),
+    itemId: String(row.itemId || ''),
+    recordKey: String(row.recordKey || '')
+  }
+}
+
+function normalizeStage8PromotionDryRun(value: unknown): Stage8PromotionDryRun {
+  const row = asRecord(value)
+  return {
+    candidateId: String(row.candidateId || ''),
+    status: String(row.status || ''),
+    candidateType: String(row.candidateType || ''),
+    targetMemoryLayer: String(row.targetMemoryLayer || ''),
+    stableMemoryWrite: String(row.stableMemoryWrite || ''),
+    applyAllowed: Boolean(row.applyAllowed),
+    blockers: stringArray(row.blockers)
+  }
+}
+
+function normalizeStage8Boundaries(value: unknown): Stage8MemoryGovernanceStatus['boundaries'] {
+  const row = asRecord(value)
+  return {
+    rawOwnerTextInPacket: Boolean(row.rawOwnerTextInPacket),
+    visibleReplyTextInPacket: Boolean(row.visibleReplyTextInPacket),
+    candidateBodyInPacket: Boolean(row.candidateBodyInPacket),
+    stableMemoryWrite: String(row.stableMemoryWrite || ''),
+    consciousnessClaim: Boolean(row.consciousnessClaim)
+  }
+}
+
 function normalizeGrowthCandidatePromotionItem(value: unknown): GrowthCandidatePromotionItem {
   const row = asRecord(value)
   return {
@@ -479,13 +573,11 @@ export function normalizeApiConfigStatus(value: unknown): ApiConfigStatus {
   const currentRaw = asRecord(data.current)
   const current: ApiConfigCurrent = {
     configPath: String(currentRaw.configPath || data.configPath || ''),
-    provider: String(currentRaw.provider || 'ciallo'),
-    model: String(currentRaw.model || 'mimo-v2.5-pro'),
-    baseUrl: String(currentRaw.baseUrl || ''),
-    allowInsecureHttp: Boolean(currentRaw.allowInsecureHttp),
-    disableStreaming: currentRaw.disableStreaming !== false,
-    hasApiKey: Boolean(currentRaw.hasApiKey),
-    apiKeyPreview: String(currentRaw.apiKeyPreview || '')
+    llm: normalizeApiConfigLlm(currentRaw.llm || currentRaw),
+    vision: normalizeApiConfigVision(currentRaw.vision),
+    hearing: normalizeApiConfigHearing(currentRaw.hearing),
+    tts: normalizeApiConfigTts(currentRaw.tts),
+    other: normalizeApiConfigOther(currentRaw.other)
   }
   const profiles = Array.isArray(data.profiles) ? data.profiles.map(normalizeApiConfigProfile) : []
   return {
@@ -505,15 +597,77 @@ function normalizeApiConfigProfile(value: unknown): ApiConfigProfile {
   return {
     id: String(row.id || ''),
     label: String(row.label || '本地 API'),
+    llm: normalizeApiConfigLlm(row.llm || row),
+    vision: normalizeApiConfigVision(row.vision),
+    hearing: normalizeApiConfigHearing(row.hearing),
+    tts: normalizeApiConfigTts(row.tts),
+    other: normalizeApiConfigOther(row.other),
+    updatedAt: String(row.updatedAt || ''),
+    active: Boolean(row.active)
+  }
+}
+
+function normalizeApiConfigLlm(value: unknown) {
+  const row = asRecord(value)
+  return {
     provider: String(row.provider || 'ciallo'),
     model: String(row.model || 'mimo-v2.5-pro'),
     baseUrl: String(row.baseUrl || ''),
     allowInsecureHttp: Boolean(row.allowInsecureHttp),
     disableStreaming: row.disableStreaming !== false,
-    updatedAt: String(row.updatedAt || ''),
-    active: Boolean(row.active),
     hasApiKey: Boolean(row.hasApiKey),
     apiKeyPreview: String(row.apiKeyPreview || '')
+  }
+}
+
+function normalizeApiConfigVision(value: unknown) {
+  const row = asRecord(value)
+  return {
+    enabled: Boolean(row.enabled),
+    model: String(row.model || 'gpt-4o-mini'),
+    baseUrl: String(row.baseUrl || ''),
+    timeoutSeconds: numberValue(row.timeoutSeconds, 45),
+    maxBytes: numberValue(row.maxBytes, 4 * 1024 * 1024),
+    hasApiKey: Boolean(row.hasApiKey),
+    apiKeyPreview: String(row.apiKeyPreview || '')
+  }
+}
+
+function normalizeApiConfigHearing(value: unknown) {
+  const row = asRecord(value)
+  return {
+    enabled: row.enabled !== false,
+    command: String(row.command || ''),
+    model: String(row.model || 'whisper-1'),
+    baseUrl: String(row.baseUrl || ''),
+    language: String(row.language || 'zh'),
+    timeoutSeconds: numberValue(row.timeoutSeconds, 120),
+    recordFormat: String(row.recordFormat || 'mp3'),
+    hasApiKey: Boolean(row.hasApiKey),
+    apiKeyPreview: String(row.apiKeyPreview || '')
+  }
+}
+
+function normalizeApiConfigTts(value: unknown) {
+  const row = asRecord(value)
+  return {
+    enabled: Boolean(row.enabled),
+    model: String(row.model || 'mimo-v2.5-tts'),
+    baseUrl: String(row.baseUrl || ''),
+    voice: String(row.voice || 'mimo_default'),
+    format: String(row.format || 'wav'),
+    requestMode: String(row.requestMode || 'auto'),
+    timeoutSeconds: numberValue(row.timeoutSeconds, 60),
+    hasApiKey: Boolean(row.hasApiKey),
+    apiKeyPreview: String(row.apiKeyPreview || '')
+  }
+}
+
+function normalizeApiConfigOther(value: unknown) {
+  const row = asRecord(value)
+  return {
+    hasOpenAIApiKey: Boolean(row.hasOpenAIApiKey),
+    openAIApiKeyPreview: String(row.openAIApiKeyPreview || '')
   }
 }
 
@@ -536,6 +690,68 @@ export function defaultQQRuntimeConfig(): QQRuntimeConfig {
     whitelistUserIds: [],
     trustedUserIds: [],
     notes: []
+  }
+}
+
+export function normalizeAsyncExplorationState(value: unknown): AsyncExplorationState {
+  const d = asRecord(value)
+  return {
+    ok: Boolean(d.ok),
+    loadedAt: String(d.loadedAt || ''),
+    updatedAt: String(d.updatedAt || ''),
+    status: String(d.status || 'missing'),
+    resumeId: String(d.resumeId || ''),
+    sessionKey: String(d.sessionKey || ''),
+    delegationReason: String(d.delegationReason || ''),
+    taskSummary: String(d.taskSummary || ''),
+    failureKind: String(d.failureKind || ''),
+    resultQuality: String(d.resultQuality || ''),
+    ownerIntervention: String(d.ownerIntervention || ''),
+    ownerVisibleResumeHint: String(d.ownerVisibleResumeHint || ''),
+  }
+}
+
+export function normalizeStage12GateStatus(value: unknown): Stage12GateStatus {
+  const d = asRecord(value)
+  return {
+    ok: Boolean(d.ok),
+    loadedAt: String(d.loadedAt || ''),
+    updatedAt: String(d.updatedAt || ''),
+    status: String(d.status || 'missing'),
+    readyForStage13: Boolean(d.readyForStage13),
+    reason: String(d.reason || ''),
+    liveLoopStatus: String(d.liveLoopStatus || 'missing'),
+    liveLoopPassRatePct: Number(d.liveLoopPassRatePct || 0),
+    liveLoopPassedCount: Number(d.liveLoopPassedCount || 0),
+    liveLoopRequiredCount: Number(d.liveLoopRequiredCount || 0),
+    liveLoopFailingChecks: String(d.liveLoopFailingChecks || ''),
+    liveLoopFailingDetail: String(d.liveLoopFailingDetail || ''),
+    gateStage11Ready: Boolean(d.gateStage11Ready),
+    gateLiveLoopPass: Boolean(d.gateLiveLoopPass),
+    gateFeedbackClean: Boolean(d.gateFeedbackClean),
+    gatePrivacyClean: Boolean(d.gatePrivacyClean),
+    gateStableClean: Boolean(d.gateStableClean),
+    gateCanaryReady: Boolean(d.gateCanaryReady),
+    gateShortTermClean: Boolean(d.gateShortTermClean),
+    nextStep: String(d.nextStep || ''),
+  }
+}
+
+export function normalizeStage13GateStatus(value: unknown): Stage13GateStatus {
+  const d = asRecord(value)
+  return {
+    ok: Boolean(d.ok),
+    loadedAt: String(d.loadedAt || ''),
+    updatedAt: String(d.updatedAt || ''),
+    status: String(d.status || 'missing'),
+    available: Boolean(d.available),
+    reason: String(d.reason || ''),
+    stage12ReadyForStage13: Boolean(d.stage12ReadyForStage13),
+    behaviorMode: String(d.behaviorMode || ''),
+    selectedIntent: String(d.selectedIntent || ''),
+    behaviorGate: String(d.behaviorGate || ''),
+    memoryGovernanceStatus: String(d.memoryGovernanceStatus || ''),
+    nextStep: String(d.nextStep || ''),
   }
 }
 
@@ -607,6 +823,7 @@ export function normalizeQQEnvironmentStatus(value: unknown): QQEnvironmentStatu
     webuiUrl: String(status.webuiUrl || 'http://127.0.0.1:6099/webui/'),
     webuiLoginUrl: String(status.webuiLoginUrl || 'http://127.0.0.1:6099/webui/web_login'),
     tokenAvailable: Boolean(status.tokenAvailable),
+    napcatQQLoggedIn: typeof status.napcatQQLoggedIn === 'boolean' ? status.napcatQQLoggedIn : null,
     diagnosis: String(status.diagnosis || ''),
     services,
     lastError: String(status.lastError || '')
@@ -754,6 +971,7 @@ export function qqDiagnosisLabel(value: string, tokenAvailable: boolean): string
   if (value === 'core_offline') return '核心未启动'
   if (value === 'gateway_offline') return 'QQ 网关未启动'
   if (value === 'napcat_offline') return 'NapCat 未启动'
+  if (value === 'napcat_qq_login_required') return 'NapCat QQ 未登录'
   if (value === 'napcat_login_required') return tokenAvailable ? '需要网页端登录或确认 QQ 在线' : '需要登录 NapCat 网页端'
   if (value === 'napcat_ws_waiting') return '等待 NapCat 连接网关'
   if (value === 'partial') return '链路部分可用'

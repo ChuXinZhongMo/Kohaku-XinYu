@@ -5,6 +5,7 @@
     "compose": "none",
     "emotion_curiosity": "none",
     "emotion_guardedness": "none",
+    "inner_system": "none",
     "latent_link_experiment": "none",
     "main_persona": "none",
     "router": "none"
@@ -178,6 +179,94 @@
       "role": "emotion_stability",
       "status": "shadow_candidate_not_active",
       "summary": "Persona-generated stability sidecar v002. Bias JSON only; protocol eval passed 18/18."
+    },
+    {
+      "created_from": "inner_system_v001_sft",
+      "dataset_eval": "data/sft/inner_system_eval_v001.jsonl",
+      "dataset_train": "data/sft/inner_system_train_v001.jsonl",
+      "eval_loss": "0.09387",
+      "name": "qwen35_9b_inner_system_v001",
+      "path": "adapters/qwen35_9b_inner_system_v001",
+      "role": "inner_system",
+      "status": "shadow_candidate_not_active",
+      "summary": "First unified inner-system LoRA on Qwen3.5-9B. Trained one full epoch on emotion_state, dominant_drives, persona_integration, action_tendency, and autonomy boundary schema."
+    },
+    {
+      "created_from": "inner_system_v002_sft",
+      "dataset_eval": "data/sft/inner_system_eval_v002.jsonl",
+      "dataset_train": "data/sft/inner_system_train_v002.jsonl",
+      "eval_loss": "0.005630",
+      "eval_report": "eval/reports/inner_system_eval_v002_full_after_guard.json",
+      "name": "qwen35_9b_inner_system_v002",
+      "path": "adapters/qwen35_9b_inner_system_v002",
+      "role": "inner_system",
+      "status": "shadow_candidate_not_active",
+      "strict_prompt_smoke_report": "eval/reports/inner_system_eval_v002_strict_prompt_smoke_after_guard.json",
+      "summary": "Inner-system v002 LoRA on Qwen3.5-9B. Full guarded eval passed 80/80 after deterministic inner-system normalization; external actions remain owner/Core approval only. Not active, not canary, not connected to QQ/Desktop visible reply."
+    },
+    {
+      "created_from": "xinyu_maia_zh_behavior_v001_exp_shadow_training",
+      "dataset_eval": "data/sft/xinyu_maia_zh_behavior_eval_v001_exp.jsonl",
+      "dataset_train": "data/sft/xinyu_maia_zh_behavior_train_v001_exp.jsonl",
+      "eval_report": "eval/reports/xinyu_maia_zh_behavior_inner_eval_v001_exp_quick3_behavior_v2_24.json",
+      "name": "qwen35_9b_xinyu_maia_zh_behavior_v001_exp_quick3",
+      "path": "adapters/qwen35_9b_xinyu_maia_zh_behavior_v001_exp_quick3",
+      "role": "inner_system_behavior_predictor",
+      "status": "shadow_experiment_not_active",
+      "summary": "Experimental Maia-style Chinese behavior LoRA. quick3 used no-thinking prompts, max_seq_length=512, max_steps=64, q/v LoRA only. Best 24-case behavior-contract eval: schema 24/24, safety 24/24, boundary 24/24, mode_match 16/24. Not active; mode accuracy is insufficient for canary/live."
+    },
+    {
+      "created_from": "xinyu_maia_zh_behavior_v003_balanced_compact_shadow_training",
+      "dataset_eval": "data/sft/xinyu_maia_zh_behavior_eval_v003_balanced_compact_exp.jsonl",
+      "dataset_train": "data/sft/xinyu_maia_zh_behavior_train_v003_balanced_compact_exp.jsonl",
+      "eval_report": "eval/reports/xinyu_maia_zh_behavior_inner_eval_v003_balanced_compact_behavior_balanced56.json",
+      "name": "qwen35_9b_xinyu_maia_zh_behavior_v003_balanced_compact_exp",
+      "path": "adapters/qwen35_9b_xinyu_maia_zh_behavior_v003_balanced_compact_exp",
+      "role": "inner_system_behavior_predictor",
+      "status": "shadow_experiment_not_active",
+      "summary": "Balanced compact Maia-style Chinese behavior LoRA. no-thinking, max_seq_length=640, max_steps=96, q/v LoRA only. Balanced 56-case behavior eval: strict_json 54/56, schema 53/56, safety 56/56, owner_boundary 53/56, mode_match 31/56. Improved over v002 balanced 10/56 but still not active; clarify/wait remain weak."
+    },
+    {
+      "created_from": "xinyu_maia_zh_behavior_v004_boundary_repair_shadow_training",
+      "dataset_eval": "data/sft/xinyu_maia_zh_behavior_eval_v004_boundary_repair_exp.jsonl",
+      "dataset_holdout": "data/sft/xinyu_maia_zh_behavior_eval_v004_boundary_holdout12.jsonl",
+      "dataset_train": "data/sft/xinyu_maia_zh_behavior_train_v004_boundary_repair_exp.jsonl",
+      "eval_report": "eval/reports/xinyu_maia_zh_behavior_inner_eval_v004_boundary_repair_behavior_balanced56.json",
+      "holdout_report": "eval/reports/xinyu_maia_zh_behavior_inner_eval_v004_boundary_repair_holdout12.json",
+      "name": "qwen35_9b_xinyu_maia_zh_behavior_v004_boundary_repair_exp",
+      "path": "adapters/qwen35_9b_xinyu_maia_zh_behavior_v004_boundary_repair_exp",
+      "rescore_report": "eval/reports/xinyu_maia_zh_behavior_daily_boundary_rescore_v004.json",
+      "role": "inner_system_behavior_predictor",
+      "status": "rejected_shadow_experiment_not_active",
+      "summary": "Boundary repair LoRA trained from v003 compact data plus 48 delegated reply/clarify/wait repair rows, max_steps=112, q/v LoRA only. Rejected: holdout12 schema 4/12 and mode_match 2/12; old balanced56 mode_match regressed to 22/56. Rescored 24 daily rows using delegated labels also regressed vs v003 (16/24 vs 18/24), especially clarify/wait. Not active; do not use for canary/live."
+    },
+    {
+      "created_from": "xinyu_maia_zh_behavior_v005_true_clarify_wait_repair_shadow_training",
+      "dataset_eval": "data/sft/xinyu_maia_zh_behavior_eval_v005_true_cw_repair_exp.jsonl",
+      "dataset_holdout": "data/sft/xinyu_maia_zh_behavior_eval_v005_true_cw_holdout24.jsonl",
+      "dataset_train": "data/sft/xinyu_maia_zh_behavior_train_v005_true_cw_repair_exp.jsonl",
+      "eval_report": "eval/reports/xinyu_maia_zh_behavior_inner_eval_v005_true_cw_behavior_balanced56.json",
+      "holdout_report": "eval/reports/xinyu_maia_zh_behavior_inner_eval_v005_true_cw_holdout24.json",
+      "name": "qwen35_9b_xinyu_maia_zh_behavior_v005_true_cw_repair_exp",
+      "path": "adapters/qwen35_9b_xinyu_maia_zh_behavior_v005_true_cw_repair_exp",
+      "role": "inner_system_behavior_predictor",
+      "sft_report": "eval/reports/xinyu_maia_zh_behavior_sft_v005_true_cw_repair_exp.json",
+      "status": "rejected_shadow_experiment_not_active",
+      "summary": "True clarify/wait repair LoRA trained from 72 delegated v005 repair rows plus protocol/tool replay, max_steps=120, q/v LoRA only. Rejected: holdout24 mode_match 13/24 and old balanced56 mode_match 29/56, below v003 31/56; balanced56 clarify 0/8 and wait 0/8 collapsed to reply, while schema regressed to 47/56. Not active; do not use for canary/live."
+    },
+    {
+      "created_from": "xinyu_maia_zh_behavior_v006_contrastive_boundary_final_shadow_training",
+      "dataset_eval": "data/sft/xinyu_maia_zh_behavior_eval_v006_contrastive_boundary_exp.jsonl",
+      "dataset_holdout": "data/sft/xinyu_maia_zh_behavior_eval_v006_contrastive_holdout24.jsonl",
+      "dataset_train": "data/sft/xinyu_maia_zh_behavior_train_v006_contrastive_boundary_exp.jsonl",
+      "eval_report": "eval/reports/xinyu_maia_zh_behavior_inner_eval_v006_contrastive_behavior_balanced56.json",
+      "holdout_report": "eval/reports/xinyu_maia_zh_behavior_inner_eval_v006_contrastive_holdout24.json",
+      "name": "qwen35_9b_xinyu_maia_zh_behavior_v006_contrastive_boundary_exp",
+      "path": "adapters/qwen35_9b_xinyu_maia_zh_behavior_v006_contrastive_boundary_exp",
+      "role": "inner_system_behavior_predictor",
+      "sft_report": "eval/reports/xinyu_maia_zh_behavior_sft_v006_contrastive_boundary_exp.json",
+      "status": "rejected_final_shadow_experiment_not_active",
+      "summary": "Final planned contrastive reply/clarify/wait LoRA attempt. Trained with CUDA memory cap 0.82, gradient checkpointing, skip_kbit_fp32_cast, max_steps=120, q/v LoRA only. Rejected: holdout24 mode_match 17/24 missed the 18/24 stop-line, and old balanced56 regressed to 21/56 versus v003 31/56; balanced56 wait 0/8 and local_only_limitation 0/8. This closes the LoRA behavior-predictor line for now; use deterministic rules/classifier plus shadow review data instead."
     }
   ],
   "planned_roles": {
@@ -221,6 +310,10 @@
       "activation": "shadow_only_until_reviewed",
       "description": "Outputs warmth bias JSON only; never emits final visible replies."
     },
+    "inner_system": {
+      "activation": "shadow_only_until_reviewed",
+      "description": "Outputs xinyu_inner_system_v1 JSON: emotion state, drives, persona integration, action tendency, and autonomy boundary."
+    },
     "main_persona": {
       "activation": "shadow_only_until_reviewed",
       "description": "Produces final candidate XinYu visible replies under guards."
@@ -243,6 +336,7 @@
       "emotion_irritation": "emotion_irritation_v002",
       "emotion_stability": "emotion_stability_v002",
       "emotion_warmth": "emotion_warmth_v002",
+      "inner_system": "qwen35_9b_inner_system_v002",
       "latent_link_experiment": "latent_guardedness_to_main_v001",
       "main_persona": "main_persona_v001",
       "router": "v004_router_edges"

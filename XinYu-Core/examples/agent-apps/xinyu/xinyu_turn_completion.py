@@ -55,6 +55,10 @@ _HOLD_MARKERS = (
     "\u5148\u522b\u52a8",
     "\u6211\u60f3\u60f3",
     "\u518d\u60f3\u60f3",
+    "\u7b49\u6211\u60f3\u60f3",
+    "\u60f3\u60f3\u529e\u6cd5",
+    "\u5148\u60f3\u60f3",
+    "\u6211\u770b\u770b",
     "\u6211\u7ec4\u7ec7\u4e0b",
     "\u6211\u7ec4\u7ec7\u4e00\u4e0b",
     "\u6211\u6253\u5b57",
@@ -145,6 +149,8 @@ _TASK_MARKERS = (
     "test",
 )
 
+_HARD_TASK_MARKERS = tuple(marker for marker in _TASK_MARKERS if marker != "\u770b\u770b")
+
 _QUESTION_MARKERS = (
     "?",
     "\uff1f",
@@ -208,6 +214,15 @@ def evaluate_turn_completion(
             reason="handoff_marker",
             should_generate=True,
             notes=tuple(notes + ["handoff_marker"]),
+        )
+
+    if has_hold and not _contains_any(combined, _HARD_TASK_MARKERS) and not has_question:
+        return TurnCompletionDecision(
+            state=STATE_WAITING_THOUGHT,
+            wait_seconds=max(base_wait, 90.0),
+            reason="explicit_hold",
+            should_generate=False,
+            notes=tuple(notes + ["explicit_hold"]),
         )
 
     if has_task or has_question:

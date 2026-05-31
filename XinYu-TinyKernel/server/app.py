@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from kernel import decide
 from compose import compose_shadow
+from behavior_shadow_log import append_behavior_shadow_event
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -51,7 +52,37 @@ class TinyKernelHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"ok": False, "error": f"invalid_json:{type(exc).__name__}"})
             return
         if self.path == "/decide":
-            self._send_json(200, decide(payload))
+            result = decide(payload)
+            if payload.get("shadow_behavior_log") is True:
+                log_payload = dict(payload)
+                log_payload["kernel_decision_mode"] = result.get("mode")
+                append_behavior_shadow_event(
+                    log_payload,
+                    source_endpoint="/decide",
+                    include_text=bool(payload.get("shadow_behavior_include_text")),
+                )
+            self._send_json(200, result)
+            return
+        if self.path == "/behavior_shadow_log":
+            include_text = bool(payload.get("shadow_behavior_include_text"))
+            result = append_behavior_shadow_event(
+                payload,
+                source_endpoint="/behavior_shadow_log",
+                include_text=include_text,
+            )
+            self._send_json(
+                202,
+                {
+                    "ok": True,
+                    "stored": True,
+                    "path": result["path"],
+                    "behavior": result["event"]["behavior"],
+                    "shadow_only": True,
+                    "visible_reply_sent": False,
+                    "stable_memory_written": False,
+                    "adapter_activated": False,
+                },
+            )
             return
         if self.path == "/compose_shadow":
             self._send_json(200, compose_shadow(payload))

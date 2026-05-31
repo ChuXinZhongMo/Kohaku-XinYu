@@ -1,0 +1,26 @@
+{
+  "current_probe_count": 225,
+  "current_probe_profile": "zh_cped_emotion_daily_v001",
+  "input_probes": "data/probes/maia_zh_emotion_daily_probes_v001.jsonl",
+  "license": "apache-2.0",
+  "method": "maia_zh_emotion_daily_probe_v001",
+  "prep_report": "eval/reports/maia_zh_emotion_daily_probe_prep_v001.json",
+  "prep_script": "scripts/prepare_maia_public_scenario_probes.py",
+  "raw_files": [
+    "data/public/raw/CPED/data/CPED/train_split.csv",
+    "data/public/raw/CPED/data/CPED/valid_split.csv",
+    "data/public/raw/CPED/data/CPED/test_split.csv"
+  ],
+  "review_slice": "data/probes/maia_zh_emotion_daily_review_slice_v001.jsonl",
+  "review_slice_report": "eval/reports/maia_zh_emotion_daily_review_slice_v001.json",
+  "review_slice_validate_report": "eval/reports/maia_zh_emotion_daily_review_slice_validate_v001.json",
+  "shadow_eval_started": true,
+  "smoke_report": "eval/reports/maia_zh_emotion_daily_shadow_smoke_v001.json",
+  "smoke_slice": "data/probes/maia_zh_emotion_daily_smoke_slice_v001.jsonl",
+  "smoke_slice_report": "eval/reports/maia_zh_emotion_daily_smoke_slice_v001.json",
+  "smoke_trace": "state/maia_zh_emotion_daily_shadow_trace_v001.jsonl",
+  "source": "cped",
+  "source_url": "https://github.com/scutcyr/CPED",
+  "status": "prepared_zh_emotion_probe_only_not_training",
+  "training_allowed": false
+}

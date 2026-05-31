@@ -1,0 +1,34 @@
+# Sentrux governance rules for XinYu — scoped to source-owned paths.
+# Scope: XinYu-Core/examples/agent-apps/xinyu (Python backend)
+#         XinYu_Desktop/src (Electron frontend)
+# Vendor, runtime deps, and external adapters are excluded.
+
+[constraints]
+max_cycles = 0
+
+[[layers]]
+name = "desktop_renderer"
+paths = ["XinYu_Desktop/src/renderer/src/*"]
+order = 0
+
+[[layers]]
+name = "desktop_main"
+paths = ["XinYu_Desktop/src/main/*", "XinYu_Desktop/src/preload/*"]
+order = 1
+
+[[layers]]
+name = "xinyu_autonomy"
+paths = ["XinYu-Core/examples/agent-apps/xinyu/xinyu_stage*.py",
+         "XinYu-Core/examples/agent-apps/xinyu/xinyu_autonomy*.py",
+         "XinYu-Core/examples/agent-apps/xinyu/xinyu_stage*.py"]
+order = 2
+
+[[layers]]
+name = "xinyu_core"
+paths = ["XinYu-Core/examples/agent-apps/xinyu/*.py"]
+order = 3
+
+[[boundaries]]
+from = "XinYu_Desktop/src/renderer/src/*"
+to = "XinYu_Desktop/src/main/*"
+reason = "Renderer must not import main-process modules; IPC is the only bridge."

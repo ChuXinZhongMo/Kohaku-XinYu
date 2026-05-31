@@ -115,6 +115,79 @@ def test_bridge_uses_restored_live_turn_context_with_session_tail(tmp_path) -> N
     assert "previous_prediction_error" in content
 
 
+def test_live_turn_injects_short_term_continuity_for_direct_reference(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    agent = FakeAgent()
+    raw_private = "RAW_RECENT_OWNER_LINE_SHOULD_NOT_PERSIST_2201"
+    visible_reply = "刚才那句我问错了。"
+
+    runtime._inject_live_turn_context(
+        agent,
+        payload={"message_type": "private_text", "session_id": "qq:private:owner", "metadata": {"is_owner_user": True}},
+        text="她才刚说过，还要问我哪一句",
+        dialogue_tail=[
+            {"role": "user", "content": raw_private, "recorded_at": "2026-05-27T18:10:00+08:00"},
+            {"role": "assistant", "content": visible_reply, "recorded_at": "2026-05-27T18:10:10+08:00"},
+        ],
+        turn_id="turn-short-continuity-injection",
+    )
+
+    content = agent.controller._pending_injections[0]["content"]
+    state_text = (runtime.xinyu_dir / "memory/context/short_term_continuity_state.md").read_text(encoding="utf-8")
+    trace_text = (runtime.xinyu_dir / "runtime/short_term_continuity_trace.jsonl").read_text(encoding="utf-8")
+    recall_state = (
+        runtime.xinyu_dir / "memory/context/short_term_recall_diagnostics_state.md"
+    ).read_text(encoding="utf-8")
+    recall_report = (
+        runtime.xinyu_dir / "worklog/xinyu-short-term-recall-diagnostics-latest.md"
+    ).read_text(encoding="utf-8")
+    assert "short-term continuity sidecar:" in content
+    assert "tail_status: tail_available" in content
+    assert visible_reply in content
+    assert raw_private in content
+    assert "- direct_reference: true" in state_text
+    assert "- recall_status: tail_available" in state_text
+    assert "- status: pass" in recall_state
+    assert "- latest_recall_status: tail_available" in recall_state
+    assert "- working_tail_status: available" in recall_state
+    assert "- primary_failure_class: none" in recall_report
+    assert raw_private not in state_text
+    assert visible_reply not in state_text
+    assert raw_private not in trace_text
+    assert visible_reply not in trace_text
+    assert raw_private not in recall_state
+    assert visible_reply not in recall_state
+    assert raw_private not in recall_report
+    assert visible_reply not in recall_report
+
+
+def test_live_turn_injects_relation_posture_without_visible_mechanism_leak(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    agent = FakeAgent()
+
+    runtime._inject_live_turn_context(
+        agent,
+        payload={"text": "你又变回接待腔了，还是没变", "metadata": {"is_owner_user": True}},
+        text="你又变回接待腔了，还是没变",
+        dialogue_tail=[{"role": "assistant", "content": "我会改一下。"}],
+    )
+
+    content = agent.controller._pending_injections[0]["content"]
+    state = (runtime.xinyu_dir / "memory/context/relation_posture_state.md").read_text(encoding="utf-8")
+    intention_state = (runtime.xinyu_dir / "memory/context/intention_ecology_state.md").read_text(encoding="utf-8")
+    assert "relation posture sidecar:" in content
+    assert "scene: relationship_or_style_pressure" in content
+    assert "response_posture: short_concrete_repair" in content
+    assert "intention ecology sidecar:" in content
+    assert "selected_intent: repair_relation" in content
+    assert "visibility_rule: hidden" in content
+    assert "Never print sidecar names" in content
+    assert "mechanism_leak: blocked" in state
+    assert "stable_memory_write: gated" in state
+    assert "selected_intent: repair_relation" in intention_state
+    assert "proactive_delivery: review_gated" in intention_state
+
+
 def test_live_turn_prompt_includes_exact_time_context(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     agent = FakeAgent()
@@ -1276,7 +1349,7 @@ def test_model_codex_delegate_allows_trusted_public_search_only(tmp_path) -> Non
     assert "trusted public-source search task" in codex_payload["text"]
 
 
-def test_empty_visible_reply_fallback_is_disabled(tmp_path) -> None:
+def test_empty_visible_reply_fallback_covers_owner_technical_request(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     payload = {"message_type": "private_text", "metadata": {"is_owner_user": True}}
 
@@ -1286,7 +1359,7 @@ def test_empty_visible_reply_fallback_is_disabled(tmp_path) -> None:
         delegate_note="codex",
     )
 
-    assert reply == ""
+    assert reply == "我在。刚才那句没接上。"
 
 
 def test_empty_visible_reply_recovery_uses_renderer_not_template(tmp_path) -> None:
@@ -1312,7 +1385,7 @@ def test_empty_visible_reply_recovery_uses_renderer_not_template(tmp_path) -> No
     assert reply == "晚上好。"
     assert "empty_visible_reply_regenerated" in flags
     assert calls == [{"user_text": "晚上好", "draft_reply": ""}]
-    assert runtime._empty_visible_reply_fallback(payload=payload, user_text="晚上好") == ""
+    assert runtime._empty_visible_reply_fallback(payload=payload, user_text="晚上好") == "嗯，我在。"
 
 
 def test_empty_visible_reply_fallback_does_not_report_owner_state_mechanics(tmp_path) -> None:
@@ -1324,7 +1397,10 @@ def test_empty_visible_reply_fallback_does_not_report_owner_state_mechanics(tmp_
         user_text="\u72b6\u6001\u5982\u4f55\uff0c\u4e2b\u5934",
     )
 
-    assert reply == ""
+    assert reply == "还在。刚才那一下没接上。"
+    assert "模型" not in reply
+    assert "后台" not in reply
+    assert "处理" not in reply
 
 
 def test_owner_private_greeting_semantic_fast_decision_uses_v1_classifier(tmp_path) -> None:
@@ -1410,7 +1486,7 @@ def test_owner_private_state_question_semantic_fast_route_uses_renderer_not_temp
     assert published and published[0]["reply"] == rendered_reply
 
 
-def test_owner_private_state_question_semantic_fast_route_drops_empty_renderer(tmp_path) -> None:
+def test_owner_private_state_question_semantic_fast_route_falls_back_on_empty_renderer(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     payload = {
         "message_type": "private_text",
@@ -1447,8 +1523,10 @@ def test_owner_private_state_question_semantic_fast_route_drops_empty_renderer(t
         )
     )
 
-    assert response is None
-    assert published == []
+    assert response is not None
+    assert response["reply"] == "还在。刚才那一下没接上。"
+    assert response["semantic_fast"]["renderer"] == "empty_state_notice"
+    assert published and published[0]["reply"] == response["reply"]
 
 
 def test_owner_private_relationship_pressure_stays_out_of_semantic_fast_route(tmp_path) -> None:
@@ -2340,7 +2418,7 @@ def test_slow_turn_finish_sidecars_preserve_archive_candidate_and_tail_order(tmp
     assert result["sticker_tail_recorded"] is False
 
 
-def test_style_pressure_empty_fallback_is_disabled(tmp_path) -> None:
+def test_style_pressure_empty_fallback_is_short_visible_boundary(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     payload = {"message_type": "private_text", "metadata": {"is_owner_user": True}}
 
@@ -2349,7 +2427,9 @@ def test_style_pressure_empty_fallback_is_disabled(tmp_path) -> None:
         user_text="丫头，你觉得自己最近的客服化，模板化下降了吗",
     )
 
-    assert reply == ""
+    assert reply == "我在。刚才那句没接上。"
+    assert "调整" not in reply
+    assert "表达方式" not in reply
 
 
 def test_empty_visible_reply_fallback_does_not_template_short_fatigue(tmp_path) -> None:
@@ -2361,7 +2441,7 @@ def test_empty_visible_reply_fallback_does_not_template_short_fatigue(tmp_path) 
         user_text="我有点累",
     )
 
-    assert reply == ""
+    assert reply == "嗯，先不硬聊了。"
 
 
 def test_empty_visible_reply_fallback_handles_explicit_fatigue_boundary(tmp_path) -> None:
@@ -2373,7 +2453,7 @@ def test_empty_visible_reply_fallback_handles_explicit_fatigue_boundary(tmp_path
         user_text="我有点累，先别追问，也别安慰一大段。",
     )
 
-    assert reply == ""
+    assert reply == "嗯，我收住。"
 
 
 def test_dialogue_working_memory_persists_recent_exact_turns(tmp_path) -> None:

@@ -19,6 +19,7 @@ from xinyu_uncertainty_pause import build_uncertainty_pause_prompt_block
 TraceRouteStage = Callable[..., Any]
 MemoryRecallRunner = Callable[..., Any]
 FinishSidecarsRunner = Callable[..., Any]
+EMPTY_VISIBLE_RETRY_TIMEOUT_SECONDS = 45
 
 
 @dataclass
@@ -34,6 +35,117 @@ class SlowLiveModelContexts:
     runtime_presence_context: str
     life_reply_policy: dict[str, Any]
     emotion_council_context: str
+
+
+def _int_or_zero(value: Any) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _session_output_notes(session: Any) -> list[str]:
+    chunks = getattr(session, "chunks", None)
+    if isinstance(chunks, list):
+        chunk_count = len(chunks)
+        visible_chars = sum(len(_safe_str(chunk)) for chunk in chunks)
+    else:
+        chunk_count = 0
+        visible_chars = 0
+
+    agent = getattr(session, "agent", None)
+    controller = getattr(agent, "controller", None)
+    raw_assistant = _safe_str(getattr(controller, "_last_assistant_content", ""))
+    llm = getattr(agent, "llm", None)
+    try:
+        usage = getattr(llm, "last_usage", {}) if llm is not None else {}
+    except Exception:
+        usage = {}
+    if not isinstance(usage, dict):
+        usage = {}
+    try:
+        tool_calls = getattr(llm, "last_tool_calls", []) if llm is not None else []
+    except Exception:
+        tool_calls = []
+    try:
+        tool_call_count = len(tool_calls or [])
+    except TypeError:
+        tool_call_count = 0
+
+    notes = [
+        f"chunk_count:{chunk_count}",
+        f"visible_chars:{visible_chars}",
+        f"raw_assistant_chars:{len(raw_assistant)}",
+        f"completion_tokens:{_int_or_zero(usage.get('completion_tokens'))}",
+        f"tool_call_count:{tool_call_count}",
+    ]
+    if visible_chars <= 0:
+        if raw_assistant:
+            notes.append("empty_visible_parser_or_action_output")
+        elif _int_or_zero(usage.get("completion_tokens")) <= 0:
+            notes.append("empty_completion_no_visible_tokens")
+        else:
+            notes.append("empty_visible_model_or_provider_output")
+    return notes
+
+
+def _has_visible_chunks(session: Any) -> bool:
+    chunks = getattr(session, "chunks", None)
+    if not isinstance(chunks, list):
+        return False
+    return bool("".join(_safe_str(chunk) for chunk in chunks).strip())
+
+
+def _owner_private_payload_matches(runtime: Any, payload: dict[str, Any]) -> bool:
+    matcher = getattr(runtime, "_owner_private_payload_matches", None)
+    if not callable(matcher):
+        return False
+    try:
+        return bool(matcher(payload))
+    except Exception:
+        return False
+
+
+def _create_empty_visible_retry_event(
+    runtime: Any,
+    *,
+    payload: dict[str, Any],
+    text: str,
+    turn_id: str,
+    session_key: str,
+) -> Any:
+    factory = getattr(runtime, "_create_user_input_event", None)
+    if not callable(factory):
+        return None
+    retry_prompt = "\n".join(
+        [
+            "[internal visible-reply recovery]",
+            "The previous model turn returned no visible text.",
+            "Reply now to the immediately previous owner QQ private message.",
+            "Produce a concise visible Chinese private-chat reply.",
+            (
+                "Do not call tools, do not output tool blocks, and do not mention this "
+                "recovery, model output, logs, memory, or system mechanics."
+            ),
+            (
+                "If the owner explicitly asked XinYu to wait or stay silent, return "
+                "exactly [WAITING]. Otherwise do not stay silent."
+            ),
+        ]
+    )
+    return factory(
+        retry_prompt,
+        source="qq_gateway_empty_visible_retry",
+        bridge_payload=payload,
+        platform=_safe_str(payload.get("platform"), "qq"),
+        message_type=_safe_str(payload.get("message_type")),
+        session_id=session_key,
+        user_id=_safe_str(payload.get("user_id")),
+        received_at=_safe_str(payload.get("received_at") or payload.get("time") or ""),
+        turn_id=turn_id,
+        recovery_for="empty_visible_reply",
+        original_text_len=len(_safe_str(text)),
+    )
 
 
 async def run_slow_live_memory_recall(
@@ -201,7 +313,64 @@ async def inject_slow_live_model_event(
             session.agent.inject_event(event),
             timeout=runtime.turn_timeout_seconds,
         )
-        trace_route_stage("model_inject_finished", route="slow_live", status="ok")
+        output_notes = _session_output_notes(session)
+        if (
+            not _has_visible_chunks(session)
+            and _owner_private_payload_matches(runtime, payload)
+        ):
+            trace_route_stage(
+                "model_inject_empty_visible",
+                route="slow_live",
+                status="empty",
+                notes=output_notes,
+            )
+            retry_event = _create_empty_visible_retry_event(
+                runtime,
+                payload=payload,
+                text=text,
+                turn_id=turn_id,
+                session_key=_safe_str(getattr(session, "key", "")),
+            )
+            if retry_event is None:
+                output_notes = output_notes + ["empty_visible_retry_unavailable"]
+            else:
+                retry_timeout = min(
+                    EMPTY_VISIBLE_RETRY_TIMEOUT_SECONDS,
+                    max(1, _int_or_zero(getattr(runtime, "turn_timeout_seconds", 1))),
+                )
+                trace_route_stage(
+                    "model_inject_empty_visible_retry_started",
+                    route="slow_live",
+                    status="running",
+                    notes=[f"timeout_seconds:{retry_timeout}"],
+                )
+                await asyncio.wait_for(
+                    session.agent.inject_event(retry_event),
+                    timeout=retry_timeout,
+                )
+                retry_notes = _session_output_notes(session)
+                if _has_visible_chunks(session):
+                    trace_route_stage(
+                        "model_inject_empty_visible_retry_finished",
+                        route="slow_live",
+                        status="ok",
+                        notes=retry_notes,
+                    )
+                    output_notes = retry_notes + ["empty_visible_retry_recovered"]
+                else:
+                    trace_route_stage(
+                        "model_inject_empty_visible_retry_finished",
+                        route="slow_live",
+                        status="empty",
+                        notes=retry_notes,
+                    )
+                    output_notes = retry_notes + ["empty_visible_retry_failed"]
+        trace_route_stage(
+            "model_inject_finished",
+            route="slow_live",
+            status="ok",
+            notes=output_notes,
+        )
     except TimeoutError:
         trace_route_stage(
             "model_inject_timeout",

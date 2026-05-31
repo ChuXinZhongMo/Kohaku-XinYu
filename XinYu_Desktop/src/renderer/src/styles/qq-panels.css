@@ -106,6 +106,97 @@
   height: 34px;
 }
 
+.api-profile-name label {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.api-profile-name span {
+  color: #53625f;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.api-profile-name input {
+  width: 100%;
+  height: 30px;
+  border: 1px solid rgba(39, 87, 82, 0.12);
+  border-radius: 8px;
+  padding: 0 8px;
+  color: #24312f;
+  background: #fff;
+  font-size: 11px;
+  outline: none;
+}
+
+.api-section-tabs {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.api-section-tab {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(39, 87, 82, 0.12);
+  border-radius: 8px;
+  padding: 8px;
+  color: #526360;
+  background: #f7faf8;
+  cursor: pointer;
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease;
+}
+
+.api-section-tab > span,
+.api-section-tab strong {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.api-section-tab strong,
+.api-section-tab small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-section-tab strong {
+  color: #24312f;
+  font-size: 11px;
+}
+
+.api-section-tab small {
+  color: #6f817c;
+  font-size: 10px;
+  text-align: left;
+}
+
+.api-section-tab.ready {
+  background: #f2faf7;
+}
+
+.api-section-tab.active {
+  border-color: rgba(47, 128, 118, 0.34);
+  background: #e7f3ef;
+}
+
+.api-section-tab.active strong,
+.api-section-tab.active small,
+.api-section-tab.active svg {
+  color: #1f7269;
+}
+
 .api-config-grid {
   min-width: 0;
   display: grid;
@@ -119,7 +210,7 @@
   gap: 4px;
 }
 
-.api-config-grid label:nth-child(4),
+.api-config-grid label.full,
 .api-key-field {
   grid-column: 1 / -1;
 }
@@ -130,7 +221,8 @@
   font-weight: 800;
 }
 
-.api-config-grid input {
+.api-config-grid input,
+.api-config-grid select {
   width: 100%;
   height: 29px;
   border: 1px solid rgba(39, 87, 82, 0.12);
@@ -158,6 +250,10 @@
 
 .api-runtime-flags .runtime-switch {
   height: 40px;
+}
+
+.api-runtime-flags-single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .api-config-actions {
@@ -199,14 +295,18 @@
 }
 
 .api-profile-select button:hover:not(:disabled),
+.api-section-tab:hover:not(:disabled),
 .api-config-actions button:hover:not(:disabled) {
   transform: translateY(-1px);
 }
 
 .api-profile-select button:disabled,
 .api-profile-select select:disabled,
+.api-profile-name input:disabled,
+.api-section-tab:disabled,
 .api-config-actions button:disabled,
-.api-config-grid input:disabled {
+.api-config-grid input:disabled,
+.api-config-grid select:disabled {
   opacity: 0.5;
   cursor: default;
 }
@@ -530,6 +630,7 @@
 }
 
 @media (max-width: 1180px) {
+  .api-section-tabs,
   .api-config-grid,
   .api-runtime-flags,
   .external-plugin-switches,

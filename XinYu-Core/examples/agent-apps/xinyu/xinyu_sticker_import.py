@@ -190,8 +190,14 @@ def default_vision_python(xinyu_dir: Path) -> Path | None:
     workspace = _workspace_root(xinyu_dir)
     if workspace is None:
         return None
-    candidate = workspace / "vision-venv" / "Scripts" / "python.exe"
-    return candidate if candidate.exists() else None
+    candidates = (
+        workspace / "runtime" / "deps" / "vision-venv" / "Scripts" / "python.exe",
+        workspace / "vision-venv" / "Scripts" / "python.exe",
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def _as_float(value: Any, default: float = 0.0) -> float:
@@ -1090,7 +1096,10 @@ def main() -> int:
     ensure_unsorted_dir(base)
     vision_python = args.vision_python or default_vision_python(args.xinyu_dir)
     if args.use_clip and vision_python is None:
-        raise SystemExit("Could not resolve vision python. Pass --vision-python D:\\XinYu\\vision-venv\\Scripts\\python.exe")
+        raise SystemExit(
+            "Could not resolve vision python. Pass --vision-python "
+            "D:\\XinYu\\runtime\\deps\\vision-venv\\Scripts\\python.exe"
+        )
     reference_index = args.reference_index
     if reference_index is None:
         candidate_reference_index = base / REFERENCE_INDEX_NAME

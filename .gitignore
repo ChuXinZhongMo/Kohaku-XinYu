@@ -12,6 +12,10 @@ NapCatQQ/
 Python312/
 ocr-venv/
 vision-venv/
+runtime/deps/
+artifacts/archives/
+artifacts/protection-snapshots/
+docs/plans/XINYU-24H-WORK-PLAN.md
 
 # Dependency and build outputs
 node_modules/
@@ -88,6 +92,7 @@ XinYu-Local-Scope/**
 !XinYu-Local-Scope/README.md
 
 # Personal/source materials and transient OCR artifacts
+assets/素材库/
 素材库/
 *_extracted.txt
 ocr-test*.png
@@ -100,3 +105,9 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+runtime/external/super-agent-party/
+
+# Public raw datasets (too large for git)
+XinYu-TinyKernel/data/public/raw/
+

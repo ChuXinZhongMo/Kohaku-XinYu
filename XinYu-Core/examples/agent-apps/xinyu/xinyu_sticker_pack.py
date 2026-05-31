@@ -487,6 +487,9 @@ def shared_asset_sticker_dir(root: Path) -> Path | None:
     workspace = _xinyu_workspace_root(root)
     if workspace is None:
         return None
+    preferred = workspace / "assets" / "素材库" / "心玉" / "表情"
+    if preferred.exists():
+        return preferred
     return workspace / "素材库" / "心玉" / "表情"
 
 

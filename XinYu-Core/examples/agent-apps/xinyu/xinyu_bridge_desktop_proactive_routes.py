@@ -12,6 +12,7 @@ from xinyu_bridge_state_text import read_text_safe as _read_text_safe
 from xinyu_bridge_values import as_bool as _as_bool
 from xinyu_bridge_values import safe_str as _safe_str
 from xinyu_initiative_orchestrator import record_initiative_feedback
+from xinyu_proactive_context_adapter import runtime_owner_private_turns
 from xinyu_proactive_presence import _write_dispatch_state as write_proactive_qq_dispatch_state
 from xinyu_qq_outbox import enqueue_qq_outbox_message
 from xinyu_visible_persona_voice import compose_proactive_visible_message
@@ -197,9 +198,15 @@ async def desktop_approve_proactive_qq(runtime: Any, item: dict[str, Any]) -> di
             "action": "approve_qq",
             "notes": ["missing_owner_user_id"],
         }
+    recent_turns = runtime_owner_private_turns(runtime, limit=4)
     message = compose_proactive_visible_message(
         item.get("candidatePreview"),
         source="desktop_approve_qq",
+        recent_context=[
+            *recent_turns,
+            _safe_str(item.get("focusLabel")),
+            _safe_str(item.get("whyNowPreview")),
+        ],
     ).strip()
     if not message:
         return {
@@ -224,12 +231,25 @@ async def desktop_approve_proactive_qq(runtime: Any, item: dict[str, Any]) -> di
         },
     )
     if not queued.get("accepted"):
+        failure_notes = ["desktop_qq_enqueue_failed"] + [_safe_str(note) for note in queued.get("notes", [])]
+        recorded = await runtime._desktop_finish_proactive_ack(
+            item,
+            action="approve_qq",
+            status="failed",
+            answer_state="qq_enqueue_failed",
+            ack_status="failed",
+            adapter_error=";".join(note for note in failure_notes if note),
+            notes=failure_notes,
+            extra={"queued": False},
+        )
         return {
+            **recorded,
             "accepted": False,
-            "ack_recorded": False,
+            "ack_recorded": True,
             "candidateId": candidate_id,
             "action": "approve_qq",
-            "notes": ["qq_outbox_enqueue_failed"] + [_safe_str(note) for note in queued.get("notes", [])],
+            "status": "failed",
+            "notes": recorded.get("notes", failure_notes),
         }
     outbox_message_id = _safe_str(queued.get("message_id"))
     claim_id = f"desktop-proactive-{int(time.time())}"
@@ -282,6 +302,7 @@ def desktop_update_proactive_request_state(
         updated = runtime._desktop_replace_list_field(updated, "request_answer_state", answer_state)
     if ack_status:
         updated = runtime._desktop_replace_list_field(updated, "last_ack_status", ack_status)
+        updated = runtime._desktop_replace_list_field(updated, "last_acked_at", updated_at)
     if claim_id:
         updated = runtime._desktop_replace_list_field(updated, "last_claim_id", claim_id)
     if adapter_message_id:

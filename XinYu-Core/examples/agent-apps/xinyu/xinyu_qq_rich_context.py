@@ -6,7 +6,10 @@ import xinyu_qq_sticker_semantics
 
 
 STICKER_SEGMENT_TYPES = frozenset({"face", "mface", "dice", "rps"})
-RICH_CONTEXT_SEGMENT_TYPES = frozenset({"reply", "forward", "face", "mface", "dice", "rps", "image", "json", "xml", "at"})
+VOICE_SEGMENT_TYPES = frozenset({"record", "voice", "audio"})
+RICH_CONTEXT_SEGMENT_TYPES = frozenset(
+    {"reply", "forward", "face", "mface", "dice", "rps", "image", "json", "xml", "at", *VOICE_SEGMENT_TYPES}
+)
 
 
 def safe_str(value: Any, default: str = "") -> str:
@@ -69,6 +72,12 @@ def summarize_segment(segment_type: str, data: dict[str, Any]) -> dict[str, Any]
             or "image"
         )
         return {"kind": "image", "segment_type": "image", "name": name, "summary": name}
+    if segment_type in VOICE_SEGMENT_TYPES:
+        duration = safe_str(data.get("duration") or data.get("time") or data.get("seconds")).strip()
+        summary = "voice_audio"
+        if duration:
+            summary = f"voice_audio:{duration}s"
+        return {"kind": "voice", "segment_type": segment_type, "summary": summary}
     if segment_type in {"json", "xml"}:
         text = safe_str(data.get("data") or data.get("text") or data.get("content")).strip()
         summary = text[:120] if text else segment_type

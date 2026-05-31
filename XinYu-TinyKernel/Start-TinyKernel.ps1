@@ -17,10 +17,13 @@ if (Test-Path -LiteralPath $PidFile) {
   }
 }
 
-$WorkspacePython = Join-Path (Split-Path -Parent $Root) "Python312\python.exe"
-if (Test-Path -LiteralPath $WorkspacePython) {
-  $Python = $WorkspacePython
-} else {
+$WorkspaceRoot = Split-Path -Parent $Root
+$PythonCandidates = @(
+  (Join-Path $WorkspaceRoot "runtime\deps\Python312\python.exe"),
+  (Join-Path $WorkspaceRoot "Python312\python.exe")
+)
+$Python = $PythonCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+if (-not $Python) {
   $Python = "python"
 }
 $Args = @("server\app.py", "--host", $HostAddress, "--port", [string]$Port)

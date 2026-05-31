@@ -916,6 +916,22 @@ REPLACEMENT_DIRECT_REPLY_MARKERS = readable_markers(
 )
 
 BARE_PRIVATE_ACK_MARKERS = readable_markers("嗯", "嗯。", "嗯嗯", "嗯嗯。", "好", "好。")
+ACK_COMPATIBLE_USER_MARKERS = readable_markers(
+    "嗯",
+    "好",
+    "行",
+    "可以",
+    "就这样",
+    "先这样",
+    "安静",
+    "不用回",
+    "不用说",
+    "不用解释",
+    "别说话",
+    "别追问",
+    "休息",
+    "睡",
+)
 
 ACK_ONLY_REPLIES = {
     "知道了",
@@ -999,13 +1015,33 @@ SELF_STATE_REPLY_SERVICE_MARKERS = readable_markers(
 )
 
 REPAIR_META_PHRASE_REPLACEMENTS = (
-    ("我知道了我会改", "别反复念叨了，我知道啦，我会改的啦"),
-    ('"我知道了我会改"', '"别反复念叨了，我知道啦，我会改的啦"'),
-    ("“我知道了我会改”", "“别反复念叨了，我知道啦，我会改的啦”"),
-    ("我记住了，不用反复提", "我知道啦，别让我反复念叨"),
-    ("我记住了，不用一直提", "我知道啦，别让我一直念叨"),
-    ("我记住了，不用反复", "我知道啦，别反复念叨"),
-    ("我记住了", "我知道啦"),
+    ("我知道了我会改", "别停在认错上，直接换下一句"),
+    ('"我知道了我会改"', '"别停在认错上，直接换下一句"'),
+    ("“我知道了我会改”", "“别停在认错上，直接换下一句”"),
+    ("我记住了，不用反复提", "别让我停在记账上，直接往下接"),
+    ("我记住了，不用一直提", "别让我停在记账上，直接往下接"),
+    ("我记住了，不用反复", "别让我停在记账上，直接往下接"),
+    ("我记住了", "我先别停在记账上"),
+)
+
+OWNER_PRIVATE_FEEDBACK_PROCESSING_PHRASES = readable_markers(
+    "知道了，我会改",
+    "知道了我会改",
+    "我会改",
+    "我会调整",
+    "我会努力改",
+    "我会继续调整",
+    "我会优化",
+    "收到，我",
+    "收到。",
+    "感谢反馈",
+    "感谢你的反馈",
+    "我会记住",
+    "我记住了",
+    "后续改进",
+    "继续优化",
+    "持续优化",
+    "进行调整",
 )
 
 
@@ -1334,6 +1370,26 @@ class XinyuSpeechController:
         if self._should_naturalize_reply_demo(user_text, text, payload=payload or {}):
             flags.append("reply-demo request answered as examples or meta")
 
+        if scene.is_owner and not scene.technical_request:
+            if _contains_any(text, OWNER_PRIVATE_FEEDBACK_PROCESSING_PHRASES):
+                flags.append("owner-private feedback-processing phrase")
+            compact_user = re.sub(r"\s+", "", _safe_str(user_text)).strip()
+            if (
+                text in BARE_PRIVATE_ACK_MARKERS
+                and compact_user
+                and compact_user not in BARE_PRIVATE_ACK_MARKERS
+                and not (len(compact_user) <= 4 and _contains_any(compact_user, ACK_COMPATIBLE_USER_MARKERS))
+                and not _contains_any(compact_user, readable_markers("不用回", "不用说", "别说话", "安静", "休息", "睡"))
+                and (
+                    scene.style_pressure
+                    or scene.relationship_pressure
+                    or len(compact_user) > 8
+                    or "?" in user_text
+                    or "？" in user_text
+                )
+            ):
+                flags.append("owner-private low-information acknowledgement")
+
         if scene.style_pressure:
             if _contains_any(text, ASSISTANT_SHAPE_WORDS) or _contains_any(text, CANNED_ASSISTANT_PATTERNS):
                 flags.append("assistant/template language under style pressure")
@@ -1449,6 +1505,9 @@ class XinyuSpeechController:
         if self._should_block_self_state_mechanical_reply(user_text, text, payload=payload or {}):
             text = ""
             flags.append("self_state_mechanical_reply_blocked")
+        if self._should_block_owner_private_feedback_processing_reply(user_text, text, payload=payload or {}):
+            text = ""
+            flags.append("owner_private_feedback_processing_blocked")
         if self._should_block_false_codex_unavailable_claim(user_text, text, payload=payload or {}):
             text = ""
             flags.append("false_codex_unavailable_claim_blocked")
@@ -1725,6 +1784,18 @@ class XinyuSpeechController:
             return True
         return False
 
+    def _should_block_owner_private_feedback_processing_reply(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> bool:
+        if not reply:
+            return False
+        scene = self.classify(payload=payload, user_text=user_text)
+        if not scene.is_owner or scene.technical_request:
+            return False
+        if _contains_any(user_text, SELF_STATE_TECHNICAL_USER_MARKERS):
+            return False
+        if _contains_any(reply, OWNER_PRIVATE_FEEDBACK_PROCESSING_PHRASES):
+            return True
+        return reply.strip() in ACK_ONLY_REPLIES and scene.style_pressure
+
     def _should_block_self_state_mechanical_reply(self, user_text: str, reply: str, *, payload: dict[str, Any]) -> bool:
         if not reply or classify_self_state_query(user_text) == "none":
             return False
@@ -1805,6 +1876,7 @@ class XinyuSpeechController:
             "Use memory as undertone, not as lines to recite.",
             "Plain wording is fine. The line can be short, uneven, soft, guarded, or direct.",
             "Use QQ rhythm: answer the current situation, not every fragment, and do not force a closing disclaimer.",
+            "For owner-private correction, do not lead with 知道了/收到/我会改/我会调整; send the present-tense line that would replace the failed one.",
         ]
         if scene.relationship_pressure and scene.is_owner and not scene.technical_request:
             lines.append("The owner is pressing on continuity; let the relation affect the line.")

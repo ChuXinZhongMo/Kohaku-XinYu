@@ -90,7 +90,7 @@ def run_initiative_orchestrator(
             blocked_by=[],
             held_by=["no_candidates"],
             delivery_level="none",
-            feedback_pending_count=_pending_feedback_count(root),
+            feedback_pending_count=_pending_feedback_count(root, observed_at=checked_at),
             context_gate=context_gate,
             notes=["no_candidates"],
         )
@@ -147,7 +147,7 @@ def run_initiative_orchestrator(
         blocked_by=list(gate["blocked_by"]),
         held_by=list(gate["held_by"]),
         delivery_level=_safe_str(lifecycle_event.get("delivery", {}).get("level"), "none"),
-        feedback_pending_count=_pending_feedback_count(root),
+        feedback_pending_count=_pending_feedback_count(root, observed_at=checked_at),
         context_gate=context_gate,
         notes=["dry_run"] if dry_run else [],
     )
@@ -320,7 +320,7 @@ def _desktop_item_from_decision(
     gate: dict[str, Any],
     checked_at: str,
 ) -> dict[str, Any]:
-    preview = _clip(decision.candidate.owner_visible_text or decision.content_preview, 240)
+    preview = _desktop_candidate_preview(decision)
     return {
         "candidateId": decision.candidate_id,
         "requestId": decision.decision_id,
@@ -414,11 +414,28 @@ def _event_from_decision(
             },
             "context_gate": context_gate,
             "delivery": delivery,
-            "feedback": {"status": "pending", "feedback_event_id": ""},
+            "feedback": _feedback_from_delivery(delivery),
             "candidate": asdict(decision.candidate),
         }
     )
     return _clean_json_value(event)
+
+
+def _feedback_from_delivery(delivery: dict[str, Any]) -> dict[str, Any]:
+    level = _safe_str(delivery.get("level"), "none")
+    requires_owner_feedback = level == "desktop_inbox"
+    status = {
+        "desktop_inbox": "pending",
+        "private_bias": "private_only",
+        "dry_run": "not_requested",
+        "none": "not_delivered",
+    }.get(level, "not_requested")
+    return {
+        "status": status,
+        "feedback_event_id": "",
+        "requires_owner_feedback": requires_owner_feedback,
+        "reason": level,
+    }
 
 
 def _write_state(
@@ -709,7 +726,7 @@ def _write_metrics(root: Path, *, observed_at: str) -> None:
             1 for event in feedback_events if _safe_str(event.get("status")).lower() in {"approve_qq", "approved_qq"}
         ),
         "failed_count_24h": sum(1 for event in feedback_events if _safe_str(event.get("status")).lower() == "failed"),
-        "pending_feedback_count": _pending_feedback_count(root),
+        "pending_feedback_count": _pending_feedback_count(root, observed_at=observed_at),
         "status_counts_24h": _count_by(events, "status"),
         "feedback_counts_24h": _count_by(feedback_events, "status"),
         "source_counts_24h": _count_by(events, "source_type"),
@@ -775,18 +792,47 @@ def _latest_event_for_candidate(root: Path, candidate_id: str) -> dict[str, Any]
     return latest
 
 
-def _pending_feedback_count(root: Path) -> int:
+def _pending_feedback_count(root: Path, *, observed_at: str | None = None) -> int:
     pending: set[str] = set()
     final: set[str] = set()
     for event in _read_events(root / EVENTS_REL):
         candidate_id = _safe_str(event.get("candidate_id"))
         if not candidate_id:
             continue
-        if event.get("stage") == "decision" and _safe_str(event.get("delivery", {}).get("level")) == "desktop_inbox":
+        if (
+            event.get("stage") == "decision"
+            and _safe_str(event.get("delivery", {}).get("level")) == "desktop_inbox"
+            and _safe_str(event.get("feedback", {}).get("status"), "pending") == "pending"
+            and not _decision_feedback_expired(event, observed_at=observed_at)
+        ):
             pending.add(candidate_id)
         elif event.get("stage") == "feedback":
             final.add(candidate_id)
     return len(pending - final)
+
+
+def _decision_feedback_expired(event: dict[str, Any], *, observed_at: str | None) -> bool:
+    if not observed_at:
+        return False
+    observed = _parse_iso(observed_at)
+    if observed is None:
+        return False
+    expires = _parse_iso(_event_expires_at(event))
+    if expires is None:
+        return False
+    try:
+        return observed >= expires
+    except TypeError:
+        return observed.replace(tzinfo=None) >= expires.replace(tzinfo=None)
+
+
+def _event_expires_at(event: dict[str, Any]) -> str:
+    candidate = event.get("candidate")
+    if isinstance(candidate, dict):
+        expires = _safe_str(candidate.get("expires_at") or candidate.get("expiresAt"))
+        if expires:
+            return expires
+    return _safe_str(event.get("expires_at") or event.get("expiresAt"))
 
 
 def _load_recent_signatures(path: Path) -> set[str]:
@@ -842,6 +888,29 @@ def _decision_sort_key(decision: ProactiveDecision) -> tuple[int, int]:
     preferred_rank = {"qq": 4, "inbox": 3, "silent": 1}.get(decision.preferred_channel, 0)
     recommendation_rank = {"send_now": 4, "inbox": 3, "hold": 2, "drop": 1}.get(decision.recommendation, 0)
     return preferred_rank, recommendation_rank, decision.total_score
+
+
+def _desktop_candidate_preview(decision: ProactiveDecision) -> str:
+    source = decision.source_type
+    owner_text = _safe_str(decision.candidate.owner_visible_text)
+    detail = _safe_str(decision.content_preview)
+    if source == "runtime_error":
+        if "adapter_error=dry_run_not_enqueued" in detail.lower():
+            return "A local proactive draft was kept on the desktop instead of being sent to QQ."
+        return owner_text or "A runtime subsystem needs a quick local check."
+    if source == "task_done":
+        return owner_text or "A delegated task has a result ready to review."
+    if source == "task_failed":
+        return owner_text or "A delegated task needs attention."
+    if source == "style_repair":
+        return "A reply-style repair is ready for local review."
+    if source == "dream_residue":
+        return "A dream residue is available for local review."
+    if source == "reflection_question":
+        return owner_text or "A reflection topic is waiting for local review."
+    if source == "owner_long_idle":
+        return "XinYu has been quiet for a long time and is only leaving a local note."
+    return owner_text or _clip(detail, 160)
 
 
 def _why_now(decision: ProactiveDecision, gate: dict[str, Any]) -> str:

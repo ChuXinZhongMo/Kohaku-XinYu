@@ -17,8 +17,35 @@ if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 
-DEFAULT_PADDLEOCR_EXE = Path("D:/XinYu/ocr-venv/Scripts/paddleocr.exe")
+LEGACY_PADDLEOCR_EXE = Path("D:/XinYu/ocr-venv/Scripts/paddleocr.exe")
 DEFAULT_TIMEOUT_SECONDS = 160
+
+
+def _workspace_root(path: Path) -> Path | None:
+    resolved = path.resolve()
+    for candidate in (resolved, *resolved.parents):
+        if candidate.name == "XinYu":
+            return candidate
+    return None
+
+
+def _paddleocr_candidates() -> list[Path]:
+    candidates: list[Path] = []
+    workspace = _workspace_root(Path(__file__).resolve())
+    if workspace is not None:
+        candidates.append(workspace / "runtime" / "deps" / "ocr-venv" / "Scripts" / "paddleocr.exe")
+        candidates.append(workspace / "ocr-venv" / "Scripts" / "paddleocr.exe")
+    candidates.append(LEGACY_PADDLEOCR_EXE)
+    return candidates
+
+
+def _paddleocr_python_candidates() -> list[Path]:
+    candidates: list[Path] = []
+    workspace = _workspace_root(Path(__file__).resolve())
+    if workspace is not None:
+        candidates.append(workspace / "runtime" / "deps" / "ocr-venv" / "Scripts" / "python.exe")
+        candidates.append(workspace / "ocr-venv" / "Scripts" / "python.exe")
+    return candidates
 
 
 def _default_tmp_root() -> Path:
@@ -33,10 +60,30 @@ def _paddleocr_executable() -> str:
     configured = os.environ.get("XINYU_PADDLEOCR_EXE", "").strip()
     if configured:
         return configured
-    if DEFAULT_PADDLEOCR_EXE.is_file():
-        return str(DEFAULT_PADDLEOCR_EXE)
+    for candidate in _paddleocr_python_candidates():
+        if candidate.is_file():
+            return str(candidate)
+    for candidate in _paddleocr_candidates():
+        if candidate.is_file():
+            return str(candidate)
     found = shutil.which("paddleocr")
-    return found or str(DEFAULT_PADDLEOCR_EXE)
+    return found or str(_paddleocr_python_candidates()[0])
+
+
+def _paddleocr_command_prefix() -> list[str]:
+    configured = os.environ.get("XINYU_PADDLEOCR_EXE", "").strip()
+    if configured:
+        return [configured]
+    for candidate in _paddleocr_python_candidates():
+        if candidate.is_file():
+            return [str(candidate), "-m", "paddleocr"]
+    for candidate in _paddleocr_candidates():
+        if candidate.is_file():
+            return [str(candidate)]
+    found = shutil.which("paddleocr")
+    if found:
+        return [found]
+    return [str(_paddleocr_python_candidates()[0]), "-m", "paddleocr"]
 
 
 def _timeout_seconds() -> int:
@@ -106,7 +153,7 @@ def _read_saved_texts(output_dir: Path) -> list[str]:
 
 def _build_command(input_path: Path, output_dir: Path) -> list[str]:
     command = [
-        _paddleocr_executable(),
+        *_paddleocr_command_prefix(),
         "ocr",
         "-i",
         str(input_path),

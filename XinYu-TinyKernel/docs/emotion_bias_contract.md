@@ -8,6 +8,18 @@ Emotion sidecar LoRA adapters are private bias voters. They do not produce visib
 
 Their only output is strict JSON describing how the main persona candidate should be biased for the current turn.
 
+## Legacy Status
+
+This contract is now a subcomponent of `xinyu_inner_system_v1`.
+
+The old sidecar lenses are still useful as training evidence, but the target architecture is unified:
+
+```text
+emotion_state -> dominant_drives -> persona_integration -> action_tendency -> autonomy boundary
+```
+
+The main persona should depend on the inner system instead of being trained as a disconnected reply style.
+
 ## Allowed Lenses
 
 Implemented lenses:
@@ -21,6 +33,14 @@ fatigue
 hurt
 irritation
 stability
+agency
+anxiety
+boredom
+joy
+longing
+repair
+shame
+trust
 ```
 
 `guardedness` and `curiosity` were trained as v001 sidecars.

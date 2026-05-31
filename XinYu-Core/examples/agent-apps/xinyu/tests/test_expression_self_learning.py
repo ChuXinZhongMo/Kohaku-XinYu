@@ -229,7 +229,7 @@ def test_final_guard_softens_repair_meta_phrase_for_owner_chat(tmp_path: Path) -
         reply='你说了不对，我换就行，不用一直念叨"我知道了我会改"。',
     )
 
-    assert text == '你说了不对，我换就行，不用一直念叨"别反复念叨了，我知道啦，我会改的啦"。'
+    assert text == '你说了不对，我换就行，不用一直念叨"别停在认错上，直接换下一句"。'
     assert "repair_meta_phrasing_softened" in flags
 
 
@@ -242,8 +242,53 @@ def test_final_guard_softens_i_remember_promise_for_owner_chat(tmp_path: Path) -
         reply="第三个——别一直围着同一个错误打转。就是你点出来一次，我记住了，不用反复提，直接换下一话题。",
     )
 
-    assert text == "第三个——别一直围着同一个错误打转。就是你点出来一次，我知道啦，别让我反复念叨，直接换下一话题。"
+    assert text == "第三个——别一直围着同一个错误打转。就是你点出来一次，别让我停在记账上，直接往下接，直接换下一话题。"
     assert "repair_meta_phrasing_softened" in flags
+
+
+def test_final_guard_blocks_owner_private_feedback_processing_phrase(tmp_path: Path) -> None:
+    controller = XinyuSpeechController(tmp_path)
+
+    text, flags = controller.final_reply_guard(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="还是不像真人，你又在处理我的反馈",
+        reply="知道了，我会调整我的表达方式。",
+    )
+
+    assert text == ""
+    assert "owner_private_feedback_processing_blocked" in flags
+
+
+
+def test_reply_quality_flags_owner_private_feedback_processing_phrase(tmp_path: Path) -> None:
+    controller = XinyuSpeechController(tmp_path)
+
+    flags = controller.reply_quality_flags(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="这句不像真人",
+        reply="知道了，我会改。",
+    )
+
+    assert "owner-private feedback-processing phrase" in flags
+
+
+def test_reply_quality_flags_owner_private_bare_ack_under_live_question(tmp_path: Path) -> None:
+    controller = XinyuSpeechController(tmp_path)
+
+    flags = controller.reply_quality_flags(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="接下来继续做什么，别只嗯一声",
+        reply="嗯。",
+    )
+    quiet_flags = controller.reply_quality_flags(
+        payload={"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        user_text="先安静，不用回",
+        reply="嗯。",
+    )
+
+    assert "owner-private low-information acknowledgement" in flags
+    assert "owner-private low-information acknowledgement" not in quiet_flags
+
 
 
 def test_final_guard_allows_named_mechanism_in_explicit_technical_request(tmp_path: Path) -> None:

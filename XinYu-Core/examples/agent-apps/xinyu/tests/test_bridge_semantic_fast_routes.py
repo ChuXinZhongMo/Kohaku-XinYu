@@ -53,6 +53,22 @@ def test_owner_private_semantic_fast_decision_routes_greeting_to_live_renderer()
     assert "owner_greeting_live_renderer_required" in result["notes"]
 
 
+def test_owner_private_semantic_fast_decision_routes_ack_to_live_renderer() -> None:
+    runtime = FakeRuntime(decision=_decision(route="fast_path", intents=["ack"]))
+
+    result = owner_private_semantic_fast_decision(
+        runtime,
+        {"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        "\u786e\u5b9e\u53ef\u4ee5",
+    )
+
+    assert result["allowed"] is True
+    assert result["route"] == "fast_path"
+    assert result["intents"] == ("ack",)
+    assert result["direct_reply"] == ""
+    assert "owner_ack_live_renderer_required" in result["notes"]
+
+
 def test_owner_private_semantic_fast_decision_rejects_non_owner_without_v1() -> None:
     runtime = FakeRuntime(owner_private=False)
 
@@ -109,10 +125,13 @@ def test_owner_private_semantic_fast_decision_allows_short_state_question_before
     assert "owner_state_question_live_renderer_required" in result["notes"]
 
 
-def test_owner_private_empty_state_notice_is_disabled_not_mechanical() -> None:
+def test_owner_private_empty_state_notice_is_plain_not_mechanical() -> None:
     notice = owner_private_empty_state_notice("\u72b6\u6001\u5982\u4f55\uff0c\u4e2b\u5934", seed="turn-429")
 
-    assert notice == ""
+    assert notice == "\u8fd8\u5728\u3002\u521a\u624d\u90a3\u4e00\u4e0b\u6ca1\u63a5\u4e0a\u3002"
+    assert "\u6a21\u578b" not in notice
+    assert "\u540e\u53f0" not in notice
+    assert "\u5904\u7406" not in notice
 
 
 def test_owner_private_semantic_fast_decision_routes_reply_complaint_to_live_model() -> None:

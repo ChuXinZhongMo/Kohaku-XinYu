@@ -136,6 +136,7 @@ from xinyu_bridge_state_text import desktop_replace_list_field
 from xinyu_bridge_trusted_search import trusted_public_search_task_allowed
 from xinyu_bridge_utility_routes import goldmark_mark_request as _goldmark_mark_request_route
 from xinyu_bridge_utility_routes import message_ack as _message_ack_route
+from xinyu_bridge_utility_routes import message_drop as _message_drop_route
 from xinyu_bridge_utility_routes import probe as _probe_route
 from xinyu_bridge_utility_routes import review_inbox_command as _review_inbox_command_route
 from xinyu_bridge_values import as_bool as _as_bool
@@ -193,6 +194,7 @@ from xinyu_dialogue_working_memory import (
     save_dialogue_tail,
     session_tail_entries,
 )
+from xinyu_current_reference_guard import repair_current_reference_reply
 from xinyu_external_plugins import (
     ExternalCallContext,
     execute_http_prepared_call,
@@ -253,6 +255,7 @@ from xinyu_package_installer import install_python_packages
 from xinyu_memory_weights import refresh_memory_weight_state  # noqa: F401 - compatibility for older tests/hooks
 from xinyu_persona_state import observe_persona_turn
 from xinyu_private_thought_events import record_private_thought_outcome, record_private_thought_reply_link
+from xinyu_proactive_context_adapter import runtime_owner_private_turns
 from xinyu_proactive_request_loop import run_proactive_request_loop
 from xinyu_proactivity_scorer import run_proactivity_scorer_shadow
 from xinyu_qq_outbox import (
@@ -297,6 +300,7 @@ from xinyu_storage_paths import knowledge_ref
 from xinyu_sticker_ingest import import_sticker_from_payload
 from xinyu_speech_controller import XinyuSpeechController
 from xinyu_sticker_pack import sticker_mood_label
+from xinyu_tts_output import XinYuTTSOutput
 from xinyu_text_variants import readable_markers
 from xinyu_tool_protocol import ActionOutcome, DELEGATED_LOCAL_RISK, ToolRequest
 from xinyu_v1_canary_readiness import record_v1_shadow_observation
@@ -838,6 +842,7 @@ class XinYuBridgeRuntime:
         self.action_layer = XinyuActionLayer(xinyu_dir)
         self._self_choice_boot_logged = False
         self.speech_controller = XinyuSpeechController(xinyu_dir)
+        self.tts_output = XinYuTTSOutput(xinyu_dir)
         self.renderer = BridgeRenderer(
             xinyu_dir=xinyu_dir,
             speech_controller=self.speech_controller,
@@ -1442,6 +1447,14 @@ class XinYuBridgeRuntime:
             privacy=self._desktop_privacy_for_payload(payload),
             severity=severity,
         )
+        self._maybe_enqueue_tts(
+            payload,
+            reply=reply,
+            status=item["status"],
+            reply_hash=item["replyHash"],
+            session_key=session_key,
+            turn_id=turn_id,
+        )
 
     async def _desktop_publish_memory_recall(
         self,
@@ -1742,7 +1755,17 @@ class XinYuBridgeRuntime:
             "evidenceHash": _state_field(state, "evidence_hash", ""),
             "dedupeHash": self._desktop_hash(_state_field(state, "dedupe_key", "")),
             "candidatePreview": self._desktop_text_preview(
-                compose_proactive_visible_message(question, source="desktop_proactive_state"),
+                compose_proactive_visible_message(
+                    question,
+                    source="desktop_proactive_state",
+                    recent_context=[
+                        *self._desktop_recent_owner_private_turns(limit=4),
+                        _state_field(state, "focus_label", ""),
+                        _state_field(state, "evidence_label", ""),
+                        _state_field(state, "why_now", ""),
+                        _state_field(state, "after_owner_replies", ""),
+                    ],
+                ),
                 limit=240,
             ),
             "whyNowPreview": self._desktop_text_preview(_state_field(state, "why_now", ""), limit=220),
@@ -1856,6 +1879,9 @@ class XinYuBridgeRuntime:
         self._desktop_recent_turns.append(dict(item))
         if len(self._desktop_recent_turns) > DESKTOP_RECENT_TURNS_MAX:
             del self._desktop_recent_turns[: len(self._desktop_recent_turns) - DESKTOP_RECENT_TURNS_MAX]
+
+    def _desktop_recent_owner_private_turns(self, *, limit: int = 4) -> list[dict[str, Any]]:
+        return runtime_owner_private_turns(self, limit=limit)
 
     def _desktop_remember_memory_event(self, item: dict[str, Any]) -> None:
         self._desktop_recent_memory_events.append(dict(item))
@@ -3075,6 +3101,9 @@ tags: [autonomy, maintenance, runtime]
     async def message_ack(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         return await _message_ack_route(self, payload)
 
+    async def message_drop(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        return await _message_drop_route(self, payload)
+
     async def goldmark_mark_request(self, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         return await _goldmark_mark_request_route(self, payload)
 
@@ -3531,18 +3560,28 @@ tags: [autonomy, maintenance, runtime]
             return False
         request_path = self.xinyu_dir / "memory/context/proactive_request_state.md"
         request = _read_text_safe(request_path)
-        if _state_field(request, "status") not in {"claimed", "sent"}:
+        if _state_field(request, "status") not in {"claimed", "sent", "queued_qq"}:
             return False
         if _state_field(request, "delivery_level") not in {"queue_owner_private", "claim_ack"}:
             return False
-        if _state_field(request, "request_answer_state", "pending") not in {"pending", "", "unknown"}:
+        if _state_field(request, "request_answer_state", "pending") not in {
+            "pending",
+            "",
+            "unknown",
+            "sent_waiting_owner_reply",
+            "waiting_owner_reply",
+            "sent_waiting_feedback",
+        }:
             return False
         dispatch = _read_text_safe(self.xinyu_dir / "memory/context/proactive_qq_dispatch_state.md")
-        if _state_field(dispatch, "last_claim_status") != "sent":
+        request_ack_status = _state_field(request, "last_ack_status")
+        dispatch_sent = _state_field(dispatch, "last_claim_status") == "sent"
+        request_sent = request_ack_status in {"sent", "delivered", "acked", "success"}
+        if not dispatch_sent and not request_sent:
             return False
         request_id = _state_field(request, "request_id")
         dispatch_request_id = _state_field(dispatch, "proactive_request_id")
-        if request_id not in {"", "none", "unknown"} and dispatch_request_id not in {"", "none", "unknown"}:
+        if dispatch_sent and request_id not in {"", "none", "unknown"} and dispatch_request_id not in {"", "none", "unknown"}:
             if request_id != dispatch_request_id:
                 return False
         answered_at = datetime.now().astimezone().isoformat()
@@ -3566,11 +3605,15 @@ tags: [autonomy, maintenance, runtime]
             updated,
             count=1,
         )
+        owner_reply_ref = hashlib.sha256(_safe_str(text).encode("utf-8", errors="replace")).hexdigest()[:16]
+        xinyu_reply_ref = hashlib.sha256(_safe_str(reply).encode("utf-8", errors="replace")).hexdigest()[:16]
         extra = (
             "\n## Last Owner Reply To Proactive\n"
             f"- owner_replied_at: {answered_at}\n"
-            f"- owner_reply_preview: {_safe_str(text).strip()[:240] or 'none'}\n"
-            f"- xinyu_reply_preview: {_safe_str(reply).strip()[:240] or 'none'}\n"
+            f"- owner_reply_ref: sha256:{owner_reply_ref}\n"
+            f"- xinyu_reply_ref: sha256:{xinyu_reply_ref}\n"
+            "- raw_owner_reply_retained: false\n"
+            "- visible_reply_text_retained: false\n"
         )
         try:
             atomic_write_text(request_path, updated.rstrip() + extra, final_newline=False)
@@ -5239,6 +5282,25 @@ tags: [autonomy, maintenance, runtime]
                 if life_reply_adjustment.get("changed"):
                     reply = _safe_str(life_reply_adjustment.get("reply")).strip()
                     self._replace_last_assistant_message(session.agent, reply)
+            if (
+                self._owner_private_payload_matches(payload)
+                and not self_code_task
+                and not model_codex_task
+                and not direct_codex_task
+                and not wait_to_think_task
+            ):
+                current_reference_repair = repair_current_reference_reply(
+                    user_text=text,
+                    reply=reply,
+                    dialogue_tail=session.dialogue_tail,
+                )
+                if current_reference_repair.get("changed"):
+                    reply = _safe_str(current_reference_repair.get("reply")).strip()
+                    final_guard_flags = _dedupe(
+                        final_guard_flags
+                        + [str(note) for note in current_reference_repair.get("notes", []) if str(note)]
+                    )
+                    self._replace_last_assistant_message(session.agent, reply)
             reply_bubble_force_units = self._owner_requested_reply_bubble_units(
                 user_text=text,
                 reply=reply,
@@ -5543,6 +5605,11 @@ tags: [autonomy, maintenance, runtime]
             await self.self_choice_store.shutdown()
         except Exception as exc:
             print(f"[xinyu_core_bridge] self choice shutdown warning: {exc}", flush=True)
+
+        try:
+            self.tts_output.close()
+        except Exception as exc:
+            print(f"[xinyu_core_bridge] tts shutdown warning: {exc}", flush=True)
 
         async with self._sessions_lock:
             sessions = list(self._sessions.values())
@@ -6106,8 +6173,6 @@ tags: [autonomy, maintenance, runtime]
         del delegate_note
         if not self._owner_private_payload_matches(payload):
             return ""
-        if self._is_explicit_technical_request(user_text):
-            return ""
         return xinyu_bridge_semantic_fast_routes.owner_private_empty_state_notice(user_text)
 
     async def _recover_empty_visible_reply(
@@ -6193,6 +6258,42 @@ tags: [autonomy, maintenance, runtime]
 
     def _strip_renderer_wrappers(self, text: str) -> str:
         return self.renderer.strip_renderer_wrappers(text)
+
+    def _maybe_enqueue_tts(
+        self,
+        payload: dict[str, Any],
+        *,
+        reply: str,
+        status: str,
+        reply_hash: str,
+        session_key: str,
+        turn_id: str,
+    ) -> None:
+        if _safe_str(status).lower() not in {"ok", "finished"}:
+            return
+        if not owner_private_payload_matches(payload):
+            return
+        tts_output = getattr(self, "tts_output", None)
+        if tts_output is None or not tts_output.active():
+            return
+        clean_reply = _safe_str(reply)
+        if not clean_reply:
+            return
+        metadata = payload.get("metadata")
+        metadata_map = metadata if isinstance(metadata, dict) else {}
+        source = _safe_str(metadata_map.get("source") or payload.get("source") or payload.get("adapter"))
+        message_type = _safe_str(payload.get("message_type"))
+        try:
+            tts_output.enqueue(
+                clean_reply,
+                reply_hash=reply_hash or visible_text_hash(clean_reply),
+                session_key=_safe_str(session_key),
+                turn_id=_safe_str(turn_id),
+                source=source,
+                message_type=message_type,
+            )
+        except Exception as exc:
+            print(f"[xinyu_core_bridge] tts enqueue warning: {exc}", flush=True)
 
 
 def main() -> int:

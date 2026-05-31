@@ -130,6 +130,10 @@ def _state_path(root: Path) -> Path:
     return root / "memory/context/qq_outbox_dispatch_state.md"
 
 
+def _proactive_request_state_path(root: Path) -> Path:
+    return root / "memory/context/proactive_request_state.md"
+
+
 def _lock_path(root: Path) -> Path:
     return root / "memory/context/.qq_outbox_queue.lock"
 
@@ -178,6 +182,89 @@ def _atomic_write_text(path: Path, text: str) -> None:
                 tmp_path.unlink()
             except OSError:
                 pass
+
+
+def _read_text_file(path: Path) -> str:
+    try:
+        return path.read_text(encoding="utf-8-sig", errors="replace")
+    except OSError:
+        return ""
+
+
+def _state_field(text: str, field: str, default: str = "") -> str:
+    match = re.search(rf"(?m)^\s*-\s+{re.escape(field)}:\s*(.*)$", text or "")
+    return _one_line(match.group(1), limit=240) if match else default
+
+
+def _replace_frontmatter_field(text: str, field: str, value: str) -> str:
+    replacement = f"{field}: {_one_line(value, limit=240) or 'none'}"
+    updated, count = re.subn(rf"(?m)^\s*{re.escape(field)}:\s*.*$", replacement, text, count=1)
+    if count:
+        return updated
+    return text.rstrip() + "\n" + replacement + "\n"
+
+
+def _replace_list_field(text: str, field: str, value: str) -> str:
+    replacement = f"- {field}: {_one_line(value, limit=500) or 'none'}"
+    updated, count = re.subn(rf"(?m)^\s*-\s+{re.escape(field)}:\s*.*$", replacement, text, count=1)
+    if count:
+        return updated
+    return text.rstrip() + "\n" + replacement + "\n"
+
+
+def _update_proactive_request_from_outbox_ack(
+    root: Path,
+    item: dict[str, Any],
+    *,
+    ack_status: str,
+    adapter_message_id: str,
+    adapter_error: str,
+    updated_at: str,
+) -> bool:
+    metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+    request_id = _one_line(
+        metadata.get("proactive_request_id")
+        or metadata.get("request_id")
+        or metadata.get("desktop_candidate_id"),
+        limit=160,
+    )
+    message_id = _one_line(item.get("id"), limit=160)
+    proactive_hint = bool(
+        request_id
+        or metadata.get("direct_proactive") is True
+        or metadata.get("desktop_action") == "approve_qq"
+        or metadata.get("source") in {"xinyu_desktop_shell", "xinyu_proactive_direct_sender"}
+    )
+    if not proactive_hint:
+        return False
+
+    path = _proactive_request_state_path(root)
+    state = _read_text_file(path)
+    if not state:
+        return False
+
+    state_request_id = _state_field(state, "request_id", "")
+    state_message_id = _state_field(state, "qq_outbox_message_id", "") or _state_field(state, "adapter_message_id", "")
+    request_matches = bool(request_id and state_request_id and request_id == state_request_id)
+    message_matches = bool(message_id and state_message_id and message_id == state_message_id)
+    if not request_matches and not message_matches:
+        return False
+
+    request_status = "sent" if ack_status == "sent" else "failed"
+    answer_state = "sent_waiting_owner_reply" if ack_status == "sent" else "not_requested_failed"
+    error_text = _one_line(adapter_error or ("" if ack_status == "sent" else f"qq_outbox_{ack_status}"), limit=500)
+    adapter_ref = _one_line(adapter_message_id or message_id, limit=160)
+
+    updated = _replace_frontmatter_field(state, "updated_at", _timestamp_or_now_iso(updated_at))
+    updated = _replace_list_field(updated, "status", request_status)
+    updated = _replace_list_field(updated, "request_answer_state", answer_state)
+    updated = _replace_list_field(updated, "qq_outbox_message_id", message_id or "none")
+    updated = _replace_list_field(updated, "last_ack_status", ack_status)
+    updated = _replace_list_field(updated, "last_acked_at", _timestamp_or_now_iso(updated_at))
+    updated = _replace_list_field(updated, "adapter_message_id", adapter_ref or "none")
+    updated = _replace_list_field(updated, "adapter_error", error_text or "none")
+    _atomic_write_text(path, updated.rstrip() + "\n")
+    return True
 
 
 def _write_json(path: Path, data: dict[str, Any]) -> None:
@@ -609,19 +696,28 @@ def ack_qq_outbox_message(root: Path, payload: dict[str, Any] | None = None) -> 
 
         attempts = int(selected.get("attempts") or 0)
         final_status = "sent" if ack_status == "sent" else ("dead" if attempts >= MAX_ATTEMPTS else "failed")
+        acked_at = _now()
         selected["status"] = final_status
-        selected["acked_at"] = _now()
-        selected["updated_at"] = _now()
+        selected["acked_at"] = acked_at
+        selected["updated_at"] = acked_at
         selected["adapter_message_id"] = adapter_message_id or "none"
         selected["adapter_error"] = adapter_error or "none"
         data["items"] = items
         _write_json(path, data)
         _write_state(root, data, last_event=f"ack_{final_status}", last_message_id=message_id)
+        request_updated = _update_proactive_request_from_outbox_ack(
+            root,
+            selected,
+            ack_status=final_status,
+            adapter_message_id=adapter_message_id or message_id,
+            adapter_error=adapter_error,
+            updated_at=acked_at,
+        )
         return {
             "accepted": True,
             "ack_recorded": True,
             "message_id": message_id,
             "ack_status": final_status,
             "attempts": attempts,
-            "notes": ["ack_recorded"],
+            "notes": ["ack_recorded"] + (["proactive_request_state_updated"] if request_updated else []),
         }

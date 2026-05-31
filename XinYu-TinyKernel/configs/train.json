@@ -1,19 +1,25 @@
-{
-    "base_model":  "D:\\XinYu\\XinYu-TinyKernel\\models\\Qwen2.5-0.5B-Instruct",
-    "bf16":  false,
+﻿{
+    "base_model":  "D:\\XinYu\\XinYu-TinyKernel\\models\\Qwen3.5-9B",
+    "bf16":  true,
     "dataset_eval":  "data/sft/eval_v0.jsonl",
     "dataset_train":  "data/sft/train_v0.jsonl",
     "epochs":  1,
-    "fp16":  true,
+    "fp16":  false,
     "gradient_accumulation_steps":  8,
     "learning_rate":  0.0001,
     "lora_alpha":  16,
     "lora_dropout":  0.05,
     "lora_r":  4,
-    "max_seq_length":  512,
+    "max_seq_length":  768,
     "method":  "lora",
-    "output_dir":  "adapters/v001_initial_voice",
+    "output_dir":  "adapters/qwen35_9b_v001_initial_voice",
     "batch_size":  1,
     "save_steps":  50,
-    "status":  "approved_for_training"
+    "status":  "approved_for_training",
+    "base_model_repo":  "Qwen/Qwen3.5-9B",
+    "load_in_4bit":  true,
+    "bnb_4bit_quant_type":  "nf4",
+    "bnb_4bit_compute_dtype":  "bf16",
+    "bnb_4bit_use_double_quant":  true,
+    "gradient_checkpointing":  true
 }

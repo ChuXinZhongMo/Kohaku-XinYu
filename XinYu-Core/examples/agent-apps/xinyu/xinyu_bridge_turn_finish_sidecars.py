@@ -7,6 +7,7 @@ from typing import Any
 
 from xinyu_bridge_memory_snapshot import memory_snapshot as _memory_snapshot
 from xinyu_bridge_values import as_bool as _as_bool
+from xinyu_bridge_values import dedupe as _dedupe
 from xinyu_bridge_values import safe_str as _safe_str
 from xinyu_dialogue_archive import archive_dialogue_turn
 from xinyu_dialogue_curiosity import record_reply_prediction

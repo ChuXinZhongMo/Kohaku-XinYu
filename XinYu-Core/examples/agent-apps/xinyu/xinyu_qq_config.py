@@ -190,6 +190,10 @@ class GatewayConfig:
     reply_bubble_delay_seconds: float = 0.6
     owner_private_coalesce_seconds: float = 2.0
     owner_private_coalesce_max_fragments: int = 8
+    behavior_shadow_log_enabled: bool = False
+    behavior_shadow_log_url: str = "http://127.0.0.1:8877/behavior_shadow_log"
+    behavior_shadow_include_text: bool = False
+    behavior_shadow_timeout_seconds: float = 1.0
 
     @classmethod
     def from_file(cls, path: Path) -> "GatewayConfig":
@@ -303,6 +307,36 @@ class GatewayConfig:
             reply_bubble_delay_seconds=max(0.0, min(3.0, as_float(raw.get("reply_bubble_delay_seconds"), 0.6))),
             owner_private_coalesce_seconds=max(0.0, min(5.0, as_float(raw.get("owner_private_coalesce_seconds"), 2.0))),
             owner_private_coalesce_max_fragments=max(2, as_int(raw.get("owner_private_coalesce_max_fragments"), 8)),
+            behavior_shadow_log_enabled=as_bool(
+                os.environ.get("XINYU_BEHAVIOR_SHADOW_LOG_ENABLED", raw.get("behavior_shadow_log_enabled")),
+                False,
+            ),
+            behavior_shadow_log_url=(
+                _safe_str(
+                    os.environ.get("XINYU_BEHAVIOR_SHADOW_LOG_URL")
+                    or os.environ.get("XINYU_BEHAVIOR_SHADOW_LOG_ENDPOINT")
+                    or raw.get("behavior_shadow_log_url"),
+                    "http://127.0.0.1:8877/behavior_shadow_log",
+                ).strip()
+                or "http://127.0.0.1:8877/behavior_shadow_log"
+            ),
+            behavior_shadow_include_text=as_bool(
+                os.environ.get("XINYU_BEHAVIOR_SHADOW_INCLUDE_TEXT", raw.get("behavior_shadow_include_text")),
+                False,
+            ),
+            behavior_shadow_timeout_seconds=max(
+                0.1,
+                min(
+                    10.0,
+                    as_float(
+                        os.environ.get(
+                            "XINYU_BEHAVIOR_SHADOW_TIMEOUT_SECONDS",
+                            raw.get("behavior_shadow_timeout_seconds"),
+                        ),
+                        1.0,
+                    ),
+                ),
+            ),
         )
 
     def with_overrides(
@@ -424,4 +458,8 @@ class GatewayConfig:
             reply_bubble_delay_seconds=self.reply_bubble_delay_seconds,
             owner_private_coalesce_seconds=self.owner_private_coalesce_seconds,
             owner_private_coalesce_max_fragments=self.owner_private_coalesce_max_fragments,
+            behavior_shadow_log_enabled=self.behavior_shadow_log_enabled,
+            behavior_shadow_log_url=self.behavior_shadow_log_url,
+            behavior_shadow_include_text=self.behavior_shadow_include_text,
+            behavior_shadow_timeout_seconds=self.behavior_shadow_timeout_seconds,
         )

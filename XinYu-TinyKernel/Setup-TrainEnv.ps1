@@ -1,14 +1,22 @@
 param(
-  [string]$Python = "D:\XinYu\Python312\python.exe",
+  [string]$Python = "",
   [switch]$Install
 )
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$WorkspaceRoot = Split-Path -Parent $Root
 $Venv = Join-Path $Root ".venv-train"
 $Py = Join-Path $Venv "Scripts\python.exe"
 $env:PYTHONUTF8 = "1"
 $env:PYTHONIOENCODING = "utf-8"
+
+if (-not $Python) {
+  $Python = @(
+    (Join-Path $WorkspaceRoot "runtime\deps\Python312\python.exe"),
+    (Join-Path $WorkspaceRoot "Python312\python.exe")
+  ) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+}
 
 if (-not (Test-Path -LiteralPath $Python)) {
   throw "Python not found: $Python"

@@ -1,8 +1,8 @@
-import React from 'react'
-import { Activity, Bell, Brain, Check, ChevronDown, ChevronRight, Clock3, Compass, Clipboard, Download, Eye, ExternalLink, Heart, History, MessageCircle, Play, Puzzle, Radio, RefreshCw, Save, Send, ShieldAlert, Sparkles, Terminal, TimerReset, Plus, Trash2, Wifi, X } from 'lucide-react'
+﻿import React from 'react'
+import { Activity, Bell, Brain, Check, ChevronDown, ChevronRight, Clock3, Compass, Clipboard, Download, Eye, ExternalLink, Heart, History, MessageCircle, Play, Puzzle, Radio, RefreshCw, Save, Send, ShieldAlert, Sparkles, Terminal, TimerReset, Plus, Trash2, Volume2, Wifi, X } from 'lucide-react'
 import { EnvironmentValve } from './EnvironmentValve'
 import { SurfacePart } from './AffectiveSurfaceProvider'
-import type { ApiConfigActionState, ApiConfigProfile, ApiConfigProfilePatch, ApiConfigStatus, CommandState, DesktopEvent, ExternalPluginActionState, ExternalPluginConfigPatch, ExternalPluginControl, ExternalPluginInstallRequest, ExternalPluginsStatus, GatewayStatus, GrowthCandidatePromotionStatus, ImpulseSoupState, JsonRecord, ProactiveAction, ProactiveIntent, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, SelfActionSnapshot, Snapshot, StickerActionState, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
+import type { ApiConfigActionState, ApiConfigProfile, ApiConfigProfilePatch, ApiConfigStatus, AsyncExplorationState, CommandState, DesktopEvent, ExternalPluginActionState, ExternalPluginConfigPatch, ExternalPluginControl, ExternalPluginInstallRequest, ExternalPluginsStatus, GatewayStatus, GrowthCandidatePromotionStatus, ImpulseSoupState, JsonRecord, ProactiveAction, ProactiveIntent, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, SelfActionSnapshot, Snapshot, Stage8MemoryGovernanceStatus, Stage12GateStatus, Stage13GateStatus, StickerActionState, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
 import { actionLabel, asRecord, buildStats, commandStatusLabel, compact, defaultQQRuntimeConfig, defaultQQServices, digestPressureLabel, digestResidueLabel, digestResultLabel, digestThemeLabel, eventLabel, externalPluginInstallStateLabel, externalPluginNoteLabel, formatLatency, formatTime, formatTurnMeta, isCommandRenderedByTurn, memorySummary, platformLabel, proactiveTextLabel, qqDetailLabel, qqDiagnosisLabel, qqServiceLabel, riskLabel, runtimeLabel, sourceLabel, statusLabel, stickerClipLabel, stickerCorrectionMoods, stickerMoodLabel, themeOptions } from './desktopModel'
 
 const avatarSrc = './xinyu-avatar.png'
@@ -141,6 +141,50 @@ function memoryCandidateLabel(value: string, fallback = '未标记'): string {
 
 function memoryCandidateLabels(values: string[]): string {
   return values.length ? values.map((value) => memoryCandidateLabel(value)).join(' / ') : '无风险标记'
+}
+
+function stage8Label(value: string | undefined, fallback = '暂无'): string {
+  const text = String(value || '').trim()
+  if (!text) return fallback
+  const labels: Record<string, string> = {
+    active_guarded: '受控治理中',
+    blocked: '阻塞',
+    blocked_owner_review_required: '需要主人审核',
+    blocked_review_only: '只允许审核',
+    blocked_review_only_not_auto_apply: '禁止自动写入',
+    candidate_backlog_needs_consolidation_before_stable_write: '稳定写入前要先合并重复候选',
+    candidate_type_not_supported_for_stable_apply: '候选类型不能直接写稳定记忆',
+    collect_same_trial_explicit_success_before_profile_or_habit_promotion: '需要同类试验成功信号',
+    consolidate_duplicate_candidate_clusters_before_stable_write: '先合并重复候选簇',
+    consciousness_claim: '意识声明',
+    corroborated_candidate_review: '证据重复，等待整理',
+    duplicate_candidate_clusters: '重复候选簇',
+    dry_run_only: '只生成预览',
+    dry_run_or_owner_apply_confirmed_growth_log_only: '只允许干跑或主人确认的成长日志',
+    false: '否',
+    growth_apply_mode: '成长日志应用模式',
+    hidden: '隐藏',
+    learning_trial_success_gate: '学习试验门槛',
+    memory_candidate: '记忆候选',
+    owner_review_preview_only: '主人审核预览',
+    repeated_evidence_ready_for_owner_review: '重复证据，适合进入审查',
+    stable_memory_not_modified: '稳定记忆未改动',
+    stable_memory_write: '稳定记忆写入',
+    target_memory_layer_not_growth_log: '目标层不是成长日志',
+    true: '是'
+  }
+  if (labels[text]) return labels[text]
+  if (text.startsWith('duplicate_candidate_clusters:')) {
+    return `重复候选簇 ${text.split(':')[1]} 组`
+  }
+  return compact(text, 48)
+}
+
+function stage8StatusCountsLabel(value: JsonRecord): string {
+  const entries = Object.entries(value)
+    .map(([key, count]) => `${stage8Label(key)} ${String(count)}`)
+    .filter(Boolean)
+  return entries.length ? entries.join(' / ') : '无状态'
 }
 
 function selfActionKindLabel(value: string): string {
@@ -1022,10 +1066,10 @@ export function IntentQueuePanel(props: {
   onAck: (candidateId: string, action: ProactiveAction) => void
   onOpenDetail: (candidateId: string) => void
   onRefreshApiConfig: () => void
-  onSaveApiConfigProfile: (profile: ApiConfigProfilePatch) => void
+  onSaveApiConfigProfile: (profile: ApiConfigProfilePatch) => Promise<string | null>
   onTestApiConfigProfile: (profile: ApiConfigProfilePatch) => void
   onDeleteApiConfigProfile: (profileId: string) => void
-  onApplyApiConfigProfile: (profileId: string) => void
+  onApplyApiConfigProfile: (profileId: string) => Promise<void>
   onRestartCoreBridge: () => void
   onRefreshExternalPlugins: () => void
   onSetExternalPluginConfig: (request: ExternalPluginConfigPatch) => void
@@ -1118,14 +1162,15 @@ export function SystemControlPanel(props: {
   stickerLibrary: StickerLibrary | null
   stickerAction: StickerActionState
   memoryGrowthCandidates: GrowthCandidatePromotionStatus | null
+  stage8MemoryGovernance: Stage8MemoryGovernanceStatus | null
   actionDigest?: unknown
   recentMemoryEvents: unknown[]
   lastEvent?: DesktopEvent
   onRefreshApiConfig: () => void
-  onSaveApiConfigProfile: (profile: ApiConfigProfilePatch) => void
+  onSaveApiConfigProfile: (profile: ApiConfigProfilePatch) => Promise<string | null>
   onTestApiConfigProfile: (profile: ApiConfigProfilePatch) => void
   onDeleteApiConfigProfile: (profileId: string) => void
-  onApplyApiConfigProfile: (profileId: string) => void
+  onApplyApiConfigProfile: (profileId: string) => Promise<void>
   onRestartCoreBridge: () => void
   onRefreshExternalPlugins: () => void
   onSetExternalPluginConfig: (request: ExternalPluginConfigPatch) => void
@@ -1146,7 +1191,7 @@ export function SystemControlPanel(props: {
       <header className="system-head">
         <div>
           <p className="label">系统控制</p>
-          <h2>API / 插件 / QQ / 表情</h2>
+          <h2>API / 插件 / QQ / 记忆</h2>
         </div>
       </header>
 
@@ -1191,6 +1236,8 @@ export function SystemControlPanel(props: {
         onOpenAssetDir={props.onOpenStickerAssetDir}
       />
 
+      <Stage8MemoryGovernancePanel status={props.stage8MemoryGovernance} />
+
       <MemoryGrowthCandidatePanel status={props.memoryGrowthCandidates} />
 
       <ActionDigestPanel digest={props.actionDigest} />
@@ -1200,6 +1247,111 @@ export function SystemControlPanel(props: {
   )
 }
 
+
+function Stage8MemoryGovernancePanel(props: { status: Stage8MemoryGovernanceStatus | null }): JSX.Element {
+  const status = props.status
+  const latestDecision = status?.latestDecision
+  const latestDryRun = status?.latestDryRun
+  const blockers = latestDryRun?.blockers || []
+  const blockedGates = status?.blockedGates || []
+  const duplicateClusters = status?.duplicateClusters || []
+  const rawHidden = !status?.boundaries.rawOwnerTextInPacket && !status?.boundaries.visibleReplyTextInPacket && !status?.boundaries.candidateBodyInPacket
+  const tone = !status || status.ok === false
+    ? 'blocked'
+    : status.readyForStage9
+      ? 'active'
+      : status.ownerReviewRequiredCount > 0
+        ? 'warn'
+        : status.duplicateClusterCount > 0 || status.learningTrialSuccessGate === 'blocked'
+          ? 'blocked'
+          : 'prepared'
+  const headline = !status
+    ? '读取中'
+    : status.ok === false
+      ? '读取失败'
+      : status.readyForStage9
+        ? '可进阶段 9'
+        : status.ownerReviewRequiredCount > 0
+          ? `${status.ownerReviewRequiredCount} 待审核`
+          : status.duplicateClusterCount > 0
+            ? `${status.duplicateClusterCount} 组待合并`
+            : '继续观察'
+  const latestDecisionLine = latestDecision
+    ? `已记录你的批准：${compact(latestDecision.itemId, 34)}；${latestDryRun?.stableMemoryWrite === 'dry_run_only' ? '只生成干跑预览，没有写稳定记忆。' : '仍需通过写入边界。'}`
+    : '最近没有可显示的记忆候选批准记录。'
+  const dryRunTarget = latestDryRun
+    ? `${memoryCandidateLabel(latestDryRun.candidateType || latestDecision?.actionKind || 'memory_candidate')} / ${memoryCandidateLabel(
+        latestDryRun.targetMemoryLayer || 'memory/reflection/growth_log.md'
+      )}`
+    : '暂无'
+
+  return (
+    <section className={`stage8-governance-panel self-action-panel ${tone}`} aria-label="第八阶段记忆治理">
+      <div className="self-action-head">
+        <span>
+          <ShieldAlert size={15} />
+          <span>记忆治理 · 阶段 8</span>
+        </span>
+        <strong>{headline}</strong>
+      </div>
+
+      <p className="self-action-note">{latestDecisionLine}</p>
+
+      <div className="self-action-grid">
+        <SelfActionFact label="状态" value={stage8Label(status?.status)} />
+        <SelfActionFact label="阶段 9" value={status?.readyForStage9 ? '已放行' : '未放行'} />
+        <SelfActionFact label="主人审核" value={String(status?.ownerReviewRequiredCount ?? 0)} />
+        <SelfActionFact label="重复候选" value={String(status?.duplicateClusterCount ?? 0)} />
+        <SelfActionFact label="学习门槛" value={stage8Label(status?.learningTrialSuccessGate)} />
+        <SelfActionFact label="稳定写入" value={stage8Label(status?.boundaries.stableMemoryWrite || status?.stableProfileWrite)} />
+      </div>
+
+      <div className="stage8-decision-strip">
+        <SelfActionFact label="最近批准" value={latestDecision ? stage8Label(latestDecision.decision) : '暂无'} />
+        <SelfActionFact label="候选目标" value={dryRunTarget} />
+        <SelfActionFact label="干跑写入" value={stage8Label(latestDryRun?.stableMemoryWrite)} />
+        <SelfActionFact label="原文边界" value={rawHidden ? '隐藏' : '需要检查'} />
+      </div>
+
+      {blockers.length ? (
+        <div className="stage8-blockers">
+          {blockers.slice(0, 3).map((blocker) => (
+            <span key={blocker}>
+              <ShieldAlert size={12} />
+              {stage8Label(blocker)}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      <p className="self-action-note">
+        下一步：{stage8Label(status?.nextStep, '等待状态刷新')}
+        {status && status.reviewInboxPendingCount > status.ownerReviewRequiredCount
+          ? `；另有 ${status.reviewInboxPendingCount} 条普通审核项，不是当前稳定记忆写入闸门。`
+          : ''}
+      </p>
+
+      {blockedGates.slice(0, 2).map((gate) => (
+        <div className="evidence-row runtime-row stage8-gate-row" key={`${gate.gate}-${gate.status}`}>
+          <ShieldAlert size={13} />
+          <span>{stage8Label(gate.gate)}</span>
+          <strong>{stage8Label(gate.status)}</strong>
+          <small>{stage8Label(gate.reason)}</small>
+        </div>
+      ))}
+
+      {duplicateClusters.slice(0, 4).map((cluster) => (
+        <div className="evidence-row runtime-row stage8-cluster-row" key={cluster.topic}>
+          <Clipboard size={13} />
+          <span>{compact(cluster.topic, 24)}</span>
+          <strong>{cluster.size} 条</strong>
+          <small>{stage8Label(cluster.recommendation)}</small>
+          <small>{stage8StatusCountsLabel(asRecord(cluster.statuses))}</small>
+        </div>
+      ))}
+    </section>
+  )
+}
 
 function MemoryGrowthCandidatePanel(props: { status: GrowthCandidatePromotionStatus | null }): JSX.Element {
   const status = props.status
@@ -1232,7 +1384,7 @@ function MemoryGrowthCandidatePanel(props: { status: GrowthCandidatePromotionSta
         <SelfActionFact label="已应用" value={String(status?.appliedCount ?? applied.length)} />
         <SelfActionFact label="待审查" value={String(status?.ownerReviewRequiredCount ?? ownerReview.length)} />
         <SelfActionFact label="目标" value={compact(memoryCandidateLabel(status?.targetMemoryLayer || 'memory/reflection/growth_log.md'), 38)} />
-        <SelfActionFact label="写入" value="前端阻断" />
+        <SelfActionFact label="写入" value={status?.ownerReviewRequiredCount ? stage8Label('blocked_owner_review_required') : status?.pendingApplyCount ? '待确认' : '已清洁'} />
       </div>
       {status?.error ? <p className="self-action-note">{compact(status.error, 120)}</p> : null}
       {ownerReview.slice(0, 3).map((item) => (
@@ -1252,16 +1404,15 @@ function MemoryGrowthCandidatePanel(props: { status: GrowthCandidatePromotionSta
           <span>{compact(item.candidateId, 34)}</span>
           <strong>{compact(memoryCandidateLabel(item.status || 'approved'), 24)}</strong>
           <small>{compact(memoryCandidateLabel(item.reasonPreview || item.candidateTextPreview || item.targetMemoryLayer), 96)}</small>
-          {item.previewPath ? <small>预览：{compact(item.previewPath, 96)}</small> : null}
-          {item.beforeHash ? <small>写入前校验：{compact(item.beforeHash, 24)}</small> : null}
+          {item.beforeHash ? <small>校验：{compact(item.beforeHash, 24)}</small> : null}
           {item.applyCommand ? (
-            <>
-              <code>{item.applyCommand}</code>
+            <small className="memory-apply-command-row">
+              <code>{compact(item.applyCommand, 80)}</code>
               <button type="button" onClick={() => copyCommand(item.applyCommand)} title="复制应用命令">
-                <Clipboard size={13} />
+                <Clipboard size={11} />
                 <span>复制</span>
               </button>
-            </>
+            </small>
           ) : null}
         </div>
       ))}
@@ -1602,27 +1753,63 @@ function Metric(props: { label: string; value: number }): JSX.Element {
 
 type ApiConfigDraft = {
   label: string
-  provider: string
-  model: string
-  baseUrl: string
-  apiKey: string
-  allowInsecureHttp: boolean
-  disableStreaming: boolean
+  llm: {
+    provider: string
+    model: string
+    baseUrl: string
+    apiKey: string
+    allowInsecureHttp: boolean
+    disableStreaming: boolean
+  }
+  vision: {
+    enabled: boolean
+    model: string
+    baseUrl: string
+    apiKey: string
+    timeoutSeconds: number
+    maxBytes: number
+  }
+  hearing: {
+    enabled: boolean
+    command: string
+    model: string
+    baseUrl: string
+    apiKey: string
+    language: string
+    timeoutSeconds: number
+    recordFormat: string
+  }
+  tts: {
+    enabled: boolean
+    model: string
+    baseUrl: string
+    apiKey: string
+    voice: string
+    format: string
+    requestMode: string
+    timeoutSeconds: number
+  }
+  other: {
+    openAIApiKey: string
+  }
 }
+
+type ApiSectionId = 'llm' | 'vision' | 'hearing' | 'tts' | 'other'
 
 function ApiConfigPanel(props: {
   status: ApiConfigStatus | null
   action: ApiConfigActionState
   onRefresh: () => void
-  onSaveProfile: (profile: ApiConfigProfilePatch) => void
+  onSaveProfile: (profile: ApiConfigProfilePatch) => Promise<string | null>
   onTestProfile: (profile: ApiConfigProfilePatch) => void
   onDeleteProfile: (profileId: string) => void
-  onApplyProfile: (profileId: string) => void
+  onApplyProfile: (profileId: string) => Promise<void>
   onRestartCore: () => void
 }): JSX.Element {
   const profiles = props.status?.profiles || []
   const activeProfileId = props.status?.activeProfileId || ''
   const [selectedId, setSelectedId] = React.useState(() => activeProfileId || profiles[0]?.id || '__new__')
+  const [activeSection, setActiveSection] = React.useState<ApiSectionId>('llm')
   const selected = profiles.find((profile) => profile.id === selectedId) || null
   const [draft, setDraft] = React.useState<ApiConfigDraft>(() => apiDraftFromStatus(props.status))
   const [draftDirty, setDraftDirty] = React.useState(false)
@@ -1651,7 +1838,7 @@ function ApiConfigPanel(props: {
     if (draftDirty && draftSourceId === sourceId) {
       return
     }
-    setDraft(selected ? apiDraftFromProfile(selected) : apiBlankDraft())
+    setDraft(selected ? apiDraftFromProfile(selected) : apiDraftFromStatus(props.status))
     setDraftSourceId(sourceId)
     setDraftDirty(false)
   }, [draftDirty, draftSourceId, props.status, selected, sourceId])
@@ -1661,57 +1848,164 @@ function ApiConfigPanel(props: {
     setDraft((currentDraft) => ({ ...currentDraft, ...patch }))
   }
 
+  function updateDraftSection<K extends ApiSectionId>(section: K, patch: Partial<ApiConfigDraft[K]>): void {
+    setDraftDirty(true)
+    setDraft((currentDraft) => ({
+      ...currentDraft,
+      [section]: {
+        ...currentDraft[section],
+        ...patch
+      }
+    }))
+  }
+
   function draftToPatch(): ApiConfigProfilePatch {
     return {
       id: selected?.id,
       label: draft.label,
-      provider: draft.provider,
-      model: draft.model,
-      baseUrl: draft.baseUrl,
-      apiKey: draft.apiKey.trim() || undefined,
-      allowInsecureHttp: draft.allowInsecureHttp,
-      disableStreaming: draft.disableStreaming
+      llm: {
+        provider: draft.llm.provider,
+        model: draft.llm.model,
+        baseUrl: draft.llm.baseUrl,
+        apiKey: draft.llm.apiKey.trim() || undefined,
+        allowInsecureHttp: draft.llm.allowInsecureHttp,
+        disableStreaming: draft.llm.disableStreaming
+      },
+      vision: {
+        enabled: draft.vision.enabled,
+        model: draft.vision.model,
+        baseUrl: draft.vision.baseUrl,
+        apiKey: draft.vision.apiKey.trim() || undefined,
+        timeoutSeconds: draft.vision.timeoutSeconds,
+        maxBytes: draft.vision.maxBytes
+      },
+      hearing: {
+        enabled: draft.hearing.enabled,
+        command: draft.hearing.command,
+        model: draft.hearing.model,
+        baseUrl: draft.hearing.baseUrl,
+        apiKey: draft.hearing.apiKey.trim() || undefined,
+        language: draft.hearing.language,
+        timeoutSeconds: draft.hearing.timeoutSeconds,
+        recordFormat: draft.hearing.recordFormat
+      },
+      tts: {
+        enabled: draft.tts.enabled,
+        model: draft.tts.model,
+        baseUrl: draft.tts.baseUrl,
+        apiKey: draft.tts.apiKey.trim() || undefined,
+        voice: draft.tts.voice,
+        format: draft.tts.format,
+        requestMode: draft.tts.requestMode,
+        timeoutSeconds: draft.tts.timeoutSeconds
+      },
+      other: {
+        openAIApiKey: draft.other.openAIApiKey.trim() || undefined
+      }
     }
   }
 
-  function saveProfile(): void {
+  async function saveProfile(): Promise<string | null> {
+    const savedId = await props.onSaveProfile(draftToPatch())
+    if (!savedId) {
+      return null
+    }
+    setSelectedId(savedId)
+    setDraftSourceId(savedId)
     setDraftDirty(false)
-    props.onSaveProfile(draftToPatch())
+    return savedId
   }
 
   function testProfile(): void {
     props.onTestProfile(draftToPatch())
   }
 
+  async function applyProfile(): Promise<void> {
+    let profileId = selected?.id || ''
+    if (draftDirty || !profileId) {
+      const savedId = await saveProfile()
+      if (!savedId) {
+        return
+      }
+      profileId = savedId
+    }
+    if (!profileId) {
+      return
+    }
+    await props.onApplyProfile(profileId)
+  }
+
   function selectProfile(nextId: string): void {
     setSelectedId(nextId)
     const nextProfile = profiles.find((profile) => profile.id === nextId)
-    setDraft(nextProfile ? apiDraftFromProfile(nextProfile) : apiBlankDraft())
+    setDraft(nextProfile ? apiDraftFromProfile(nextProfile) : apiDraftFromStatus(props.status))
     setDraftSourceId(nextProfile?.id || '__new__')
     setDraftDirty(false)
   }
 
-  const currentText = current ? `${current.provider} / ${current.model}` : '未加载'
-  const keyText = selected?.apiKeyPreview || current?.apiKeyPreview || '暂无密钥'
+  const activeProfileLabel = profiles.find((profile) => profile.active)?.label || ''
+  const currentText = activeProfileLabel || (current ? `${current.llm.provider} / ${current.llm.model}` : '未加载')
+  const llmSecret = selected?.llm || current?.llm
+  const visionSecret = selected?.vision || current?.vision
+  const hearingSecret = selected?.hearing || current?.hearing
+  const ttsSecret = selected?.tts || current?.tts
+  const otherSecret = selected?.other || current?.other
+  const sectionCards = [
+    {
+      id: 'llm' as const,
+      icon: <Brain size={14} />,
+      label: 'LLM',
+      summary: current ? `${current.llm.provider} / ${current.llm.model}` : '未配置',
+      ready: Boolean(current?.llm.baseUrl)
+    },
+    {
+      id: 'vision' as const,
+      icon: <Eye size={14} />,
+      label: '视觉',
+      summary: current?.vision.enabled ? current.vision.model : '未启用',
+      ready: Boolean(current?.vision.enabled)
+    },
+    {
+      id: 'hearing' as const,
+      icon: <Radio size={14} />,
+      label: '听觉',
+      summary: current?.hearing.enabled ? `${current.hearing.model} / ${current.hearing.language}` : '未启用',
+      ready: Boolean(current?.hearing.enabled)
+    },
+    {
+      id: 'tts' as const,
+      icon: <Volume2 size={14} />,
+      label: 'TTS',
+      summary: current?.tts.enabled ? `${current.tts.model} / ${current.tts.voice}` : 'Disabled',
+      ready: Boolean(current?.tts.enabled)
+    },
+    {
+      id: 'other' as const,
+      icon: <Puzzle size={14} />,
+      label: '其他',
+      summary: current?.other.hasOpenAIApiKey ? current.other.openAIApiKeyPreview : '未配置',
+      ready: Boolean(current?.other.hasOpenAIApiKey)
+    }
+  ]
 
   return (
     <section className={`api-config-panel ${activeProfileId ? 'ready' : 'warn'}`}>
       <div className="section-head api-config-head">
         <span>
           <Terminal size={15} />
-          <span>API 快捷配置</span>
+          <span>API 配置中心</span>
         </span>
         <strong>{profiles.length}</strong>
       </div>
 
       <div className="api-current-line">
         <span>{compact(currentText, 42)}</span>
-        <small>{current?.hasApiKey ? current.apiKeyPreview : '暂无密钥'}</small>
+        <small>{current?.llm.hasApiKey ? current.llm.apiKeyPreview : '无 LLM 密钥'}</small>
       </div>
 
       <div className="api-profile-select">
         <select value={selectedId} disabled={busy} onChange={(event) => selectProfile(event.currentTarget.value)}>
-          <option value="__new__">新资料</option>
+          <option value="__new__">新建配置</option>
           {profiles.map((profile) => (
             <option value={profile.id} key={profile.id}>
               {profile.active ? '* ' : ''}
@@ -1719,80 +2013,301 @@ function ApiConfigPanel(props: {
             </option>
           ))}
         </select>
-        <button type="button" onClick={props.onRefresh} disabled={busy} title="刷新 API 资料" aria-label="刷新 API 资料">
+        <button type="button" onClick={props.onRefresh} disabled={busy} title="刷新 API 配置" aria-label="刷新 API 配置">
           <RefreshCw size={14} className={props.action.kind === 'loading' ? 'spin' : ''} />
         </button>
       </div>
 
-      <div className="api-config-grid">
+      <div className="api-profile-name">
         <label>
-          <span>名称</span>
+          <span>配置名称</span>
           <input value={draft.label} disabled={busy} onChange={(event) => updateDraft({ label: event.currentTarget.value })} />
         </label>
-        <label>
-          <span>提供方</span>
-          <input value={draft.provider} disabled={busy} onChange={(event) => updateDraft({ provider: event.currentTarget.value })} />
-        </label>
-        <label>
-          <span>模型</span>
-          <input value={draft.model} disabled={busy} onChange={(event) => updateDraft({ model: event.currentTarget.value })} />
-        </label>
-        <label>
-          <span>基础地址</span>
-          <input value={draft.baseUrl} disabled={busy} onChange={(event) => updateDraft({ baseUrl: event.currentTarget.value })} />
-        </label>
-        <label className="api-key-field">
-          <span>密钥</span>
-          <input
-            value={draft.apiKey}
-            disabled={busy}
-            type="password"
-            placeholder={selected?.hasApiKey || current?.hasApiKey ? `${keyText} · 留空则保留` : '粘贴 API 密钥'}
-            onChange={(event) => updateDraft({ apiKey: event.currentTarget.value })}
-          />
-          <small>{draft.apiKey.trim() ? '新密钥会覆盖已保存密钥' : selected?.hasApiKey ? '留空则保留已保存密钥' : '留空则在创建时使用当前环境密钥'}</small>
-        </label>
       </div>
 
-      <div className="api-runtime-flags">
-        <RuntimeSwitch
-          label="连接方式"
-          checked={draft.allowInsecureHttp}
-          detail={draft.allowInsecureHttp ? '明文连接' : '安全连接'}
-          danger={draft.allowInsecureHttp}
-          disabled={busy}
-          onToggle={() => updateDraft({ allowInsecureHttp: !draft.allowInsecureHttp })}
-        />
-        <RuntimeSwitch
-          label="流式"
-          checked={!draft.disableStreaming}
-          detail={draft.disableStreaming ? '关闭' : '开启'}
-          disabled={busy}
-          onToggle={() => updateDraft({ disableStreaming: !draft.disableStreaming })}
-        />
+      <div className="api-section-tabs">
+        {sectionCards.map((card) => (
+          <button
+            key={card.id}
+            type="button"
+            className={`api-section-tab ${activeSection === card.id ? 'active' : ''} ${card.ready ? 'ready' : 'idle'}`}
+            onClick={() => setActiveSection(card.id)}
+            disabled={busy}
+            aria-pressed={activeSection === card.id}
+          >
+            <span>
+              {card.icon}
+              <strong>{card.label}</strong>
+            </span>
+            <small>{compact(card.summary, 30)}</small>
+          </button>
+        ))}
       </div>
+
+      {activeSection === 'llm' ? (
+        <>
+          <div className="api-config-grid">
+            <label>
+              <span>提供方</span>
+              <input value={draft.llm.provider} disabled={busy} onChange={(event) => updateDraftSection('llm', { provider: event.currentTarget.value })} />
+            </label>
+            <label>
+              <span>模型</span>
+              <input value={draft.llm.model} disabled={busy} onChange={(event) => updateDraftSection('llm', { model: event.currentTarget.value })} />
+            </label>
+            <label className="full">
+              <span>基础地址</span>
+              <input value={draft.llm.baseUrl} disabled={busy} onChange={(event) => updateDraftSection('llm', { baseUrl: event.currentTarget.value })} />
+            </label>
+            <label className="api-key-field">
+              <span>密钥</span>
+              <input
+                value={draft.llm.apiKey}
+                disabled={busy}
+                type="password"
+                placeholder={apiSecretPlaceholder(llmSecret?.hasApiKey, llmSecret?.apiKeyPreview, '粘贴 LLM API 密钥')}
+                onChange={(event) => updateDraftSection('llm', { apiKey: event.currentTarget.value })}
+              />
+              <small>{apiSecretHint(draft.llm.apiKey, Boolean(llmSecret?.hasApiKey), '新密钥会覆盖已保存密钥', '留空则沿用当前环境密钥')}</small>
+            </label>
+          </div>
+
+          <div className="api-runtime-flags">
+            <RuntimeSwitch
+              label="HTTP"
+              checked={draft.llm.allowInsecureHttp}
+              detail={draft.llm.allowInsecureHttp ? '明文连接' : '安全连接'}
+              danger={draft.llm.allowInsecureHttp}
+              disabled={busy}
+              onToggle={() => updateDraftSection('llm', { allowInsecureHttp: !draft.llm.allowInsecureHttp })}
+            />
+            <RuntimeSwitch
+              label="流式输出"
+              checked={!draft.llm.disableStreaming}
+              detail={draft.llm.disableStreaming ? '关闭' : '开启'}
+              disabled={busy}
+              onToggle={() => updateDraftSection('llm', { disableStreaming: !draft.llm.disableStreaming })}
+            />
+          </div>
+        </>
+      ) : null}
+
+      {activeSection === 'vision' ? (
+        <>
+          <div className="api-runtime-flags api-runtime-flags-single">
+            <RuntimeSwitch
+              label="视觉启用"
+              checked={draft.vision.enabled}
+              detail={draft.vision.enabled ? '图像理解已接入' : '当前关闭'}
+              disabled={busy}
+              onToggle={() => updateDraftSection('vision', { enabled: !draft.vision.enabled })}
+            />
+          </div>
+
+          <div className="api-config-grid">
+            <label>
+              <span>模型</span>
+              <input value={draft.vision.model} disabled={busy} onChange={(event) => updateDraftSection('vision', { model: event.currentTarget.value })} />
+            </label>
+            <label>
+              <span>超时（秒）</span>
+              <input
+                type="number"
+                min={1}
+                value={draft.vision.timeoutSeconds}
+                disabled={busy}
+                onChange={(event) => updateDraftSection('vision', { timeoutSeconds: parseDraftNumber(event.currentTarget.value, draft.vision.timeoutSeconds) })}
+              />
+            </label>
+            <label className="full">
+              <span>基础地址</span>
+              <input value={draft.vision.baseUrl} disabled={busy} onChange={(event) => updateDraftSection('vision', { baseUrl: event.currentTarget.value })} />
+            </label>
+            <label>
+              <span>最大字节数</span>
+              <input
+                type="number"
+                min={1024}
+                value={draft.vision.maxBytes}
+                disabled={busy}
+                onChange={(event) => updateDraftSection('vision', { maxBytes: parseDraftNumber(event.currentTarget.value, draft.vision.maxBytes) })}
+              />
+            </label>
+            <label className="api-key-field">
+              <span>密钥</span>
+              <input
+                value={draft.vision.apiKey}
+                disabled={busy}
+                type="password"
+                placeholder={apiSecretPlaceholder(visionSecret?.hasApiKey, visionSecret?.apiKeyPreview, '粘贴视觉 API 密钥')}
+                onChange={(event) => updateDraftSection('vision', { apiKey: event.currentTarget.value })}
+              />
+              <small>{apiSecretHint(draft.vision.apiKey, Boolean(visionSecret?.hasApiKey), '新密钥会覆盖已保存密钥', '留空则沿用当前环境密钥')}</small>
+            </label>
+          </div>
+        </>
+      ) : null}
+
+      {activeSection === 'hearing' ? (
+        <>
+          <div className="api-runtime-flags api-runtime-flags-single">
+            <RuntimeSwitch
+              label="听觉启用"
+              checked={draft.hearing.enabled}
+              detail={draft.hearing.enabled ? '语音转文字已接入' : '当前关闭'}
+              disabled={busy}
+              onToggle={() => updateDraftSection('hearing', { enabled: !draft.hearing.enabled })}
+            />
+          </div>
+
+          <div className="api-config-grid">
+            <label className="full">
+              <span>命令通道</span>
+              <input value={draft.hearing.command} disabled={busy} onChange={(event) => updateDraftSection('hearing', { command: event.currentTarget.value })} />
+            </label>
+            <label>
+              <span>模型</span>
+              <input value={draft.hearing.model} disabled={busy} onChange={(event) => updateDraftSection('hearing', { model: event.currentTarget.value })} />
+            </label>
+            <label>
+              <span>语言</span>
+              <input value={draft.hearing.language} disabled={busy} onChange={(event) => updateDraftSection('hearing', { language: event.currentTarget.value })} />
+            </label>
+            <label className="full">
+              <span>基础地址</span>
+              <input value={draft.hearing.baseUrl} disabled={busy} onChange={(event) => updateDraftSection('hearing', { baseUrl: event.currentTarget.value })} />
+            </label>
+            <label>
+              <span>超时（秒）</span>
+              <input
+                type="number"
+                min={1}
+                value={draft.hearing.timeoutSeconds}
+                disabled={busy}
+                onChange={(event) => updateDraftSection('hearing', { timeoutSeconds: parseDraftNumber(event.currentTarget.value, draft.hearing.timeoutSeconds) })}
+              />
+            </label>
+            <label>
+              <span>录音格式</span>
+              <input value={draft.hearing.recordFormat} disabled={busy} onChange={(event) => updateDraftSection('hearing', { recordFormat: event.currentTarget.value })} />
+            </label>
+            <label className="api-key-field">
+              <span>密钥</span>
+              <input
+                value={draft.hearing.apiKey}
+                disabled={busy}
+                type="password"
+                placeholder={apiSecretPlaceholder(hearingSecret?.hasApiKey, hearingSecret?.apiKeyPreview, '粘贴听觉 API 密钥')}
+                onChange={(event) => updateDraftSection('hearing', { apiKey: event.currentTarget.value })}
+              />
+              <small>{apiSecretHint(draft.hearing.apiKey, Boolean(hearingSecret?.hasApiKey), '新密钥会覆盖已保存密钥', '留空则沿用当前环境密钥')}</small>
+            </label>
+          </div>
+        </>
+      ) : null}
+      {activeSection === 'tts' ? (
+        <>
+          <div className="api-runtime-flags api-runtime-flags-single">
+            <RuntimeSwitch
+              label="TTS"
+              checked={draft.tts.enabled}
+              detail={draft.tts.enabled ? 'Local playback on' : 'Local playback off'}
+              disabled={busy}
+              onToggle={() => updateDraftSection('tts', { enabled: !draft.tts.enabled })}
+            />
+          </div>
+
+          <div className="api-config-grid">
+            <label>
+              <span>Model</span>
+              <input value={draft.tts.model} disabled={busy} onChange={(event) => updateDraftSection('tts', { model: event.currentTarget.value })} />
+            </label>
+            <label>
+              <span>Voice</span>
+              <input value={draft.tts.voice} disabled={busy} onChange={(event) => updateDraftSection('tts', { voice: event.currentTarget.value })} />
+            </label>
+            <label className="full">
+              <span>Base URL</span>
+              <input value={draft.tts.baseUrl} disabled={busy} onChange={(event) => updateDraftSection('tts', { baseUrl: event.currentTarget.value })} />
+            </label>
+            <label>
+              <span>Request Mode</span>
+              <select value={draft.tts.requestMode} disabled={busy} onChange={(event) => updateDraftSection('tts', { requestMode: event.currentTarget.value })}>
+                <option value="auto">auto</option>
+                <option value="chat_audio">chat_audio</option>
+                <option value="audio_speech">audio_speech</option>
+              </select>
+            </label>
+            <label>
+              <span>Format</span>
+              <input value={draft.tts.format} disabled={busy} onChange={(event) => updateDraftSection('tts', { format: event.currentTarget.value })} />
+            </label>
+            <label>
+              <span>Timeout (s)</span>
+              <input
+                type="number"
+                min={1}
+                value={draft.tts.timeoutSeconds}
+                disabled={busy}
+                onChange={(event) => updateDraftSection('tts', { timeoutSeconds: parseDraftNumber(event.currentTarget.value, draft.tts.timeoutSeconds) })}
+              />
+            </label>
+            <label className="api-key-field">
+              <span>API Key</span>
+              <input
+                value={draft.tts.apiKey}
+                disabled={busy}
+                type="password"
+                placeholder={apiSecretPlaceholder(ttsSecret?.hasApiKey, ttsSecret?.apiKeyPreview, 'Paste TTS API key')}
+                onChange={(event) => updateDraftSection('tts', { apiKey: event.currentTarget.value })}
+              />
+              <small>{apiSecretHint(draft.tts.apiKey, Boolean(ttsSecret?.hasApiKey), 'New key will replace the stored key', 'Leave blank to reuse current env key')}</small>
+            </label>
+          </div>
+        </>
+      ) : null}
+
+      {activeSection === 'other' ? (
+        <div className="api-config-grid">
+          <label className="api-key-field">
+            <span>共享 OpenAI Key</span>
+            <input
+              value={draft.other.openAIApiKey}
+              disabled={busy}
+              type="password"
+              placeholder={
+                otherSecret?.hasOpenAIApiKey
+                  ? `${otherSecret.openAIApiKeyPreview} · 留空则保留`
+                  : '粘贴共享 OpenAI / 备用密钥'
+              }
+              onChange={(event) => updateDraftSection('other', { openAIApiKey: event.currentTarget.value })}
+            />
+            <small>{apiSecretHint(draft.other.openAIApiKey, Boolean(otherSecret?.hasOpenAIApiKey), '新密钥会覆盖已保存密钥', '留空则沿用当前环境密钥')}</small>
+          </label>
+        </div>
+      ) : null}
 
       <div className="api-config-actions">
-        <button type="button" onClick={saveProfile} disabled={busy || !draft.label.trim()} title="保存 API 资料" aria-label="保存 API 资料">
+        <button type="button" onClick={() => void saveProfile()} disabled={busy || !draft.label.trim()} title="保存 API 配置" aria-label="保存 API 配置">
           <Save size={14} />
           <span>保存</span>
         </button>
         <button
           type="button"
           onClick={testProfile}
-          disabled={busy || !draft.baseUrl.trim() || !draft.model.trim()}
-          title="测试 API 资料"
-          aria-label="测试 API 资料"
+          disabled={busy || !draft.llm.baseUrl.trim() || !draft.llm.model.trim()}
+          title="测试 LLM"
+          aria-label="测试 LLM"
         >
           <Radio size={14} className={props.action.kind === 'testing' ? 'spin' : ''} />
-          <span>测试</span>
+          <span>测试 LLM</span>
         </button>
         <button
           type="button"
-          onClick={() => selected && props.onApplyProfile(selected.id)}
-          disabled={busy || !selected}
-          title="应用资料并重启核心"
-          aria-label="应用资料并重启核心"
+          onClick={() => void applyProfile()}
+          disabled={busy || (!selected && !draft.label.trim())}
+          title="应用并重启核心"
+          aria-label="应用并重启核心"
         >
           <Play size={14} />
           <span>应用</span>
@@ -1801,8 +2316,8 @@ function ApiConfigPanel(props: {
           type="button"
           onClick={() => selected && props.onDeleteProfile(selected.id)}
           disabled={busy || !selected}
-          title="删除 API 资料"
-          aria-label="删除 API 资料"
+          title="删除 API 配置"
+          aria-label="删除 API 配置"
         >
           <Trash2 size={14} />
           <span>删除</span>
@@ -2109,38 +2624,153 @@ function externalPluginInstallOptionsFromDraft(plugin: ExternalPluginControl, dr
 function apiDraftFromStatus(status: ApiConfigStatus | null): ApiConfigDraft {
   const current = status?.current
   return {
-    label: current?.provider ? `${current.provider} ${current.model}`.trim() : '本地 API',
-    provider: current?.provider || 'ciallo',
-    model: current?.model || 'mimo-v2.5-pro',
-    baseUrl: current?.baseUrl || '',
-    apiKey: '',
-    allowInsecureHttp: Boolean(current?.allowInsecureHttp),
-    disableStreaming: current?.disableStreaming !== false
+    label: current?.llm.provider ? `${current.llm.provider} ${current.llm.model}`.trim() : '本地 API',
+    llm: {
+      provider: current?.llm.provider || 'ciallo',
+      model: current?.llm.model || 'mimo-v2.5-pro',
+      baseUrl: current?.llm.baseUrl || '',
+      apiKey: '',
+      allowInsecureHttp: Boolean(current?.llm.allowInsecureHttp),
+      disableStreaming: current?.llm.disableStreaming !== false
+    },
+    vision: {
+      enabled: Boolean(current?.vision.enabled),
+      model: current?.vision.model || 'gpt-4o-mini',
+      baseUrl: current?.vision.baseUrl || '',
+      apiKey: '',
+      timeoutSeconds: current?.vision.timeoutSeconds || 45,
+      maxBytes: current?.vision.maxBytes || 4 * 1024 * 1024
+    },
+    hearing: {
+      enabled: current?.hearing.enabled !== false,
+      command: current?.hearing.command || '',
+      model: current?.hearing.model || 'whisper-1',
+      baseUrl: current?.hearing.baseUrl || '',
+      apiKey: '',
+      language: current?.hearing.language || 'zh',
+      timeoutSeconds: current?.hearing.timeoutSeconds || 120,
+      recordFormat: current?.hearing.recordFormat || 'mp3'
+    },
+    tts: {
+      enabled: Boolean(current?.tts.enabled),
+      model: current?.tts.model || 'mimo-v2.5-tts',
+      baseUrl: current?.tts.baseUrl || current?.hearing.baseUrl || '',
+      apiKey: '',
+      voice: current?.tts.voice || 'mimo_default',
+      format: current?.tts.format || 'wav',
+      requestMode: current?.tts.requestMode || 'auto',
+      timeoutSeconds: current?.tts.timeoutSeconds || 60
+    },
+    other: {
+      openAIApiKey: ''
+    }
   }
 }
 
 function apiBlankDraft(): ApiConfigDraft {
   return {
     label: '',
-    provider: 'openai',
-    model: '',
-    baseUrl: '',
-    apiKey: '',
-    allowInsecureHttp: false,
-    disableStreaming: true
+    llm: {
+      provider: 'openai',
+      model: '',
+      baseUrl: '',
+      apiKey: '',
+      allowInsecureHttp: false,
+      disableStreaming: true
+    },
+    vision: {
+      enabled: false,
+      model: 'gpt-4o-mini',
+      baseUrl: '',
+      apiKey: '',
+      timeoutSeconds: 45,
+      maxBytes: 4 * 1024 * 1024
+    },
+    hearing: {
+      enabled: true,
+      command: '',
+      model: 'whisper-1',
+      baseUrl: '',
+      apiKey: '',
+      language: 'zh',
+      timeoutSeconds: 120,
+      recordFormat: 'mp3'
+    },
+    tts: {
+      enabled: false,
+      model: 'mimo-v2.5-tts',
+      baseUrl: '',
+      apiKey: '',
+      voice: 'mimo_default',
+      format: 'wav',
+      requestMode: 'auto',
+      timeoutSeconds: 60
+    },
+    other: {
+      openAIApiKey: ''
+    }
   }
 }
 
 function apiDraftFromProfile(profile: ApiConfigProfile): ApiConfigDraft {
   return {
     label: profile.label,
-    provider: profile.provider,
-    model: profile.model,
-    baseUrl: profile.baseUrl,
-    apiKey: '',
-    allowInsecureHttp: profile.allowInsecureHttp,
-    disableStreaming: profile.disableStreaming
+    llm: {
+      provider: profile.llm.provider,
+      model: profile.llm.model,
+      baseUrl: profile.llm.baseUrl,
+      apiKey: '',
+      allowInsecureHttp: profile.llm.allowInsecureHttp,
+      disableStreaming: profile.llm.disableStreaming
+    },
+    vision: {
+      enabled: profile.vision.enabled,
+      model: profile.vision.model,
+      baseUrl: profile.vision.baseUrl,
+      apiKey: '',
+      timeoutSeconds: profile.vision.timeoutSeconds,
+      maxBytes: profile.vision.maxBytes
+    },
+    hearing: {
+      enabled: profile.hearing.enabled,
+      command: profile.hearing.command,
+      model: profile.hearing.model,
+      baseUrl: profile.hearing.baseUrl,
+      apiKey: '',
+      language: profile.hearing.language,
+      timeoutSeconds: profile.hearing.timeoutSeconds,
+      recordFormat: profile.hearing.recordFormat
+    },
+    tts: {
+      enabled: profile.tts.enabled,
+      model: profile.tts.model,
+      baseUrl: profile.tts.baseUrl,
+      apiKey: '',
+      voice: profile.tts.voice,
+      format: profile.tts.format,
+      requestMode: profile.tts.requestMode,
+      timeoutSeconds: profile.tts.timeoutSeconds
+    },
+    other: {
+      openAIApiKey: ''
+    }
   }
+}
+
+function apiSecretPlaceholder(hasSecret: boolean | undefined, preview: string | undefined, createText: string): string {
+  return hasSecret && preview ? `${preview} · 留空则保留` : createText
+}
+
+function apiSecretHint(nextValue: string, hasStored: boolean, replaceText: string, fallbackText: string): string {
+  if (nextValue.trim()) {
+    return replaceText
+  }
+  return hasStored ? '留空则保留已保存密钥' : fallbackText
+}
+
+function parseDraftNumber(value: string, fallback: number): number {
+  const parsed = Number.parseInt(value, 10)
+  return Number.isFinite(parsed) ? parsed : fallback
 }
 
 function QQBridgePanel(props: {
@@ -2162,6 +2792,14 @@ function QQBridgePanel(props: {
   const busy = props.action.kind !== 'idle'
   const checkedAt = props.status?.checkedAt ? formatTime(props.status.checkedAt) : '--:--'
   const tokenAvailable = Boolean(props.status?.tokenAvailable)
+  const qqLoginState =
+    props.status?.napcatQQLoggedIn === true
+      ? 'QQ 已登录'
+      : props.status?.napcatQQLoggedIn === false
+        ? 'QQ 未登录'
+        : tokenAvailable
+          ? '网页端口令可复制'
+          : '未找到网页端口令'
   const diagnosis = qqDiagnosisLabel(props.status?.diagnosis || '', tokenAvailable)
 
   return (
@@ -2180,7 +2818,7 @@ function QQBridgePanel(props: {
       </div>
       <div className={`qq-login-hint ${allReady ? 'ready' : ''}`}>
         <span>{diagnosis}</span>
-        <small>{tokenAvailable ? '网页端口令可复制' : '未找到网页端口令'}</small>
+        <small>{qqLoginState}</small>
       </div>
 
       <div className="qq-service-list">
@@ -2774,3 +3412,131 @@ function memoryRouteList(value: unknown): string[] {
   }
   return value.map((item) => String(item || '').trim()).filter(Boolean)
 }
+
+type GateCell = { label: string; ok: boolean | null; detail?: string }
+
+function GateCellView({ cell }: { cell: GateCell }): JSX.Element {
+  const tone = cell.ok === true ? 'gate-ok' : cell.ok === false ? 'gate-fail' : 'gate-unknown'
+  return (
+    <div className={`gate-cell ${tone}`} title={cell.detail || cell.label}>
+      <span className="gate-icon">{cell.ok === true ? <Check size={11} /> : cell.ok === false ? <X size={11} /> : <Clock3 size={11} />}</span>
+      <span className="gate-label">{cell.label}</span>
+    </div>
+  )
+}
+
+export function AutonomyGatePanel(props: {
+  stage12: Stage12GateStatus | null
+  stage13: Stage13GateStatus | null
+  qqEnvironment: QQEnvironmentStatus | null
+  stage8: Stage8MemoryGovernanceStatus | null
+  asyncExploration: AsyncExplorationState | null
+}): JSX.Element {
+  const { stage12, stage13, qqEnvironment, stage8, asyncExploration } = props
+
+  const services: GateCell[] = (qqEnvironment?.services || []).map((s) => ({
+    label: qqServiceLabel(s),
+    ok: s.ok,
+    detail: s.detail || s.endpoint,
+  }))
+
+  const s12cells: GateCell[] = stage12
+    ? [
+        { label: 'Stage11→12', ok: stage12.gateStage11Ready },
+        { label: '实时循环', ok: stage12.gateLiveLoopPass, detail: stage12.liveLoopFailingDetail || stage12.liveLoopFailingChecks },
+        { label: '反馈消费', ok: stage12.gateFeedbackClean },
+        { label: '短期记忆', ok: stage12.gateShortTermClean },
+        { label: '隐私边界', ok: stage12.gatePrivacyClean },
+        { label: '稳定记忆', ok: stage12.gateStableClean },
+        { label: '金丝雀', ok: stage12.gateCanaryReady },
+      ]
+    : []
+
+  const s13ready = stage13?.available ?? null
+  const s8blocked = stage8 ? stage8.ownerReviewRequiredCount > 0 || stage8.duplicateClusterCount > 0 : null
+
+  const s12StatusLabel = stage12
+    ? stage12.readyForStage13
+      ? '✓ 已就绪'
+      : `${stage12.liveLoopPassedCount}/${stage12.liveLoopRequiredCount} 通过`
+    : '—'
+
+  const s12StatusTone = stage12
+    ? stage12.readyForStage13
+      ? 'status-ok'
+      : 'status-fail'
+    : 'status-unknown'
+
+  return (
+    <div className="autonomy-gate-panel">
+      <div className="gate-section">
+        <span className="gate-section-label">
+          <Radio size={12} /> 服务
+        </span>
+        <div className="gate-cells">
+          {services.length ? services.map((c) => <GateCellView key={c.label} cell={c} />) : <span className="gate-empty">等待刷新</span>}
+        </div>
+      </div>
+
+      <div className="gate-section">
+        <span className="gate-section-label">
+          <Brain size={12} /> Stage12
+          <span className={`gate-summary ${s12StatusTone}`}>{s12StatusLabel}</span>
+        </span>
+        <div className="gate-cells">
+          {s12cells.length ? s12cells.map((c) => <GateCellView key={c.label} cell={c} />) : <span className="gate-empty">无状态</span>}
+        </div>
+        {stage12 && !stage12.readyForStage13 && stage12.liveLoopFailingDetail ? (
+          <div className="gate-blocker">{compact(stage12.liveLoopFailingDetail, 120)}</div>
+        ) : null}
+      </div>
+
+      <div className="gate-section">
+        <span className="gate-section-label">
+          <Sparkles size={12} /> Stage13
+          <GateCellView cell={{ label: s13ready ? '可用' : '等待 Stage12', ok: s13ready }} />
+        </span>
+        {stage13 && !stage13.available ? (
+          <div className="gate-blocker">{compact(stage13.reason, 100)}</div>
+        ) : null}
+      </div>
+
+      <div className="gate-section">
+        <span className="gate-section-label">
+          <Compass size={12} /> 探索循环
+          {asyncExploration && asyncExploration.ok ? (
+            <GateCellView cell={{
+              label: asyncExploration.status === 'delegated_to_codex' ? '等待 Codex' :
+                     asyncExploration.status === 'completed' ? '已完成' :
+                     asyncExploration.status === 'missing' ? '无挂起探索' : asyncExploration.status,
+              ok: asyncExploration.status === 'completed' ? true :
+                  asyncExploration.status === 'delegated_to_codex' ? null : null,
+              detail: asyncExploration.taskSummary || asyncExploration.delegationReason,
+            }} />
+          ) : (
+            <span className="gate-empty">无挂起探索</span>
+          )}
+        </span>
+        {asyncExploration && asyncExploration.resumeId && asyncExploration.resumeId !== 'none' ? (
+          <div className="gate-blocker" style={{color:'var(--app-text)'}}>
+            {compact(asyncExploration.resumeId, 40)} · {compact(asyncExploration.taskSummary, 60)}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="gate-section">
+        <span className="gate-section-label">
+          <ShieldAlert size={12} /> Stage8 记忆治理
+          {s8blocked === true ? (
+            <span className="gate-summary status-fail">
+              待审核 {stage8?.ownerReviewRequiredCount ?? 0} · 重复簇 {stage8?.duplicateClusterCount ?? 0}
+            </span>
+          ) : s8blocked === false ? (
+            <span className="gate-summary status-ok">治理清洁</span>
+          ) : null}
+        </span>
+      </div>
+    </div>
+  )
+}
+

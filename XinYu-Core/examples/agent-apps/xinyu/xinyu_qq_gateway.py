@@ -17,6 +17,7 @@ from xinyu_gateway_ack_spool import SentAckSpool
 from xinyu_group_shadow_observer import record_group_shadow_observation
 from xinyu_image_context import build_image_context, is_image_learning_payload
 from xinyu_codex_delegate import looks_like_owner_local_write_request
+from xinyu_behavior_shadow_client import record_behavior_shadow_log
 import xinyu_qq_attachment_resolver
 import xinyu_qq_command_router
 import xinyu_qq_gateway_context_enrichment
@@ -51,6 +52,7 @@ import xinyu_qq_sender
 import xinyu_qq_sticker_semantics
 import xinyu_qq_trust_policy
 import xinyu_qq_visible_dispatch
+import xinyu_qq_voice_transcript
 from xinyu_turn_completion import TurnCompletionDecision, evaluate_turn_completion
 
 try:
@@ -59,7 +61,7 @@ except ImportError as exc:  # pragma: no cover - exercised by startup scripts
     raise SystemExit("Missing dependency: websockets. Run: python -m pip install -r requirements-minimal.txt") from exc
 
 
-GATEWAY_VERSION = "0.1.25"
+GATEWAY_VERSION = "0.1.29"
 GATEWAY_NAME = "xinyu_native_qq_gateway"
 QQ_INBOUND_TRACE_REL = Path("runtime") / "qq_inbound_trace.jsonl"
 QQ_RICH_CONTEXT_TRACE_REL = Path("runtime") / "qq_rich_context_trace.jsonl"
@@ -107,6 +109,7 @@ class NativeQQGateway:
         self._recent_sticker_imports: dict[str, RecentStickerImportState] = {}
         self._recent_group_reply_message_ids: dict[str, dict[str, Any]] = {}
         self._group_followup_windows: dict[str, dict[str, Any]] = {}
+        self._behavior_shadow_tasks: set[asyncio.Task[Any]] = set()
         self._connection_count = 0
 
     _effective_whitelist_user_ids = xinyu_qq_trust_policy.gateway_effective_whitelist_user_ids
@@ -493,6 +496,24 @@ class NativeQQGateway:
             user_id=event.get("user_id"),
         )
 
+    def _event_supersedes_pending_visible_reply(self, event: dict[str, Any]) -> bool:
+        if _safe_str(event.get("post_type")).lower() != "message":
+            return False
+        if self._message_kind(event) != "private":
+            return False
+        sender_id = _safe_str(event.get("user_id"), "").strip()
+        if sender_id not in self.config.owner_user_ids:
+            return False
+        text = self._extract_text(event).strip()
+        if text:
+            return True
+        if self.config.qq_sticker_import_enabled and self._extract_sticker_import_material(event) is not None:
+            return False
+        if self.config.qq_file_learning_enabled and self._extract_learning_material(event) is not None:
+            return False
+        rich_context = self._extract_rich_message_context(event)
+        return bool(_safe_str(rich_context.get("fallback_text")).strip())
+
     def _mark_latest_session_arrival(self, session_queue_key: str, arrival_seq: int) -> None:
         xinyu_qq_session_flow.mark_latest_session_arrival(
             self._latest_inbound_arrival_by_session_hash,
@@ -521,7 +542,8 @@ class NativeQQGateway:
             return
         arrival_seq = self._next_arrival_seq()
         queue_key = self._event_session_queue_key(event)
-        self._mark_latest_session_arrival(queue_key, arrival_seq)
+        if self._event_supersedes_pending_visible_reply(event):
+            self._mark_latest_session_arrival(queue_key, arrival_seq)
         async with self._inbound_queue_lock:
             queue = self._inbound_session_queues.get(queue_key)
             if queue is None:
@@ -719,8 +741,12 @@ class NativeQQGateway:
                 "rich_summary": _safe_str(rich.get("summary"))[:500],
                 "sticker_count": int(rich.get("sticker_count") or 0),
                 "image_count": int(rich.get("image_count") or 0),
+                "voice_count": int(rich.get("voice_count") or 0),
+                "audio_count": int(rich.get("audio_count") or 0),
+                "record_count": int(rich.get("record_count") or 0),
                 "forward_count": int(rich.get("forward_count") or 0),
                 "reply_message_id": _safe_str(rich.get("reply_message_id")).strip(),
+                "supersedes_visible_reply": self._event_supersedes_pending_visible_reply(event),
                 "drop_reason": drop_reason,
                 "error": error[:500],
             }
@@ -745,12 +771,14 @@ class NativeQQGateway:
             arrival_seq = self._next_arrival_seq()
         if not session_queue_key:
             session_queue_key = self._event_session_queue_key(event)
-        self._mark_latest_session_arrival(session_queue_key, arrival_seq)
+        if self._event_supersedes_pending_visible_reply(event):
+            self._mark_latest_session_arrival(session_queue_key, arrival_seq)
         self._maybe_record_group_shadow_event(event)
         prepared = self.prepare_message(event)
         prepared = await self._upgrade_reply_file_learning(websocket, event, prepared)
         prepared = await self._enrich_reply_context(websocket, event, prepared)
         prepared = await self._enrich_forward_context(websocket, event, prepared)
+        prepared = await self._maybe_transcribe_owner_private_voice(websocket, event, prepared)
         if prepared is None:
             self._trace_qq_inbound(
                 event,
@@ -829,6 +857,7 @@ class NativeQQGateway:
         payload = prepared.payload if isinstance(prepared.payload, dict) else {}
         metadata = payload.get("metadata")
         metadata = metadata if isinstance(metadata, dict) else {}
+        self._schedule_behavior_shadow_log(prepared)
         self._trace_qq_inbound(
             event_for_trace,
             stage="dispatch_start",
@@ -906,59 +935,25 @@ class NativeQQGateway:
                     payload=payload,
                     status="pending",
                 )
-                try:
-                    import_response = await self.client.sticker_import(payload)
-                except BridgeError as exc:
-                    self._trace_sticker_import(
-                        event or {},
-                        target=prepared.target,
-                        payload=payload,
-                        stage="error",
-                        elapsed_ms=int((time.monotonic() - started) * 1000),
-                        error=str(exc),
-                    )
-                    self._remember_recent_sticker_import(
-                        target=prepared.target,
-                        event=event or {},
-                        payload=payload,
-                        status="error",
-                        error=str(exc),
-                    )
-                    raise
                 self._trace_sticker_import(
                     event or {},
                     target=prepared.target,
                     payload=payload,
-                    response=import_response,
-                    stage="completed",
+                    stage="background_queued",
                     elapsed_ms=int((time.monotonic() - started) * 1000),
                 )
-                self._remember_recent_sticker_import(
-                    target=prepared.target,
-                    event=event or {},
-                    payload=payload,
-                    status="completed",
-                    response=import_response,
-                )
-                response = import_response
-                followup_payload = self._build_sticker_followup_chat_payload(
+                self._schedule_sticker_import_background(
+                    websocket,
                     event or {},
                     target=prepared.target,
                     sticker_payload=payload,
-                    sticker_response=import_response,
                 )
-                if followup_payload is not None:
-                    self._trace_qq_rich_context(
-                        event or {},
-                        PreparedMessage(target=prepared.target, payload=followup_payload, route="chat"),
-                        stage="sticker_followup_after_import",
-                    )
-                    response = await self._chat_with_core_retry(
-                        followup_payload,
-                        prepared=prepared,
-                        event=event_for_trace,
-                        metadata=metadata,
-                    )
+                response = {
+                    "accepted": True,
+                    "reply": "",
+                    "route": "sticker_import",
+                    "notes": ["sticker_import_background_queued"],
+                }
             elif prepared.route == "package_install":
                 if not self.config.bridge_token:
                     await self.send_reply(
@@ -1088,13 +1083,20 @@ class NativeQQGateway:
         if self.config.send_replies and response.get("accepted", True) and reply:
             stale, generation_waterline, latest_arrival = self._visible_reply_stale_waterline(prepared)
             if stale:
+                drop_reason = f"newer_input_before_visible_send:{generation_waterline}->{latest_arrival}"
+                await self._drop_unsent_visible_reply(
+                    prepared,
+                    reply=reply,
+                    core_response=response,
+                    drop_reason=drop_reason,
+                )
                 self._trace_qq_inbound(
                     event_for_trace,
                     stage="stale_reply_dropped",
                     arrival_seq=_as_int(metadata.get("qq_arrival_seq"), 0),
                     prepared=prepared,
                     session_queue_key=_safe_str(metadata.get("qq_session_queue_hash")),
-                    drop_reason=f"newer_input_before_visible_send:{generation_waterline}->{latest_arrival}",
+                    drop_reason=drop_reason,
                 )
                 return
             self._record_direct_visible_send_shadow(prepared, reply, response)
@@ -1122,6 +1124,51 @@ class NativeQQGateway:
                 session_queue_key=_safe_str(metadata.get("qq_session_queue_hash")),
                 drop_reason="" if reply else "empty_visible_reply",
                 )
+
+    def _schedule_behavior_shadow_log(self, prepared: PreparedMessage) -> None:
+        if not self.config.behavior_shadow_log_enabled:
+            return
+        payload = prepared.payload if isinstance(prepared.payload, dict) else {}
+        if not payload:
+            return
+        target = {
+            "message_kind": prepared.target.message_kind,
+            "user_id_hash": _hash_id(prepared.target.user_id),
+            "group_id_hash": _hash_id(prepared.target.group_id),
+        }
+        task = asyncio.create_task(
+            self._record_behavior_shadow_log(prepared, target=target),
+            name=f"xinyu-behavior-shadow-{_safe_str(payload.get('message_id')) or 'turn'}",
+        )
+        self._behavior_shadow_tasks.add(task)
+        task.add_done_callback(self._behavior_shadow_tasks.discard)
+
+    async def _record_behavior_shadow_log(
+        self,
+        prepared: PreparedMessage,
+        *,
+        target: dict[str, Any],
+    ) -> None:
+        try:
+            result = await asyncio.to_thread(
+                record_behavior_shadow_log,
+                prepared.payload,
+                route=prepared.route,
+                target=target,
+                enabled=True,
+                endpoint=self.config.behavior_shadow_log_url,
+                include_text=self.config.behavior_shadow_include_text,
+                timeout_seconds=self.config.behavior_shadow_timeout_seconds,
+            )
+        except Exception as exc:
+            print(f"[xinyu_qq_gateway] behavior shadow log failed: {type(exc).__name__}: {exc}", flush=True)
+            return
+        if result.get("ok") is True or "behavior_shadow_log_disabled" in result.get("notes", []):
+            return
+        notes = ",".join(_safe_str(note) for note in result.get("notes", [])[:3])
+        error = _safe_str(result.get("error")).strip()
+        suffix = f": {error}" if error else (f": {notes}" if notes else "")
+        print(f"[xinyu_qq_gateway] behavior shadow log failed{suffix}", flush=True)
 
     async def _dispatch_intent_gated_prepared_message(
         self,
@@ -1182,6 +1229,12 @@ class NativeQQGateway:
     ) -> None:
         started = time.monotonic()
         self._trace_sticker_import(event, target=target, payload=sticker_payload, stage="queued")
+        self._remember_recent_sticker_import(
+            target=target,
+            event=event,
+            payload=sticker_payload,
+            status="pending",
+        )
         try:
             resolved_payload = await self._resolve_sticker_import_payload(websocket, sticker_payload)
             if resolved_payload is not sticker_payload:
@@ -1201,6 +1254,13 @@ class NativeQQGateway:
                 stage="completed",
                 elapsed_ms=int((time.monotonic() - started) * 1000),
             )
+            self._remember_recent_sticker_import(
+                target=target,
+                event=event,
+                payload=resolved_payload,
+                status="completed",
+                response=response,
+            )
         except BridgeError as exc:
             self._trace_sticker_import(
                 event,
@@ -1208,6 +1268,13 @@ class NativeQQGateway:
                 payload=sticker_payload,
                 stage="error",
                 elapsed_ms=int((time.monotonic() - started) * 1000),
+                error=str(exc),
+            )
+            self._remember_recent_sticker_import(
+                target=target,
+                event=event,
+                payload=sticker_payload,
+                status="error",
                 error=str(exc),
             )
             print(f"[xinyu_qq_gateway] background sticker import error: {exc}", flush=True)
@@ -1218,6 +1285,13 @@ class NativeQQGateway:
                 payload=sticker_payload,
                 stage="error",
                 elapsed_ms=int((time.monotonic() - started) * 1000),
+                error=f"{type(exc).__name__}: {exc}",
+            )
+            self._remember_recent_sticker_import(
+                target=target,
+                event=event,
+                payload=sticker_payload,
+                status="error",
                 error=f"{type(exc).__name__}: {exc}",
             )
             print("[xinyu_qq_gateway] unexpected background sticker import error", flush=True)
@@ -1646,6 +1720,10 @@ class NativeQQGateway:
         coalesced_count = _as_int(metadata.get("qq_coalesced_message_count"), len(fragments))
         if _as_bool(metadata.get("qq_coalesced_owner_messages"), default=False) or coalesced_count > 1:
             notes.append("coalesced_owner_fragments")
+        turn_completion_should_generate = _as_bool(
+            metadata.get("qq_turn_completion_should_generate"),
+            default=False,
+        )
 
         correction_markers = (
             "\u4e0d\u662f",
@@ -1793,17 +1871,29 @@ class NativeQQGateway:
         elif has_question or has_emotion or has_technical or has_social:
             action = "reply_now"
         elif all_low_info:
-            action = "silent"
-            should_reply = False
-            notes.append("low_info_owner_turn")
+            if turn_completion_should_generate:
+                action = "reply_now"
+                notes.append("turn_completion_ready_overrides_silent")
+            else:
+                action = "silent"
+                should_reply = False
+                notes.append("low_info_owner_turn")
         elif self._owner_private_looks_like_fragment_continuation(fragments[-1]):
-            action = "wait_more"
-            should_reply = False
-            notes.append("fragment_continuation_marker")
+            if turn_completion_should_generate:
+                action = "reply_now"
+                notes.append("turn_completion_ready_overrides_fragment_wait")
+            else:
+                action = "wait_more"
+                should_reply = False
+                notes.append("fragment_continuation_marker")
         elif short_status_update:
-            action = "silent"
-            should_reply = False
-            notes.append("short_status_update")
+            if turn_completion_should_generate:
+                action = "reply_now"
+                notes.append("turn_completion_ready_overrides_silent")
+            else:
+                action = "silent"
+                should_reply = False
+                notes.append("short_status_update")
 
         return {
             "applies": True,
@@ -2032,6 +2122,17 @@ class NativeQQGateway:
             metadata["qq_message_segments"] = rich_segments[:12]
             metadata["qq_sticker_count"] = sum(1 for segment in rich_segments if segment.get("kind") == "sticker")
             metadata["qq_image_count"] = sum(1 for segment in rich_segments if segment.get("kind") == "image")
+            metadata["qq_voice_count"] = sum(1 for segment in rich_segments if segment.get("kind") == "voice")
+            metadata["qq_record_count"] = sum(
+                1
+                for segment in rich_segments
+                if segment.get("kind") == "voice" and _safe_str(segment.get("segment_type")).lower() == "record"
+            )
+            metadata["qq_audio_count"] = sum(
+                1
+                for segment in rich_segments
+                if segment.get("kind") == "voice" and _safe_str(segment.get("segment_type")).lower() in {"audio", "voice"}
+            )
             metadata["qq_rich_summary"] = "；".join(
                 _safe_str(segment.get("summary") or segment.get("name") or segment.get("id")).strip()
                 for segment in rich_segments[:6]
@@ -2101,7 +2202,18 @@ class NativeQQGateway:
             "qq_rich_summary": _safe_str(metadata.get("qq_rich_summary") or rich.get("summary"))[:800],
             "qq_sticker_count": _as_int(metadata.get("qq_sticker_count"), int(rich.get("sticker_count") or 0)),
             "qq_image_count": _as_int(metadata.get("qq_image_count"), int(rich.get("image_count") or 0)),
+            "qq_voice_count": _as_int(metadata.get("qq_voice_count"), int(rich.get("voice_count") or 0)),
+            "qq_audio_count": _as_int(metadata.get("qq_audio_count"), int(rich.get("audio_count") or 0)),
+            "qq_record_count": _as_int(metadata.get("qq_record_count"), int(rich.get("record_count") or 0)),
             "qq_forward_count": _as_int(metadata.get("qq_forward_count"), int(rich.get("forward_count") or 0)),
+            "qq_voice_transcript_available": _as_bool(
+                metadata.get("qq_voice_transcript_available"),
+                default=False,
+            ),
+            "qq_voice_transcript_status": _safe_str(metadata.get("qq_voice_transcript_status")),
+            "qq_voice_transcript_engine": _safe_str(metadata.get("qq_voice_transcript_engine")),
+            "qq_voice_transcript_text_len": _as_int(metadata.get("qq_voice_transcript_text_len"), 0),
+            "qq_voice_transcript_trace_ref": _safe_str(metadata.get("qq_voice_transcript_trace_ref")),
             "segments": safe_segments,
             "qq_image_context_available": _as_bool(metadata.get("qq_image_context_available"), default=False),
             "qq_image_context_notes": image_context.get("notes", [])[:8] if isinstance(image_context.get("notes"), list) else [],
@@ -2137,6 +2249,7 @@ class NativeQQGateway:
             print(f"[xinyu_qq_gateway] ignored blocked group={group_id}", flush=True)
             return None
         text = self._extract_text(event).strip()
+        original_text = text
         rich_context = self._extract_rich_message_context(event)
         sticker_material = self._extract_sticker_import_material(event)
         learning_material = self._extract_learning_material(event)
@@ -2158,6 +2271,19 @@ class NativeQQGateway:
             return None
 
         target = ReplyTarget(message_kind=message_kind, user_id=sender_id, group_id=group_id)
+        if self._is_owner_private_untranscribed_voice(
+            target,
+            original_text=original_text,
+            rich_context=rich_context,
+            learning_material=learning_material,
+            sticker_material=sticker_material,
+        ):
+            return PreparedMessage(
+                target=target,
+                payload={},
+                route="local_reply",
+                local_reply=self._untranscribed_voice_local_reply(),
+            )
 
         if sender_id in self.config.owner_user_ids and (
             self._looks_like_trust_command(text) or self._looks_like_trust_revoke_command(text)
@@ -2367,6 +2493,92 @@ class NativeQQGateway:
         return PreparedMessage(
             target=target,
             payload=chat_payload,
+        )
+
+    async def _maybe_transcribe_owner_private_voice(
+        self,
+        websocket: Any,
+        event: dict[str, Any],
+        prepared: PreparedMessage | None,
+    ) -> PreparedMessage | None:
+        if prepared is None:
+            return None
+        if prepared.route != "local_reply" or not prepared.local_reply:
+            return prepared
+        rich_context = self._extract_rich_message_context(event)
+        if not self._is_owner_private_untranscribed_voice(
+            prepared.target,
+            original_text=self._extract_text(event).strip(),
+            rich_context=rich_context,
+            learning_material=self._extract_learning_material(event),
+            sticker_material=self._extract_sticker_import_material(event),
+        ):
+            return prepared
+        result = await xinyu_qq_voice_transcript.transcribe_owner_private_voice(
+            self,
+            websocket,
+            event,
+            target=prepared.target,
+        )
+        if not result.transcribed:
+            print(
+                "[xinyu_qq_gateway] owner private voice transcription unavailable: "
+                f"status={result.status} error={result.error}",
+                flush=True,
+            )
+            return prepared
+
+        payload = self._build_chat_payload(
+            event,
+            target=prepared.target,
+            text=result.transcript,
+            rich_context=rich_context,
+        )
+        metadata = payload.get("metadata")
+        metadata = metadata if isinstance(metadata, dict) else {}
+        metadata.update(
+            {
+                "source": "qq_voice_transcript_message",
+                "qq_voice_transcript_available": True,
+                "qq_voice_transcript_status": result.status,
+                "qq_voice_transcript_engine": result.engine,
+                "qq_voice_transcript_model": result.model,
+                "qq_voice_transcript_language": result.language,
+                "qq_voice_transcript_text_len": len(result.transcript.strip()),
+                "qq_voice_transcript_trace_ref": result.trace_ref,
+                "qq_voice_audio_resolution_status": result.audio_ref.status if result.audio_ref else "payload",
+                "qq_voice_audio_resolved_by": result.audio_ref.resolved_by if result.audio_ref else "onebot_payload",
+            }
+        )
+        if result.confidence is not None:
+            metadata["qq_voice_transcript_confidence"] = result.confidence
+        payload["metadata"] = metadata
+        payload["raw_message"] = result.transcript
+        return PreparedMessage(target=prepared.target, payload=payload, route="chat")
+
+    def _is_owner_private_untranscribed_voice(
+        self,
+        target: ReplyTarget,
+        *,
+        original_text: str,
+        rich_context: dict[str, Any],
+        learning_material: Any,
+        sticker_material: Any,
+    ) -> bool:
+        if target.message_kind != "private" or target.user_id not in self.config.owner_user_ids:
+            return False
+        if original_text.strip() or learning_material is not None or sticker_material is not None:
+            return False
+        return _as_int(rich_context.get("voice_count"), 0) > 0
+
+    @staticmethod
+    def _untranscribed_voice_local_reply() -> str:
+        return (
+            "\u6211\u6536\u5230\u8bed\u97f3\u4e86\uff0c"
+            "\u4f46\u73b0\u5728\u8fd8\u6ca1\u6709\u8f6c\u5199\u5185\u5bb9\uff0c"
+            "\u6211\u4e0d\u80fd\u786e\u5b9a\u4f60\u8bf4\u4e86\u4ec0\u4e48\u3002"
+            "\u4f60\u53ef\u4ee5\u518d\u53d1\u4e00\u53e5\u6587\u5b57\uff0c"
+            "\u6211\u5c31\u63a5\u7740\u56de\u3002"
         )
 
     def _prepare_none_reason(self, event: dict[str, Any]) -> str:
@@ -2607,6 +2819,9 @@ class NativeQQGateway:
         segment_records: list[dict[str, Any]] = []
         sticker_count = 0
         image_count = 0
+        voice_count = 0
+        audio_count = 0
+        record_count = 0
         reply_message_id = self._extract_reply_message_id(event)
         forward_ids = self._extract_forward_message_ids(event)
         forward_count = 0
@@ -2627,6 +2842,14 @@ class NativeQQGateway:
             elif kind == "image":
                 image_count += 1
                 summaries.append(f"图片:{label or 'unknown'}")
+            elif kind == "voice":
+                voice_count += 1
+                segment_type = _safe_str(record.get("segment_type")).strip().lower()
+                if segment_type == "record":
+                    record_count += 1
+                if segment_type in {"audio", "voice"}:
+                    audio_count += 1
+                summaries.append(f"语音:{label or 'voice_audio'}")
             elif kind == "reply" and label:
                 summaries.append(f"引用:{label}")
             elif kind == "forward":
@@ -2638,6 +2861,8 @@ class NativeQQGateway:
         fallback_text = ""
         if not self._extract_text(event).strip() and forward_count:
             fallback_text = "我转发了一段聊天记录。"
+        elif not self._extract_text(event).strip() and voice_count:
+            fallback_text = "我发了一条语音。"
         elif not self._extract_text(event).strip() and summaries:
             fallback_text = "我发了" + "，".join(summaries[:3])
 
@@ -2647,6 +2872,9 @@ class NativeQQGateway:
             "fallback_text": fallback_text,
             "sticker_count": sticker_count,
             "image_count": image_count,
+            "voice_count": voice_count,
+            "audio_count": audio_count,
+            "record_count": record_count,
             "forward_count": forward_count,
             "forward_message_ids": forward_ids,
             "reply_message_id": reply_message_id,
@@ -2710,7 +2938,7 @@ class NativeQQGateway:
 
     def _learning_material_from_segment(self, segment: dict[str, Any]) -> dict[str, str] | None:
         segment_type = _safe_str(segment.get("type")).strip().lower()
-        if segment_type not in {"file", "image", "record", "video"}:
+        if segment_type not in {"file", "image", "video"}:
             return None
         data = segment.get("data")
         if not isinstance(data, dict):
@@ -2724,7 +2952,7 @@ class NativeQQGateway:
     def _learning_material_from_cq(self, raw_message: str) -> dict[str, str] | None:
         for segment in self._parse_cq_segments(raw_message):
             segment_type = _safe_str(segment.get("type")).strip().lower()
-            if segment_type not in {"file", "image", "record", "video"}:
+            if segment_type not in {"file", "image", "video"}:
                 continue
             data = self._segment_data(segment)
             if segment_type == "image" and self._image_segment_looks_like_sticker(data):
@@ -2776,6 +3004,9 @@ class NativeQQGateway:
             metadata["qq_message_segments"] = rich_context.get("segments", [])[:12]
             metadata["qq_sticker_count"] = int(rich_context.get("sticker_count") or 0)
             metadata["qq_image_count"] = int(rich_context.get("image_count") or 0)
+            metadata["qq_voice_count"] = int(rich_context.get("voice_count") or 0)
+            metadata["qq_audio_count"] = int(rich_context.get("audio_count") or 0)
+            metadata["qq_record_count"] = int(rich_context.get("record_count") or 0)
             metadata["qq_forward_count"] = int(rich_context.get("forward_count") or 0)
         reply_message_id = _safe_str(rich_context.get("reply_message_id")).strip()
         if reply_message_id:
@@ -3321,6 +3552,49 @@ class NativeQQGateway:
         except BridgeError as exc:
             print(f"[xinyu_qq_gateway] OneBot action failed: {action}: {exc}", flush=True)
             return None
+
+    async def _drop_unsent_visible_reply(
+        self,
+        prepared: PreparedMessage,
+        *,
+        reply: str,
+        core_response: dict[str, Any],
+        drop_reason: str,
+    ) -> None:
+        if not self.config.bridge_token:
+            return
+        source_payload = prepared.payload if isinstance(prepared.payload, dict) else {}
+        payload = {
+            "adapter": GATEWAY_NAME,
+            "gateway": GATEWAY_NAME,
+            "route": _safe_str(core_response.get("route") or prepared.route or "chat").strip() or "chat",
+            "source_route": prepared.route or "chat",
+            "session_id": _safe_str(core_response.get("session_id") or source_payload.get("session_id")).strip(),
+            "turn_id": _safe_str(core_response.get("turn_id")).strip(),
+            "archive_message_ids": core_response.get("archive_message_ids")
+            if isinstance(core_response.get("archive_message_ids"), list)
+            else [],
+            "archive_assistant_message_id": _safe_str(core_response.get("archive_assistant_message_id")).strip(),
+            "source_message_id": _safe_str(source_payload.get("message_id")).strip(),
+            "message_type": prepared.target.message_kind,
+            "target": {
+                "message_kind": prepared.target.message_kind,
+                "user_id": prepared.target.user_id,
+                "group_id": prepared.target.group_id or "",
+            },
+            "reply": reply,
+            "visible_text": reply,
+            "reply_hash": _safe_str(core_response.get("reply_hash")).strip(),
+            "drop_reason": drop_reason,
+            "metadata": {
+                "gateway_version": getattr(self, "gateway_version", GATEWAY_VERSION),
+                "source": "qq_gateway_stale_reply_drop",
+            },
+        }
+        try:
+            await self.client.message_drop(payload)
+        except Exception as exc:
+            print(f"[xinyu_qq_gateway] stale reply drop notice failed: {type(exc).__name__}: {exc}", flush=True)
 
 
 def main() -> int:

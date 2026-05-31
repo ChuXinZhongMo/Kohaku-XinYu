@@ -51,6 +51,7 @@ def test_review_inbox_ok_approves_memory_candidate_without_stable_promotion(tmp_
 
     assert first["pending_count"] == 1
     assert cursor["items"][0]["source_kind"] == "memory_candidate"
+    assert "是否允许" in cursor["items"][0]["summary"]
     assert "not stable memory" in cursor["items"][0]["summary"]
     assert "不会直接写稳定记忆" in compose_review_inbox_card(cursor)
 

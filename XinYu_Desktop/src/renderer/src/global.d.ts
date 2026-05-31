@@ -8,6 +8,10 @@ declare global {
       getSnapshot: () => Promise<unknown>
       getProactiveInbox: () => Promise<unknown>
       getMemoryGrowthCandidates: () => Promise<unknown>
+      getStage8MemoryGovernance: () => Promise<unknown>
+      getAsyncExplorationState: () => Promise<unknown>
+      getStage12GateStatus: () => Promise<unknown>
+      getStage13GateStatus: () => Promise<unknown>
       getImpulseSoupState: () => Promise<unknown>
       getGatewayStatus: () => Promise<unknown>
       getExternalPlugins: () => Promise<unknown>
@@ -19,26 +23,8 @@ declare global {
       }) => Promise<unknown>
       installExternalPlugin: (request: { pluginId: string; options?: Record<string, unknown> }) => Promise<unknown>
       getApiConfigStatus: () => Promise<unknown>
-      saveApiConfigProfile: (profile: {
-        id?: string
-        label?: string
-        provider?: string
-        model?: string
-        baseUrl?: string
-        apiKey?: string
-        allowInsecureHttp?: boolean
-        disableStreaming?: boolean
-      }) => Promise<unknown>
-      testApiConfigProfile: (profile: {
-        id?: string
-        label?: string
-        provider?: string
-        model?: string
-        baseUrl?: string
-        apiKey?: string
-        allowInsecureHttp?: boolean
-        disableStreaming?: boolean
-      }) => Promise<unknown>
+      saveApiConfigProfile: (profile: Record<string, unknown>) => Promise<unknown>
+      testApiConfigProfile: (profile: Record<string, unknown>) => Promise<unknown>
       deleteApiConfigProfile: (profileId: string) => Promise<unknown>
       applyApiConfigProfile: (request: { profileId: string; restartCore?: boolean }) => Promise<unknown>
       restartCoreBridge: () => Promise<unknown>

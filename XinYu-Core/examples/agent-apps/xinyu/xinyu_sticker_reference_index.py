@@ -40,8 +40,14 @@ def default_vision_python(xinyu_dir: Path) -> Path | None:
     workspace = _workspace_root(xinyu_dir)
     if workspace is None:
         return None
-    candidate = workspace / "vision-venv" / "Scripts" / "python.exe"
-    return candidate if candidate.exists() else None
+    candidates = (
+        workspace / "runtime" / "deps" / "vision-venv" / "Scripts" / "python.exe",
+        workspace / "vision-venv" / "Scripts" / "python.exe",
+    )
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def _is_running_in_vision_env() -> bool:

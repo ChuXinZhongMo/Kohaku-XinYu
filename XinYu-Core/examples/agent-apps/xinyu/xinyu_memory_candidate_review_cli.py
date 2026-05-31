@@ -21,6 +21,7 @@ STATUSES = (
     "blocked_scope_mismatch",
     "blocked_sensitive",
     "archived_observe_more",
+    "archived_duplicate",
     "archived_rejected",
     "archived_blocked",
     "rejected",
