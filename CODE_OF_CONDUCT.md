@@ -4,6 +4,10 @@
 
 We are committed to making participation in this project a welcoming experience for everyone, regardless of background or identity.
 
+XinYu also has a strict privacy boundary. Public project spaces must not include
+private runtime state, credentials, QQ payloads, local memory, or
+owner-supplied material bodies.
+
 ## Standards
 
 **Positive behavior:**
@@ -14,6 +18,8 @@ We are committed to making participation in this project a welcoming experience 
 **Unacceptable behavior:**
 - Harassment, insults, or personal attacks
 - Publishing others' private information
+- Publishing secrets, local memory, QQ payloads, private messages, or
+  owner-supplied material from a running XinYu instance
 - Any conduct that would be inappropriate in a professional setting
 
 ## Scope

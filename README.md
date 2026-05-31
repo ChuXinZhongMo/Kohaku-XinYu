@@ -85,6 +85,24 @@ NapCatQQ
 
 这些路径默认被 Git 忽略。
 
+## 开源价值与维护状态
+
+XinYu 的公开价值不只是一个聊天壳，而是一套可检查、可复现、隐私边界清晰的本地长期运行个人 AI runtime。它重点展示：
+
+- 长期记忆、事件记录和 review 边界，避免把私有运行状态带入公开仓库
+- 受控主动性，包括候选、claim、发送、ack 和失败恢复路径
+- 原生 QQ/NapCat gateway 与 Core bridge 的本地消息闭环
+- 桌面端、命令行和 smoke/pytest 验证组成的维护面
+- tiny-kernel/persona/routing 实验与主 runtime 的分层边界
+
+维护与发布状态：
+
+- 主要维护者：`ChuXinZhongMo`
+- 当前阶段：早期公开源码基线，已有本地 runtime、QQ gateway、测试和运维文档
+- Roadmap：见 [`ROADMAP.md`](ROADMAP.md)
+- Release notes：见 [`CHANGELOG.md`](CHANGELOG.md) 的 `v0.1.0` public-source release candidate
+- 贡献入口：见 [`CONTRIBUTING.md`](CONTRIBUTING.md)、[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) 和 [`OPEN_SOURCE_POLICY.md`](OPEN_SOURCE_POLICY.md)
+
 ## 快速启动
 
 进入 XinYu app：
@@ -207,4 +225,6 @@ examples/agent-apps/xinyu/learning/owner_supplied/
 ## License
 
 本仓库包含 XinYu 项目代码，以及作为底层依赖使用的 KohakuTerrarium 源码快照。许可证见 [`LICENSE`](LICENSE)。
+
+该许可证是带有额外命名和归属要求的 Apache-2.0-derived custom license。请以 [`LICENSE`](LICENSE) 为准，不要默认按 MIT 或原版 Apache-2.0 理解。
 

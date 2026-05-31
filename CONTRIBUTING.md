@@ -4,6 +4,21 @@ Thanks for your interest in the project. This document is short on purpose — p
 
 **English only.** All issues, PRs, commit messages, and code comments in this repository must be in English. PRs in other languages will be asked to translate before review. Discussion in other languages belongs in the community channels below.
 
+## XinYu Maintainer Note
+
+The primary maintainer for the XinYu presentation in this repository is
+`ChuXinZhongMo`. Public contributions are welcome for source code, tests, smoke
+coverage, documentation, operator tooling, QQ/NapCat gateway reliability, and
+privacy-boundary hardening.
+
+Good first contribution areas:
+
+- clarify XinYu setup and troubleshooting docs
+- add or tighten tests around public runtime behavior
+- improve gateway diagnostics with sanitized fixtures
+- improve local operator ergonomics
+- strengthen release, security, and privacy-boundary checks
+
 The only exception: **multi-locale documentation files** (e.g. `README.zh.md`, `docs/zh/`, other translated `*.md` under `docs/`). Translations and locale-specific doc content are welcome and expected to be in their target language. Everything else — code, comments, commits, PR titles/descriptions, issue text — stays English.
 
 ## Community

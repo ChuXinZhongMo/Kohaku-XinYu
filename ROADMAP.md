@@ -4,6 +4,22 @@ This roadmap describes XinYu's own direction. KohakuTerrarium remains the
 underlying runtime framework snapshot, but this repository is organized around
 XinYu.
 
+This root roadmap is the public-facing project plan. Detailed runtime plans and
+audit trails live under `examples/agent-apps/xinyu/` and the worklog/report
+folders.
+
+## v0.1.0 - Public Source Baseline
+
+Status: release candidate
+
+- Publish the source tree as XinYu-first local personal-agent infrastructure.
+- Keep private runtime state, credentials, QQ payloads, local memory, and
+  owner-supplied material bodies outside the public source surface.
+- Document the active runtime layout, setup commands, validation baseline, and
+  local operator entry points.
+- Keep the Python test suite, runtime readiness smoke, QQ gateway smoke,
+  desktop typecheck, and desktop build as the release-readiness baseline.
+
 ## v0.1 - Local Working System
 
 Status: shipped locally
@@ -76,3 +92,11 @@ Status: exploratory
 - Cloud deployment of private memory.
 - Removing the vendored framework source before XinYu has a clean dependency
   path.
+
+## Success Signals
+
+- Tagged releases with clear notes and validation results.
+- Public issues and pull requests triaged by the maintainer.
+- Reproducible local setup from public documentation.
+- Tests and smoke checks covering the public runtime boundaries.
+- No private runtime state or credentials in published source.
