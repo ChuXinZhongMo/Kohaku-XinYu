@@ -12,6 +12,10 @@ The license is based on Apache License 2.0 with additional naming and
 attribution requirements. Downstream forks, services, packages, and products
 must keep the required KohakuTerrarium attribution.
 
+Because the license contains project-specific additional terms, some hosting
+tools may show it as a custom license instead of a standard SPDX license. The
+`LICENSE` file is the canonical license text for this repository.
+
 ## Publication Scope
 
 Included:
@@ -48,3 +52,4 @@ Before accepting a contribution:
 - no copied third-party source without license evidence
 - tests or smoke coverage for runtime behavior changes
 - update `THIRD-PARTY-NOTICES.md` when adding a dependency or vendored asset
+- sanitized reproduction steps for gateway, memory, or proactive behavior bugs

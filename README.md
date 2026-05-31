@@ -8,8 +8,51 @@ This repository is prepared for source-code publication. It is not intended to
 publish private runtime state, owner-supplied materials, QQ payloads, local
 memory, or credentials.
 
+## Why This Project Matters
+
+XinYu is a reusable reference implementation for local, privacy-bound,
+long-running personal AI agents. It is not a hosted chatbot wrapper: the
+project focuses on the operating surfaces needed to keep an agent running,
+observable, reviewable, and bounded on a local machine.
+
+Core technical themes:
+
+- durable memory, event, and review boundaries that keep private state out of
+  the public source tree
+- controlled proactive behavior with explicit lifecycle, claim, delivery, and
+  acknowledgement paths
+- native QQ/NapCat gateway integration for real local messaging loops
+- desktop and command-line operator workflows for local inspection and control
+- smoke tests, pytest coverage, audits, and runbooks for long-run maintenance
+- tiny-kernel experiments for local behavior, persona, and routing research
+
+The intended open-source value is a practical, inspectable foundation for
+Chinese-language personal companion agents and other privacy-aware local agent
+runtimes.
+
+## Open Source And Maintainer Status
+
+- Primary maintainer: `ChuXinZhongMo`.
+- Current stage: early public source baseline with working local runtime,
+  desktop shell, QQ gateway path, tests, and operations documentation.
+- Contribution path: issues and pull requests are welcome for public source,
+  tests, docs, operator tooling, gateway reliability, and privacy-boundary
+  hardening.
+- Roadmap: see `ROADMAP.md` and `XinYu-Core/ROADMAP.md`.
+- Release notes: see `CHANGELOG.md` for the `v0.1.0` public-source release
+  candidate.
+
+## Goal Anchor
+
+Required first reading for project direction:
+
+- `docs/system/心玉最终目标.md` - Chinese final goal anchor for XinYu's
+  bounded, verifiable self-generating autonomy loop.
+
 ## Repository Layout
 
+- `XinYu.ps1` - unified local operator entry point for status, start/stop,
+  tests, smoke checks, cleanup, and the system tree.
 - `XinYu-Core/` - core Python runtime and the active `xinyu` agent app.
 - `XinYu_Desktop/` - Electron/Vite desktop shell.
 - `XinYu-TinyKernel/` - local tiny-kernel experiments and training scaffolding.
@@ -17,7 +60,16 @@ memory, or credentials.
   ignored except the README.
 - `XinYu-Local-Scope/` - local request/material staging; private contents are
   ignored except the README.
+- `docs/` - system notes, work plans, audits, reports, and operations docs.
+- `scripts/` - startup, shutdown, and local operator helper scripts.
+- `assets/` - cases, reference library, icons, OCR fixtures, and material library.
+- `artifacts/` - local archives, protection snapshots, and generated package artifacts.
+- `runtime/deps/` - local machine dependencies such as Python, OCR, vision,
+  and NapCat runtimes. This directory is ignored.
 - `worklog/` - sanitized engineering worklogs and recovery points.
+
+See `docs/system/XINYU-SYSTEM.md` for the current system spine and component
+boundaries.
 
 ## Privacy Boundary
 
@@ -37,6 +89,10 @@ See `.gitignore`, `OPEN_SOURCE_POLICY.md`, and `SECURITY.md`.
 
 XinYu follows the KohakuTerrarium License Version 1.0 used by the embedded
 KohakuTerrarium/XinYuTerrariumRuntime source tree.
+
+This is a custom Apache-2.0-derived license with additional naming and
+attribution requirements. Treat `LICENSE` as the canonical license text; do not
+assume the project is MIT-licensed or plain Apache-2.0.
 
 See:
 
@@ -65,12 +121,30 @@ npm run build
 
 ## Daily Entry Points
 
-Root launch scripts are provided for local Windows use:
+Use the unified local operator entry point:
 
-- `Start-XinYu-Desktop.ps1`
-- `Stop-XinYu-Desktop.ps1`
-- `Start-XinYu-TinyKernel.ps1`
-- `Stop-XinYu-TinyKernel.ps1`
+```powershell
+.\XinYu.ps1 tree
+.\XinYu.ps1 status
+.\XinYu.ps1 start desktop
+.\XinYu.ps1 stop all
+.\XinYu.ps1 test core
+.\XinYu.ps1 verify qq
+.\XinYu.ps1 clean
+```
+
+For a one-click QQ live-loop verification on Windows, run or double-click:
+
+```powershell
+.\Verify-XinYu-QQ.cmd
+```
+
+Compatibility launch scripts are still provided for local Windows use:
+
+- `scripts/Start-XinYu-Desktop.ps1`
+- `scripts/Stop-XinYu-Desktop.ps1`
+- `scripts/Start-XinYu-TinyKernel.ps1`
+- `scripts/Stop-XinYu-TinyKernel.ps1`
 
 These scripts assume the local machine has the required runtime configuration.
 Do not commit local credentials or machine-specific secrets.
@@ -87,3 +161,7 @@ Latest checked local baseline, 2026-05-21:
 
 Detailed audit and recovery notes live in `worklog/` and
 `XinYu-Core/examples/agent-apps/xinyu/ops/reports/`.
+
+This baseline is the public release-readiness signal for the current source
+tree. New runtime behavior should keep the relevant tests, smoke checks, and
+privacy-boundary checks green before publication.
