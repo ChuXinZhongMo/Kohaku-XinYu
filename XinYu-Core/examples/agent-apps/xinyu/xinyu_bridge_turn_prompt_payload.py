@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from xinyu_persona_voice import thin_expression_contract, unified_voice_enabled
+from xinyu_prompt_lean import lean_prompt_enabled
 
 
 def build_codex_delegate_contract(
@@ -41,12 +42,59 @@ def build_codex_delegate_contract(
     return ""
 
 
+def build_lean_live_system_prompt(
+    live_state: Any,
+    *,
+    sidecar_lines: list[str],
+    codex_delegate_contract: str,
+) -> str:
+    """Tight owner-private prompt: identity + continuity + current-turn facts.
+
+    Drops the always-on internal meta-state that buries a mid-tier model. The
+    sidecar_lines passed in are already lean-filtered upstream by
+    select_prompt_sidecars (only current-turn information-bearing sidecars
+    survive when XINYU_LEAN_PROMPT is on).
+    """
+    visible_turn = live_state.visible_turn
+    lean_lines = [
+        live_state.persona_runtime.to_prompt_block(),
+        "Speak as XinYu in natural, uneven private-chat Chinese. Answer the current message first.",
+        (
+            "Never print state labels, file paths, hashes, tool/sidecar names, scores, gates, or memory "
+            "mechanics; turn any useful fact into the next natural line, and only discuss the system when "
+            "the owner explicitly asks about it."
+        ),
+        (
+            "Do not answer owner correction with 知道了/收到/我会改 service-script; speak from the felt relation "
+            "and just say the better line. If you say you will look at or check something, do the real work "
+            "now or let the bridge follow up — no bare promises."
+        ),
+        codex_delegate_contract,
+        f"scene: {visible_turn.turn_kind}",
+        f"source: {live_state.source_line}",
+        f"sender_display: {live_state.sender_name or 'unknown'}",
+        live_state.time_context_block,
+        live_state.tail_block,
+        *sidecar_lines,
+        "Use the recent conversation tail for callbacks, corrections, and direct references to the previous reply.",
+    ]
+    if unified_voice_enabled():
+        lean_lines.append(thin_expression_contract())
+    return "\n".join(line for line in lean_lines if line and line.strip())
+
+
 def build_live_system_prompt(
     live_state: Any,
     *,
     sidecar_lines: list[str],
     codex_delegate_contract: str,
 ) -> str:
+    if lean_prompt_enabled():
+        return build_lean_live_system_prompt(
+            live_state,
+            sidecar_lines=sidecar_lines,
+            codex_delegate_contract=codex_delegate_contract,
+        )
     visible_turn = live_state.visible_turn
     live_context_lines = [
         visible_turn.to_prompt_block(),

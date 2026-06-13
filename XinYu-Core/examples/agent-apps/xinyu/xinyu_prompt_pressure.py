@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 
+from xinyu_prompt_lean import lean_prompt_enabled, lean_sidecar_admitted
 from xinyu_prompt_pressure_store import write_prompt_pressure_report_json
 from xinyu_text_variants import readable_markers
 
@@ -322,6 +323,10 @@ def _admission_decision(
     status_reference: bool,
     digest_reference: bool,
 ) -> tuple[bool, str]:
+    if lean_prompt_enabled():
+        if lean_sidecar_admitted(candidate.name):
+            return True, "lean_whitelist_admitted"
+        return False, "lean_meta_state_dropped"
     if candidate.required:
         return True, "required"
     if candidate.admission == "conversation_experience":
