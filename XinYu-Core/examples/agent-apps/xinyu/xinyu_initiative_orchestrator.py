@@ -30,6 +30,17 @@ CONTEXTUAL_RECALL_STATE_REL = Path("memory/context/contextual_recall_state.md")
 RECENT_SCAN_LINES = 300
 DEFAULT_EXPIRES_SECONDS = 12 * 60 * 60
 METRICS_WINDOW_HOURS = 24
+GENTLE_CONTEXT_BYPASS_MIN_SCORE = 52
+SUBSTANTIVE_CONTEXT_BYPASS_MIN_SCORE = 75
+SUBSTANTIVE_CONTEXT_BYPASS_SOURCE_TYPES = {
+    "runtime_error",
+    "task_done",
+    "task_failed",
+}
+QQ_ONLY_OUTWARD_BLOCKS = {
+    "qq_send_disabled_for_dream_v0",
+    "qq_send_disabled_for_owner_long_idle_v0",
+}
 FINAL_FEEDBACK_STATUSES = {
     "dismiss",
     "dismissed",
@@ -226,9 +237,9 @@ def _gate_decision(
     requested_delivery: str,
 ) -> dict[str, Any]:
     signature = decision.candidate_signature or candidate_signature(decision.candidate)
-    blocked_by = list(decision.hard_blocks)
+    blocked_by = [block for block in decision.hard_blocks if block not in QQ_ONLY_OUTWARD_BLOCKS]
     held_by: list[str] = []
-    notes: list[str] = []
+    notes: list[str] = [block for block in decision.hard_blocks if block in QQ_ONLY_OUTWARD_BLOCKS]
     visible = f"{decision.candidate.owner_visible_text} {decision.content_preview}".lower()
     if "[redacted-" in visible:
         blocked_by.append("owner_visible_text_redacted_sensitive")
@@ -285,8 +296,13 @@ def _apply_context_gate(
     score = _safe_int(decision.total_score)
     urgent_source = proactive_source_is_urgent(decision.source_type)
     held_reason = ""
+    gentle_presence = decision.source_type == "owner_long_idle" and score >= GENTLE_CONTEXT_BYPASS_MIN_SCORE
+    substantive_progress = (
+        decision.source_type in SUBSTANTIVE_CONTEXT_BYPASS_SOURCE_TYPES
+        and score >= SUBSTANTIVE_CONTEXT_BYPASS_MIN_SCORE
+    )
     if posture in {"quiet_by_default", "quiet_presence"}:
-        if not urgent_source:
+        if not urgent_source and not gentle_presence and not substantive_progress:
             held_reason = f"context_gate_{posture}"
     elif posture == "hold_unless_owner_asks":
         if not urgent_source:

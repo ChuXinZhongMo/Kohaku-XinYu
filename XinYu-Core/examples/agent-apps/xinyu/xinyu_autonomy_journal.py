@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import os
 import re
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_autonomy_journal_store import autonomy_journal_env_has_key
+from xinyu_autonomy_journal_store import read_autonomy_journal_env_lines
+from xinyu_autonomy_journal_store import read_autonomy_journal_text
+from xinyu_autonomy_journal_store import write_autonomy_journal_env
+from xinyu_autonomy_journal_store import write_autonomy_journal_thought
 from xinyu_private_thought_events import (
     PrivateThoughtEventSnapshot,
     build_private_thought_note_material,
@@ -21,9 +25,7 @@ SEMANTIC_MATERIAL_TITLE = "Private Thought Event Material For XinYu Owner-Visibl
 
 
 def read_text(path: Path) -> str:
-    if not path.exists():
-        return ""
-    return path.read_text(encoding="utf-8-sig", errors="replace")
+    return read_autonomy_journal_text(path)
 
 
 def read_limited(root: Path, rel: str, limit: int = 5000) -> str:
@@ -73,17 +75,15 @@ def default_output_dir() -> Path:
 
 def _load_local_env(xinyu_dir: Path) -> None:
     env_path = xinyu_dir / "xinyu.local.env"
-    if not env_path.exists():
-        return
-    for raw_line in env_path.read_text(encoding="utf-8-sig").splitlines():
+    for raw_line in read_autonomy_journal_env_lines(env_path):
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, value = line.split("=", 1)
         key = key.strip()
         value = value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
-            os.environ[key] = value
+        if key and not autonomy_journal_env_has_key(key):
+            write_autonomy_journal_env(key, value)
 
 
 def _ensure_repo_src(xinyu_dir: Path) -> None:
@@ -359,9 +359,8 @@ def main() -> int:
     if not text.strip():
         print("skipped: no natural desktop thought generated")
         return 2
-    date_dir.mkdir(parents=True, exist_ok=True)
     path = date_dir / f"{generated.strftime('%H-%M-%S')}-xinyu-thoughts.md"
-    path.write_text(text, encoding="utf-8-sig")
+    write_autonomy_journal_thought(path, text)
     print(path)
     return 0
 

@@ -13,7 +13,8 @@
         "memory/context/interaction_journal_state.md"
       ],
       "allowed_raw_readers": [
-        "xinyu_interaction_journal.py"
+        "xinyu_interaction_journal.py",
+        "xinyu_proactive_context_adapter.py"
       ],
       "privacy": "private_runtime_event_log",
       "retention_policy": "bounded_rows",
@@ -29,7 +30,8 @@
       "owner_symbol": "_desktop_remember_proactive_history",
       "projection_paths": [],
       "allowed_raw_readers": [
-        "xinyu_core_bridge.py"
+        "xinyu_core_bridge.py",
+        "xinyu_bridge_desktop_proactive_inbox_history.py"
       ],
       "privacy": "private_runtime_event_log",
       "retention_policy": "bounded_rows",

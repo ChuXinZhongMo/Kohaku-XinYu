@@ -73,12 +73,13 @@ def main() -> int:
         if "gateway_effect: local ticket and trace only" not in handoff:
             failures.append("approval handoff missing local-control boundary")
 
-    core_text = _read(ROOT / "xinyu_core_bridge.py")
+    autonomous_aliases_text = _read(ROOT / "xinyu_bridge_runtime_autonomous_aliases.py")
+    maintenance_text = _read(ROOT / "xinyu_bridge_autonomous_maintenance.py")
     context_text = _read(ROOT / "xinyu_runtime_context.py")
     presence_text = _read(ROOT / "xinyu_runtime_presence.py")
     smoke_text = _read(ROOT / "smoke_run.py")
-    if "run_self_action_gateway(" not in core_text:
-        failures.append("xinyu_core_bridge.py does not run self action gateway")
+    if "_append_self_action_gateway_note" not in autonomous_aliases_text or "run_self_action_gateway(" not in maintenance_text:
+        failures.append("runtime does not run self action gateway")
     if "memory/context/self_action_gateway_state.md" not in context_text:
         failures.append("runtime context does not include self action gateway state")
     if "runtime/self_action_gateway/trace.jsonl" not in presence_text:

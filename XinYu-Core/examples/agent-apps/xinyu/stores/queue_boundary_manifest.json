@@ -19,6 +19,7 @@
       ],
       "allowed_raw_readers": [
         "start_xinyu_core_bridge.ps1",
+        "xinyu_bridge_proactive_delivery_state_store.py",
         "xinyu_qq_gateway.py",
         "xinyu_qq_outbox.py",
         "xinyu_runtime_presence.py"

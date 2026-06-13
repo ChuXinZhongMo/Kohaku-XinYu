@@ -151,7 +151,15 @@ def classify_images(
         if not image_path.is_file():
             raise FileNotFoundError(str(image_path))
 
-    selected_device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+    selected_device = device
+    if not selected_device:
+        selected_device = "cuda" if torch.cuda.is_available() else "cpu"
+        if selected_device == "cuda":
+            try:
+                torch.zeros(1, device="cuda")
+            except Exception:
+                selected_device = "cpu"
+                print("[xinyu_clip_command] CUDA incompatible, falling back to CPU", flush=True)
     model, _, preprocess = open_clip.create_model_and_transforms(
         model_name,
         pretrained=pretrained,

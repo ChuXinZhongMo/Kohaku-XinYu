@@ -5,6 +5,12 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
+from xinyu_bridge_desktop_surface_contract import (
+    DESKTOP_EVENT_STREAM_LIFECYCLE_BOUNDARY,
+    DESKTOP_EVENT_STREAM_RUNTIME_ATTR,
+    DesktopEventStreamReadiness,
+    desktop_event_stream_readiness,
+)
 from xinyu_desktop_events import DesktopEventBus
 from xinyu_desktop_ws import DesktopWSServer
 
@@ -19,6 +25,7 @@ class DesktopService:
         return self.event_bus is not None and self.ws_server is not None
 
     def attach_runtime(self, runtime: Any) -> None:
+        setattr(runtime, DESKTOP_EVENT_STREAM_RUNTIME_ATTR, self)
         runtime.desktop_event_bus = self.event_bus
         runtime.desktop_ws_server = self.ws_server
 
@@ -34,6 +41,20 @@ class DesktopService:
         if self.ws_server is None:
             return ""
         return f"ws://{self.ws_server.host}:{self.ws_server.bound_port}{self.ws_server.path}"
+
+    def readiness(self) -> DesktopEventStreamReadiness:
+        return desktop_event_stream_readiness(event_bus=self.event_bus, ws_server=self.ws_server)
+
+
+def desktop_event_stream_service_readiness(runtime: Any) -> DesktopEventStreamReadiness:
+    service = getattr(runtime, DESKTOP_EVENT_STREAM_RUNTIME_ATTR, None)
+    readiness = getattr(service, "readiness", None)
+    if callable(readiness):
+        return readiness()
+    return desktop_event_stream_readiness(
+        event_bus=getattr(runtime, "desktop_event_bus", None),
+        ws_server=getattr(runtime, "desktop_ws_server", None),
+    )
 
 
 def desktop_limit(value: Any, *, default: int, maximum: int) -> int:

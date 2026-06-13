@@ -9,6 +9,7 @@ import shutil
 from contextlib import contextmanager
 from pathlib import Path
 
+from xinyu_private_ecosystem_grants import save_grants_patch
 from xinyu_qq_outbox import claim_next_qq_outbox_message
 from xinyu_sticker_pack import (
     decide_sticker,
@@ -170,6 +171,7 @@ def main() -> int:
         if blocked_auto.should_send:
             failures.append("serious failure context should block auto sticker")
 
+        save_grants_patch(root, {"owner_private_autonomous_share": {"enabled": True, "paused": False}})
         auto_queued = maybe_enqueue_sticker_reply(
             root,
             payload,

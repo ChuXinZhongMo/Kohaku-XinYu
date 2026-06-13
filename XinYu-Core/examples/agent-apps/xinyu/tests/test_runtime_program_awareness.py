@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from xinyu_runtime_presence import (
+    _render_capability_manifest_markdown,
     _render_presence_markdown,
     _render_program_awareness_markdown,
     build_runtime_presence_prompt_block,
@@ -29,11 +30,14 @@ def _frontmatter_value(text: str, field: str) -> str:
 def test_runtime_presence_writers_default_invalid_frontmatter_time_to_iso(tmp_path: Path) -> None:
     presence = _render_presence_markdown({"updated_at": "unknown"})
     program = _render_program_awareness_markdown(tmp_path, {"updated_at": "not-a-time"})
+    capability = _render_capability_manifest_markdown(tmp_path, {"updated_at": "not-a-time"})
 
     datetime.fromisoformat(_frontmatter_value(presence, "updated_at"))
     datetime.fromisoformat(_frontmatter_value(program, "updated_at"))
+    datetime.fromisoformat(_frontmatter_value(capability, "updated_at"))
     assert "updated_at: unknown" not in presence
     assert "updated_at: not-a-time" not in program
+    assert "updated_at: not-a-time" not in capability
 
 
 def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> None:
@@ -293,6 +297,90 @@ def test_runtime_program_awareness_collects_known_subsystems(tmp_path: Path) -> 
         - current_bridge_digest: bridge-digest-current
         - running_bridge_digest: bridge-digest-current
         - last_changed_files: modified:xinyu_speech_controller.py
+        """,
+    )
+    _write(
+        tmp_path / "memory/context/capability_zones_state.md",
+        """
+        - regular_mind_loop: approved_low_frequency_autonomous_passes
+        - proactive_qq_send: enabled_gated_one_short_message
+        - codex_as_eye_and_hand: approved_bounded_delegate
+        - self_code_iteration_via_codex: approved_owner_private_bounded_patch
+        - autonomous_search_provider: enabled_duckduckgo_html_bounded_ai_domain
+        - stable_personality_auto_apply: disabled
+        """,
+    )
+    grants_path = tmp_path / "memory/context/private_ecosystem_grants.json"
+    grants_path.parent.mkdir(parents=True, exist_ok=True)
+    grants_path.write_text(
+        json.dumps(
+            {
+                "private_ecosystem": {"enabled": True, "rollout_state": "enabled"},
+                "private_desktop": {
+                    "enabled": True,
+                    "observe_only": True,
+                    "single_step_actions": False,
+                    "network_enabled": False,
+                },
+                "private_browser": {
+                    "enabled": True,
+                    "read_only": True,
+                    "single_step_actions": False,
+                    "max_tabs": 4,
+                    "screenshot_ttl_hours": 24,
+                },
+                "owner_private_autonomous_share": {
+                    "enabled": True,
+                    "paused": True,
+                    "daily_limit": 8,
+                },
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    _write(
+        tmp_path / "memory/context/private_ecosystem_state.md",
+        """
+        - rollout_state: enabled
+        - selected_goal_id: observe_private_space
+        - selected_action_kind: local_probe
+        - last_action_status: completed
+        - tick_count: 1
+        - low_risk_executed_count: 1
+        - approval_queued_count: 0
+        - owner_private_shares_sent: 0
+        - owner_private_share_status: none
+        - stable_memory_write: blocked
+        - qq_message_enqueued_directly: false
+        """,
+    )
+    _write(
+        tmp_path / "memory/context/private_ecosystem_desktop_state.md",
+        """
+        - session_id: xinyu-private-desktop
+        - backend: live
+        - last_action_kind: screenshot
+        - last_result: completed
+        - last_risk: read_only
+        - actions_total: 1
+        - actions_executed: 1
+        - actions_blocked: 0
+        - frame_count: 1
+        """,
+    )
+    _write(
+        tmp_path / "memory/context/private_ecosystem_owner_share_state.md",
+        """
+        - enabled: true
+        - paused: true
+        - last_delivery_level: hold
+        - last_allowed: false
+        - last_queued: false
+        - last_block_reasons: share_paused
+        - daily_remaining: 8
+        - cooldown_minutes: 30
+        - channel: owner_private_only
         """,
     )
     _write(

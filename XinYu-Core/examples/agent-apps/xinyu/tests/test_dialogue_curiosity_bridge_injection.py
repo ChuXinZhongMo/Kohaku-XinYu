@@ -7,6 +7,7 @@ from types import SimpleNamespace
 
 import xinyu_bridge_turn_finish_sidecars as turn_finish_sidecars
 import xinyu_bridge_slow_live_turn as slow_live_turn
+import xinyu_bridge_turn_pipeline as turn_pipeline
 import xinyu_core_bridge as core_bridge
 from xinyu_dialogue_working_memory import load_dialogue_tail, save_dialogue_tail
 from xinyu_core_bridge import XinYuBridgeRuntime
@@ -716,6 +717,51 @@ def test_recent_readable_attachment_context_stays_out_of_unrelated_turns(tmp_pat
     assert "Recent readable attachment context" not in content
 
 
+def test_recent_readable_attachment_context_stays_out_when_current_image_unavailable(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    extracted = runtime.xinyu_dir / "learning/owner_supplied/item/extracted_text.md"
+    extracted.parent.mkdir(parents=True)
+    extracted.write_text("# old paper\n\nold attachment content\n", encoding="utf-8")
+
+    assert record_recent_attachment_context(
+        runtime.xinyu_dir,
+        {
+            "title": "old-paper.pdf",
+            "metadata": {"session_id": "qq:private:owner", "is_owner_user": True},
+        },
+        {
+            "learning_item_id": "learn-old-paper",
+            "material_id": "material-old-paper",
+            "extracted_text_path": "learning/owner_supplied/item/extracted_text.md",
+        },
+    )
+
+    agent = FakeAgent()
+    runtime._inject_live_turn_context(
+        agent,
+        payload={
+            "session_id": "qq:private:owner",
+            "message_type": "private_text",
+            "metadata": {
+                "is_owner_user": True,
+                "qq_rich_message": True,
+                "qq_image_count": 1,
+                "qq_image_context_available": False,
+                "qq_image_context": {
+                    "available": False,
+                    "notes": ["image_context_requested", "ocr_text_empty"],
+                },
+            },
+        },
+        text="please read this image",
+    )
+
+    content = agent.controller._pending_injections[0]["content"]
+    assert "old attachment content" not in content
+    assert "Recent readable attachment context" not in content
+    assert "Do not use previous attachments" in content
+
+
 def test_recent_readable_attachment_context_ignores_future_attachment_reference(tmp_path) -> None:
     runtime = _make_runtime(tmp_path)
     extracted = runtime.xinyu_dir / "learning/owner_supplied/item/extracted_text.md"
@@ -848,6 +894,38 @@ def test_model_codex_delegate_protocol_builds_owner_private_payload(tmp_path) ->
     assert codex_payload["raw_owner_task"] == task
     assert codex_payload["metadata"]["delegated_by_model"] is True
     assert "Use Codex auxiliary brain" in codex_payload["text"]
+
+
+def test_append_assistant_to_dialogue_tail_persists_and_dedupes(tmp_path) -> None:
+    runtime = _make_runtime(tmp_path)
+    session_key = "qq:private:owner"
+
+    assert (
+        runtime._append_assistant_to_dialogue_tail(
+            session_key,
+            "  I can prepare a bounded search task.  ",
+            recorded_at="2026-05-02T10:00:00+08:00",
+        )
+        is True
+    )
+    assert (
+        runtime._append_assistant_to_dialogue_tail(
+            session_key,
+            "I can prepare a bounded search task.",
+            recorded_at="2026-05-02T10:01:00+08:00",
+        )
+        is False
+    )
+
+    tail = load_dialogue_tail(runtime.xinyu_dir, session_key, max_entries=8, include_timestamps=True)
+
+    assert tail == [
+        {
+            "role": "assistant",
+            "content": "I can prepare a bounded search task.",
+            "recorded_at": "2026-05-02T10:00:00+08:00",
+        }
+    ]
 
 
 def test_desktop_codex_mode_payload_carries_owner_local_write_approval(tmp_path) -> None:
@@ -1652,7 +1730,7 @@ def test_owner_private_greeting_chat_replay_intercepts_before_full_live_event(tm
         del args, kwargs
         raise AssertionError("semantic fast greeting should not wait for pre-model routes")
 
-    monkeypatch.setattr(core_bridge, "run_pre_model_routes", fail_pre_model_routes)
+    monkeypatch.setattr(turn_pipeline, "run_pre_model_routes", fail_pre_model_routes)
     runtime._loaded = True
     runtime._agent_cls = FakeAgentFactory
     runtime._create_user_input_event = fail_full_live_event
@@ -1724,7 +1802,7 @@ def test_pre_model_routes_timeout_falls_through_without_bridge_timeout(tmp_path,
             "notes": ["continued_after_pre_model_timeout"],
         }
 
-    monkeypatch.setattr(core_bridge, "run_pre_model_routes", hanging_pre_model_routes)
+    monkeypatch.setattr(turn_pipeline, "run_pre_model_routes", hanging_pre_model_routes)
     runtime._loaded = True
     runtime._agent_cls = FakeAgentFactory
     runtime._owner_private_semantic_fast_decision = lambda payload, text: {  # type: ignore[method-assign]
@@ -1809,7 +1887,7 @@ def _install_minimal_slow_live_chat(
 
     async def no_pre_model_route(*args, **kwargs):
         del args, kwargs
-        return core_bridge.PreModelRouteResult(
+        return turn_pipeline.PreModelRouteResult(
             None,
             {"notes": ["event_sourcing_test_skipped"]},
             {"notes": ["v1_shadow_test_skipped"]},
@@ -1849,27 +1927,27 @@ def _install_minimal_slow_live_chat(
     runtime._build_life_reply_policy = no_life_reply_policy  # type: ignore[method-assign]
     runtime._sync_recent_proactive_to_dialogue_tail = lambda *args, **kwargs: False  # type: ignore[method-assign]
 
-    monkeypatch.setattr(core_bridge, "run_pre_model_routes", no_pre_model_route)
-    monkeypatch.setattr(core_bridge, "run_emotion_council_shadow", lambda *args, **kwargs: {"notes": []})
-    monkeypatch.setattr(core_bridge, "observe_persona_turn", lambda *args, **kwargs: {"notes": [], "prompt_block": ""})
+    monkeypatch.setattr(turn_pipeline, "run_pre_model_routes", no_pre_model_route)
+    monkeypatch.setattr(slow_live_turn, "run_emotion_council_shadow", lambda *args, **kwargs: {"notes": []})
+    monkeypatch.setattr(slow_live_turn, "observe_persona_turn", lambda *args, **kwargs: {"notes": [], "prompt_block": ""})
     monkeypatch.setattr(slow_live_turn, "refresh_continuity_handoff", lambda *args, **kwargs: {"notes": []})
     monkeypatch.setattr(slow_live_turn, "build_runtime_presence_prompt_block", lambda *args, **kwargs: "")
     monkeypatch.setattr(slow_live_turn, "build_continuity_handoff_prompt_block", lambda *args, **kwargs: "")
     monkeypatch.setattr(slow_live_turn, "build_uncertainty_pause_prompt_block", lambda *args, **kwargs: "")
     monkeypatch.setattr(slow_live_turn, "build_life_reply_prompt_block", lambda *args, **kwargs: "")
-    monkeypatch.setattr(core_bridge, "apply_life_reply_policy", lambda *args, **kwargs: {"notes": []})
+    monkeypatch.setattr(slow_live_turn, "apply_life_reply_policy", lambda *args, **kwargs: {"notes": []})
     monkeypatch.setattr(
-        core_bridge,
+        slow_live_turn,
         "classify_response_error",
         lambda *args, **kwargs: SimpleNamespace(error_class="none", severity="none"),
     )
-    monkeypatch.setattr(core_bridge, "build_scene_frame", lambda *args, **kwargs: SimpleNamespace())
+    monkeypatch.setattr(slow_live_turn, "build_scene_frame", lambda *args, **kwargs: SimpleNamespace())
     monkeypatch.setattr(
-        core_bridge,
+        slow_live_turn,
         "build_slow_state",
         lambda *args, **kwargs: SimpleNamespace(reply_policy="steady", initiative_policy="steady", active_policies=[]),
     )
-    monkeypatch.setattr(core_bridge, "run_slow_turn_finish_sidecars", minimal_finish_sidecars)
+    monkeypatch.setattr(slow_live_turn, "run_slow_turn_finish_sidecars", minimal_finish_sidecars)
 
 
 def _install_successful_memory_recall(monkeypatch, runtime: XinYuBridgeRuntime) -> None:
@@ -1885,7 +1963,7 @@ def _install_successful_memory_recall(monkeypatch, runtime: XinYuBridgeRuntime) 
         )
 
     runtime._desktop_publish_memory_recall = fake_publish_recall  # type: ignore[method-assign]
-    monkeypatch.setattr(core_bridge, "run_living_memory_recall_algorithm", fake_recall_algorithm)
+    monkeypatch.setattr(slow_live_turn, "run_living_memory_recall_algorithm", fake_recall_algorithm)
 
 
 def test_slow_live_memory_recall_route_trace_records_success(tmp_path, monkeypatch) -> None:
@@ -1943,7 +2021,7 @@ def test_slow_live_memory_recall_route_trace_records_error(tmp_path, monkeypatch
         raise AssertionError("publish should not run after recall error")
 
     runtime._desktop_publish_memory_recall = fail_publish_recall  # type: ignore[method-assign]
-    monkeypatch.setattr(core_bridge, "run_living_memory_recall_algorithm", fake_recall_algorithm)
+    monkeypatch.setattr(slow_live_turn, "run_living_memory_recall_algorithm", fake_recall_algorithm)
 
     response = asyncio.run(runtime.chat(payload))
 
@@ -1977,7 +2055,7 @@ def test_slow_live_memory_recall_route_trace_records_timeout(tmp_path, monkeypat
         raise AssertionError("publish should not run after recall timeout")
 
     runtime._desktop_publish_memory_recall = fail_publish_recall  # type: ignore[method-assign]
-    monkeypatch.setattr(core_bridge, "run_living_memory_recall_algorithm", fake_recall_algorithm)
+    monkeypatch.setattr(slow_live_turn, "run_living_memory_recall_algorithm", fake_recall_algorithm)
 
     response = asyncio.run(runtime.chat(payload))
 
@@ -2209,7 +2287,7 @@ def test_slow_live_finish_sidecars_route_trace_records_timeout(tmp_path, monkeyp
         del args, kwargs
         raise TimeoutError("finish sidecars timeout")
 
-    monkeypatch.setattr(core_bridge, "run_slow_turn_finish_sidecars", timeout_finish_sidecars)
+    monkeypatch.setattr(slow_live_turn, "run_slow_turn_finish_sidecars", timeout_finish_sidecars)
 
     try:
         asyncio.run(runtime.chat(payload))
@@ -2243,7 +2321,7 @@ def test_slow_live_finish_sidecars_route_trace_records_error(tmp_path, monkeypat
         del args, kwargs
         raise RuntimeError("finish sidecars failed")
 
-    monkeypatch.setattr(core_bridge, "run_slow_turn_finish_sidecars", error_finish_sidecars)
+    monkeypatch.setattr(slow_live_turn, "run_slow_turn_finish_sidecars", error_finish_sidecars)
 
     try:
         asyncio.run(runtime.chat(payload))
@@ -2558,12 +2636,12 @@ def test_autonomous_maintenance_runs_self_thought_and_proactive_sidecars(tmp_pat
             "outcome": "useful",
         }
 
-    monkeypatch.setattr("xinyu_core_bridge.run_self_thought_loop", fake_self_thought)
-    monkeypatch.setattr("xinyu_core_bridge.run_proactive_request_loop", fake_proactive_request)
-    monkeypatch.setattr("xinyu_core_bridge.run_self_chosen_goal_ecology", fake_goal_ecology)
-    monkeypatch.setattr("xinyu_core_bridge.run_self_action_gateway", fake_action_gateway)
-    monkeypatch.setattr("xinyu_core_bridge.run_self_action_patch_executor", fake_patch_executor)
-    monkeypatch.setattr("xinyu_core_bridge.run_goal_outcome_observer", fake_outcome_observer)
+    monkeypatch.setattr("xinyu_bridge_autonomous_maintenance.run_self_thought_loop", fake_self_thought)
+    monkeypatch.setattr("xinyu_bridge_autonomous_maintenance.run_proactive_request_loop", fake_proactive_request)
+    monkeypatch.setattr("xinyu_bridge_autonomous_maintenance.run_self_chosen_goal_ecology", fake_goal_ecology)
+    monkeypatch.setattr("xinyu_bridge_autonomous_maintenance.run_self_action_gateway", fake_action_gateway)
+    monkeypatch.setattr("xinyu_bridge_autonomous_maintenance.run_self_action_patch_executor", fake_patch_executor)
+    monkeypatch.setattr("xinyu_bridge_autonomous_maintenance.run_goal_outcome_observer", fake_outcome_observer)
 
     notes = runtime._run_autonomous_self_thought_sidecars(checked_at="2026-05-01T23:00:00+08:00")
 
@@ -2634,11 +2712,11 @@ def test_autonomous_maintenance_does_not_build_proactive_request_without_candida
             "reason": "no_concrete_signal",
         }
 
-    monkeypatch.setattr("xinyu_core_bridge.run_self_thought_loop", fake_self_thought)
-    monkeypatch.setattr("xinyu_core_bridge.run_proactive_request_loop", fake_proactive_request)
-    monkeypatch.setattr("xinyu_core_bridge.run_self_action_gateway", fake_action_gateway)
-    monkeypatch.setattr("xinyu_core_bridge.run_self_action_patch_executor", fake_patch_executor)
-    monkeypatch.setattr("xinyu_core_bridge.run_goal_outcome_observer", fake_outcome_observer)
+    monkeypatch.setattr("xinyu_bridge_autonomous_maintenance.run_self_thought_loop", fake_self_thought)
+    monkeypatch.setattr("xinyu_bridge_autonomous_maintenance.run_proactive_request_loop", fake_proactive_request)
+    monkeypatch.setattr("xinyu_bridge_autonomous_maintenance.run_self_action_gateway", fake_action_gateway)
+    monkeypatch.setattr("xinyu_bridge_autonomous_maintenance.run_self_action_patch_executor", fake_patch_executor)
+    monkeypatch.setattr("xinyu_bridge_autonomous_maintenance.run_goal_outcome_observer", fake_outcome_observer)
 
     notes = runtime._run_autonomous_self_thought_sidecars(checked_at="2026-05-01T23:00:00+08:00")
 

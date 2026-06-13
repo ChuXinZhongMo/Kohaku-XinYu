@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_async_exploration_store import append_async_exploration_jsonl
+from xinyu_async_exploration_store import read_async_exploration_report_text
+from xinyu_async_exploration_store import read_async_exploration_text
+from xinyu_async_exploration_store import write_async_exploration_text
 from xinyu_dialogue_working_memory import load_dialogue_tail
 from xinyu_visible_persona_voice import compose_async_exploration_outbox_message
 
@@ -45,21 +48,15 @@ def _hash(value: str, length: int = 16) -> str:
 
 
 def _read(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
-        return ""
+    return read_async_exploration_text(path)
 
 
 def _write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text.rstrip() + "\n", encoding="utf-8")
+    write_async_exploration_text(path, text)
 
 
 def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+    append_async_exploration_jsonl(path, row)
 
 
 def _field(text: str, name: str, default: str = "none") -> str:
@@ -213,11 +210,12 @@ def create_async_exploration_closure(
 
 def _sanitized_report_summary(report_path: str, *, limit: int = 420) -> tuple[str, str]:
     path = Path(report_path) if report_path else Path()
-    if not report_path or not path.exists():
+    if not report_path:
         return "missing_report", "none"
-    try:
-        text = path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
+    read_status, text = read_async_exploration_report_text(path)
+    if read_status == "missing_report":
+        return "missing_report", "none"
+    if read_status == "unreadable_report":
         return "unreadable_report", "none"
     if not text.strip():
         return "empty_report", "none"
@@ -275,15 +273,16 @@ def update_async_exploration_from_codex(
         failure_kind, sanitized = _sanitized_report_summary(report_path)
         result_quality = "usable_partial" if failure_kind == "usable_partial" else "failed"
     status = "codex_result_ready" if result_quality == "usable_partial" else "failed_snapshot_saved"
+    previous_state = _read(root / STATE_REL)
     fields = {
         "resume_id": resume_id,
         "updated_at": observed,
         "status": status,
-        "session_key": _field(_read(root / STATE_REL), "session_key", "none"),
-        "user_id": _field(_read(root / STATE_REL), "user_id", "none"),
-        "delegation_reason": _field(_read(root / STATE_REL), "delegation_reason", "none"),
-        "expected_format": _field(_read(root / STATE_REL), "expected_format", "none"),
-        "task_summary": _field(_read(root / STATE_REL), "task_summary", "none"),
+        "session_key": _field(previous_state, "session_key", "none"),
+        "user_id": _field(previous_state, "user_id", "none"),
+        "delegation_reason": _field(previous_state, "delegation_reason", "none"),
+        "expected_format": _field(previous_state, "expected_format", "none"),
+        "task_summary": _field(previous_state, "task_summary", "none"),
         "codex_job_id": _safe_str(getattr(result, "request_path", "") or "none") if result is not None else "none",
         "report_label": report_label,
         "failure_kind": failure_kind,

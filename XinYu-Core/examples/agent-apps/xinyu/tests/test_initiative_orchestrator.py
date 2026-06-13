@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import xinyu_bridge_desktop_proactive_routes
 import xinyu_core_bridge
 from xinyu_core_bridge import XinYuBridgeRuntime
 from xinyu_initiative_orchestrator import (
@@ -126,7 +127,28 @@ def _seed_context_gate(
     )
 
 
-def _seed_runtime_program_awareness(root: Path, *, watched_source_error: bool = False) -> None:
+def _seed_owner_long_idle(root: Path, *, minutes: int = 360) -> None:
+    path = root / "memory/context/interaction_journal_state.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "\n".join(
+            [
+                "- updated_at: 2026-05-13T01:30:00+08:00",
+                "- last_owner_private_at: 2026-05-12T19:30:00+08:00",
+                f"- minutes_since_last_owner_private: {minutes}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _seed_runtime_program_awareness(
+    root: Path,
+    *,
+    watched_source_error: bool = False,
+    codex_delegate_status: str = "",
+) -> None:
     path = root / "memory/context/runtime_program_awareness.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = [
@@ -135,6 +157,14 @@ def _seed_runtime_program_awareness(root: Path, *, watched_source_error: bool = 
         "## Subsystems",
         "- bridge_core: bridge_process=running current_turn_state=finished last_turn_status=ok",
     ]
+    if codex_delegate_status:
+        lines.extend(
+            [
+                "",
+                "## Programs",
+                f"- codex_delegate: status={codex_delegate_status} task_id=test-delegate",
+            ]
+        )
     if watched_source_error:
         lines.extend(
             [
@@ -243,6 +273,50 @@ def test_context_gate_quiet_by_default_holds_ordinary_initiative(tmp_path: Path)
     assert "context_scene: casual_chat" in state
     metrics = json.loads((tmp_path / "runtime/initiative_metrics.json").read_text(encoding="utf-8"))
     assert metrics["pending_feedback_count"] == 0
+
+
+def test_owner_long_idle_surfaces_gentle_presence_in_quiet_context(tmp_path: Path) -> None:
+    _seed_owner_long_idle(tmp_path, minutes=360)
+    _seed_context_gate(tmp_path, scene="casual_chat", posture="quiet_by_default", recall_count=0)
+
+    result = run_initiative_orchestrator(
+        tmp_path,
+        checked_at="2026-05-13T01:30:00+08:00",
+        trigger="test",
+    )
+    event = _events(tmp_path)[-1]
+    state = (tmp_path / "memory/context/initiative_lifecycle_state.md").read_text(encoding="utf-8")
+
+    assert result["status"] == "desktop_inbox"
+    assert result["source_type"] == "owner_long_idle"
+    assert result["desktop_item"]["claimable"] is False
+    assert "qq_send_disabled_for_owner_long_idle_v0" in result["hard_blocks"]
+    assert "qq_send_disabled_for_owner_long_idle_v0" in result["notes"]
+    assert "context_gate_passed" in result["notes"]
+    assert "context_gate_quiet_by_default" not in result["reasons_negative"]
+    assert event["delivery"]["level"] == "desktop_inbox"
+    assert event["delivery"]["claimable"] is False
+    assert "- selected_decision: desktop_inbox" in state
+
+
+def test_context_gate_allows_substantive_task_done_in_quiet_context(tmp_path: Path) -> None:
+    _seed_runtime_program_awareness(tmp_path, codex_delegate_status="finished")
+    _seed_context_gate(tmp_path, scene="casual_chat", posture="quiet_by_default", recall_count=0)
+
+    result = run_initiative_orchestrator(
+        tmp_path,
+        checked_at="2026-05-13T02:00:00+08:00",
+        trigger="test",
+    )
+    event = _events(tmp_path)[-1]
+
+    assert result["status"] == "desktop_inbox"
+    assert result["source_type"] == "task_done"
+    assert result["desktop_item"]["deliveryLevel"] == "state_only"
+    assert "context_gate_passed" in result["notes"]
+    assert "context_gate_quiet_by_default" not in result["reasons_negative"]
+    assert event["delivery"]["level"] == "desktop_inbox"
+    assert "context_gate_passed" in event["gate"]["notes"]
 
 
 def test_context_gate_feedback_scene_with_recall_allows_desktop_candidate(tmp_path: Path) -> None:
@@ -523,14 +597,34 @@ def test_bridge_autonomous_sidecar_publishes_local_only_initiative(monkeypatch, 
             },
         }
 
-    monkeypatch.setattr(xinyu_core_bridge, "run_proactivity_scorer_shadow", lambda root, *, checked_at: {"status": "hold"})
-    monkeypatch.setattr(xinyu_core_bridge, "run_initiative_orchestrator", fake_orchestrator)
-    monkeypatch.setattr(xinyu_core_bridge, "run_emotion_council_shadow", lambda *args, **kwargs: {"status": "ok"})
-    monkeypatch.setattr(xinyu_core_bridge, "run_impulse_soup", lambda *args, **kwargs: {"status": "ok"})
-    monkeypatch.setattr(xinyu_core_bridge, "run_initiative_spine", lambda *args, **kwargs: {"emergence_level": "shadow", "action_permission": "hold"})
     monkeypatch.setattr(
-        xinyu_core_bridge,
-        "run_contextual_self_observatory",
+        "xinyu_bridge_autonomous_maintenance.run_proactivity_scorer_shadow",
+        lambda root, *, checked_at: {"status": "hold"},
+    )
+    monkeypatch.setattr("xinyu_bridge_autonomous_maintenance.run_initiative_orchestrator", fake_orchestrator)
+    monkeypatch.setattr(
+        "xinyu_bridge_autonomous_maintenance.run_emotion_council_shadow",
+        lambda *args, **kwargs: {"status": "ok"},
+    )
+    monkeypatch.setattr(
+        "xinyu_bridge_autonomous_maintenance.run_impulse_soup",
+        lambda *args, **kwargs: {"status": "ok"},
+    )
+    monkeypatch.setattr(
+        "xinyu_bridge_autonomous_maintenance.run_initiative_spine",
+        lambda *args, **kwargs: {"emergence_level": "shadow", "action_permission": "hold"},
+    )
+    monkeypatch.setattr(
+        "xinyu_bridge_autonomous_maintenance.run_desire_drive_state",
+        lambda *args, **kwargs: {
+            "status": "active",
+            "dominant_drive": "repair",
+            "drive_intensity": "0.5",
+            "autonomy_tension": "low",
+        },
+    )
+    monkeypatch.setattr(
+        "xinyu_bridge_autonomous_maintenance.run_contextual_self_observatory",
         lambda *args, **kwargs: {
             "posture": "balanced_or_insufficient_data",
             "latest_scene": "initiative_feedback",
@@ -609,7 +703,7 @@ def test_bridge_desktop_ack_records_initiative_feedback(monkeypatch, tmp_path: P
         )
         return {"accepted": True, "recorded": True}
 
-    monkeypatch.setattr(xinyu_core_bridge, "record_initiative_feedback", fake_feedback)
+    monkeypatch.setattr(xinyu_bridge_desktop_proactive_routes, "record_initiative_feedback", fake_feedback)
 
     result = runtime._record_desktop_initiative_feedback(
         runtime._desktop_proactive_existing("procand-test"),

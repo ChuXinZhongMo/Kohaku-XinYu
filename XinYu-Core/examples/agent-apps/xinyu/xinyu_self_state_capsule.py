@@ -6,7 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from state_service import atomic_write_text
+from xinyu_self_state_capsule_store import read_self_state_capsule_context_text
+from xinyu_self_state_capsule_store import write_self_state_capsule_state
 from xinyu_text_variants import readable_markers
 
 
@@ -319,13 +320,12 @@ def _write_state(root: Path, capsule: SelfStateCapsule) -> None:
         "",
         "Hidden current-turn state for owner-private status, feeling, thought, and delay questions.",
     ]
-    atomic_write_text(root / STATE_REL, "\n".join(lines))
+    write_self_state_capsule_state(root / STATE_REL, "\n".join(lines))
 
 
 def _read_markdown_fields(path: Path) -> dict[str, str]:
-    try:
-        text = path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
+    text = read_self_state_capsule_context_text(path)
+    if not text:
         return {}
     fields: dict[str, str] = {}
     for line in text.splitlines():

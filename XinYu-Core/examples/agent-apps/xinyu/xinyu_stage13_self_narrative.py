@@ -11,11 +11,12 @@ from xinyu_decision_chain_latest import build_decision_chain_latest_report
 from xinyu_memory_health_report import build_memory_health_report
 from xinyu_owner_feedback_effects import build_owner_feedback_effect_report
 from xinyu_stage12_long_term_evaluation import build_stage12_long_term_evaluation
-
-
-REPORT_REL = Path("worklog") / "xinyu-stage13-self-narrative-latest.md"
-STATE_REL = Path("memory/context/stage13_self_narrative_state.md")
-TRACE_REL = Path("runtime/stage13_self_narrative_trace.jsonl")
+from xinyu_stage13_self_narrative_store import REPORT_REL
+from xinyu_stage13_self_narrative_store import STATE_REL
+from xinyu_stage13_self_narrative_store import TRACE_REL
+from xinyu_stage13_self_narrative_store import append_stage13_self_narrative_trace_event
+from xinyu_stage13_self_narrative_store import write_stage13_self_narrative_report_text
+from xinyu_stage13_self_narrative_store import write_stage13_self_narrative_state_text
 
 NONE_VALUES = {"", "none", "missing", "unknown", "null"}
 SILENCE_GATES = {"hold_or_silence", "hold_private", "silence", "blocked"}
@@ -374,12 +375,11 @@ def write_stage13_self_narrative_report(
     output: Path | None = None,
 ) -> Path:
     root = Path(root).resolve()
-    path = output if output is not None else root / REPORT_REL
-    if not path.is_absolute():
-        path = root / path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_stage13_self_narrative(report), encoding="utf-8")
-    return path
+    return write_stage13_self_narrative_report_text(
+        root,
+        render_stage13_self_narrative(report),
+        output=output,
+    )
 
 
 def write_stage13_self_narrative_state(
@@ -389,8 +389,6 @@ def write_stage13_self_narrative_state(
     report_path: Path | None = None,
 ) -> Path:
     root = Path(root).resolve()
-    path = root / STATE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     model = report.get("model") if isinstance(report.get("model"), dict) else {}
     boundaries = report.get("boundaries") if isinstance(report.get("boundaries"), dict) else {}
     behavior = model.get("behavior_explanation") if isinstance(model.get("behavior_explanation"), dict) else {}
@@ -445,14 +443,11 @@ tags: [autonomy, self-narrative, stage13, audit]
 - consciousness_claim: {_bool_text(boundaries.get('consciousness_claim', False))}
 - report_path: {target_report.as_posix()}
 """
-    path.write_text(text, encoding="utf-8")
-    return path
+    return write_stage13_self_narrative_state_text(root, text)
 
 
 def append_stage13_self_narrative_trace(root: Path | str, report: dict[str, Any]) -> Path:
     root = Path(root).resolve()
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     model = report.get("model") if isinstance(report.get("model"), dict) else {}
     behavior = model.get("behavior_explanation") if isinstance(model.get("behavior_explanation"), dict) else {}
     governance = model.get("memory_governance_state") if isinstance(model.get("memory_governance_state"), dict) else {}
@@ -474,9 +469,7 @@ def append_stage13_self_narrative_trace(root: Path | str, report: dict[str, Any]
         "qq_message_enqueued": False,
         "consciousness_claim": False,
     }
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
-    return path
+    return append_stage13_self_narrative_trace_event(root, event)
 
 
 def main(argv: list[str] | None = None) -> int:

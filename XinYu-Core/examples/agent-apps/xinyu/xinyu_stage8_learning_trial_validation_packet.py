@@ -8,13 +8,17 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_stage8_learning_trial_validation_packet_store import LEARNING_STATE_REL
+from xinyu_stage8_learning_trial_validation_packet_store import LEARNING_TRACE_REL
+from xinyu_stage8_learning_trial_validation_packet_store import PACKET_REL
+from xinyu_stage8_learning_trial_validation_packet_store import STATE_REL
+from xinyu_stage8_learning_trial_validation_packet_store import latest_stage8_learning_trial_validation_jsonl_row
+from xinyu_stage8_learning_trial_validation_packet_store import read_stage8_learning_trial_validation_text
+from xinyu_stage8_learning_trial_validation_packet_store import write_stage8_learning_trial_validation_packet_text
+from xinyu_stage8_learning_trial_validation_packet_store import write_stage8_learning_trial_validation_state_text
 from xinyu_text_variants import LEGACY_MOJIBAKE_FRAGMENTS
 
 
-PACKET_REL = Path("worklog") / "xinyu-stage8-learning-trial-validation-latest.md"
-STATE_REL = Path("memory/context/stage8_learning_trial_validation_state.md")
-LEARNING_STATE_REL = Path("memory/self/learning_closed_loop_state.md")
-LEARNING_TRACE_REL = Path("runtime/learning_closed_loop_trace.jsonl")
 SUCCESS_GATE_TARGET_STREAK = 2
 NONE_VALUES = {"", "none", "unknown", "missing", "null"}
 # Display hygiene only: the matcher keeps legacy mojibake variants (for tolerating
@@ -104,10 +108,7 @@ def _one_line(value: Any, *, limit: int = 180, default: str = "none") -> str:
 
 
 def _read_text(path: Path, *, limit: int = 80000) -> str:
-    try:
-        return path.read_text(encoding="utf-8-sig", errors="replace")[:limit]
-    except OSError:
-        return ""
+    return read_stage8_learning_trial_validation_text(path, limit=limit)
 
 
 def _field(text: str, name: str, default: str = "none") -> str:
@@ -129,20 +130,7 @@ def _int_field(text: str, name: str, default: int = 0) -> int:
 
 
 def _latest_jsonl_row(path: Path, *, max_lines: int = 300) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
-    except OSError:
-        return {}
-    for line in reversed(lines[-max(1, int(max_lines)) :]):
-        try:
-            data = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(data, dict):
-            return data
-    return {}
+    return latest_stage8_learning_trial_validation_jsonl_row(path, max_lines=max_lines)
 
 
 def _is_display_clean_marker(marker: str) -> bool:
@@ -466,12 +454,11 @@ def write_stage8_learning_trial_validation_packet(
     output: Path | None = None,
 ) -> Path:
     root = root.resolve()
-    path = output if output is not None else root / PACKET_REL
-    if not path.is_absolute():
-        path = root / path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_stage8_learning_trial_validation_packet(packet), encoding="utf-8")
-    return path
+    return write_stage8_learning_trial_validation_packet_text(
+        root,
+        render_stage8_learning_trial_validation_packet(packet),
+        output=output,
+    )
 
 
 def write_stage8_learning_trial_validation_state(
@@ -481,8 +468,6 @@ def write_stage8_learning_trial_validation_state(
     packet_path: Path | None = None,
 ) -> Path:
     root = root.resolve()
-    path = root / STATE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     trial = packet.get("learning_trial") if isinstance(packet.get("learning_trial"), dict) else {}
     gate = packet.get("gate") if isinstance(packet.get("gate"), dict) else {}
     decision = packet.get("owner_review_decision") if isinstance(packet.get("owner_review_decision"), dict) else {}
@@ -526,8 +511,7 @@ tags: [autonomy, memory, governance, learning-trial, stage8]
 - qq_message_enqueued: false
 - consciousness_claim: false
 """
-    path.write_text(text, encoding="utf-8")
-    return path
+    return write_stage8_learning_trial_validation_state_text(root, text)
 
 
 def main(argv: list[str] | None = None) -> int:

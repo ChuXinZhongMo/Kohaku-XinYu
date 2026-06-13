@@ -14,7 +14,7 @@
       "retention_days": null,
       "contains_pii": true,
       "requires_redaction": true,
-      "max_file_count": 800,
+      "max_file_count": 870,
       "snapshot_allowed": false,
       "last_verified_at": "2026-05-17",
       "verifier_version": "memory_library_manifest_v1"

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import argparse
-import os
 
+from xinyu_bridge_cli_env_store import read_bridge_cli_env
 from xinyu_bridge_values import as_bool, as_int
 
 
@@ -14,7 +14,7 @@ def build_bridge_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--request-timeout-margin-seconds",
         type=int,
-        default=as_int(os.environ.get("XINYU_BRIDGE_REQUEST_TIMEOUT_MARGIN_SECONDS"), 90),
+        default=as_int(read_bridge_cli_env("XINYU_BRIDGE_REQUEST_TIMEOUT_MARGIN_SECONDS"), 90),
         help="Extra HTTP bridge wait time after the model turn timeout for post-turn sidecars.",
     )
     parser.add_argument("--settle-seconds", type=float, default=0.0)
@@ -24,7 +24,7 @@ def build_bridge_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--renderer-mode",
         choices=("always", "quality", "pressure", "off"),
-        default=os.environ.get("XINYU_RENDERER_MODE", "off"),
+        default=read_bridge_cli_env("XINYU_RENDERER_MODE", "off"),
         help=(
             "Outward renderer policy. always=second LLM call every reply; "
             "quality=only pressure or failed quality gate; pressure=only pressure turns; off=disabled by default."
@@ -34,7 +34,7 @@ def build_bridge_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--session-idle-ttl-seconds",
         type=int,
-        default=as_int(os.environ.get("XINYU_DIALOGUE_SESSION_IDLE_TTL_SECONDS"), 86400),
+        default=as_int(read_bridge_cli_env("XINYU_DIALOGUE_SESSION_IDLE_TTL_SECONDS"), 86400),
     )
     parser.add_argument("--max-sessions", type=int, default=8)
     parser.add_argument("--proactive-min-interval-seconds", type=int, default=1800)
@@ -47,24 +47,24 @@ def build_bridge_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--bridge-token",
-        default=os.environ.get("XINYU_BRIDGE_TOKEN", ""),
+        default=read_bridge_cli_env("XINYU_BRIDGE_TOKEN", ""),
         help="Shared token. Optional only for loopback hosts; required for non-loopback hosts.",
     )
     parser.add_argument(
         "--desktop-events-host",
-        default=os.environ.get("XINYU_DESKTOP_EVENTS_HOST", "127.0.0.1"),
+        default=read_bridge_cli_env("XINYU_DESKTOP_EVENTS_HOST", "127.0.0.1"),
         help="Loopback host for the dark-launched desktop WebSocket event stream.",
     )
     parser.add_argument(
         "--desktop-events-port",
         type=int,
-        default=as_int(os.environ.get("XINYU_DESKTOP_EVENTS_PORT"), 8766),
+        default=as_int(read_bridge_cli_env("XINYU_DESKTOP_EVENTS_PORT"), 8766),
         help="Port for the dark-launched desktop WebSocket event stream.",
     )
     parser.add_argument(
         "--disable-desktop-events",
         action="store_true",
-        default=as_bool(os.environ.get("XINYU_DISABLE_DESKTOP_EVENTS"), default=False),
+        default=as_bool(read_bridge_cli_env("XINYU_DISABLE_DESKTOP_EVENTS"), default=False),
         help="Disable the desktop WebSocket event stream dark launch.",
     )
     return parser

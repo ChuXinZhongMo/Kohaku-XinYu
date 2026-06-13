@@ -7,10 +7,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-
-REPORT_REL = Path("worklog") / "xinyu-stage9-self-state-model-latest.md"
-STATE_REL = Path("memory/context/stage9_self_state_model_state.md")
-TRACE_REL = Path("runtime/stage9_self_state_model_trace.jsonl")
+from xinyu_stage9_self_state_model_store import REPORT_REL
+from xinyu_stage9_self_state_model_store import SOURCE_RELS
+from xinyu_stage9_self_state_model_store import STATE_REL
+from xinyu_stage9_self_state_model_store import TRACE_REL
+from xinyu_stage9_self_state_model_store import append_stage9_trace_event
+from xinyu_stage9_self_state_model_store import read_stage9_source_text
+from xinyu_stage9_self_state_model_store import stage9_report_path
+from xinyu_stage9_self_state_model_store import write_stage9_report_text
+from xinyu_stage9_self_state_model_store import write_stage9_state_text
 
 NONE_VALUES = {"", "none", "unknown", "missing", "null"}
 
@@ -60,15 +65,7 @@ def _int_value(value: Any, default: int = 0) -> int:
         return default
 
 
-def _read_text(path: Path, *, limit: int = 50000) -> str:
-    try:
-        return path.read_text(encoding="utf-8-sig", errors="replace")[:limit]
-    except OSError:
-        return ""
-
-
-def _read_fields(path: Path) -> dict[str, str]:
-    text = _read_text(path)
+def _read_fields(text: str) -> dict[str, str]:
     fields: dict[str, str] = {}
     for line in text.splitlines():
         stripped = line.strip()
@@ -81,18 +78,7 @@ def _read_fields(path: Path) -> dict[str, str]:
 
 
 def _load_sources(root: Path) -> dict[str, dict[str, str]]:
-    return {
-        "stage8": _read_fields(root / "memory/context/stage8_memory_governance_state.md"),
-        "runtime": _read_fields(root / "memory/context/runtime_self_presence.md"),
-        "intention": _read_fields(root / "memory/context/intention_ecology_state.md"),
-        "action_feedback": _read_fields(root / "memory/context/action_feedback_coverage_state.md"),
-        "owner_feedback": _read_fields(root / "memory/context/owner_feedback_effect_state.md"),
-        "self_action": _read_fields(root / "memory/context/self_action_gateway_state.md"),
-        "self_thought": _read_fields(root / "memory/context/self_thought_state.md"),
-        "proactive": _read_fields(root / "memory/context/proactive_response_diagnostics_state.md"),
-        "continuity": _read_fields(root / "memory/context/short_term_continuity_state.md"),
-        "capsule": _read_fields(root / "memory/context/self_state_capsule_state.md"),
-    }
+    return {source_id: _read_fields(read_stage9_source_text(root, source_id)) for source_id in SOURCE_RELS}
 
 
 def _field(sources: dict[str, dict[str, str]], source: str, name: str, default: str = "none") -> str:
@@ -324,12 +310,7 @@ def render_stage9_self_state_model(report: dict[str, Any]) -> str:
 
 def write_stage9_self_state_model_report(root: Path | str, report: dict[str, Any], *, output: Path | None = None) -> Path:
     root = Path(root).resolve()
-    path = output if output is not None else root / REPORT_REL
-    if not path.is_absolute():
-        path = root / path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_stage9_self_state_model(report), encoding="utf-8")
-    return path
+    return write_stage9_report_text(root, render_stage9_self_state_model(report), output=output)
 
 
 def write_stage9_self_state_model_state(
@@ -339,14 +320,12 @@ def write_stage9_self_state_model_state(
     report_path: Path | None = None,
 ) -> Path:
     root = Path(root).resolve()
-    path = root / STATE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     model = report.get("model") if isinstance(report.get("model"), dict) else {}
     boundaries = report.get("boundaries") if isinstance(report.get("boundaries"), dict) else {}
     unfinished = model.get("unfinished_intentions") if isinstance(model.get("unfinished_intentions"), list) else []
     limits = model.get("current_limits") if isinstance(model.get("current_limits"), list) else []
     actions = model.get("available_actions") if isinstance(model.get("available_actions"), list) else []
-    target_report = report_path or (root / REPORT_REL)
+    target_report = report_path or stage9_report_path(root)
     text = f"""---
 title: Stage 9 Self State Model State
 memory_type: stage9_self_state_model_state
@@ -387,14 +366,11 @@ tags: [autonomy, self-state, stage9, audit]
 - consciousness_claim: {str(bool(boundaries.get('consciousness_claim', False))).lower()}
 - report_path: {target_report.as_posix()}
 """
-    path.write_text(text, encoding="utf-8")
-    return path
+    return write_stage9_state_text(root, text)
 
 
 def append_stage9_self_state_model_trace(root: Path | str, report: dict[str, Any]) -> Path:
     root = Path(root).resolve()
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     model = report.get("model") if isinstance(report.get("model"), dict) else {}
     event = {
         "event_id": "stage9-self-state-" + datetime.now().astimezone().strftime("%Y%m%dT%H%M%S"),
@@ -411,9 +387,7 @@ def append_stage9_self_state_model_trace(root: Path | str, report: dict[str, Any
         "visible_reply_text_retained": False,
         "consciousness_claim": False,
     }
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
-    return path
+    return append_stage9_trace_event(root, event)
 
 
 def main(argv: list[str] | None = None) -> int:

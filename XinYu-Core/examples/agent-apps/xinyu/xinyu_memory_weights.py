@@ -6,8 +6,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-
-STATE_REL = "memory/context/memory_weight_state.md"
+from xinyu_memory_weights_store import STATE_REL
+from xinyu_memory_weights_store import memory_weight_spec_path
+from xinyu_memory_weights_store import read_memory_weight_state
+from xinyu_memory_weights_store import read_memory_weight_text
+from xinyu_memory_weights_store import write_memory_weight_state
 
 
 @dataclass(frozen=True)
@@ -119,10 +122,8 @@ def calculate_memory_weights(root: Path, *, at: datetime | None = None) -> list[
     evaluated = at or _now()
     rows: list[dict[str, object]] = []
     for spec in MEMORY_WEIGHT_SPECS:
-        path = root / spec.rel
-        try:
-            text = path.read_text(encoding="utf-8-sig", errors="replace")
-        except OSError:
+        text = read_memory_weight_text(memory_weight_spec_path(root, spec.rel))
+        if text is None:
             rows.append(
                 {
                     "path": spec.rel,
@@ -206,13 +207,7 @@ def refresh_memory_weight_state(root: Path, *, at: datetime | None = None) -> st
     evaluated = at or _now()
     rows = calculate_memory_weights(root, at=evaluated)
     text = render_memory_weight_state(evaluated, rows)
-    path = root / STATE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    old = ""
-    try:
-        old = path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
-        pass
+    old = read_memory_weight_state(root)
     if old != text:
-        path.write_text(text, encoding="utf-8")
+        write_memory_weight_state(root, text)
     return text

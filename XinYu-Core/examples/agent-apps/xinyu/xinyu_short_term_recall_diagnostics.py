@@ -2,21 +2,21 @@ from __future__ import annotations
 
 import argparse
 import json
-import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_dialogue_archive import dialogue_archive_path
-from xinyu_prompt_pressure import PROMPT_PRESSURE_REPORT_REL
-from xinyu_state_io import write_text_atomic
-
-
-SHORT_TRACE_REL = Path("runtime/short_term_continuity_trace.jsonl")
-WORKING_MEMORY_DIR_REL = Path("runtime/dialogue_working_memory")
-STATE_REL = Path("memory/context/short_term_recall_diagnostics_state.md")
-REPORT_REL = Path("worklog/xinyu-short-term-recall-diagnostics-latest.md")
-TRACE_REL = Path("runtime/short_term_recall_diagnostics_trace.jsonl")
+from xinyu_short_term_recall_diagnostics_store import REPORT_REL
+from xinyu_short_term_recall_diagnostics_store import SHORT_TRACE_REL
+from xinyu_short_term_recall_diagnostics_store import STATE_REL
+from xinyu_short_term_recall_diagnostics_store import TRACE_REL
+from xinyu_short_term_recall_diagnostics_store import WORKING_MEMORY_DIR_REL
+from xinyu_short_term_recall_diagnostics_store import append_short_term_recall_trace_event
+from xinyu_short_term_recall_diagnostics_store import read_short_term_recall_prompt_report
+from xinyu_short_term_recall_diagnostics_store import read_short_term_recall_trace_tail
+from xinyu_short_term_recall_diagnostics_store import short_term_recall_storage_stats
+from xinyu_short_term_recall_diagnostics_store import write_short_term_recall_report_text
+from xinyu_short_term_recall_diagnostics_store import write_short_term_recall_state_text
 
 SHORT_TERM_SIDECAR = "short_term_continuity"
 SIDECAR_CLIP_WARN_CHARS = 1550
@@ -30,12 +30,12 @@ def build_short_term_recall_diagnostics(
 ) -> dict[str, Any]:
     root = root.resolve()
     generated_at = generated_at or _now_iso()
-    trace_rows = _read_jsonl_tail(root / SHORT_TRACE_REL, max_lines=max(1, int(trace_limit)))
+    trace_rows = read_short_term_recall_trace_tail(root, max_lines=max(1, int(trace_limit)))
     direct_events = [_safe_event(row) for row in trace_rows if row.get("direct_reference") is True]
     latest = direct_events[-1] if direct_events else {}
-    prompt_report = _read_json(root / PROMPT_PRESSURE_REPORT_REL)
+    prompt_report = read_short_term_recall_prompt_report(root)
     prompt = _prompt_sidecar_status(prompt_report, latest)
-    storage = _storage_stats(root)
+    storage = short_term_recall_storage_stats(root)
     archive = _archive_fallback_status(latest, storage)
     budget = _budget_status(prompt)
     primary_failure = _primary_failure_class(latest, prompt, archive, budget, storage)
@@ -176,11 +176,7 @@ def write_short_term_recall_diagnostics(
     output: Path | None = None,
 ) -> dict[str, str]:
     root = root.resolve()
-    report_path = output if output is not None else root / REPORT_REL
-    if not report_path.is_absolute():
-        report_path = root / report_path
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(render_short_term_recall_diagnostics(report), encoding="utf-8")
+    report_path = write_short_term_recall_report_text(root, render_short_term_recall_diagnostics(report), output=output)
     _write_state(root, report, report_path=report_path)
     _append_trace(root, report)
     return {"report_path": str(report_path), "state_path": str(root / STATE_REL)}
@@ -251,7 +247,7 @@ tags: [continuity, recall, diagnostics, input-anchor]
 - visible_reply_text_in_state: false
 - stable_memory_write: blocked
 """
-    write_text_atomic(root / STATE_REL, text)
+    write_short_term_recall_state_text(root, text)
 
 
 def _append_trace(root: Path, report: dict[str, Any]) -> None:
@@ -270,10 +266,7 @@ def _append_trace(root: Path, report: dict[str, Any]) -> None:
         "raw_owner_text_in_trace": False,
         "visible_reply_text_in_trace": False,
     }
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as fh:
-        fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+    append_short_term_recall_trace_event(root, row)
 
 
 def _safe_event(row: dict[str, Any]) -> dict[str, Any]:
@@ -352,34 +345,6 @@ def _find_sidecar(value: Any, name: str) -> dict[str, Any]:
         if isinstance(item, dict) and item.get("name") == name:
             return item
     return {}
-
-
-def _storage_stats(root: Path) -> dict[str, Any]:
-    working_dir = root / WORKING_MEMORY_DIR_REL
-    working_files = list(working_dir.glob("*.jsonl")) if working_dir.exists() else []
-    working_rows = 0
-    for path in working_files:
-        try:
-            working_rows += sum(1 for line in path.read_text(encoding="utf-8-sig", errors="replace").splitlines() if line.strip())
-        except OSError:
-            continue
-
-    archive_path = dialogue_archive_path(root)
-    archive_exists = archive_path.exists()
-    archive_messages = 0
-    if archive_exists:
-        try:
-            with sqlite3.connect(archive_path) as conn:
-                row = conn.execute("SELECT COUNT(*) FROM dialogue_messages").fetchone()
-                archive_messages = int(row[0] if row else 0)
-        except sqlite3.Error:
-            archive_messages = 0
-    return {
-        "working_memory_file_count": len(working_files),
-        "working_memory_row_count": working_rows,
-        "archive_db_exists": archive_exists,
-        "archive_message_count": archive_messages,
-    }
 
 
 def _archive_fallback_status(latest: dict[str, Any], storage: dict[str, Any]) -> dict[str, str]:
@@ -511,34 +476,6 @@ def _classification_basis(
             f"archive={archive.get('reason', 'tail_and_archive_missing')}"
         )
     return "insufficient_diagnostic_evidence"
-
-
-def _read_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def _read_jsonl_tail(path: Path, *, max_lines: int) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-    try:
-        lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
-    except OSError:
-        return []
-    rows: list[dict[str, Any]] = []
-    for line in lines[-max(1, int(max_lines)) :]:
-        try:
-            data = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(data, dict):
-            rows.append(data)
-    return rows
 
 
 def _as_int(value: Any) -> int:

@@ -13,9 +13,13 @@ from xinyu_dialogue_rule_eval import (
     evaluate_text,
     parse_owner_rule_cards,
 )
+from xinyu_dialogue_rule_trial_overlay_store import OVERLAY_REL
+from xinyu_dialogue_rule_trial_overlay_store import dialogue_rule_trial_overlay_exists
+from xinyu_dialogue_rule_trial_overlay_store import dialogue_rule_trial_overlay_path
+from xinyu_dialogue_rule_trial_overlay_store import read_dialogue_rule_trial_overlay_state
+from xinyu_dialogue_rule_trial_overlay_store import write_dialogue_rule_trial_overlay_state
 
 
-OVERLAY_REL = Path("runtime/life_kernel/dialogue_rule_trial_overlay.json")
 DEFAULT_APPLICATIONS = 8
 DEFAULT_TTL_MINUTES = 360
 DEFAULT_MAX_RULES_PER_TURN = 3
@@ -76,23 +80,6 @@ def _owner_private(payload: dict[str, Any] | None) -> bool:
     group_id = _safe_str(payload.get("group_id")).strip()
     message_type = _safe_str(payload.get("message_type")).strip().lower()
     return is_owner and not group_id and not message_type.startswith("group")
-
-
-def _read_state(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        value = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return value if isinstance(value, dict) else {}
-
-
-def _write_state(path: Path, state: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    tmp.replace(path)
 
 
 def _parse_time(value: Any) -> datetime | None:
@@ -165,10 +152,10 @@ def activate_dialogue_rule_trial_overlay(
             "applies_only_when_current_text_matches_approved_rule",
         ],
     }
-    _write_state(root / OVERLAY_REL, state)
+    write_dialogue_rule_trial_overlay_state(root, state)
     return {
         "activated": True,
-        "path": str(root / OVERLAY_REL),
+        "path": str(dialogue_rule_trial_overlay_path(root)),
         "trial_id": state["trial_id"],
         "approved_rule_count": len(cards),
         "remaining_applications": applications,
@@ -180,7 +167,7 @@ def activate_dialogue_rule_trial_overlay(
 
 
 def read_dialogue_rule_trial_overlay(root: Path) -> dict[str, Any]:
-    return _read_state(root / OVERLAY_REL)
+    return read_dialogue_rule_trial_overlay_state(root)
 
 
 def build_dialogue_rule_trial_overlay_prompt_block(
@@ -194,15 +181,14 @@ def build_dialogue_rule_trial_overlay_prompt_block(
     if not _owner_private(payload):
         return ""
     now_dt = now_dt or _now()
-    path = root / OVERLAY_REL
-    state = _read_state(path)
+    state = read_dialogue_rule_trial_overlay_state(root)
     if not state:
         return ""
     if _expired(state, now_dt):
         if _safe_str(state.get("status")) == "active":
             state["status"] = "expired"
             state["updated_at"] = _timestamp_or_now_iso(now_dt.isoformat(timespec="seconds"))
-            _write_state(path, state)
+            write_dialogue_rule_trial_overlay_state(root, state)
         return ""
 
     cards_path = Path(_safe_str(state.get("cards_path"))) if _safe_str(state.get("cards_path")) else default_cards_path(root)
@@ -233,7 +219,7 @@ def build_dialogue_rule_trial_overlay_prompt_block(
         state["last_matched_rules"] = [match.rule_key for match in selected]
         if remaining_after <= 0:
             state["status"] = "expired_applications_consumed"
-        _write_state(path, state)
+        write_dialogue_rule_trial_overlay_state(root, state)
 
     rule_by_key = {card.rule_key: card for card in cards}
     lines = [
@@ -266,14 +252,13 @@ def build_dialogue_rule_trial_overlay_prompt_block(
 
 
 def clear_dialogue_rule_trial_overlay(root: Path) -> bool:
-    path = root / OVERLAY_REL
-    if not path.exists():
+    if not dialogue_rule_trial_overlay_exists(root):
         return False
-    state = _read_state(path)
+    state = read_dialogue_rule_trial_overlay_state(root)
     state["status"] = "cleared"
     state["remaining_applications"] = 0
     state["updated_at"] = _timestamp_or_now_iso(_now().isoformat(timespec="seconds"))
-    _write_state(path, state)
+    write_dialogue_rule_trial_overlay_state(root, state)
     return True
 
 

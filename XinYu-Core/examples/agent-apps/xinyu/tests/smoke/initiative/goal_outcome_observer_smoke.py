@@ -57,11 +57,14 @@ def main() -> int:
         if "maintenance_notes_hash" not in observer_state:
             failures.append("observer state missing hashed maintenance signal")
 
-    core_text = _read(ROOT / "xinyu_core_bridge.py")
+    autonomous_aliases_text = _read(ROOT / "xinyu_bridge_runtime_autonomous_aliases.py")
+    autonomous_maintenance_text = _read(ROOT / "xinyu_bridge_autonomous_maintenance.py")
     presence_text = _read(ROOT / "xinyu_runtime_presence.py")
     smoke_text = _read(ROOT / "smoke_run.py")
-    if "run_goal_outcome_observer(" not in core_text:
-        failures.append("xinyu_core_bridge.py does not run goal outcome observer")
+    if "_append_goal_outcome_observer_note" not in autonomous_aliases_text:
+        failures.append("runtime autonomous aliases missing goal outcome observer helper alias")
+    if "run_goal_outcome_observer(" not in autonomous_maintenance_text:
+        failures.append("autonomous maintenance does not run goal outcome observer")
     if "xinyu_goal_outcome_observer.py" not in presence_text:
         failures.append("runtime presence does not include goal outcome observer in code surface")
     if "goal_outcome_observer_smoke.py" not in smoke_text:

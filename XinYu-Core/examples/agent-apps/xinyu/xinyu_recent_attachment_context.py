@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from state_service import atomic_write_json
 from xinyu_bridge_session import session_key_from_payload
+from xinyu_recent_attachment_context_store import read_recent_attachment_context_json
+from xinyu_recent_attachment_context_store import read_recent_attachment_text
+from xinyu_recent_attachment_context_store import write_recent_attachment_context_json
 from xinyu_text_variants import readable_markers
 
 
@@ -129,12 +130,7 @@ def _resolve_under_root(root: Path, value: str) -> Path:
 
 
 def _load_context(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {"attachments": []}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
-    except (OSError, json.JSONDecodeError):
-        return {"attachments": []}
+    data = read_recent_attachment_context_json(path)
     if not isinstance(data, dict):
         return {"attachments": []}
     attachments = data.get("attachments")
@@ -145,7 +141,7 @@ def _load_context(path: Path) -> dict[str, Any]:
 
 def _write_context(path: Path, data: dict[str, Any]) -> bool:
     try:
-        atomic_write_json(path, data, sort_keys=True)
+        write_recent_attachment_context_json(path, data)
     except OSError:
         return False
     return True
@@ -318,10 +314,7 @@ def load_recent_attachment_context(
 
     for index, record in enumerate(chosen, start=1):
         path = _resolve_under_root(root, _safe_str(record.get("extracted_text_path")).strip())
-        try:
-            text = path.read_text(encoding="utf-8-sig", errors="replace")
-        except OSError:
-            continue
+        text = read_recent_attachment_text(path)
         excerpt = _compact_text(text, per_attachment)
         if not excerpt:
             continue

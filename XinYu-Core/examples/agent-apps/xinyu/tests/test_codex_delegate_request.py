@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from xinyu_codex_delegate import _write_request
+from xinyu_codex_delegate import _write_request, looks_like_codex_request
 
 
 def test_write_request_preserves_multiline_self_code_task(tmp_path: Path) -> None:
@@ -37,3 +37,17 @@ def test_write_request_preserves_multiline_self_code_task(tmp_path: Path) -> Non
     assert "\nSelf-code approval id: selfaction-decision-test\n" in text
     assert "\n- Inspect the current XinYu app state.\n```\n\n## Input URLs" in text
     assert "- output_report: " in text
+
+
+def test_codex_request_detection_rejects_meta_observations() -> None:
+    for text in (
+        "丫头刚刚在想什么？看见你调用codex了",
+        "心玉为什么不能调用codex进行搜索",
+        "说起来你运行codex好像每次都没成功的样子",
+        "codex查完了没",
+    ):
+        assert looks_like_codex_request(text) is False, text
+
+
+def test_codex_request_detection_accepts_explicit_delegate_task() -> None:
+    assert looks_like_codex_request("调用codex自主修复一下群聊逻辑") is True

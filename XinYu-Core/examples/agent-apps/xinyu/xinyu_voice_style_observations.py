@@ -8,6 +8,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_voice_style_observations_store import OBSERVATIONS_REL
+from xinyu_voice_style_observations_store import write_voice_style_observations_text
+
 PUBLIC_REFERENCE_SOURCES: tuple[dict[str, str], ...] = (
     {
         "name": "Chinese-Dialogue-Dataset",
@@ -232,7 +235,6 @@ def write_voice_style_observations(root: Path, *, updated_at: str | None = None)
     root = root.resolve()
     updated_at = updated_at or datetime.now().astimezone().isoformat(timespec="seconds")
     analysis = analyse_public_examples()
-    path = root / "memory/self/voice_style_observations.md"
     lines = [
         "# Voice Style Observations",
         "",
@@ -284,9 +286,7 @@ def write_voice_style_observations(root: Path, *, updated_at: str | None = None)
             "- Do not use this file as permission to write stable persona or owner memory.",
         ]
     )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-    return path
+    return write_voice_style_observations_text(root, "\n".join(lines).rstrip() + "\n")
 
 
 def proactive_style_guard(text: str) -> dict[str, Any]:

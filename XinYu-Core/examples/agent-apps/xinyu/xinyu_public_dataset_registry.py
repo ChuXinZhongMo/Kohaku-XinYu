@@ -9,7 +9,7 @@ from xinyu_storage_paths import public_dataset_registry_path as resolve_public_d
 
 
 ALLOWED_PRIORITIES = {"P0", "P1", "P1.5", "P2", "P3"}
-ALLOWED_DATASET_KINDS = {"owner_seed", "public_dataset"}
+ALLOWED_DATASET_KINDS = {"owner_seed", "owner_eval_seed", "public_dataset"}
 ALLOWED_SOURCE_TIERS = {"owner_xinyu", "public_pattern"}
 ALLOWED_REVIEW_STATUSES = {"approved", "pending", "disabled"}
 ALLOWED_RISK_LEVELS = {"low", "medium", "high"}
@@ -208,6 +208,21 @@ def _validate_entry_policy(entry: PublicDatasetEntry) -> None:
             raise PublicDatasetRegistryError(f"{entry.dataset_id}: owner seed must be P0 owner_xinyu")
         if entry.raw_data_policy != "committed_abstract_seed_cases_only":
             raise PublicDatasetRegistryError(f"{entry.dataset_id}: invalid owner raw_data_policy")
+        return
+
+    if entry.dataset_kind == "owner_eval_seed":
+        if entry.priority != "P0" or entry.source_tier != "owner_xinyu":
+            raise PublicDatasetRegistryError(f"{entry.dataset_id}: owner eval seed must be P0 owner_xinyu")
+        if entry.raw_data_policy != "committed_abstract_eval_cases_only":
+            raise PublicDatasetRegistryError(f"{entry.dataset_id}: invalid owner eval raw_data_policy")
+        if entry.stable_memory_allowed:
+            raise PublicDatasetRegistryError(f"{entry.dataset_id}: owner eval seed cannot allow stable memory writes")
+        if entry.license_status != "owner_owned":
+            raise PublicDatasetRegistryError(f"{entry.dataset_id}: owner eval seed must be owner_owned")
+        if entry.default_review_status != "approved" or entry.execution_status != "owner_active":
+            raise PublicDatasetRegistryError(f"{entry.dataset_id}: owner eval seed must be approved owner_active")
+        if not entry.case_card_only:
+            raise PublicDatasetRegistryError(f"{entry.dataset_id}: owner eval seed must be case_card_only")
         return
 
     if entry.priority == "P0":

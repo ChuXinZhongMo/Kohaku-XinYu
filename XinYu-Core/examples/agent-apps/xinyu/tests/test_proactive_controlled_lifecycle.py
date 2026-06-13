@@ -55,6 +55,18 @@ title: Self Thought State
     )
 
 
+def _seed_owner_long_idle(root: Path, *, minutes: int) -> None:
+    last_owner_at = "2026-05-13T00:01:00+08:00" if minutes < 90 else "2026-05-13T00:00:00+08:00"
+    _write(
+        root / "memory/context/interaction_journal_state.md",
+        f"""
+        - updated_at: 2026-05-13T01:30:00+08:00
+        - last_owner_private_at: {last_owner_at}
+        - minutes_since_last_owner_private: {minutes}
+        """,
+    )
+
+
 def _make_runtime(root: Path) -> XinYuBridgeRuntime:
     (root / "memory/context").mkdir(parents=True, exist_ok=True)
     (root / "memory/self").mkdir(parents=True, exist_ok=True)
@@ -133,6 +145,40 @@ def test_proactive_shadow_holds_style_repair_when_realtime_pressure_is_capped(tm
     assert "style_repair_realtime_pressure_capped_hold" in result["hard_blocks"]
     assert "- recommendation: hold" in state
     assert "- preferred_channel: silent" in state
+
+
+def test_owner_long_idle_candidate_starts_after_ninety_minutes_and_stays_inbox_only(tmp_path: Path) -> None:
+    _seed_owner_long_idle(tmp_path / "early", minutes=89)
+    early = run_proactivity_scorer_shadow(tmp_path / "early", checked_at="2026-05-13T01:30:00+08:00")
+
+    _seed_owner_long_idle(tmp_path / "ready", minutes=90)
+    ready = run_proactivity_scorer_shadow(tmp_path / "ready", checked_at="2026-05-13T01:30:00+08:00")
+    state = (tmp_path / "ready/memory/context/proactive_decision_state.md").read_text(encoding="utf-8")
+
+    assert early["status"] == "no_candidates"
+    assert ready["source_type"] == "owner_long_idle"
+    assert ready["status"] == "inbox"
+    assert ready["preferred_channel"] == "inbox"
+    assert ready["total_score"] >= 52
+    assert "qq_send_disabled_for_owner_long_idle_v0" in ready["hard_blocks"]
+    assert "- recommendation: inbox" in state
+    assert "- preferred_channel: inbox" in state
+
+
+def test_owner_long_idle_uses_timestamp_when_cached_minutes_are_stale(tmp_path: Path) -> None:
+    _write(
+        tmp_path / "memory/context/interaction_journal_state.md",
+        """
+        - updated_at: 2026-05-13T01:30:00+08:00
+        - last_owner_private_at: 2026-05-12T19:30:00+08:00
+        - minutes_since_last_owner_private: 0
+        """,
+    )
+
+    result = run_proactivity_scorer_shadow(tmp_path, checked_at="2026-05-13T01:30:00+08:00")
+
+    assert result["source_type"] == "owner_long_idle"
+    assert result["status"] == "inbox"
 
 
 def test_failed_proactive_ack_enters_retry_cooldown_then_retries(tmp_path: Path) -> None:

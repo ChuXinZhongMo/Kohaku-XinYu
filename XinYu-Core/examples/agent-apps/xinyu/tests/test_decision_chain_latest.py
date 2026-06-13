@@ -9,6 +9,8 @@ from xinyu_decision_chain_latest import (
     render_decision_chain_latest_report,
     write_decision_chain_latest,
 )
+from xinyu_decision_chain_latest_store import decision_chain_latest_report_path
+from xinyu_decision_chain_latest_store import decision_chain_latest_state_path
 
 
 NOW = datetime(2026, 5, 27, 6, 45, tzinfo=timezone.utc)
@@ -296,6 +298,8 @@ def test_decision_chain_latest_writes_visible_decision_without_raw_text(tmp_path
     state = Path(paths["state_path"]).read_text(encoding="utf-8")
     trace = (tmp_path / "runtime/decision_chain_latest_trace.jsonl").read_text(encoding="utf-8")
 
+    assert paths["report_path"] == str(decision_chain_latest_report_path(tmp_path))
+    assert paths["state_path"] == str(decision_chain_latest_state_path(tmp_path))
     assert report["ok"] is True
     assert report["decision_chain"]["selected_candidate"] == "answer_current_turn"
     assert report["decision_chain"]["selected_total_score"] == "52"

@@ -6,8 +6,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from state_service import append_jsonl, atomic_write_text
 from xinyu_answer_discipline_visible_guard import evaluate_visible_reply_for_answer_discipline
+from xinyu_qq_visible_send_shadow_store import append_visible_send_shadow_trace
+from xinyu_qq_visible_send_shadow_store import read_visible_send_shadow_context_text
+from xinyu_qq_visible_send_shadow_store import write_visible_send_shadow_state
 from xinyu_sent_reply_index import visible_text_hash
 
 
@@ -70,8 +72,8 @@ def record_visible_send_shadow(
         "metadata": _safe_metadata(metadata or {}),
     }
     try:
-        append_jsonl(root_path / TRACE_REL, row)
-        atomic_write_text(root_path / STATE_REL, _render_state(row))
+        append_visible_send_shadow_trace(root_path / TRACE_REL, row)
+        write_visible_send_shadow_state(root_path / STATE_REL, _render_state(row))
     except Exception as exc:  # pragma: no cover - defensive; sending must continue
         return {
             **row,
@@ -84,9 +86,8 @@ def record_visible_send_shadow(
 
 def _read_contextual_recall_context(root: Path) -> dict[str, str]:
     path = root / CONTEXTUAL_RECALL_STATE_REL
-    try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
+    text = read_visible_send_shadow_context_text(path)
+    if not text:
         return dict(DEFAULT_CONTEXT)
     fields = dict(DEFAULT_CONTEXT)
     for key in ("retrieval_pressure", "evidence_sufficiency", "answer_discipline"):

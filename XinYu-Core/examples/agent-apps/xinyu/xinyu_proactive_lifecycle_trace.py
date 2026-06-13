@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from xinyu_proactive_lifecycle_trace_store import append_proactive_lifecycle_trace_event
 
 
 TRACE_REL = Path("runtime/proactive_request_trace.jsonl")
@@ -72,10 +73,7 @@ def append_proactive_lifecycle_event(
         "candidate_hash": _text_hash(candidate_text),
         "notes": [_safe_value(note, default="note") for note in notes if _safe_value(note, default="")],
     }
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
+    append_proactive_lifecycle_trace_event(root / TRACE_REL, payload)
 
 
 def _extract_value(text: str, field: str, default: str = "none") -> str:

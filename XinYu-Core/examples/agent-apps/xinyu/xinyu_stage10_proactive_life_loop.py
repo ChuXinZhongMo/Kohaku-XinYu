@@ -12,11 +12,14 @@ from xinyu_proactive_response_diagnostics import build_proactive_response_diagno
 from xinyu_self_action_gateway import APPROVAL_RISK, LOW_LOCAL_RISK, build_action_candidates
 from xinyu_self_chosen_goal_ecology import build_self_chosen_goal_decision
 from xinyu_stage9_self_state_model import build_stage9_self_state_model
+from xinyu_stage10_proactive_life_loop_store import REPORT_REL
+from xinyu_stage10_proactive_life_loop_store import STATE_REL
+from xinyu_stage10_proactive_life_loop_store import TRACE_REL
+from xinyu_stage10_proactive_life_loop_store import append_stage10_proactive_life_loop_trace_event
+from xinyu_stage10_proactive_life_loop_store import stage10_proactive_life_loop_report_path
+from xinyu_stage10_proactive_life_loop_store import write_stage10_proactive_life_loop_report_text
+from xinyu_stage10_proactive_life_loop_store import write_stage10_proactive_life_loop_state_text
 
-
-REPORT_REL = Path("worklog") / "xinyu-stage10-proactive-life-loop-latest.md"
-STATE_REL = Path("memory/context/stage10_proactive_life_loop_state.md")
-TRACE_REL = Path("runtime/stage10_proactive_life_loop_trace.jsonl")
 
 NONE_VALUES = {"", "none", "unknown", "missing", "null"}
 
@@ -387,13 +390,11 @@ def write_stage10_proactive_life_loop_report(
     *,
     output: Path | None = None,
 ) -> Path:
-    root = Path(root).resolve()
-    path = output if output is not None else root / REPORT_REL
-    if not path.is_absolute():
-        path = root / path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_stage10_proactive_life_loop(report), encoding="utf-8")
-    return path
+    return write_stage10_proactive_life_loop_report_text(
+        root,
+        render_stage10_proactive_life_loop(report),
+        output=output,
+    )
 
 
 def write_stage10_proactive_life_loop_state(
@@ -403,12 +404,10 @@ def write_stage10_proactive_life_loop_state(
     report_path: Path | None = None,
 ) -> Path:
     root = Path(root).resolve()
-    path = root / STATE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     loop = report.get("loop") if isinstance(report.get("loop"), dict) else {}
     gate_proof = report.get("gate_proof") if isinstance(report.get("gate_proof"), dict) else {}
     boundaries = report.get("boundaries") if isinstance(report.get("boundaries"), dict) else {}
-    target_report = report_path or (root / REPORT_REL)
+    target_report = report_path or stage10_proactive_life_loop_report_path(root)
     action_kinds = loop.get("candidate_action_kinds") if isinstance(loop.get("candidate_action_kinds"), list) else []
     text = f"""---
 title: Stage 10 Proactive Life Loop State
@@ -466,14 +465,11 @@ tags: [autonomy, proactive, life-loop, stage10, audit]
 - consciousness_claim: {_bool_text(boundaries.get('consciousness_claim', False))}
 - report_path: {target_report.as_posix()}
 """
-    path.write_text(text, encoding="utf-8")
-    return path
+    return write_stage10_proactive_life_loop_state_text(root, text)
 
 
 def append_stage10_proactive_life_loop_trace(root: Path | str, report: dict[str, Any]) -> Path:
     root = Path(root).resolve()
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     loop = report.get("loop") if isinstance(report.get("loop"), dict) else {}
     event = {
         "event_id": "stage10-life-loop-" + datetime.now().astimezone().strftime("%Y%m%dT%H%M%S"),
@@ -494,9 +490,7 @@ def append_stage10_proactive_life_loop_trace(root: Path | str, report: dict[str,
         "qq_message_enqueued": False,
         "consciousness_claim": False,
     }
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
-    return path
+    return append_stage10_proactive_life_loop_trace_event(root, event)
 
 
 def main(argv: list[str] | None = None) -> int:

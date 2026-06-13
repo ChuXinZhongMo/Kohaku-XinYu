@@ -1,276 +1,184 @@
 from __future__ import annotations
 
-import json
-from datetime import datetime
+import asyncio
 from pathlib import Path
 from typing import Any
 
-from xinyu_action_experience_digest import read_recent_action_digest_snapshot
-from xinyu_environment_sensor import sample_environment
-from xinyu_life_kernel import build_entropy_state
-from xinyu_bridge_values import safe_str
 from stores.self_action_queue import APPROVAL_QUEUE_REL as SELF_ACTION_APPROVAL_QUEUE_REL
 from stores.self_action_queue import read_approval_queue_events
+from xinyu_action_experience_digest import read_recent_action_digest_snapshot
+from xinyu_bridge_desktop_actions import desktop_action_pressure_label
+from xinyu_bridge_desktop_actions import desktop_action_result_label
+from xinyu_bridge_desktop_actions import desktop_action_theme_label
+from xinyu_bridge_desktop_projection import desktop_hash, desktop_text_preview
+import xinyu_bridge_desktop_snapshot_deps as _snapshot_deps
+from xinyu_bridge_desktop_snapshot_state import DesktopXinyuStateDeps
+from xinyu_bridge_desktop_surface_route_backend import maybe_execute_desktop_surface_backend
+from xinyu_bridge_state_text import read_text_safe, state_field
+from xinyu_bridge_values import as_bool, compact_text, safe_str
+from xinyu_browser_control import build_browser_snapshot
+from xinyu_computer_control import build_computer_snapshot
+from xinyu_desktop_service import desktop_event_state as desktop_service_event_state
+from xinyu_desktop_service import desktop_services as desktop_service_services
+from xinyu_environment_sensor import sample_environment
+from xinyu_life_kernel import build_entropy_state, evaluate_life_kernel
+from xinyu_metabolism_contract import create_ticket as create_metabolism_ticket
+from xinyu_private_ecosystem import build_private_ecosystem_snapshot
 
 
 SELF_ACTION_GATEWAY_STATE_REL = Path("runtime/self_action_gateway/state.json")
 SELF_ACTION_APPROVAL_HANDOFF_REL = Path("memory/context/self_action_gateway_execution_handoff.md")
 SELF_ACTION_PATCH_STATE_REL = Path("runtime/self_action_patch_executor/state.json")
 SELF_ACTION_PATCH_TASK_MD_REL = Path("memory/context/self_action_patch_executor_task.md")
+CREATIVE_WRITING_STATE_REL = Path("memory/creative/planning/novel_state.md")
 
 
 def desktop_metric_int(value: Any) -> int:
-    try:
-        return max(0, int(safe_str(value).strip()))
-    except (TypeError, ValueError):
-        return 0
+    return _snapshot_deps.desktop_metric_int(value, facade_deps=globals())
 
 
 def desktop_initiative_metrics_summary(metrics: dict[str, Any]) -> dict[str, Any]:
-    if not metrics or safe_str(metrics.get("observed")) == "false":
-        return {"observed": False}
-    return {
-        "observed": True,
-        "updatedAt": safe_str(metrics.get("updated_at")),
-        "windowHours": desktop_metric_int(metrics.get("window_hours")),
-        "eventCount24h": desktop_metric_int(metrics.get("event_count_24h")),
-        "desktopShown24h": desktop_metric_int(metrics.get("desktop_shown_count_24h")),
-        "heldPrivate24h": desktop_metric_int(metrics.get("held_private_count_24h")),
-        "blocked24h": desktop_metric_int(metrics.get("blocked_count_24h")),
-        "feedbackCount24h": desktop_metric_int(metrics.get("feedback_count_24h")),
-        "dismissCount24h": desktop_metric_int(metrics.get("dismiss_count_24h")),
-        "replyCount24h": desktop_metric_int(metrics.get("reply_count_24h")),
-        "approvedQqCount24h": desktop_metric_int(metrics.get("approved_qq_count_24h")),
-        "failedCount24h": desktop_metric_int(metrics.get("failed_count_24h")),
-        "pendingFeedbackCount": desktop_metric_int(metrics.get("pending_feedback_count")),
-    }
+    return _snapshot_deps.desktop_initiative_metrics_summary(metrics, facade_deps=globals())
 
 
-def _desktop_safe_dict(value: Any) -> dict[str, Any]:
-    return value if isinstance(value, dict) else {}
+async def desktop_event_state(runtime: Any) -> dict[str, Any]:
+    return await _snapshot_deps.desktop_event_state(runtime, facade_deps=globals())
 
 
-def _desktop_safe_list(value: Any) -> list[Any]:
-    return value if isinstance(value, list) else []
+def desktop_services(runtime: Any) -> list[dict[str, Any]]:
+    return _snapshot_deps.desktop_services(runtime, facade_deps=globals())
 
 
-def _desktop_read_json_dict(path: Path) -> dict[str, Any]:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-        return {}
-    return _desktop_safe_dict(data)
+def desktop_latest_memory_route(recent_memory_events: list[Any]) -> dict[str, Any]:
+    return _snapshot_deps.desktop_latest_memory_route(recent_memory_events, facade_deps=globals())
 
 
-def _desktop_read_markdown_fields(path: Path) -> dict[str, str]:
-    fields: dict[str, str] = {}
-    try:
-        lines = path.read_text(encoding="utf-8").splitlines()
-    except (OSError, UnicodeDecodeError):
-        return fields
-    for line in lines:
-        clean = line.strip()
-        if not clean.startswith("- ") or ":" not in clean:
-            continue
-        key, value = clean[2:].split(":", 1)
-        fields[key.strip()] = value.strip()
-    return fields
+def desktop_creative_writing_state(root: Path) -> dict[str, Any]:
+    return _snapshot_deps.desktop_creative_writing_state(root, facade_deps=globals())
 
 
-def _desktop_public_candidate(candidate: Any) -> dict[str, Any]:
-    data = _desktop_safe_dict(candidate)
-    return {
-        "actionId": safe_str(data.get("action_id")),
-        "goalId": safe_str(data.get("goal_id")),
-        "actionKind": safe_str(data.get("action_kind")),
-        "label": safe_str(data.get("label")),
-        "risk": safe_str(data.get("risk")),
-        "requiresApproval": bool(data.get("requires_approval")),
-        "tool": safe_str(data.get("tool")),
-        "reason": safe_str(data.get("reason")),
-    }
+def desktop_xinyu_state(
+    runtime: Any,
+    *,
+    environment: dict[str, Any],
+    entropy_state: dict[str, Any],
+    active_desires: list[dict[str, Any]],
+    proactive_items: list[Any],
+    recent_turns: list[Any],
+    recent_memory_events: list[Any],
+    action_digest: dict[str, Any] | None = None,
+    initiative_metrics: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return _snapshot_deps.desktop_xinyu_state(
+        runtime,
+        environment=environment,
+        entropy_state=entropy_state,
+        active_desires=active_desires,
+        proactive_items=proactive_items,
+        recent_turns=recent_turns,
+        recent_memory_events=recent_memory_events,
+        action_digest=action_digest,
+        initiative_metrics=initiative_metrics,
+        facade_deps=globals(),
+    )
 
 
-def _desktop_public_approval_event(event: Any) -> dict[str, Any]:
-    data = _desktop_safe_dict(event)
-    return {
-        "eventKind": safe_str(data.get("event_kind")),
-        "queueId": safe_str(data.get("queue_id")),
-        "approvalId": safe_str(data.get("approval_id")),
-        "goalId": safe_str(data.get("goal_id")),
-        "actionKind": safe_str(data.get("action_kind")),
-        "status": safe_str(data.get("status")),
-        "decision": safe_str(data.get("decision")),
-        "result": safe_str(data.get("result")),
-        "queuedAt": safe_str(data.get("queued_at")),
-        "decidedAt": safe_str(data.get("decided_at")),
-        "checkedAt": safe_str(data.get("checked_at")),
-    }
+def desktop_memory_route_payload(route_plan: Any | None) -> dict[str, Any]:
+    return _snapshot_deps.desktop_memory_route_payload(route_plan, facade_deps=globals())
+
+
+def desktop_recall_item(item: Any) -> dict[str, Any]:
+    return _snapshot_deps.desktop_recall_item(item, facade_deps=globals())
+
+
+def desktop_session_label(
+    runtime: Any,
+    payload: dict[str, Any],
+    *,
+    session_kind: str,
+    metadata: dict[str, Any],
+) -> str:
+    return _snapshot_deps.desktop_session_label(
+        runtime,
+        payload,
+        session_kind=session_kind,
+        metadata=metadata,
+        facade_deps=globals(),
+    )
+
+
+def desktop_account_label(
+    runtime: Any,
+    payload: dict[str, Any],
+    *,
+    session_kind: str,
+    metadata: dict[str, Any],
+    user_display_id: str,
+    group_display_id: str,
+) -> str:
+    return _snapshot_deps.desktop_account_label(
+        runtime,
+        payload,
+        session_kind=session_kind,
+        metadata=metadata,
+        user_display_id=user_display_id,
+        group_display_id=group_display_id,
+        facade_deps=globals(),
+    )
+
+
+async def desktop_active_desires(
+    runtime: Any,
+    *,
+    environment: dict[str, Any],
+    entropy_state: Any,
+    proactive_items: list[Any],
+    recent_turns: list[Any],
+    recent_memory_events: list[Any],
+    self_choice_state: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    return await _snapshot_deps.desktop_active_desires(
+        runtime,
+        environment=environment,
+        entropy_state=entropy_state,
+        proactive_items=proactive_items,
+        recent_turns=recent_turns,
+        recent_memory_events=recent_memory_events,
+        self_choice_state=self_choice_state,
+        facade_deps=globals(),
+    )
+
+
+def desktop_turn_base(runtime: Any, payload: dict[str, Any], *, session_key: str, turn_id: str) -> dict[str, Any]:
+    return _snapshot_deps.desktop_turn_base(
+        runtime,
+        payload,
+        session_key=session_key,
+        turn_id=turn_id,
+        facade_deps=globals(),
+    )
 
 
 def desktop_self_action_snapshot(root: Path) -> dict[str, Any]:
-    gateway_state = _desktop_read_json_dict(root / SELF_ACTION_GATEWAY_STATE_REL)
-    patch_state = _desktop_read_json_dict(root / SELF_ACTION_PATCH_STATE_REL)
-    approval_queue_events = read_approval_queue_events(root, limit=12)
-    handoff_fields = _desktop_read_markdown_fields(root / SELF_ACTION_APPROVAL_HANDOFF_REL)
-    task_fields = _desktop_read_markdown_fields(root / SELF_ACTION_PATCH_TASK_MD_REL)
+    return _snapshot_deps.desktop_self_action_snapshot(root, facade_deps=globals())
 
-    last_run = _desktop_safe_dict(gateway_state.get("last_run"))
-    approval_queue = _desktop_safe_dict(gateway_state.get("approval_queue"))
-    latest_execution = _desktop_safe_dict(gateway_state.get("latest_approval_execution"))
-    latest_event = approval_queue_events[-1] if approval_queue_events else {}
-    candidate_actions = [_desktop_public_candidate(candidate) for candidate in _desktop_safe_list(gateway_state.get("last_candidates"))[:4]]
 
-    pending_count = desktop_metric_int(approval_queue.get("pending_count", gateway_state.get("pending_approval_count")))
-    selected_goal_id = safe_str(
-        last_run.get("selected_goal_id")
-        or latest_execution.get("goal_id")
-        or patch_state.get("last_goal_id")
-        or handoff_fields.get("goal_id")
-    )
-    selected_action_kind = safe_str(
-        latest_execution.get("action_kind")
-        or patch_state.get("last_action_kind")
-        or handoff_fields.get("action_kind")
-        or _desktop_safe_dict(latest_event).get("action_kind")
-    )
-    patch_history = _desktop_safe_list(patch_state.get("history"))
-    latest_patch_history = _desktop_safe_dict(patch_history[-1]) if patch_history else {}
-    patch_status = safe_str(patch_state.get("status") or latest_patch_history.get("status"))
-    codex_status = safe_str(patch_state.get("last_codex_status") or latest_patch_history.get("codex_status"))
-    observed = bool(gateway_state or patch_state or approval_queue_events or handoff_fields or task_fields)
-    notes: list[str] = []
-    if not observed:
-        notes.append("self_action_state_not_observed")
-    if patch_status == "prepared" and codex_status == "not_requested":
-        notes.append("codex_execution_not_requested")
+def _desktop_safe_dict(value: Any) -> dict[str, Any]:
+    return _snapshot_deps.desktop_safe_dict(value)
 
-    return {
-        "observed": observed,
-        "updatedAt": safe_str(gateway_state.get("updated_at") or patch_state.get("updated_at")),
-        "selectedGoalId": selected_goal_id,
-        "selectedActionKind": selected_action_kind,
-        "pendingApprovalCount": pending_count,
-        "latestPendingQueueId": safe_str(approval_queue.get("latest_pending_queue_id")),
-        "latestApprovalEvent": _desktop_public_approval_event(latest_event),
-        "approvalQueue": {
-            "pendingCount": pending_count,
-            "approvedWaitingExecutionCount": desktop_metric_int(approval_queue.get("approved_waiting_execution_count")),
-            "executedCount": desktop_metric_int(approval_queue.get("executed_count")),
-            "deniedCount": desktop_metric_int(approval_queue.get("denied_count")),
-            "blockedExecutionCount": desktop_metric_int(approval_queue.get("blocked_execution_count")),
-            "latestPendingQueueId": safe_str(approval_queue.get("latest_pending_queue_id")),
-            "latestApprovedQueueId": safe_str(approval_queue.get("latest_approved_queue_id")),
-            "latestExecutedQueueId": safe_str(approval_queue.get("latest_executed_queue_id")),
-        },
-        "gateway": {
-            "checkedAt": safe_str(last_run.get("checked_at")),
-            "selectedGoalId": selected_goal_id,
-            "candidateCount": desktop_metric_int(last_run.get("candidate_count")),
-            "executedActionCount": desktop_metric_int(last_run.get("executed_action_count")),
-            "queuedApprovalCount": desktop_metric_int(last_run.get("queued_approval_count")),
-            "pendingApprovalCount": pending_count,
-        },
-        "handoff": {
-            "exists": bool(handoff_fields),
-            "path": SELF_ACTION_APPROVAL_HANDOFF_REL.as_posix(),
-            "queueId": safe_str(handoff_fields.get("queue_id") or latest_execution.get("queue_id")),
-            "approvalId": safe_str(handoff_fields.get("approval_id") or latest_execution.get("approval_id")),
-            "goalId": safe_str(handoff_fields.get("goal_id") or latest_execution.get("goal_id")),
-            "actionKind": safe_str(handoff_fields.get("action_kind") or latest_execution.get("action_kind")),
-            "approvalScope": safe_str(handoff_fields.get("approval_scope") or latest_execution.get("approval_scope")),
-            "executionMode": safe_str(handoff_fields.get("execution_mode")),
-            "nextExecutor": safe_str(handoff_fields.get("next_executor")),
-            "executionResult": safe_str(latest_execution.get("execution_result")),
-        },
-        "patchExecutor": {
-            "updatedAt": safe_str(patch_state.get("updated_at")),
-            "status": patch_status,
-            "executionLevel": safe_str(patch_state.get("execution_level")),
-            "queueId": safe_str(patch_state.get("last_queue_id") or task_fields.get("queue_id")),
-            "approvalId": safe_str(patch_state.get("last_approval_id") or task_fields.get("approval_id")),
-            "goalId": safe_str(patch_state.get("last_goal_id") or task_fields.get("goal_id")),
-            "actionKind": safe_str(patch_state.get("last_action_kind") or task_fields.get("action_kind")),
-            "taskId": safe_str(patch_state.get("last_task_id") or task_fields.get("task_id")),
-            "taskPath": safe_str(patch_state.get("last_task_path")),
-            "taskMarkdownPath": safe_str(patch_state.get("last_task_markdown_path") or SELF_ACTION_PATCH_TASK_MD_REL.as_posix()),
-            "codexStatus": codex_status,
-            "reportPath": safe_str(patch_state.get("last_report_path")),
-            "lastError": safe_str(patch_state.get("last_error")),
-        },
-        "candidateActions": candidate_actions,
-        "paths": {
-            "gatewayState": SELF_ACTION_GATEWAY_STATE_REL.as_posix(),
-            "approvalQueue": SELF_ACTION_APPROVAL_QUEUE_REL.as_posix(),
-            "handoff": SELF_ACTION_APPROVAL_HANDOFF_REL.as_posix(),
-            "patchState": SELF_ACTION_PATCH_STATE_REL.as_posix(),
-            "patchTask": SELF_ACTION_PATCH_TASK_MD_REL.as_posix(),
-        },
-        "notes": notes,
-    }
+
+def desktop_private_ecosystem_snapshot(root: Path) -> dict[str, Any]:
+    return _snapshot_deps.desktop_private_ecosystem_snapshot(root, facade_deps=globals())
 
 
 async def desktop_snapshot(runtime: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    payload = payload or {}
-    await runtime._ensure_self_choice_ready()
-    await runtime.self_choice_store.apply_time_decay()
-    self_choice_private = await runtime.self_choice_store.snapshot_private()
-    event_state = await runtime._desktop_event_state()
-    proactive_inbox = await runtime.desktop_proactive_inbox(payload)
-    proactive_items = proactive_inbox.get("items", [])
-    proactive_history = proactive_inbox.get("history", [])
-    recent_turns = (await runtime.desktop_chat_recent(payload)).get("items", [])
-    recent_memory_events = (await runtime.desktop_memory_recent(payload)).get("items", [])
-    environment = sample_environment(runtime.xinyu_dir)
-    entropy = build_entropy_state(
-        environment=environment,
-        proactive_items=proactive_items,
-        recent_turns=recent_turns,
-        recent_memory_events=recent_memory_events,
+    backend_result = await maybe_execute_desktop_surface_backend(
+        runtime,
+        payload,
+        route="/desktop/snapshot",
+        http_method="GET",
+        runtime_method="desktop_snapshot",
     )
-    entropy_state = entropy.model_dump(mode="json")
-    active_desires = await runtime._desktop_active_desires(
-        environment=environment,
-        entropy_state=entropy,
-        proactive_items=proactive_items,
-        recent_turns=recent_turns,
-        recent_memory_events=recent_memory_events,
-        self_choice_state=self_choice_private,
-    )
-    self_choice_public = await runtime.self_choice_store.snapshot_public()
-    action_digest = read_recent_action_digest_snapshot(runtime.xinyu_dir, limit=5)
-    health = runtime.health_snapshot()
-    initiative_metrics = (
-        health.get("runtime_presence", {}).get("initiative_metrics", {})
-        if isinstance(health.get("runtime_presence"), dict)
-        else {}
-    )
-    return {
-        "version": 1,
-        "snapshotAt": datetime.now().astimezone().isoformat(),
-        "lastEventId": event_state.get("latest_event_id", ""),
-        "services": runtime._desktop_services(),
-        "health": health,
-        "environment": environment,
-        "entropyState": entropy_state,
-        "selfChoiceState": self_choice_public,
-        "activeDesires": active_desires,
-        "xinyuState": runtime._desktop_xinyu_state(
-            environment=environment,
-            entropy_state=entropy_state,
-            active_desires=active_desires,
-            proactive_items=proactive_items,
-            recent_turns=recent_turns,
-            recent_memory_events=recent_memory_events,
-            action_digest=action_digest,
-            initiative_metrics=initiative_metrics,
-        ),
-        "eventBus": event_state,
-        "proactiveInbox": proactive_items,
-        "proactiveHistory": proactive_history,
-        "recentTurns": recent_turns,
-        "recentMemoryEvents": recent_memory_events,
-        "actionDigestState": action_digest,
-        "selfAction": desktop_self_action_snapshot(runtime.xinyu_dir),
-        "notes": ["desktop_snapshot_v1_life_state"],
-    }
+    if backend_result is not None:
+        return backend_result
+    return await _snapshot_deps.desktop_snapshot(runtime, payload, facade_deps=globals())

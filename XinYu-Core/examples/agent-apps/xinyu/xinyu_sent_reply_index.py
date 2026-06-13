@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 import hashlib
-import json
-import os
 import re
-import tempfile
-import contextlib
-import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_sent_reply_index_store import read_sent_reply_index_data
+from xinyu_sent_reply_index_store import write_sent_reply_index_data
 from xinyu_visible_text_sanitizer import sanitize_visible_text
 
 
@@ -71,37 +68,11 @@ def _age_seconds(value: Any) -> float:
 
 
 def _read_index(path: Path) -> dict[str, Any]:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
-        return {"version": 1, "entries": []}
-    if not isinstance(data, dict):
-        return {"version": 1, "entries": []}
-    if not isinstance(data.get("entries"), list):
-        data["entries"] = []
-    data.setdefault("version", 1)
-    return data
+    return read_sent_reply_index_data(path)
 
 
 def _atomic_write_json(path: Path, data: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
-            json.dump(data, fh, ensure_ascii=False, indent=2)
-            fh.write("\n")
-        for attempt in range(6):
-            try:
-                os.replace(tmp_name, path)
-                break
-            except PermissionError:
-                if attempt >= 5:
-                    raise
-                time.sleep(0.05 * (attempt + 1))
-    finally:
-        if os.path.exists(tmp_name):
-            with contextlib.suppress(OSError):
-                os.unlink(tmp_name)
+    write_sent_reply_index_data(path, data)
 
 
 def _entry_key(adapter: str, adapter_message_id: str, route: str) -> str:

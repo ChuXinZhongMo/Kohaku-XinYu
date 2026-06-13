@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from xinyu_private_ecosystem_grants import save_grants_patch
 from xinyu_life_event_runtime import process_life_event
 
 
 def _seed_owner_private_send_grant(root: Path) -> None:
     (root / "memory/context").mkdir(parents=True, exist_ok=True)
+    save_grants_patch(root, {"owner_private_autonomous_share": {"enabled": True, "paused": False}})
     (root / "xinyu_qq_gateway.config.json").write_text('{"owner_user_ids": ["owner-1"]}', encoding="utf-8")
     (root / "memory/context/current_life_posture.md").write_text("- no_proactive_constraint: unchanged\n", encoding="utf-8")
     (root / "memory/context/owner_permission_grants.md").write_text("", encoding="utf-8")

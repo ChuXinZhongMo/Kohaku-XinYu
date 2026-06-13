@@ -7,8 +7,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_turn_residue_store import STATE_REL
+from xinyu_turn_residue_store import read_turn_residue_state
+from xinyu_turn_residue_store import write_turn_residue_state
 
-STATE_REL = "memory/context/persona_surface_state.md"
 RESIDUE_HALF_LIFE_HOURS = 6.0
 
 
@@ -103,10 +105,8 @@ class TurnResidue:
 
 
 def read_turn_residue(root: Path, *, at: datetime | None = None) -> TurnResidue:
-    path = root / STATE_REL
-    try:
-        text = path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
+    text = read_turn_residue_state(root)
+    if text is None:
         return TurnResidue()
 
     updated_at = _extract_field(text, "updated_at", "")
@@ -194,8 +194,6 @@ def write_turn_residue(
         strength = min(strength, 25)
         felt = "visible reply was empty; preserve caution"
 
-    path = root / STATE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     text = f"""---
 title: Persona Surface State
 memory_type: persona_surface_state
@@ -238,12 +236,8 @@ tags: [persona, floating, tone, residue]
 - Do not snap from hurt/guarded/style-pressure turns back to polished helper voice.
 - Do not let residue override a clear technical task, explicit rest boundary, or stable identity/reality boundaries.
 """
-    old = ""
-    try:
-        old = path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
-        pass
+    old = read_turn_residue_state(root) or ""
     if old == text:
         return False
-    path.write_text(text, encoding="utf-8")
+    write_turn_residue_state(root, text)
     return True

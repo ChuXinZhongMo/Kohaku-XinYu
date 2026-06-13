@@ -171,9 +171,10 @@ def main() -> int:
 
     source_root = ROOT
     core_text = _read(source_root / "xinyu_core_bridge.py")
+    maintenance_text = _read(source_root / "xinyu_bridge_autonomous_maintenance.py")
     context_text = _read(source_root / "xinyu_runtime_context.py")
-    if "run_watched_source_check(" not in core_text:
-        failures.append("xinyu_core_bridge.py does not run watched source sidecar")
+    if "_append_watched_source_note(" not in core_text or "run_watched_source_check(" not in maintenance_text:
+        failures.append("runtime does not run watched source sidecar")
     if "memory/context/watched_source_state.md" not in context_text:
         failures.append("runtime context does not include watched_source_state")
 

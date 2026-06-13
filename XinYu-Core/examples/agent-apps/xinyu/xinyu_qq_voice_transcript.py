@@ -16,10 +16,10 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
-from state_service import append_jsonl
 from xinyu_qq_attachment_resolver import looks_like_file_path, path_from_file_uri
 from xinyu_qq_gateway_utils import hash_id as _hash_id
 from xinyu_qq_gateway_utils import safe_str as _safe_str
+from xinyu_qq_voice_transcript_store import append_voice_input_trace
 import xinyu_qq_normalizer
 import xinyu_qq_rich_context
 
@@ -900,7 +900,7 @@ def append_voice_transcript_trace(root: Path, result: VoiceTranscriptResult, *, 
         "stable_memory_write": "blocked",
     }
     path = root / TRACE_REL
-    append_jsonl(path, row)
+    append_voice_input_trace(path, row)
     return path
 
 

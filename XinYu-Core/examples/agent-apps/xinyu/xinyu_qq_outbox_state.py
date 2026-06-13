@@ -7,18 +7,21 @@ from typing import Any
 from xinyu_runtime_failure_freshness import RECENT_RUNTIME_FAILURE_SECONDS
 
 
-OUTBOX_STATUSES = ("queued", "claimed", "sent", "failed", "dead")
+OUTBOX_STATUSES = ("queued", "claimed", "sent", "failed", "dead", "suppressed")
 
 
 def summarize_outbox_items(items: list[dict[str, Any]], *, now: datetime | None = None) -> dict[str, Any]:
     checked_at = now or datetime.now().astimezone()
     counts = {status: 0 for status in OUTBOX_STATUSES}
+    unknown_status_count = 0
     recent_counts = {"failed": 0, "dead": 0}
     latest_times = {"failed": "", "dead": ""}
     for item in items:
         status = safe_status(item.get("status"))
         if status in counts:
             counts[status] += 1
+        else:
+            unknown_status_count += 1
         if status not in latest_times:
             continue
         stamp = status_stamp(item)
@@ -31,12 +34,14 @@ def summarize_outbox_items(items: list[dict[str, Any]], *, now: datetime | None 
         if age <= RECENT_RUNTIME_FAILURE_SECONDS:
             recent_counts[status] += 1
     return {
-        "queue_items": sum(counts.values()),
+        "queue_items": len(items),
         "queued_count": counts["queued"],
         "claimed_count": counts["claimed"],
         "sent_count": counts["sent"],
         "failed_count": counts["failed"],
         "dead_count": counts["dead"],
+        "suppressed_count": counts["suppressed"],
+        "unknown_status_count": unknown_status_count,
         "recent_failed_count": recent_counts["failed"],
         "recent_dead_count": recent_counts["dead"],
         "last_failed_at": latest_times["failed"] or "none",

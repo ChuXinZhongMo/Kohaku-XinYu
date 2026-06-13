@@ -11,10 +11,13 @@ from typing import Any
 from xinyu_dialogue_archive import list_memory_candidates
 from xinyu_memory_candidate_analysis import candidate_review_context
 from xinyu_memory_health_report import CANDIDATE_STATUSES, build_memory_health_report
+from xinyu_stage8_memory_review_packet_store import PACKET_REL
+from xinyu_stage8_memory_review_packet_store import STATE_REL
+from xinyu_stage8_memory_review_packet_store import stage8_memory_review_packet_path
+from xinyu_stage8_memory_review_packet_store import write_stage8_memory_review_packet_state_text
+from xinyu_stage8_memory_review_packet_store import write_stage8_memory_review_packet_text
 
 
-PACKET_REL = Path("worklog") / "xinyu-stage8-memory-review-packet-latest.md"
-STATE_REL = Path("memory/context/stage8_memory_review_packet_state.md")
 PRIVATE_TEXT_MARKERS = (
     "owner_turn:",
     "visible_reply:",
@@ -465,12 +468,7 @@ def write_stage8_memory_review_packet(
     output: Path | None = None,
 ) -> Path:
     root = root.resolve()
-    path = output if output is not None else root / PACKET_REL
-    if not path.is_absolute():
-        path = root / path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_stage8_memory_review_packet(packet), encoding="utf-8")
-    return path
+    return write_stage8_memory_review_packet_text(root, render_stage8_memory_review_packet(packet), output=output)
 
 
 def write_stage8_memory_review_packet_state(
@@ -483,9 +481,7 @@ def write_stage8_memory_review_packet_state(
     inventory = packet.get("candidate_inventory") if isinstance(packet.get("candidate_inventory"), dict) else {}
     boundaries = packet.get("boundaries") if isinstance(packet.get("boundaries"), dict) else {}
     stage8 = packet.get("stage8_memory_governance") if isinstance(packet.get("stage8_memory_governance"), dict) else {}
-    path = root / STATE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    target_packet_path = packet_path or (root / PACKET_REL)
+    target_packet_path = packet_path or stage8_memory_review_packet_path(root)
     text = f"""---
 title: Stage 8 Memory Review Packet State
 memory_type: stage8_memory_review_packet_state
@@ -520,8 +516,7 @@ tags: [autonomy, memory, governance, owner-review, stage8]
 - stable_identity_profile_apply: {boundaries.get('stable_identity_profile_apply', 'blocked')}
 - consciousness_claim: {str(bool(boundaries.get('consciousness_claim', False))).lower()}
 """
-    path.write_text(text, encoding="utf-8")
-    return path
+    return write_stage8_memory_review_packet_state_text(root, text)
 
 
 def main(argv: list[str] | None = None) -> int:

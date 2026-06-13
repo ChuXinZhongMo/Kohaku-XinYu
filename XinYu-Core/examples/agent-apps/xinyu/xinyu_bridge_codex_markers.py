@@ -4,6 +4,20 @@ import re
 from typing import Pattern
 
 
+CODEX_DELEGATE_OPEN = "[[XINYU_CODEX_DELEGATE]]"
+CODEX_DELEGATE_CLOSE = "[[/XINYU_CODEX_DELEGATE]]"
+CODEX_DELEGATE_PATTERNS = (
+    re.compile(
+        r"\[\[XINYU_CODEX_DELEGATE\]\]\s*(?P<task>.*?)\s*\[\[/XINYU_CODEX_DELEGATE\]\]",
+        re.S,
+    ),
+    re.compile(
+        r"\[/codex\]\s*(?:@@task\s*=\s*)?(?P<task>.*?)\s*\[codex/\]",
+        re.I | re.S,
+    ),
+)
+
+
 def extract_model_codex_delegate(reply: str, patterns: tuple[Pattern[str], ...]) -> str:
     for pattern in patterns:
         match = pattern.search(reply or "")
@@ -13,6 +27,10 @@ def extract_model_codex_delegate(reply: str, patterns: tuple[Pattern[str], ...])
         task = re.sub(r"(?i)^@@task\s*=\s*", "", task).strip()
         return task[:4000]
     return ""
+
+
+def extract_model_codex_delegate_default(reply: str) -> str:
+    return extract_model_codex_delegate(reply, CODEX_DELEGATE_PATTERNS)
 
 
 def extract_self_code_approval_id(task_text: str) -> str:

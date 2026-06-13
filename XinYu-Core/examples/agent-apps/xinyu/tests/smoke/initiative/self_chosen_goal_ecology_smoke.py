@@ -58,11 +58,12 @@ def main() -> int:
         if not any(row.get("event_kind") == "goal_ecology_outcome_recorded" for row in trace_rows):
             failures.append("outcome trace missing")
 
-    core_text = _read(ROOT / "xinyu_core_bridge.py")
+    autonomous_aliases_text = _read(ROOT / "xinyu_bridge_runtime_autonomous_aliases.py")
+    maintenance_text = _read(ROOT / "xinyu_bridge_autonomous_maintenance.py")
     context_text = _read(ROOT / "xinyu_runtime_context.py")
     presence_text = _read(ROOT / "xinyu_runtime_presence.py")
-    if "run_self_chosen_goal_ecology(" not in core_text:
-        failures.append("xinyu_core_bridge.py does not run self-chosen goal ecology")
+    if "_append_goal_ecology_note" not in autonomous_aliases_text or "run_self_chosen_goal_ecology(" not in maintenance_text:
+        failures.append("runtime does not run self-chosen goal ecology")
     if "memory/context/self_chosen_goal_ecology_state.md" not in context_text:
         failures.append("runtime context does not include self-chosen goal ecology state")
     if "runtime/self_chosen_goal_ecology/trace.jsonl" not in presence_text:

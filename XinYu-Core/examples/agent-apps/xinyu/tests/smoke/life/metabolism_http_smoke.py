@@ -8,6 +8,7 @@ import asyncio
 import json
 import shutil
 import threading
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -39,6 +40,15 @@ def _get_json(url: str) -> dict:
     request = urllib.request.Request(url, headers={"Authorization": f"Bearer {TOKEN}"}, method="GET")
     with urllib.request.urlopen(request, timeout=10) as response:
         return json.loads(response.read().decode("utf-8"))
+
+
+def _get_status_json(url: str) -> tuple[int, dict]:
+    request = urllib.request.Request(url, headers={"Authorization": f"Bearer {TOKEN}"}, method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return response.status, json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        return exc.code, json.loads(exc.read().decode("utf-8"))
 
 
 async def _smoke() -> list[str]:
@@ -109,6 +119,12 @@ async def _smoke() -> list[str]:
         fetched = await asyncio.to_thread(_get_json, f"{base}/life/metabolism/tickets/{ticket_id}")
         if fetched.get("ticket", {}).get("ticket_id") != ticket_id:
             failures.append(f"GET ticket did not return ticket: {fetched}")
+        invalid_status, invalid_payload = await asyncio.to_thread(
+            _get_status_json,
+            f"{base}/life/metabolism/tickets/{ticket_id}/extra",
+        )
+        if invalid_status != 404 or invalid_payload.get("error") != "not_found":
+            failures.append(f"GET invalid ticket subroute should 404: {invalid_status} {invalid_payload}")
     finally:
         server.shutdown()
         server.server_close()

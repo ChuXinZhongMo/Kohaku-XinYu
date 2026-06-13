@@ -244,6 +244,69 @@ def default_external_plugins(env: Mapping[str, str] | None = None) -> dict[str, 
                 "Use MCP behind this gateway when a plugin already speaks MCP.",
             ),
         ),
+        "xinyu_private_browser": ExternalPluginSpec(
+            plugin_id="xinyu_private_browser",
+            title="XinYu private browser",
+            kind="private_ecosystem_runtime",
+            transport=TRANSPORT_NATIVE_BRIDGE,
+            endpoint_env="",
+            capabilities={
+                "navigate": _capability("navigate", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_READ_ONLY, proactive=True, description="Read-only navigation/observation of a page (sensitive pages blocked downstream)."),
+                "navigate_readonly": _capability("navigate_readonly", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_READ_ONLY, proactive=True, description="Read-only navigation/observation of a page (sensitive pages blocked downstream)."),
+                "snapshot_dom": _capability("snapshot_dom", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_READ_ONLY, proactive=True, description="Read-only DOM/accessibility snapshot of the current private tab."),
+                "screenshot": _capability("screenshot", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_READ_ONLY, proactive=True, description="Viewport screenshot stored under the private ecosystem runtime path."),
+                "extract_text": _capability("extract_text", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_READ_ONLY, proactive=True, description="Read-only visible text extraction."),
+            },
+            notes=(
+                "Isolated profile only; never the owner's real browser profile.",
+                "Only real read-only browser engine capabilities are registered here.",
+                "Form submission, downloads, credential/payment pages, arbitrary JS, and input actions are blocked in xinyu_browser_control.",
+            ),
+        ),
+        "xinyu_private_desktop": ExternalPluginSpec(
+            plugin_id="xinyu_private_desktop",
+            title="XinYu private isolated desktop",
+            kind="private_ecosystem_runtime",
+            transport=TRANSPORT_NATIVE_BRIDGE,
+            endpoint_env="",
+            capabilities={
+                "status": _capability("status", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_READ_ONLY, proactive=True, description="Read-only status of XinYu's isolated desktop session (backend/state/display)."),
+                "live_view": _capability("live_view", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_READ_ONLY, proactive=True, description="Read-only latest frame of the isolated desktop; loopback noVNC only."),
+                "screenshot": _capability("screenshot", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_READ_ONLY, proactive=True, description="Capture one frame of the isolated desktop under the private runtime path."),
+                "list_windows": _capability("list_windows", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_READ_ONLY, proactive=True, description="Read-only list of windows in the isolated desktop."),
+                "observe_text": _capability("observe_text", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_READ_ONLY, proactive=True, description="Read-only sanitized text observation inside the isolated desktop."),
+                "propose_click": _capability("propose_click", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_READ_ONLY, proactive=True, description="Proposal-only click record with reason; never executes."),
+                "propose_type": _capability("propose_type", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_READ_ONLY, proactive=True, description="Proposal-only text-entry record; never executes."),
+                "propose_hotkey": _capability("propose_hotkey", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_READ_ONLY, proactive=True, description="Proposal-only hotkey record; never executes."),
+                "click": _capability("click", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_EXTERNAL_RUNTIME, proactive=False, requires_approval=True, description="Single-step click in the isolated desktop; approval or single-step grant required."),
+                "double_click": _capability("double_click", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_EXTERNAL_RUNTIME, proactive=False, requires_approval=True, description="Single-step double-click; approval or single-step grant required."),
+                "move_mouse": _capability("move_mouse", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_EXTERNAL_RUNTIME, proactive=False, requires_approval=True, description="Single-step mouse move; approval or single-step grant required."),
+                "scroll": _capability("scroll", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_EXTERNAL_RUNTIME, proactive=False, requires_approval=True, description="Single-step scroll; approval or single-step grant required."),
+                "type_text": _capability("type_text", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_EXTERNAL_RUNTIME, proactive=False, requires_approval=True, description="Single-step text entry; approval or single-step grant required."),
+                "hotkey": _capability("hotkey", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_EXTERNAL_RUNTIME, proactive=False, requires_approval=True, description="Single-step hotkey; approval or single-step grant required."),
+                "clipboard_set": _capability("clipboard_set", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_EXTERNAL_RUNTIME, proactive=False, requires_approval=True, description="Single-step clipboard set inside the isolated desktop; approval required."),
+            },
+            notes=(
+                "Isolated Linux desktop container only; never the owner's host Windows desktop.",
+                "shell/download/upload/install/network/multi-step are unregistered and blocked in this landing.",
+                "All ports bind 127.0.0.1; owner host screen not captured and owner mouse not moved.",
+            ),
+        ),
+        "xinyu_computer_control": ExternalPluginSpec(
+            plugin_id="xinyu_computer_control",
+            title="XinYu computer control",
+            kind="private_ecosystem_runtime",
+            transport=TRANSPORT_NATIVE_BRIDGE,
+            endpoint_env="",
+            capabilities={
+                "screenshot": _capability("screenshot", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_READ_ONLY, proactive=True, description="Observe-only desktop/region screenshot under private runtime path."),
+                "region_screenshot": _capability("region_screenshot", transport=TRANSPORT_NATIVE_BRIDGE, risk=RISK_READ_ONLY, proactive=True, description="Observe-only region-scoped screenshot."),
+            },
+            notes=(
+                "Observe-only body surface; proposal and input actions are intentionally unregistered.",
+                "Never targets payment, credential, or account-security windows.",
+            ),
+        ),
     }
 
 
@@ -295,6 +358,21 @@ def _control_defaults(root: Path, env: Mapping[str, str] | None = None) -> dict[
                 "enabled": False,
                 "proactive_enabled": False,
                 "config": {},
+            },
+            "xinyu_private_browser": {
+                "enabled": False,
+                "proactive_enabled": False,
+                "config": {"default_execute": False},
+            },
+            "xinyu_private_desktop": {
+                "enabled": False,
+                "proactive_enabled": False,
+                "config": {"default_execute": False, "backend": "docker_xfce_vnc"},
+            },
+            "xinyu_computer_control": {
+                "enabled": False,
+                "proactive_enabled": False,
+                "config": {"default_execute": False},
             },
         },
     }
@@ -407,7 +485,7 @@ def _plugin_install_status(plugin_id: str, config: Mapping[str, Any]) -> dict[st
         return _codex_install_status(config)
     if plugin_id == "kohaku_terrarium":
         return _kohaku_install_status(config)
-    if plugin_id == "mcp_gateway":
+    if plugin_id in {"mcp_gateway", "xinyu_private_browser", "xinyu_computer_control", "xinyu_private_desktop"}:
         return {
             "installed": True,
             "installable": False,

@@ -5,6 +5,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
+from xinyu_tool_targets_store import (
+    glob_tool_target_paths,
+    read_tool_target_config_text,
+    tool_target_config_exists,
+    tool_target_path_exists,
+    tool_target_path_is_dir,
+    tool_target_path_is_file,
+    tool_target_path_mtime,
+)
+
 
 CONFIG_REL = Path("config/tool_targets.json")
 SENSITIVE_SEGMENTS = {
@@ -94,9 +104,9 @@ class TargetRegistry:
     def load(cls, root: Path, *, config_path: Path | None = None) -> "TargetRegistry":
         root = root.resolve()
         path = config_path or root / CONFIG_REL
-        if not path.exists():
+        if not tool_target_config_exists(path):
             return cls(root, targets={})
-        data = json.loads(path.read_text(encoding="utf-8-sig"))
+        data = json.loads(read_tool_target_config_text(path))
         if not isinstance(data, dict):
             raise TargetRegistryError("tool target config must be a JSON object")
         raw_targets = data.get("targets")
@@ -136,7 +146,7 @@ class TargetRegistry:
             resolved = candidate.resolve()
             if _has_sensitive_segment(resolved):
                 raise TargetRegistryError(f"target read root is blocked by private-path policy: {alias}")
-            if not resolved.exists() or not resolved.is_dir():
+            if not tool_target_path_exists(resolved) or not tool_target_path_is_dir(resolved):
                 raise TargetRegistryError(f"target read root is not available: {alias}")
             roots.append(resolved)
         return ResolvedTarget(definition=target, roots=tuple(roots))
@@ -150,7 +160,7 @@ class TargetRegistry:
         for root in resolved.roots:
             for pattern in patterns:
                 safe_pattern = pattern.replace("\\", "/").lstrip("/")
-                for path in root.glob(safe_pattern):
+                for path in glob_tool_target_paths(root, safe_pattern):
                     try:
                         file_path = path.resolve()
                     except OSError:
@@ -159,9 +169,9 @@ class TargetRegistry:
                         continue
                     if _has_sensitive_segment(file_path):
                         continue
-                    if file_path.is_file():
+                    if tool_target_path_is_file(file_path):
                         try:
-                            files[file_path] = file_path.stat().st_mtime
+                            files[file_path] = tool_target_path_mtime(file_path)
                         except OSError:
                             files[file_path] = 0.0
         ordered = sorted(files, key=lambda item: files[item], reverse=True)

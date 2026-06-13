@@ -6,6 +6,10 @@ from datetime import datetime
 from pathlib import Path
 
 from xinyu_text_variants import readable_markers
+from xinyu_voice_calibration_store import read_voice_calibration_text
+from xinyu_voice_calibration_store import voice_calibration_log_path
+from xinyu_voice_calibration_store import voice_profile_review_state_path
+from xinyu_voice_calibration_store import write_voice_calibration_text
 
 
 CLUSTERS: tuple[tuple[str, tuple[str, ...], str], ...] = (
@@ -62,14 +66,11 @@ AFFECTED_SMOKES = (
 
 
 def read_text(path: Path) -> str:
-    if not path.exists():
-        return ""
-    return path.read_text(encoding="utf-8-sig", errors="replace")
+    return read_voice_calibration_text(path)
 
 
 def write_text(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text.rstrip() + "\n", encoding="utf-8")
+    write_voice_calibration_text(path, text)
 
 
 def _timestamp_or_now_iso(value: object) -> str:
@@ -244,7 +245,7 @@ def build_voice_promotion_review(
     min_evidence: int = 2,
 ) -> dict[str, object]:
     evaluated_at = _timestamp_or_now_iso(evaluated_at)
-    log_text = read_text(root / "memory/self/voice_calibration_log.md")
+    log_text = read_text(voice_calibration_log_path(root))
     entries = parse_voice_entries(log_text)
     candidates = build_candidates(entries, min_evidence=min_evidence)
     state = render_review_state(
@@ -252,7 +253,7 @@ def build_voice_promotion_review(
         candidates=candidates,
         entry_count=len(entries),
     )
-    write_text(root / "memory/self/voice_profile_review_state.md", state)
+    write_text(voice_profile_review_state_path(root), state)
     return {
         "review_status": "pending_owner_review" if candidates else "hold_not_enough_repeated_evidence",
         "candidate_count": len(candidates),

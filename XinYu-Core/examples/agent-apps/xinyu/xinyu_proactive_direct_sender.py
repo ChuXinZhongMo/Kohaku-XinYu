@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_private_ecosystem_grants import load_share_block_reasons
 from xinyu_proactive_presence import acknowledge_proactive_qq_message, claim_proactive_qq_message
 from xinyu_proactive_request_loop import run_proactive_request_loop
 from xinyu_qq_outbox import enqueue_owner_qq_outbox_message
@@ -62,6 +64,20 @@ def _proactive_recent_context(root: Path) -> str:
     return "\n".join(part for part in parts if part)
 
 
+def _active_request_source(root: Path) -> str:
+    state = _read_text(root / "memory/context/proactive_request_state.md")
+    source = _extract_list_field(state, "source")
+    focus = _extract_list_field(state, "focus_kind")
+    if source == "owner_long_idle" or focus == "owner_long_idle":
+        return "owner_long_idle"
+    return source
+
+
+def _share_blocks(root: Path) -> list[str]:
+    try:
+        return load_share_block_reasons(root)
+    except Exception:
+        return ["owner_private_autonomous_share_unreadable"]
 
 
 def _replace_list_field(text: str, field: str, value: str) -> str:
@@ -106,24 +122,47 @@ def send_proactive_direct(
     min_interval_seconds: int = DEFAULT_MIN_INTERVAL_SECONDS,
     claim_id: str = "",
     dry_run: bool = False,
+    prepare_request: bool = True,
 ) -> dict[str, Any]:
     root = root.resolve()
     evaluated_at = evaluated_at or _now_iso()
     claim_id = _one_line(claim_id, limit=96) or f"direct-proactive-{int(time.time())}"
 
-    request = run_proactive_request_loop(
-        root,
-        evaluated_at=evaluated_at,
-        delivery_level="queue_owner_private",
-        cooldown_seconds=max(0, int(min_interval_seconds)),
-    )
-    if not request.get("accepted"):
+    share_blocks = _share_blocks(root)
+    if share_blocks:
         return {
-            "accepted": False,
+            "accepted": True,
             "queued": False,
             "claim_id": claim_id,
-            "status": "request_loop_failed",
-            "notes": ["direct_request_loop_failed"] + [str(note) for note in request.get("notes", [])],
+            "status": "blocked",
+            "notes": ["owner_private_autonomous_share_blocked", *share_blocks],
+        }
+
+    request: dict[str, Any] = {}
+    if prepare_request:
+        request = run_proactive_request_loop(
+            root,
+            evaluated_at=evaluated_at,
+            delivery_level="queue_owner_private",
+            cooldown_seconds=max(0, int(min_interval_seconds)),
+        )
+        if not request.get("accepted"):
+            return {
+                "accepted": False,
+                "queued": False,
+                "claim_id": claim_id,
+                "status": "request_loop_failed",
+                "notes": ["direct_request_loop_failed"] + [str(note) for note in request.get("notes", [])],
+                "request": request,
+            }
+
+    if _active_request_source(root) == "owner_long_idle":
+        return {
+            "accepted": True,
+            "queued": False,
+            "claim_id": claim_id,
+            "status": "blocked",
+            "notes": ["owner_long_idle_direct_send_disabled"],
             "request": request,
         }
 
@@ -225,7 +264,7 @@ def send_proactive_direct(
         root,
         acked_at=evaluated_at,
         claim_id=claim_id,
-        ack_status="sent",
+        ack_status="queued",
         adapter_message_id=outbox_message_id,
     )
     return {
@@ -246,6 +285,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--min-interval-seconds", type=int, default=DEFAULT_MIN_INTERVAL_SECONDS)
     parser.add_argument("--claim-id", default="")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--skip-request-loop", action="store_true")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     result = send_proactive_direct(
@@ -254,6 +294,7 @@ def main(argv: list[str] | None = None) -> int:
         min_interval_seconds=args.min_interval_seconds,
         claim_id=args.claim_id,
         dry_run=args.dry_run,
+        prepare_request=not args.skip_request_loop,
     )
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))

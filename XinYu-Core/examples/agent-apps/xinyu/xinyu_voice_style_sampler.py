@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_voice_style_observations import PUBLIC_CORPUS_FINDINGS, PUBLIC_EXAMPLES
+from xinyu_voice_style_sampler_store import SAMPLE_REPORT_REL
+from xinyu_voice_style_sampler_store import write_voice_style_sample_report_text
 
 BANNED_SAMPLE_PATTERNS: tuple[str, ...] = (
     "傻逼",
@@ -153,7 +155,6 @@ def write_style_sample_report(root: Path, *, updated_at: str | None = None) -> P
     samples = collect_public_style_samples()
     analysis = analyse_style_samples(samples)
     constraints = derive_proactive_constraints(analysis)
-    path = root / "memory/self/voice_style_sample_report.md"
     lines = [
         "# Voice Style Sample Report",
         "",
@@ -203,9 +204,7 @@ def write_style_sample_report(root: Path, *, updated_at: str | None = None) -> P
             "- Keep proactive delivery gates, owner-private routing, cooldown and dedupe unchanged.",
         ]
     )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-    return path
+    return write_voice_style_sample_report_text(root, "\n".join(lines).rstrip() + "\n")
 
 
 def normalize_public_sample(text: Any) -> str:

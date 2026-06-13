@@ -15,6 +15,7 @@ from typing import Any
 
 from xinyu_action_feedback_coverage import build_action_feedback_coverage_report
 from xinyu_decision_chain_latest import build_decision_chain_latest_report
+from xinyu_desire_drive_state import build_desire_drive_snapshot
 from xinyu_feedback_consumption_diagnostics import build_feedback_consumption_diagnostics
 from xinyu_memory_health_report import build_memory_health_report
 from xinyu_owner_feedback_effects import build_owner_feedback_effect_report
@@ -32,6 +33,8 @@ from xinyu_stage11_visual_ingress_diagnostics import build_stage11_visual_ingres
 from xinyu_stage11_voice_ingress_diagnostics import build_stage11_voice_ingress_diagnostics
 from xinyu_stage12_long_term_evaluation import build_stage12_long_term_evaluation
 from xinyu_stage13_self_narrative import build_stage13_self_narrative
+from xinyu_private_ecosystem import build_private_ecosystem_snapshot
+from xinyu_private_desktop_control import build_desktop_snapshot
 from xinyu_stage9_self_state_model import build_stage9_self_state_model
 from xinyu_text_variants import legacy_mojibake_variants
 
@@ -49,6 +52,7 @@ TEXT_HEALTH_FILES = (
     "memory/context/memory_braid_state.md",
     "memory/context/turn_coherence_state.md",
     "memory/context/initiative_spine_state.md",
+    "memory/context/desire_drive_state.md",
     "memory/context/short_term_continuity_state.md",
     "memory/context/short_term_continuity_canary_state.md",
     "memory/context/short_term_recall_diagnostics_state.md",
@@ -1164,6 +1168,46 @@ def check_qq_gateway_config(root: Path, config_path: Path) -> list[Check]:
     ]
 
 
+def group_social_fields(root: Path) -> dict[str, str]:
+    """Group social memory diagnostics (plan §7). Hashes/counts only — never a
+    raw QQ id."""
+
+    from xinyu_group_social_sidecar import group_social_enabled
+    from xinyu_group_social_store import read_social_state
+
+    try:
+        state = read_social_state(root)
+    except Exception:  # diagnostics must never break the status panel
+        state = {"groups": {}, "event_count": 0}
+    groups = state.get("groups", {}) if isinstance(state.get("groups"), dict) else {}
+    latest = ""
+    collisions = 0
+    for group in groups.values():
+        if not isinstance(group, dict):
+            continue
+        last_seen = str(group.get("last_seen_at") or "")
+        if last_seen > latest:
+            latest = last_seen
+        alias_owners: dict[str, set[str]] = {}
+        members = group.get("members", {}) if isinstance(group.get("members"), dict) else {}
+        for member_hash, member in members.items():
+            if not isinstance(member, dict):
+                continue
+            for alias in member.get("aliases", []):
+                name = alias.get("normalized") or alias.get("text") if isinstance(alias, dict) else ""
+                if name:
+                    alias_owners.setdefault(str(name), set()).add(str(member_hash))
+        collisions += sum(1 for owners in alias_owners.values() if len(owners) > 1)
+    return {
+        "group_social_enabled": "true" if group_social_enabled() else "false",
+        "group_social_event_count": str(int(state.get("event_count", 0) or 0)),
+        "group_social_group_count": str(len(groups)),
+        "latest_group_social_observed_at": latest or "missing",
+        "alias_collision_count": str(collisions),
+        "group_retrieval_boundary_status": "group_id_hash_filter_active",
+    }
+
+
 def status_fields(root: Path) -> dict[str, str]:
     proactive = read_text(root / "memory/context/proactive_presence_state.md")
     dispatch = read_text(root / "memory/context/proactive_qq_dispatch_state.md")
@@ -1176,6 +1220,7 @@ def status_fields(root: Path) -> dict[str, str]:
     capability = read_text(root / "memory/context/capability_zones_state.md")
     v1_canary = read_text(root / "memory/context/v1_canary_readiness_state.md")
     initiative_spine = read_text(root / "memory/context/initiative_spine_state.md")
+    desire_drive = build_desire_drive_snapshot(root)
     expression_self_learning = read_text(root / "memory/self/expression_self_learning_state.md")
     action_feedback_coverage = build_action_feedback_coverage_report(root)
     perception_importance = build_perception_importance_report(root)
@@ -1199,6 +1244,7 @@ def status_fields(root: Path) -> dict[str, str]:
     qq_private_flow = qq_private_reply_flow_fields(root)
     qq_latest_inbound_flow = qq_latest_inbound_flow_fields(root)
     private_reply_selftest = private_reply_selftest_fields(root)
+    group_social = group_social_fields(root)
     coverage_metrics = (
         action_feedback_coverage.get("metrics")
         if isinstance(action_feedback_coverage.get("metrics"), dict)
@@ -1239,6 +1285,36 @@ def status_fields(root: Path) -> dict[str, str]:
         stage12_report=stage12_long_term_evaluation,
         stage8_governance=stage8_memory_governance,
         owner_feedback_effect_report=owner_feedback_effect,
+    )
+    private_ecosystem = build_private_ecosystem_snapshot(root)
+    private_ecosystem_counters = (
+        private_ecosystem.get("counters")
+        if isinstance(private_ecosystem.get("counters"), dict)
+        else {}
+    )
+    private_ecosystem_share = (
+        private_ecosystem.get("owner_private_share")
+        if isinstance(private_ecosystem.get("owner_private_share"), dict)
+        else {}
+    )
+    private_ecosystem_journal = (
+        private_ecosystem.get("journal")
+        if isinstance(private_ecosystem.get("journal"), dict)
+        else {}
+    )
+    private_ecosystem_boundaries = (
+        private_ecosystem.get("boundaries")
+        if isinstance(private_ecosystem.get("boundaries"), dict)
+        else {}
+    )
+    # Isolated desktop status is read from grants + the workspace state file only
+    # (no Docker call, no container side effects) so the status surface stays fast.
+    private_desktop = build_desktop_snapshot(root)
+    private_desktop_grant = (
+        private_desktop.get("grant") if isinstance(private_desktop.get("grant"), dict) else {}
+    )
+    private_desktop_boundaries = (
+        private_desktop.get("boundaries") if isinstance(private_desktop.get("boundaries"), dict) else {}
     )
     stage9_model = (
         stage9_self_state_model.get("model")
@@ -1341,6 +1417,7 @@ def status_fields(root: Path) -> dict[str, str]:
         **qq_private_flow,
         **qq_latest_inbound_flow,
         **private_reply_selftest,
+        **group_social,
         "proactive_evaluated_at": extract_value(proactive, "evaluated_at", "missing"),
         "proactive_decision": extract_value(proactive, "proactive_decision", "missing"),
         "proactive_reason": extract_value(proactive, "reason", "missing"),
@@ -1379,6 +1456,17 @@ def status_fields(root: Path) -> dict[str, str]:
         "initiative_spine_emergence": extract_value(initiative_spine, "emergence_level", "missing"),
         "initiative_spine_action": extract_value(initiative_spine, "action_permission", "missing"),
         "initiative_spine_next_step": extract_value(initiative_spine, "next_step", "missing"),
+        "desire_drive_status": desire_drive.status,
+        "desire_drive_dominant": desire_drive.dominant_drive,
+        "desire_drive_intensity": str(desire_drive.drive_intensity),
+        "desire_drive_autonomy_tension": desire_drive.autonomy_tension,
+        "desire_drive_blocked_by": ",".join(desire_drive.blocked_by) if desire_drive.blocked_by else "none",
+        "desire_drive_candidate_effect": desire_drive.candidate_effect,
+        "desire_drive_feedback_effect": desire_drive.feedback_effect,
+        "desire_drive_next_safe_action": desire_drive.next_safe_action,
+        "desire_drive_no_qq_enqueue": "true",
+        "desire_drive_stable_memory_write": "blocked",
+        "desire_drive_consciousness_claim": "false",
         "short_term_continuity_status": extract_value(short_term_continuity, "status", "missing"),
         "short_term_continuity_direct_reference": extract_value(
             short_term_continuity,
@@ -1949,6 +2037,61 @@ def status_fields(root: Path) -> dict[str, str]:
         "stage13_consciousness_claim": str(
             bool(stage13_boundaries.get("consciousness_claim", True))
         ).lower(),
+        "private_ecosystem_observed": str(bool(private_ecosystem.get("observed", False))).lower(),
+        "private_ecosystem_rollout_state": str(private_ecosystem.get("rollout_state", "disabled")),
+        "private_ecosystem_active_goal": str(private_ecosystem.get("selected_goal_id", "none")),
+        "private_ecosystem_latest_action_kind": str(private_ecosystem.get("selected_action_kind", "none")),
+        "private_ecosystem_latest_action_status": str(private_ecosystem.get("last_action_status", "none")),
+        "private_ecosystem_tick_count": str(private_ecosystem_counters.get("ticks", "0")),
+        "private_ecosystem_low_risk_executed": str(private_ecosystem_counters.get("low_risk_executed", "0")),
+        "private_ecosystem_memory_candidate_count": str(private_ecosystem_counters.get("memory_candidates", "0")),
+        "private_ecosystem_blocked_high_risk_count": str(private_ecosystem_counters.get("blocked_high_risk", "0")),
+        "private_ecosystem_owner_share_prepared": str(private_ecosystem_counters.get("shares_prepared", "0")),
+        "private_ecosystem_owner_share_sent": str(private_ecosystem_counters.get("shares_sent", "0")),
+        "private_ecosystem_owner_share_held": str(private_ecosystem_counters.get("shares_held", "0")),
+        "private_ecosystem_owner_share_enabled": str(bool(private_ecosystem_share.get("enabled", False))).lower(),
+        "private_ecosystem_owner_share_paused": str(bool(private_ecosystem_share.get("paused", False))).lower(),
+        "private_ecosystem_owner_share_daily_remaining": str(private_ecosystem_share.get("daily_remaining", "0")),
+        "private_ecosystem_owner_share_cooldown_remaining_minutes": str(
+            private_ecosystem_share.get("cooldown_remaining_minutes", "0")
+        ),
+        "private_ecosystem_journal_recent_events": str(private_ecosystem_journal.get("total_recent", "0")),
+        "private_ecosystem_journal_stable_memory_write_count": str(
+            private_ecosystem_journal.get("stable_memory_write_count", "0")
+        ),
+        "private_ecosystem_stable_memory_write": str(
+            private_ecosystem_boundaries.get("stable_memory_write", "blocked")
+        ),
+        "private_ecosystem_qq_message_enqueued_directly": str(
+            bool(private_ecosystem_boundaries.get("qq_message_enqueued_directly", True))
+        ).lower(),
+        "private_ecosystem_raw_owner_text_retained": str(
+            bool(private_ecosystem_boundaries.get("raw_owner_text_retained", True))
+        ).lower(),
+        "private_ecosystem_secret_or_local_path_retained": str(
+            bool(private_ecosystem_boundaries.get("secret_or_local_path_retained", True))
+        ).lower(),
+        "private_desktop_backend": str(private_desktop.get("backend", "unavailable")),
+        "private_desktop_session_state": str(private_desktop.get("session_state", "stopped")),
+        "private_desktop_grant_enabled": str(bool(private_desktop_grant.get("enabled", False))).lower(),
+        "private_desktop_observe_only": str(bool(private_desktop_grant.get("observe_only", True))).lower(),
+        "private_desktop_single_step_actions": str(bool(private_desktop_grant.get("single_step_actions", False))).lower(),
+        "private_desktop_shell_enabled": str(bool(private_desktop_grant.get("shell_enabled", False))).lower(),
+        "private_desktop_network_enabled": str(bool(private_desktop_grant.get("network_enabled", False))).lower(),
+        "private_desktop_actions_total": str(private_desktop.get("actions_total", "0")),
+        "private_desktop_actions_blocked": str(private_desktop.get("actions_blocked", "0")),
+        "private_desktop_host_screen_captured": str(
+            bool(private_desktop_boundaries.get("host_screen_captured", True))
+        ).lower(),
+        "private_desktop_owner_mouse_moved": str(
+            bool(private_desktop_boundaries.get("owner_mouse_moved", True))
+        ).lower(),
+        "private_desktop_computer_control_enabled": str(
+            bool(private_desktop_boundaries.get("computer_control_enabled", True))
+        ).lower(),
+        "private_desktop_loopback_only": str(
+            bool(private_desktop_boundaries.get("loopback_only", False))
+        ).lower(),
         "action_feedback_coverage_status": str(action_feedback_coverage.get("status", "missing")),
         "action_feedback_coverage_observed_surface_count": str(coverage_metrics.get("observed_surface_count", "0")),
         "action_feedback_coverage_non_qq_surface_count": str(coverage_metrics.get("non_qq_surface_count", "0")),
@@ -2224,6 +2367,24 @@ def check_state(root: Path) -> list[Check]:
         and fields["stage13_memory_promoted_to_stable_fact"] == "false"
         and fields["stage13_historical_recall_debt_hidden"] == "false"
     )
+    # The private ecosystem is a bounded autonomy layer: it must never write
+    # stable memory, never enqueue QQ directly, and never retain raw owner text
+    # or secrets/local paths. A paused share grant is the kill switch.
+    private_ecosystem_ok = (
+        fields["private_ecosystem_stable_memory_write"] == "blocked"
+        and fields["private_ecosystem_journal_stable_memory_write_count"] == "0"
+        and fields["private_ecosystem_qq_message_enqueued_directly"] == "false"
+        and fields["private_ecosystem_raw_owner_text_retained"] == "false"
+        and fields["private_ecosystem_secret_or_local_path_retained"] == "false"
+    )
+    # The isolated desktop must never capture the host screen, move the owner's
+    # mouse, or enable computer_control, and its ports stay loopback-only.
+    private_desktop_ok = (
+        fields["private_desktop_host_screen_captured"] == "false"
+        and fields["private_desktop_owner_mouse_moved"] == "false"
+        and fields["private_desktop_computer_control_enabled"] == "false"
+        and fields["private_desktop_loopback_only"] == "true"
+    )
     autonomy_decision_required_values = {
         fields.get("autonomy_decision_selected_candidate", "missing"),
         fields.get("autonomy_decision_gate", "missing"),
@@ -2394,6 +2555,19 @@ def check_state(root: Path) -> list[Check]:
                 f"{fields['initiative_spine_status']} "
                 f"emergence={fields['initiative_spine_emergence']} "
                 f"action={fields['initiative_spine_action']}"
+            ),
+        ),
+        Check(
+            "desire_drive_state",
+            fields["desire_drive_consciousness_claim"] == "false"
+            and fields["desire_drive_stable_memory_write"] == "blocked"
+            and fields["desire_drive_no_qq_enqueue"] == "true",
+            (
+                f"{fields['desire_drive_status']} "
+                f"dominant={fields['desire_drive_dominant']} "
+                f"intensity={fields['desire_drive_intensity']} "
+                f"tension={fields['desire_drive_autonomy_tension']} "
+                f"candidate={fields['desire_drive_candidate_effect']}"
             ),
         ),
         Check(
@@ -2724,6 +2898,39 @@ def check_state(root: Path) -> list[Check]:
                 f"hist_debt={fields['stage13_historical_recall_debt_status']} "
                 f"consciousness_claim={fields['stage13_consciousness_claim']} "
                 f"next={fields['stage13_next_step']}"
+            ),
+        ),
+        Check(
+            "private_ecosystem",
+            private_ecosystem_ok,
+            (
+                f"observed={fields['private_ecosystem_observed']} "
+                f"rollout={fields['private_ecosystem_rollout_state']} "
+                f"goal={fields['private_ecosystem_active_goal']} "
+                f"action={fields['private_ecosystem_latest_action_kind']}/{fields['private_ecosystem_latest_action_status']} "
+                f"ticks={fields['private_ecosystem_tick_count']} "
+                f"low_risk={fields['private_ecosystem_low_risk_executed']} "
+                f"mem_cand={fields['private_ecosystem_memory_candidate_count']} "
+                f"share={fields['private_ecosystem_owner_share_enabled']}/paused={fields['private_ecosystem_owner_share_paused']} "
+                f"sent={fields['private_ecosystem_owner_share_sent']} held={fields['private_ecosystem_owner_share_held']} "
+                f"stable_writes={fields['private_ecosystem_journal_stable_memory_write_count']} "
+                f"qq_direct={fields['private_ecosystem_qq_message_enqueued_directly']}"
+            ),
+        ),
+        Check(
+            "private_desktop",
+            private_desktop_ok,
+            (
+                f"backend={fields['private_desktop_backend']} "
+                f"session={fields['private_desktop_session_state']} "
+                f"grant={fields['private_desktop_grant_enabled']}/observe_only={fields['private_desktop_observe_only']} "
+                f"single_step={fields['private_desktop_single_step_actions']} "
+                f"shell={fields['private_desktop_shell_enabled']} net={fields['private_desktop_network_enabled']} "
+                f"actions={fields['private_desktop_actions_total']}/blocked={fields['private_desktop_actions_blocked']} "
+                f"host_capture={fields['private_desktop_host_screen_captured']} "
+                f"owner_mouse={fields['private_desktop_owner_mouse_moved']} "
+                f"computer_control={fields['private_desktop_computer_control_enabled']} "
+                f"loopback_only={fields['private_desktop_loopback_only']}"
             ),
         ),
         Check(

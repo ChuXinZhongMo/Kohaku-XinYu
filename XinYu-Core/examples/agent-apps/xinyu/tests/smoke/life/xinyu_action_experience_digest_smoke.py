@@ -6,6 +6,7 @@ ROOT = ensure_project_root_on_path()
 
 import json
 import tempfile
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from xinyu_action_experience_digest import (
@@ -16,13 +17,13 @@ from xinyu_action_experience_digest import (
 )
 
 
-def _write_action_residue(root: Path) -> str:
+def _write_action_residue(root: Path, *, created_at: str) -> str:
     exp_id = "exp-action-digest-smoke"
     path = root / "runtime/life_kernel/action_experience_residue.jsonl"
     path.parent.mkdir(parents=True, exist_ok=True)
     row = {
         "experience_id": exp_id,
-        "created_at": "2026-05-06T04:40:00+08:00",
+        "created_at": created_at,
         "tool": "log_scan",
         "target_alias": "minecraft_server",
         "result": "success",
@@ -52,11 +53,14 @@ def main() -> int:
     scratch.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="xinyu-action-digest-", dir=str(scratch)) as tmp:
         root = Path(tmp)
-        exp_id = _write_action_residue(root)
+        now = datetime.now().astimezone()
+        created_at = (now - timedelta(minutes=5)).isoformat(timespec="seconds")
+        produced_at = now.isoformat(timespec="seconds")
+        exp_id = _write_action_residue(root, created_at=created_at)
 
         result = digest_action_experience_residue(
             root,
-            produced_at="2026-05-06T04:45:00+08:00",
+            produced_at=produced_at,
             salience_threshold=0.6,
         )
         if result.get("digested_count") != 1:
@@ -106,7 +110,7 @@ def main() -> int:
 
         second = digest_action_experience_residue(
             root,
-            produced_at="2026-05-06T04:46:00+08:00",
+            produced_at=(now + timedelta(minutes=1)).isoformat(timespec="seconds"),
             salience_threshold=0.6,
         )
         if second.get("digested_count") != 0:

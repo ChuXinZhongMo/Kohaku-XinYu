@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-import json
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from xinyu_text_variants import readable_markers
+from xinyu_voice_trial_overlay_store import read_voice_trial_overlay_state
+from xinyu_voice_trial_overlay_store import voice_trial_overlay_state_exists
+from xinyu_voice_trial_overlay_store import write_voice_trial_overlay_state
 
 
 OVERLAY_REL = Path("runtime/life_kernel/voice_trial_overlay.json")
@@ -173,20 +175,11 @@ def _overlay_id(recorded_at: str, user_text: str) -> str:
 
 
 def _read_state(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        value = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return value if isinstance(value, dict) else {}
+    return read_voice_trial_overlay_state(path)
 
 
 def _write_state(path: Path, state: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    tmp.replace(path)
+    write_voice_trial_overlay_state(path, state)
 
 
 def _parse_time(value: Any) -> datetime | None:
@@ -327,7 +320,7 @@ def build_voice_trial_overlay_prompt_block(
 
 def clear_voice_trial_overlay(root: Path) -> bool:
     path = root / OVERLAY_REL
-    if not path.exists():
+    if not voice_trial_overlay_state_exists(path):
         return False
     state = _read_state(path)
     state["status"] = "cleared"

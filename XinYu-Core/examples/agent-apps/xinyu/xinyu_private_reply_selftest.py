@@ -11,7 +11,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from state_service import append_jsonl, atomic_write_json
+from xinyu_private_reply_selftest_store import append_private_reply_selftest_trace
+from xinyu_private_reply_selftest_store import read_private_reply_selftest_text
+from xinyu_private_reply_selftest_store import write_private_reply_selftest_state
 from xinyu_qq_config import GatewayConfig
 from xinyu_qq_gateway import NativeQQGateway
 
@@ -54,10 +56,7 @@ def _load_bridge_token(project_root: Path, config: GatewayConfig) -> str:
     token_path = project_root / ".xinyu_bridge_token"
     if not token_path.exists():
         return ""
-    try:
-        return token_path.read_text(encoding="utf-8-sig", errors="replace").strip()
-    except OSError:
-        return ""
+    return read_private_reply_selftest_text(token_path).strip()
 
 
 def _safe_trace_note(note: Any) -> str:
@@ -77,10 +76,10 @@ def _safe_trace_note(note: Any) -> str:
 def _read_jsonl_tail(path: Path, *, max_lines: int = 600) -> list[dict[str, Any]]:
     if not path.exists():
         return []
-    try:
-        lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
-    except OSError:
+    text = read_private_reply_selftest_text(path)
+    if not text:
         return []
+    lines = text.splitlines()
     rows: list[dict[str, Any]] = []
     for line in lines[-max_lines:]:
         try:
@@ -145,8 +144,12 @@ class SyntheticPrivateGateway(NativeQQGateway):
         queue_depth: int | None = None,
         drop_reason: str = "",
         error: str = "",
+        delivery_kind: str = "",
+        adapter_message_id: str = "",
+        adapter_error: str = "",
+        voice_fallback_reason: str = "",
     ) -> None:
-        del event, session_queue_key, queue_depth
+        del event, session_queue_key, queue_depth, delivery_kind, adapter_message_id, adapter_error, voice_fallback_reason
         route = ""
         text_len = 0
         if prepared is not None:
@@ -330,8 +333,8 @@ async def run_private_reply_selftest(
     if write:
         state_path = root / SELFTEST_STATE_REL
         trace_path = root / SELFTEST_TRACE_REL
-        atomic_write_json(state_path, state, sort_keys=True)
-        append_jsonl(trace_path, state)
+        write_private_reply_selftest_state(state_path, state)
+        append_private_reply_selftest_trace(trace_path, state)
     return state
 
 

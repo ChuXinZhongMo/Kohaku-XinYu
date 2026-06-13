@@ -8,6 +8,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_dialogue_working_memory_store import clear_dialogue_working_memory_rows
+from xinyu_dialogue_working_memory_store import dialogue_working_memory_path_exists
+from xinyu_dialogue_working_memory_store import dialogue_working_memory_session_hash
+from xinyu_dialogue_working_memory_store import dialogue_working_memory_session_path
+from xinyu_dialogue_working_memory_store import read_dialogue_working_memory_raw
+from xinyu_dialogue_working_memory_store import read_dialogue_working_memory_rows
+from xinyu_dialogue_working_memory_store import write_dialogue_working_memory_rows
 from xinyu_visible_text_sanitizer import sanitize_visible_text
 
 
@@ -56,33 +63,15 @@ def _now_iso() -> str:
 
 
 def _session_hash(session_key: str) -> str:
-    normalized = _safe_str(session_key, "default").strip() or "default"
-    return hashlib.sha256(normalized.encode("utf-8", errors="replace")).hexdigest()[:24]
+    return dialogue_working_memory_session_hash(session_key)
 
 
 def _session_path(root: Path, session_key: str) -> Path:
-    return root / "runtime/dialogue_working_memory" / f"{_session_hash(session_key)}.jsonl"
+    return dialogue_working_memory_session_path(root, session_key)
 
 
 def _load_rows(path: Path) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-    rows: list[dict[str, Any]] = []
-    try:
-        raw = path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
-        return []
-    for raw_line in raw.splitlines():
-        line = raw_line.strip()
-        if not line:
-            continue
-        try:
-            data = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(data, dict):
-            rows.append(data)
-    return rows
+    return read_dialogue_working_memory_rows(path)
 
 
 def inspect_dialogue_tail_storage(root: Path, session_key: str) -> dict[str, Any]:
@@ -97,7 +86,7 @@ def inspect_dialogue_tail_storage(root: Path, session_key: str) -> dict[str, Any
         }
 
     path = _session_path(root, safe_session_key)
-    if not path.exists():
+    if not dialogue_working_memory_path_exists(path):
         return {
             "status": "missing_file",
             "reason": "working_memory_file_missing",
@@ -106,12 +95,11 @@ def inspect_dialogue_tail_storage(root: Path, session_key: str) -> dict[str, Any
             "invalid_line_count": 0,
         }
 
-    try:
-        raw = path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError as exc:
+    raw, read_error = read_dialogue_working_memory_raw(path)
+    if read_error:
         return {
             "status": "read_error",
-            "reason": f"working_memory_read_error:{type(exc).__name__}",
+            "reason": f"working_memory_read_error:{read_error}",
             "usable_row_count": 0,
             "filtered_row_count": 0,
             "invalid_line_count": 0,
@@ -242,8 +230,7 @@ def save_dialogue_tail(
     path = _session_path(root, session_key)
     if safe_max == 0:
         try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text("", encoding="utf-8")
+            clear_dialogue_working_memory_rows(path)
         except OSError:
             return False
         return True
@@ -257,11 +244,7 @@ def save_dialogue_tail(
             recorded_at = _safe_str(item.get("recorded_at")).strip() or _now_iso()
             rows.append({"role": role, "content": content, "recorded_at": recorded_at})
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            "\n".join(json.dumps(row, ensure_ascii=False, sort_keys=True) for row in rows) + ("\n" if rows else ""),
-            encoding="utf-8",
-        )
+        write_dialogue_working_memory_rows(path, rows)
     except OSError:
         return False
     return True
@@ -311,11 +294,7 @@ def remove_matching_assistant_reply(
     if not result.get("removed"):
         return result
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            "\n".join(json.dumps(row, ensure_ascii=False, sort_keys=True) for row in rows) + ("\n" if rows else ""),
-            encoding="utf-8",
-        )
+        write_dialogue_working_memory_rows(path, rows)
     except OSError:
         return {"removed": False, "removed_count": 0, "notes": ["dialogue_tail_write_failed"]}
     return result

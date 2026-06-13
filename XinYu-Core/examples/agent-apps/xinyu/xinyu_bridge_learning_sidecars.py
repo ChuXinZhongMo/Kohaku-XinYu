@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import sys
+from datetime import datetime
 from pathlib import Path
+from typing import Any
+
+from xinyu_bridge_learning_sidecars_store import append_codex_learning_followup_trace
+from xinyu_bridge_values import safe_str
 
 
 def run_learning_study_chain(root: Path, mode: str) -> dict[str, object]:
@@ -45,3 +51,25 @@ def should_run_learning_after_codex(text: str) -> bool:
             "仓库",
         )
     )
+
+
+async def codex_learning_followup(runtime: Any, mode: str) -> None:
+    trace_path = runtime.memory_root / "knowledge/codex_learning_followup_trace.log"
+    started_at = datetime.now().astimezone().isoformat()
+    try:
+        async with runtime._global_turn_lock:
+            result = await asyncio.to_thread(run_learning_study_chain, runtime.xinyu_dir, mode)
+        learner = result.get("learner_integration", {}) if isinstance(result, dict) else {}
+        quality = result.get("learning_quality", {}) if isinstance(result, dict) else {}
+        integrated = int_result(learner if isinstance(learner, dict) else {}, "newly_integrated_materials")
+        quality_grade = safe_str(quality.get("quality_grade"), "unknown") if isinstance(quality, dict) else "unknown"
+        line = (
+            f"{datetime.now().astimezone().isoformat()} ok "
+            f"started_at={started_at} integrated={integrated} quality={quality_grade}\n"
+        )
+    except Exception as exc:
+        line = (
+            f"{datetime.now().astimezone().isoformat()} error "
+            f"started_at={started_at} {type(exc).__name__}: {exc}\n"
+        )
+    append_codex_learning_followup_trace(trace_path, line)

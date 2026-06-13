@@ -7,7 +7,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from state_service import append_jsonl, atomic_write_text
+from xinyu_group_shadow_observer_store import append_group_shadow_trace
+from xinyu_group_shadow_observer_store import read_group_shadow_history_text
+from xinyu_group_shadow_observer_store import write_group_shadow_history_text
+from xinyu_group_shadow_observer_store import write_group_shadow_state
 
 
 TRACE_REL = Path("runtime/group_shadow/group_shadow_observations.jsonl")
@@ -156,7 +159,7 @@ def record_group_shadow_observation(
         "recent_group_context": recent_context,
         **classification,
     }
-    append_jsonl(trace_path, row)
+    append_group_shadow_trace(trace_path, row)
     _append_recent_history(
         root,
         {
@@ -207,14 +210,14 @@ def _append_recent_history(root: Path, row: dict[str, Any]) -> None:
     for group_hash in ordered_groups:
         compact_rows.extend(grouped[group_hash][-HISTORY_KEEP_PER_GROUP:])
     lines = [json.dumps(item, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str) for item in compact_rows]
-    atomic_write_text(path, "\n".join(lines))
+    write_group_shadow_history_text(path, "\n".join(lines))
 
 
 def _read_history_rows(path: Path) -> list[dict[str, Any]]:
-    try:
-        lines = path.read_text(encoding="utf-8-sig").splitlines()
-    except OSError:
+    text = read_group_shadow_history_text(path)
+    if not text:
         return []
+    lines = text.splitlines()
     rows: list[dict[str, Any]] = []
     for line in lines:
         if not line.strip():
@@ -230,7 +233,6 @@ def _read_history_rows(path: Path) -> list[dict[str, Any]]:
 
 def _write_state(root: Path, row: dict[str, Any]) -> None:
     state_path = root / STATE_REL
-    state_path.parent.mkdir(parents=True, exist_ok=True)
     history_lines = _state_history_lines(row.get("recent_group_context") or [])
     content = "\n".join(
         [
@@ -268,7 +270,7 @@ def _write_state(root: Path, row: dict[str, Any]) -> None:
             "- use: observe group social texture before enabling active replies",
         ]
     )
-    atomic_write_text(state_path, content)
+    write_group_shadow_state(state_path, content)
 
 
 def _state_history_lines(rows: Any) -> list[str]:

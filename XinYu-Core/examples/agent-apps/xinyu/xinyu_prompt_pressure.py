@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 
-from state_service import atomic_write_json
+from xinyu_prompt_pressure_store import write_prompt_pressure_report_json
 from xinyu_text_variants import readable_markers
 
 
@@ -308,7 +308,7 @@ def select_prompt_sidecars(
 
 
 def write_prompt_pressure_report(root: Path, report: dict[str, Any]) -> None:
-    atomic_write_json(root / PROMPT_PRESSURE_REPORT_REL, report)
+    write_prompt_pressure_report_json(root / PROMPT_PRESSURE_REPORT_REL, report)
 
 
 def _admission_decision(

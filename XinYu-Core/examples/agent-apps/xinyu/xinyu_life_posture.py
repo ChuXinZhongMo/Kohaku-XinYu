@@ -5,6 +5,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_life_posture_store import life_posture_emotion_state_path
+from xinyu_life_posture_store import life_posture_recent_context_path
+from xinyu_life_posture_store import read_life_posture_context_text
+from xinyu_life_posture_store import write_life_posture_state_text
 from xinyu_text_variants import readable_markers
 from xinyu_turn_classifier import VisibleTurnContext, classify_visible_turn
 
@@ -35,10 +39,7 @@ STUDY_MARKERS = readable_markers(
 
 
 def _read_text(path: Path, limit: int = 1800) -> str:
-    if not path.exists():
-        return ""
-    text = path.read_text(encoding="utf-8-sig", errors="replace").strip()
-    return text if len(text) <= limit else text[-limit:]
+    return read_life_posture_context_text(path, limit=limit)
 
 
 def _contains_any(text: str, markers: tuple[str, ...]) -> bool:
@@ -88,8 +89,8 @@ def build_life_posture(
 ) -> LifePostureState:
     turn = visible_turn or classify_visible_turn(root, payload=payload, user_text=user_text)
     hour = _parse_hour(evaluated_at)
-    recent = _read_text(root / "memory/context/recent_context.md")
-    emotion = _read_text(root / "memory/emotions/current_state.md")
+    recent = _read_text(life_posture_recent_context_path(root))
+    emotion = _read_text(life_posture_emotion_state_path(root))
     combined = f"{user_text}\n{recent}\n{emotion}"
 
     if turn.technical_work:
@@ -207,6 +208,4 @@ tags: [runtime, persona, posture, qq]
 
 
 def write_life_posture_state(root: Path, *, evaluated_at: str, state: LifePostureState) -> None:
-    path = root / "memory/context/current_life_posture.md"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_life_posture_state(evaluated_at=evaluated_at, state=state), encoding="utf-8")
+    write_life_posture_state_text(root, render_life_posture_state(evaluated_at=evaluated_at, state=state))

@@ -87,6 +87,11 @@ class FeatureFlags:
     auto_healing_enabled: bool = False
     trace_enabled: bool = True
     migration_dry_run: bool = True
+    # Human-voice unification (plan §4.4). All default False => behavior is
+    # byte-identical to the pre-change runtime; flip per phase to roll out.
+    human_voice_unified_prompt: bool = False
+    human_voice_bypass_model: bool = False
+    human_voice_regen_pipeline: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +102,36 @@ class ModelConfig:
     api_key_env: str = "XINYU_API_KEY"
     temperature: float = 0.7
     max_tokens: int = 4096
+
+
+@dataclass(frozen=True, slots=True)
+class MicroModelConfig:
+    """Fast, short model call for bypass/fallback micro-replies (plan §4.2).
+
+    Defaults inherit the main model/base_url/api_key_env but with a small token
+    cap and a tight timeout. The timeout default is intentionally low (plan 11.3)
+    so a micro call cannot outlive the outer pre-model/fast-path budget that
+    would otherwise cancel it and silently force a canned fallback.
+    """
+
+    model: str = ""
+    base_url: str = ""
+    api_key_env: str = ""
+    temperature: float = 0.7
+    max_tokens: int = 120
+    timeout_seconds: float = 1.1
+
+    def resolved(self, base: ModelConfig) -> "ModelConfig":
+        """A ModelConfig for the micro call, inheriting unset fields from base."""
+
+        return ModelConfig(
+            provider=base.provider,
+            model=self.model or base.model,
+            base_url=self.base_url or base.base_url,
+            api_key_env=self.api_key_env or base.api_key_env,
+            temperature=self.temperature,
+            max_tokens=self.max_tokens,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,6 +165,7 @@ class XinYuV1Config:
     features: FeatureFlags
     vector_store: VectorStoreConfig
     model: ModelConfig
+    micro_model: MicroModelConfig
     bridge: BridgeConfig
     maintenance: MaintenanceConfig
     latency: LatencyBudget
@@ -155,6 +191,9 @@ class XinYuV1Config:
                 auto_healing_enabled=_env_bool("XINYU_V1_AUTO_HEALING_ENABLED", False),
                 trace_enabled=_env_bool("XINYU_V1_TRACE_ENABLED", True),
                 migration_dry_run=_env_bool("XINYU_V1_MIGRATION_DRY_RUN", True),
+                human_voice_unified_prompt=_env_bool("XINYU_HUMAN_VOICE_UNIFIED_PROMPT", False),
+                human_voice_bypass_model=_env_bool("XINYU_HUMAN_VOICE_BYPASS_MODEL", False),
+                human_voice_regen_pipeline=_env_bool("XINYU_HUMAN_VOICE_REGEN_PIPELINE", False),
             ),
             vector_store=VectorStoreConfig(
                 backend=coerce_enum(
@@ -182,6 +221,14 @@ class XinYuV1Config:
                 api_key_env=os.environ.get("XINYU_API_KEY_ENV", "XINYU_API_KEY"),
                 temperature=_env_float("XINYU_LLM_TEMPERATURE", 0.7),
                 max_tokens=_env_int("XINYU_LLM_MAX_TOKENS", 4096),
+            ),
+            micro_model=MicroModelConfig(
+                model=os.environ.get("XINYU_MICRO_LLM_MODEL", ""),
+                base_url=os.environ.get("XINYU_MICRO_LLM_BASE_URL", ""),
+                api_key_env=os.environ.get("XINYU_MICRO_LLM_API_KEY_ENV", ""),
+                temperature=_env_float("XINYU_MICRO_LLM_TEMPERATURE", 0.7),
+                max_tokens=_env_int("XINYU_MICRO_LLM_MAX_TOKENS", 120),
+                timeout_seconds=_env_float("XINYU_MICRO_LLM_TIMEOUT_SECONDS", 1.1),
             ),
             bridge=BridgeConfig(
                 host=os.environ.get("XINYU_BRIDGE_HOST", "127.0.0.1"),

@@ -9,7 +9,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Iterable
 
-from state_service import append_jsonl, atomic_write_json, atomic_write_text
+from xinyu_goal_outcome_observer_store import append_goal_outcome_trace
+from xinyu_goal_outcome_observer_store import read_goal_outcome_json
+from xinyu_goal_outcome_observer_store import read_goal_outcome_jsonl_rows
+from xinyu_goal_outcome_observer_store import read_goal_outcome_jsonl_summary
+from xinyu_goal_outcome_observer_store import read_goal_outcome_text
+from xinyu_goal_outcome_observer_store import write_goal_outcome_json
+from xinyu_goal_outcome_observer_store import write_goal_outcome_text
 from xinyu_self_chosen_goal_ecology import (
     STATE_JSON_REL,
     STATE_MD_REL,
@@ -130,7 +136,7 @@ def run_goal_outcome_observer(
         "habit_weight_before": outcome_result.get("habit_weight_before"),
         "habit_weight_after": outcome_result.get("habit_weight_after"),
     }
-    append_jsonl(root / TRACE_REL, event)
+    append_goal_outcome_trace(root / TRACE_REL, event)
 
     updated_observer = _update_observer_state(
         root,
@@ -140,7 +146,7 @@ def run_goal_outcome_observer(
         outcome_result=outcome_result,
         signals=signals,
     )
-    atomic_write_json(root / OBSERVER_STATE_REL, updated_observer)
+    write_goal_outcome_json(root / OBSERVER_STATE_REL, updated_observer)
     _write_goal_ecology_report(root, updated_observer.get("report", {}))
     return {
         "accepted": True,
@@ -463,7 +469,7 @@ def _persist_skip(
     }
     updated["last_signal_snapshot"] = _stable_signal_subset(signals)
     updated["report"] = _build_report(root, updated, checked_at=checked_at)
-    atomic_write_json(root / OBSERVER_STATE_REL, updated)
+    write_goal_outcome_json(root / OBSERVER_STATE_REL, updated)
     _write_goal_ecology_report(root, updated.get("report", {}))
 
 
@@ -517,7 +523,7 @@ def _write_goal_ecology_report(root: Path, report: Any) -> None:
         return
     base = text.split("\n## Outcome Ecology Report\n", 1)[0].rstrip()
     lines = _report_markdown_lines(report)
-    atomic_write_text(path, base + "\n\n" + "\n".join(lines))
+    write_goal_outcome_text(path, base + "\n\n" + "\n".join(lines))
 
 
 def _report_markdown_lines(report: dict[str, Any]) -> list[str]:
@@ -621,43 +627,11 @@ def _markdown_fields(text: str) -> dict[str, str]:
 
 
 def _jsonl_summary(path: Path) -> dict[str, Any]:
-    row_count = 0
-    last_event = ""
-    try:
-        with path.open("r", encoding="utf-8-sig", errors="replace") as handle:
-            for line in handle:
-                if not line.strip():
-                    continue
-                row_count += 1
-                try:
-                    row = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if isinstance(row, dict):
-                    last_event = _safe_str(row.get("event_kind") or row.get("kind") or row.get("status"))
-    except OSError:
-        pass
-    return {"row_count": row_count, "last_event_kind": last_event}
+    return read_goal_outcome_jsonl_summary(path)
 
 
 def _read_jsonl_rows(path: Path, *, max_rows: int) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    try:
-        with path.open("r", encoding="utf-8-sig", errors="replace") as handle:
-            for line in handle:
-                if not line.strip():
-                    continue
-                try:
-                    row = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if isinstance(row, dict):
-                    rows.append(row)
-                    if len(rows) > max_rows:
-                        rows.pop(0)
-    except OSError:
-        return []
-    return rows
+    return read_goal_outcome_jsonl_rows(path, max_rows=max_rows)
 
 
 def _within_hours(value: Any, checked_at: str, *, hours: int) -> bool:
@@ -669,17 +643,11 @@ def _within_hours(value: Any, checked_at: str, *, hours: int) -> bool:
 
 
 def _read_json(path: Path, *, default: Any) -> Any:
-    try:
-        return json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
-        return default
+    return read_goal_outcome_json(path, default=default)
 
 
 def _read_text(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
-        return ""
+    return read_goal_outcome_text(path)
 
 
 def _contains_any(text: str, markers: Iterable[str]) -> bool:

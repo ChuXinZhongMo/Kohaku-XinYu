@@ -5,6 +5,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from xinyu_bridge_desktop_surface_state_store import desktop_surface_state_store_for_runtime
+
 CONTROL_CONTEXT_FIELDS = ("status", "trace", "report", "outbox", "batch", "source")
 CONTROL_ID_PATTERN = re.compile(r"(?i)\b(?:resume_id|request_id|queue_id|task_id)\s*[:：#]?\s*[A-Za-z0-9_.:-]+")
 SECRET_PATTERNS: tuple[re.Pattern[str], ...] = (
@@ -138,7 +140,7 @@ def read_recent_context_summary(path: Path) -> str:
 
 
 def runtime_owner_private_turns(runtime: Any, *, limit: int = 4) -> list[dict[str, Any]]:
-    turns = list(getattr(runtime, "_desktop_recent_turns", []) or [])
+    turns = desktop_surface_state_store_for_runtime(runtime).recent_turns()
     rows: list[dict[str, Any]] = []
     for item in reversed(turns):
         if not isinstance(item, dict) or not looks_like_owner_private_turn(item):

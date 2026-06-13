@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+from xinyu_bridge_semantic_fast_routes import empty_visible_reply_fallback
+from xinyu_bridge_semantic_fast_routes import owner_private_llm_failover_context
 from xinyu_bridge_semantic_fast_routes import owner_private_direct_repair_reply
 from xinyu_bridge_semantic_fast_routes import owner_private_empty_state_notice
 from xinyu_bridge_semantic_fast_routes import owner_private_semantic_fast_decision
@@ -132,6 +134,80 @@ def test_owner_private_empty_state_notice_is_plain_not_mechanical() -> None:
     assert "\u6a21\u578b" not in notice
     assert "\u540e\u53f0" not in notice
     assert "\u5904\u7406" not in notice
+
+
+def test_empty_visible_reply_fallback_requires_owner_private_payload() -> None:
+    owner_runtime = FakeRuntime(owner_private=True)
+    other_runtime = FakeRuntime(owner_private=False)
+    payload = {"message_type": "private_text", "metadata": {"is_owner_user": True}}
+
+    assert empty_visible_reply_fallback(owner_runtime, payload=payload, user_text="hello") != ""
+    assert empty_visible_reply_fallback(other_runtime, payload=payload, user_text="hello") == ""
+
+
+def test_owner_private_llm_failover_context_projects_safe_chat_context(tmp_path) -> None:
+    runtime = FakeRuntime(owner_private=True)
+    runtime.xinyu_dir = tmp_path
+
+    context = owner_private_llm_failover_context(
+        runtime,
+        {"message_type": "private_text", "metadata": {"is_owner_user": True}},
+        text="今晚有点累",
+        session_key="qq:private:owner",
+        turn_id="turn-1",
+    )
+
+    assert context["enabled"] is True
+    assert context["scope"] == "owner_private_chat"
+    assert context["source"] == "onebot_message_event"
+    assert context["session_key"] == "qq:private:owner"
+    assert context["turn_id"] == "turn-1"
+    assert context["user_text"] == "今晚有点累"
+    assert context["trace_root"] == str(tmp_path)
+    assert context["capabilities"]["local_tools_available"] is True
+    assert context["constraints"]["allow_tool_request"] is False
+
+
+def test_owner_private_llm_failover_context_blocks_non_chat_or_sensitive_payloads(tmp_path) -> None:
+    runtime = FakeRuntime(owner_private=True)
+    runtime.xinyu_dir = tmp_path
+    base = {"message_type": "private_text", "metadata": {"is_owner_user": True}}
+
+    assert owner_private_llm_failover_context(
+        FakeRuntime(owner_private=False),
+        base,
+        text="今晚有点累",
+        session_key="s",
+        turn_id="t",
+    ) == {}
+    assert owner_private_llm_failover_context(
+        runtime,
+        {"message_type": "private_text", "metadata": {"control_plane": "true"}},
+        text="今晚有点累",
+        session_key="s",
+        turn_id="t",
+    ) == {}
+    assert owner_private_llm_failover_context(
+        runtime,
+        {"message_type": "private_text", "image_path": "D:/XinYu/runtime/test.png", "metadata": {}},
+        text="今晚有点累",
+        session_key="s",
+        turn_id="t",
+    ) == {}
+    assert owner_private_llm_failover_context(
+        runtime,
+        base,
+        text="让 Codex 查一下这个启动问题",
+        session_key="s",
+        turn_id="t",
+    ) == {}
+    assert owner_private_llm_failover_context(
+        runtime,
+        {"message_type": "group_text", "metadata": {"is_owner_user": True}},
+        text="今晚有点累",
+        session_key="s",
+        turn_id="t",
+    ) == {}
 
 
 def test_owner_private_semantic_fast_decision_routes_reply_complaint_to_live_model() -> None:

@@ -7,11 +7,13 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from xinyu_action_openended_audit_store import ACTION_RESIDUE_REL
+from xinyu_action_openended_audit_store import DREAM_SEEDS_REL
+from xinyu_action_openended_audit_store import RECENT_ACTION_REL
+from xinyu_action_openended_audit_store import REFLECTION_QUEUE_REL
+from xinyu_action_openended_audit_store import read_action_openended_audit_jsonl
+from xinyu_action_openended_audit_store import read_action_openended_audit_text
 
-RECENT_ACTION_REL = Path("runtime/life_kernel/recent_action_experience.jsonl")
-ACTION_RESIDUE_REL = Path("runtime/life_kernel/action_experience_residue.jsonl")
-DREAM_SEEDS_REL = Path("memory/dreams/dream_seeds.md")
-REFLECTION_QUEUE_REL = Path("memory/reflection/reflection_queue.md")
 
 LOW_SALIENCE_THRESHOLD = 0.6
 
@@ -28,37 +30,6 @@ def _bounded_float(value: Any, *, default: float = 0.0) -> float:
     except (TypeError, ValueError):
         number = default
     return max(0.0, min(1.0, number))
-
-
-def _read_text(path: Path) -> tuple[str, list[str]]:
-    if not path.exists():
-        return "", [f"missing_input:{path.as_posix()}"]
-    try:
-        return path.read_text(encoding="utf-8-sig", errors="replace"), []
-    except OSError as exc:
-        return "", [f"read_error:{path.as_posix()}:{type(exc).__name__}"]
-
-
-def _load_jsonl(path: Path) -> tuple[list[dict[str, Any]], list[str]]:
-    text, warnings = _read_text(path)
-    rows: list[dict[str, Any]] = []
-    invalid = 0
-    for line in text.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            value = json.loads(line)
-        except json.JSONDecodeError:
-            invalid += 1
-            continue
-        if isinstance(value, dict):
-            rows.append(value)
-        else:
-            invalid += 1
-    if invalid:
-        warnings.append(f"invalid_jsonl_lines:{path.as_posix()}:{invalid}")
-    return rows, warnings
 
 
 def _markdown_blocks(text: str) -> list[dict[str, Any]]:
@@ -332,10 +303,10 @@ def _health_status(warnings: list[str]) -> str:
 
 def run_audit(root: Path, *, low_salience_threshold: float = LOW_SALIENCE_THRESHOLD) -> dict[str, Any]:
     root = root.resolve()
-    recent_rows, recent_warnings = _load_jsonl(root / RECENT_ACTION_REL)
-    residue_rows, residue_warnings = _load_jsonl(root / ACTION_RESIDUE_REL)
-    dream_text, dream_warnings = _read_text(root / DREAM_SEEDS_REL)
-    reflection_text, reflection_warnings = _read_text(root / REFLECTION_QUEUE_REL)
+    recent_rows, recent_warnings = read_action_openended_audit_jsonl(root / RECENT_ACTION_REL)
+    residue_rows, residue_warnings = read_action_openended_audit_jsonl(root / ACTION_RESIDUE_REL)
+    dream_text, dream_warnings = read_action_openended_audit_text(root / DREAM_SEEDS_REL)
+    reflection_text, reflection_warnings = read_action_openended_audit_text(root / REFLECTION_QUEUE_REL)
 
     dream_blocks = _markdown_blocks(dream_text)
     reflection_blocks = _markdown_blocks(reflection_text)

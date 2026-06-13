@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 import sys
 import time
@@ -9,6 +8,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_expression_self_learning_store import append_expression_self_learning_trace
+from xinyu_expression_self_learning_store import read_expression_self_learning_text
+from xinyu_expression_self_learning_store import write_expression_self_learning_text
 from xinyu_storage_paths import knowledge_file_path
 
 
@@ -73,21 +75,15 @@ def _compact(value: Any, *, limit: int = 220, default: str = "none") -> str:
 
 
 def _read(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
-        return ""
+    return read_expression_self_learning_text(path)
 
 
 def _write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text.rstrip() + "\n", encoding="utf-8")
+    write_expression_self_learning_text(path, text)
 
 
 def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+    append_expression_self_learning_trace(path, row)
 
 
 def _knowledge(root: Path, filename: str) -> Path:

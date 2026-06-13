@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_action_experience_digest_store import append_action_experience_digest_jsonl
+from xinyu_action_experience_digest_store import read_action_experience_digest_json
+from xinyu_action_experience_digest_store import read_action_experience_digest_jsonl
+from xinyu_action_experience_digest_store import read_action_experience_digest_text
+from xinyu_action_experience_digest_store import write_action_experience_digest_json
+from xinyu_action_experience_digest_store import write_action_experience_digest_text
 from xinyu_visible_text_sanitizer import (
     sanitize_visible_text,
     visible_action_pressure_label,
@@ -71,37 +76,19 @@ def _bounded_float(value: Any, *, default: float = 0.0) -> float:
 
 
 def _read_text(path: Path) -> str:
-    if not path.exists():
-        return ""
-    return path.read_text(encoding="utf-8-sig", errors="replace")
+    return read_action_experience_digest_text(path)
 
 
 def _write_text(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text.rstrip() + "\n", encoding="utf-8")
+    write_action_experience_digest_text(path, text)
 
 
 def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
+    append_action_experience_digest_jsonl(path, row)
 
 
 def _load_jsonl(path: Path) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-    rows: list[dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8-sig", errors="replace").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            value = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(value, dict):
-            rows.append(value)
-    return rows
+    return read_action_experience_digest_jsonl(path)
 
 
 def _field_from_block(block: str, key: str, default: str = "none") -> str:
@@ -123,12 +110,7 @@ def _markdown_block(text: str, heading_id: str) -> str:
 
 
 def _load_state(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {"version": 1, "digested_ids": []}
-    try:
-        value = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
-    except (OSError, json.JSONDecodeError):
-        return {"version": 1, "digested_ids": []}
+    value = read_action_experience_digest_json(path, {"version": 1, "digested_ids": []})
     if not isinstance(value, dict):
         return {"version": 1, "digested_ids": []}
     ids = value.get("digested_ids")
@@ -138,10 +120,7 @@ def _load_state(path: Path) -> dict[str, Any]:
 
 
 def _write_state(path: Path, state: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = path.with_suffix(path.suffix + ".tmp")
-    tmp_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    tmp_path.replace(path)
+    write_action_experience_digest_json(path, state)
 
 
 def _hash_id(text: str, length: int = 10) -> str:

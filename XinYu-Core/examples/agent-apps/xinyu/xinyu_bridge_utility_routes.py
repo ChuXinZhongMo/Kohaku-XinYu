@@ -4,31 +4,58 @@ import asyncio
 from http import HTTPStatus
 from typing import Any
 
-from xinyu_bridge_errors import BridgeRequestError
 from xinyu_action_feedback_surface import record_action_feedback_from_message_ack
 from xinyu_action_feedback_surface import record_action_feedback_from_message_drop
+from xinyu_bridge_errors import BridgeRequestError
+from xinyu_bridge_learning import LearningBridgeError
+from xinyu_bridge_learning_ingest_route_backend import maybe_execute_learning_ingest_backend
+import xinyu_bridge_utility_route_helpers as _helpers
 from xinyu_dialogue_archive import retract_archived_assistant_message
 from xinyu_dialogue_working_memory import remove_matching_assistant_reply
 from xinyu_dialogue_working_memory import remove_matching_assistant_reply_from_tail
 from xinyu_dialogue_working_memory import save_dialogue_tail
 from xinyu_goldmark import mark_goldmark_request as mark_goldmark_request_bridge
+from xinyu_package_installer import install_python_packages
 from xinyu_review_inbox import handle_review_inbox_command
 from xinyu_sent_reply_index import register_sent_reply_ack
+from xinyu_sticker_ingest import import_sticker_from_payload
+
+
+def _deps() -> _helpers.UtilityRouteDeps:
+    return _helpers.UtilityRouteDeps(
+        bridge_request_error_type=BridgeRequestError,
+        learning_bridge_error_type=LearningBridgeError,
+        bad_request_status=HTTPStatus.BAD_REQUEST,
+        service_unavailable_status=HTTPStatus.SERVICE_UNAVAILABLE,
+        to_thread=asyncio.to_thread,
+        handle_review_inbox_command=handle_review_inbox_command,
+        install_python_packages=install_python_packages,
+        import_sticker_from_payload=import_sticker_from_payload,
+        register_sent_reply_ack=register_sent_reply_ack,
+        record_action_feedback_from_message_ack=record_action_feedback_from_message_ack,
+        record_action_feedback_from_message_drop=record_action_feedback_from_message_drop,
+        remove_matching_assistant_reply_from_tail=remove_matching_assistant_reply_from_tail,
+        save_dialogue_tail=save_dialogue_tail,
+        remove_matching_assistant_reply=remove_matching_assistant_reply,
+        retract_archived_assistant_message=retract_archived_assistant_message,
+        mark_goldmark_request=mark_goldmark_request_bridge,
+    )
 
 
 def _sessions(runtime: Any) -> int:
-    return len(getattr(runtime, "_sessions", {}))
+    return _helpers.sessions(runtime)
 
 
 def _ensure_open(runtime: Any) -> None:
-    if getattr(runtime, "_closed", False):
-        raise BridgeRequestError(HTTPStatus.SERVICE_UNAVAILABLE, "bridge is shutting down")
+    _helpers.ensure_open(runtime, _deps())
 
 
 def _ensure_payload(payload: dict[str, Any] | None) -> dict[str, Any]:
-    if payload is not None and not isinstance(payload, dict):
-        raise BridgeRequestError(HTTPStatus.BAD_REQUEST, "request body must be a JSON object")
-    return dict(payload or {})
+    return _helpers.ensure_payload(payload, _deps())
+
+
+def _payload_or_empty(payload: dict[str, Any] | None) -> dict[str, Any]:
+    return _helpers.payload_or_empty(payload, _deps())
 
 
 async def probe(
@@ -43,100 +70,74 @@ async def probe(
     reply, or inject a turn. It is for startup/status checks that should not
     become lived context.
     """
-    payload = _ensure_payload(payload)
-    text = runtime._payload_text(payload)
-    cleanup = await runtime._cleanup_idle_sessions()
-    return {
-        "ok": True,
-        "bridge": "xinyu_core_bridge",
-        "version": bridge_version,
-        "probe": "diagnostic_no_memory",
-        "accepted": True,
-        "reply": "probe_ok",
-        "received_text_chars": len(text),
-        "memory_changed": False,
-        "session_created": False,
-        "sessions": _sessions(runtime),
-        "cleaned_sessions": cleanup["cleaned_sessions"],
-        "notes": ["no_agent_turn", "no_memory_write", "no_session_created"],
-    }
+    return await _helpers.probe(runtime, payload, bridge_version=bridge_version, deps=_deps())
+
+
+async def runtime_probe(runtime: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    return await _helpers.runtime_probe(runtime, payload, deps=_deps())
 
 
 async def review_inbox_command(runtime: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    _ensure_open(runtime)
-    payload = _ensure_payload(payload)
-    async with runtime._review_admin_lock:
-        return await asyncio.to_thread(handle_review_inbox_command, runtime.xinyu_dir, payload)
+    return await _helpers.review_inbox_command(runtime, payload, deps=_deps())
+
+
+async def package_install(runtime: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    return await _helpers.package_install(runtime, payload, deps=_deps())
+
+
+async def learning_ingest(runtime: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    backend_result = await maybe_execute_learning_ingest_backend(
+        runtime,
+        payload,
+        route="/learning/ingest",
+        http_method="POST",
+        runtime_method="learning_ingest",
+        service_method="ingest",
+    )
+    if backend_result is not None:
+        return backend_result
+    return await _helpers.learning_ingest(runtime, payload, deps=_deps())
+
+
+async def learning_study(runtime: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    backend_result = await maybe_execute_learning_ingest_backend(
+        runtime,
+        payload,
+        route="/learning/study",
+        http_method="POST",
+        runtime_method="learning_study",
+        service_method="study",
+    )
+    if backend_result is not None:
+        return backend_result
+    return await _helpers.learning_study(runtime, payload, deps=_deps())
+
+
+async def learning_observe(runtime: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    backend_result = await maybe_execute_learning_ingest_backend(
+        runtime,
+        payload,
+        route="/learning/observe",
+        http_method="POST",
+        runtime_method="learning_observe",
+        service_method="observe",
+    )
+    if backend_result is not None:
+        return backend_result
+    return await _helpers.learning_observe(runtime, payload, deps=_deps())
+
+
+async def sticker_import(runtime: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    return await _helpers.sticker_import(runtime, payload, deps=_deps())
 
 
 async def message_ack(runtime: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    _ensure_open(runtime)
-    payload = _ensure_payload(payload)
-    result = await asyncio.to_thread(register_sent_reply_ack, runtime.xinyu_dir, payload)
-    await asyncio.to_thread(record_action_feedback_from_message_ack, runtime.xinyu_dir, payload, ack_result=result)
-    return result
+    return await _helpers.message_ack(runtime, payload, deps=_deps())
 
 
 async def message_drop(runtime: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    _ensure_open(runtime)
-    payload = _ensure_payload(payload)
-    session_id = str(payload.get("session_id") or "").strip()
-    reply = str(payload.get("reply") or payload.get("visible_text") or "").strip()
-    reply_hash = str(payload.get("reply_hash") or payload.get("visible_text_hash") or "").strip()
-    notes: list[str] = []
-    tail_removed = False
-
-    if session_id:
-        sessions_lock = getattr(runtime, "_sessions_lock", None)
-        if sessions_lock is not None:
-            async with sessions_lock:
-                session = getattr(runtime, "_sessions", {}).get(session_id)
-                tail = getattr(session, "dialogue_tail", None)
-                if isinstance(tail, list):
-                    result = remove_matching_assistant_reply_from_tail(tail, reply=reply, reply_hash=reply_hash)
-                    tail_removed = bool(result.get("removed"))
-                    notes.extend(str(note) for note in result.get("notes", []) if note)
-                    if tail_removed:
-                        await asyncio.to_thread(
-                            save_dialogue_tail,
-                            runtime.xinyu_dir,
-                            session_id,
-                            tail,
-                            max_entries=getattr(runtime, "dialogue_persisted_tail_entries", None),
-                        )
-        if not tail_removed:
-            tail_result = await asyncio.to_thread(
-                remove_matching_assistant_reply,
-                runtime.xinyu_dir,
-                session_id,
-                reply=reply,
-                reply_hash=reply_hash,
-            )
-            tail_removed = bool(tail_result.get("removed"))
-            notes.extend(str(note) for note in tail_result.get("notes", []) if note)
-    else:
-        notes.append("missing_session_id")
-
-    archive_result = await asyncio.to_thread(
-        retract_archived_assistant_message,
-        runtime.xinyu_dir,
-        message_id=payload.get("archive_assistant_message_id"),
-        expected_reply=reply,
-    )
-    notes.extend(str(note) for note in archive_result.get("notes", []) if note)
-    result = {
-        "accepted": True,
-        "dropped": True,
-        "tail_removed": tail_removed,
-        "archive_deleted": bool(archive_result.get("deleted")),
-        "archive_deleted_count": int(archive_result.get("deleted_count") or 0),
-        "notes": notes,
-    }
-    await asyncio.to_thread(record_action_feedback_from_message_drop, runtime.xinyu_dir, payload, drop_result=result)
-    return result
+    return await _helpers.message_drop(runtime, payload, deps=_deps())
 
 
 async def goldmark_mark_request(runtime: Any, payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    _ensure_open(runtime)
-    payload = _ensure_payload(payload)
-    return await asyncio.to_thread(mark_goldmark_request_bridge, runtime.xinyu_dir, payload)
+    return await _helpers.goldmark_mark_request(runtime, payload, deps=_deps())

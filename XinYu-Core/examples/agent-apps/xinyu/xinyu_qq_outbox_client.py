@@ -258,10 +258,22 @@ def sent_message_ack_payload(
     archive_message_ids = core_response.get("archive_message_ids")
     if not isinstance(archive_message_ids, list):
         archive_message_ids = []
+    delivery_kind = ""
+    voice_fallback_reason = ""
+    if isinstance(action_response, dict):
+        delivery_kind = _safe_str(action_response.get("xinyu_delivery_kind")).strip()
+        voice_fallback_reason = _safe_str(action_response.get("xinyu_voice_fallback_reason")).strip()
+        data = action_response.get("data")
+        if not delivery_kind and isinstance(data, dict):
+            delivery_kind = _safe_str(data.get("delivery_kind")).strip()
+    delivery_kind = delivery_kind or "text"
     metadata = {
         "gateway_version": getattr(gateway, "gateway_version", GATEWAY_VERSION_FALLBACK),
         "source_route": prepared.route or "chat",
+        "delivery_kind": delivery_kind,
     }
+    if voice_fallback_reason:
+        metadata["voice_fallback_reason"] = voice_fallback_reason
     return {
         "adapter": GATEWAY_NAME,
         "gateway": GATEWAY_NAME,
@@ -283,6 +295,7 @@ def sent_message_ack_payload(
         "visible_text_hash": _safe_str(core_response.get("reply_hash")).strip(),
         "sent_at": _now_iso(),
         "adapter_error": adapter_error,
+        "delivery_kind": delivery_kind,
         "metadata": metadata,
     }
 

@@ -11,7 +11,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from state_service import append_jsonl, atomic_write_json, atomic_write_text
+from xinyu_self_action_gateway_store import append_self_action_gateway_trace
+from xinyu_self_action_gateway_store import read_self_action_gateway_json
+from xinyu_self_action_gateway_store import read_self_action_gateway_jsonl_summary
+from xinyu_self_action_gateway_store import read_self_action_gateway_text
+from xinyu_self_action_gateway_store import write_self_action_gateway_json
+from xinyu_self_action_gateway_store import write_self_action_gateway_text
 from stores.self_action_queue import (
     APPROVAL_QUEUE_REL,
     BOUNDARY_ID as SELF_ACTION_QUEUE_BOUNDARY,
@@ -19,6 +24,19 @@ from stores.self_action_queue import (
     read_approval_queue_rows,
 )
 from xinyu_self_chosen_goal_ecology import STATE_JSON_REL as GOAL_ECOLOGY_STATE_REL
+from xinyu_self_action_trusted_autoapproval import (
+    load_policy as load_trusted_autoapproval_policy,
+    prune_ledger as prune_trusted_autoapproval_ledger,
+    remaining_budget as trusted_autoapproval_remaining_budget,
+    scope_is_auto_approvable,
+    scope_is_codex_auto_runnable,
+)
+from xinyu_autonomy_policy import (
+    PRODUCTIVE_GOAL_IDS,
+    SCRATCH_DIR_REL,
+    load_policy as load_autonomy_policy,
+    reliability_budget_bonus,
+)
 
 
 GATEWAY_VERSION = 1
@@ -38,7 +56,11 @@ LOW_RISK_ACTIONS = {
     "memory_pressure_probe",
     "quiet_boundary_probe",
     "environment_trace_probe",
+    "knowledge_material_probe",
+    "improvement_material_probe",
+    "self_scratch_reflection",
 }
+SCRATCH_NOTE_LIMIT = 60
 APPROVAL_ACTIONS = {
     "self_code_patch_request",
     "owner_message_draft_request",
@@ -90,7 +112,10 @@ def run_self_action_gateway(
     checked_at = _timestamp_or_now_iso(checked_at)
     goal_state = _read_json(root / GOAL_ECOLOGY_STATE_REL, default={})
     selected_goal_id = _safe_token(goal_state.get("last_selected_goal_id")) if isinstance(goal_state, dict) else ""
-    candidates = build_action_candidates(root, selected_goal_id=selected_goal_id, checked_at=checked_at)
+    autonomy_policy = load_autonomy_policy(root)
+    candidates = build_action_candidates(
+        root, selected_goal_id=selected_goal_id, checked_at=checked_at, autonomy_policy=autonomy_policy
+    )
     low_risk = [candidate for candidate in candidates if candidate.risk == LOW_LOCAL_RISK and not candidate.requires_approval]
     approval_required = [candidate for candidate in candidates if candidate.requires_approval]
 
@@ -99,7 +124,8 @@ def run_self_action_gateway(
     skipped_approvals: list[str] = []
     state = _load_state(root)
     if execute_low_risk:
-        for candidate in low_risk[:1]:
+        max_low_risk = max(1, int(getattr(autonomy_policy, "max_low_risk_actions_per_cycle", 1)))
+        for candidate in low_risk[:max_low_risk]:
             executions.append(_execute_low_risk_action(root, candidate, checked_at=checked_at))
     for candidate in approval_required:
         queued_item = _queue_approval_if_new(root, state, candidate, checked_at=checked_at)
@@ -107,6 +133,10 @@ def run_self_action_gateway(
             queued.append(queued_item)
         else:
             skipped_approvals.append(_safe_str(queued_item.get("reason"), "duplicate"))
+
+    auto_approval = {"enabled": False, "auto_approved": [], "skipped_budget": 0, "skipped_scope": 0}
+    if write_state and queued:
+        auto_approval = _apply_trusted_auto_approval(root, state, queued, checked_at=checked_at)
 
     result = {
         "accepted": True,
@@ -118,8 +148,10 @@ def run_self_action_gateway(
         "executed_action_count": len(executions),
         "queued_approval_count": len(queued),
         "skipped_approval_count": len(skipped_approvals),
+        "auto_approved_count": len(auto_approval["auto_approved"]),
         "low_risk_results": [asdict(item) for item in executions],
         "approval_queue_items": queued,
+        "trusted_auto_approval": auto_approval,
         "notes": _result_notes(selected_goal_id, executions, queued, skipped_approvals),
     }
     if write_state:
@@ -135,7 +167,7 @@ def run_self_action_gateway(
         state = _with_approval_overview(root, state, checked_at=checked_at)
         _persist_state(root, state)
         _write_state_markdown(root, state)
-        append_jsonl(root / TRACE_REL, {"event_kind": "self_action_gateway_run", "version": GATEWAY_VERSION, **result})
+        append_self_action_gateway_trace(root / TRACE_REL, {"event_kind": "self_action_gateway_run", "version": GATEWAY_VERSION, **result})
     return result
 
 
@@ -208,7 +240,7 @@ def decide_self_action_approval(
     append_approval_queue_event(root, event)
     trace_event = dict(event)
     trace_event["queue_event_kind"] = trace_event.pop("event_kind")
-    append_jsonl(root / TRACE_REL, {"event_kind": "self_action_approval_decision", **trace_event})
+    append_self_action_gateway_trace(root / TRACE_REL, {"event_kind": "self_action_approval_decision", **trace_event})
     result: dict[str, Any] = {
         "accepted": True,
         "status": "completed",
@@ -270,7 +302,7 @@ def execute_approved_self_actions(
                 **execution,
             },
         )
-        append_jsonl(
+        append_self_action_gateway_trace(
             root / TRACE_REL,
             {
                 "event_kind": "self_action_approval_execution",
@@ -292,14 +324,43 @@ def execute_approved_self_actions(
     }
 
 
-def build_action_candidates(root: Path, *, selected_goal_id: str, checked_at: str | None = None) -> list[ActionCandidate]:
+def build_action_candidates(
+    root: Path,
+    *,
+    selected_goal_id: str,
+    checked_at: str | None = None,
+    autonomy_policy: Any = None,
+) -> list[ActionCandidate]:
     del checked_at
     goal = _safe_token(selected_goal_id)
     if not goal:
         return []
     low = _low_risk_candidate_for_goal(root, goal)
     high = _approval_candidate_for_goal(root, goal)
-    return [candidate for candidate in (low, high) if candidate is not None]
+    candidates = [candidate for candidate in (low, high) if candidate is not None]
+    if (
+        autonomy_policy is not None
+        and getattr(autonomy_policy, "productive_low_risk_enabled", False)
+        and goal in PRODUCTIVE_GOAL_IDS
+    ):
+        candidates.append(_productive_low_risk_candidate(goal))
+    return candidates
+
+
+def _productive_low_risk_candidate(goal_id: str) -> ActionCandidate:
+    # #1: a reversible, artifact-producing low-risk action. It writes a scratch
+    # reflection note under runtime/self_scratch/ and crosses no hard boundary.
+    return _candidate(
+        goal_id,
+        "self_scratch_reflection",
+        "write a reversible scratch reflection note",
+        LOW_LOCAL_RISK,
+        False,
+        "A productive but reversible note records the goal's intent without editing real state.",
+        "scratch_writer",
+        {"scratch_dir": str(SCRATCH_DIR_REL).replace("\\", "/"), "goal_id": goal_id},
+        (f"runtime/self_scratch/{goal_id}:note",),
+    )
 
 
 def _low_risk_candidate_for_goal(root: Path, goal_id: str) -> ActionCandidate | None:
@@ -383,6 +444,30 @@ def _low_risk_candidate_for_goal(root: Path, goal_id: str) -> ActionCandidate | 
             "trace_probe",
             {"paths": ["runtime/self_presence_trace.jsonl", "runtime/qq_inbound_trace.jsonl"]},
             ("runtime/self_presence_trace.jsonl:count", "runtime/qq_inbound_trace.jsonl:count"),
+        )
+    if goal_id == "synthesize_knowledge":
+        return _candidate(
+            goal_id,
+            "knowledge_material_probe",
+            "inspect knowledge synthesis material",
+            LOW_LOCAL_RISK,
+            False,
+            "Knowledge synthesis can inspect local material before drafting a note.",
+            "state_probe",
+            {"paths": ["memory/context/recent_context.md", "memory/self/learning_closed_loop_state.md"]},
+            ("memory/context/recent_context.md:fields",),
+        )
+    if goal_id == "draft_self_improvement":
+        return _candidate(
+            goal_id,
+            "improvement_material_probe",
+            "inspect self-improvement material",
+            LOW_LOCAL_RISK,
+            False,
+            "A self-improvement draft can inspect local state before proposing changes.",
+            "state_probe",
+            {"paths": ["memory/self/learning_closed_loop_state.md", "memory/context/initiative_spine_state.md"]},
+            ("memory/self/learning_closed_loop_state.md:fields",),
         )
     return None
 
@@ -481,10 +566,18 @@ def _execute_low_risk_action(root: Path, candidate: ActionCandidate, *, checked_
     try:
         if candidate.action_kind == "local_py_compile_probe":
             result, summary, error = _execute_py_compile_probe(root, candidate)
-        elif candidate.action_kind in {"replay_material_probe", "learning_repair_probe", "quiet_boundary_probe"}:
+        elif candidate.action_kind in {
+            "replay_material_probe",
+            "learning_repair_probe",
+            "quiet_boundary_probe",
+            "knowledge_material_probe",
+            "improvement_material_probe",
+        }:
             result, summary, error = _execute_state_probe(root, candidate)
         elif candidate.action_kind in {"memory_pressure_probe", "environment_trace_probe"}:
             result, summary, error = _execute_trace_probe(root, candidate)
+        elif candidate.action_kind == "self_scratch_reflection":
+            result, summary, error = _execute_scratch_reflection(root, candidate, checked_at=checked_at)
         else:
             result, summary, error = "blocked", ("low-risk action is not whitelisted",), "action_not_whitelisted"
     except Exception as exc:
@@ -502,7 +595,7 @@ def _execute_low_risk_action(root: Path, candidate: ActionCandidate, *, checked_
         report_ref=f"runtime/self_action_gateway/trace.jsonl:{checked_at}",
         error_code=error,
     )
-    append_jsonl(
+    append_self_action_gateway_trace(
         root / TRACE_REL,
         {
             "event_kind": "self_action_executed",
@@ -544,6 +637,47 @@ def _execute_state_probe(root: Path, candidate: ActionCandidate) -> tuple[str, t
         fields = _markdown_fields(text)
         summaries.append(f"{rel}: exists={str(bool(text)).lower()} fields={len(fields)} hash={_hash_text(text, 10) if text else 'none'}")
     return "success", tuple(summaries), ""
+
+
+def _execute_scratch_reflection(
+    root: Path, candidate: ActionCandidate, *, checked_at: str
+) -> tuple[str, tuple[str, ...], str]:
+    # #1: produce a reversible artifact — a timestamped scratch note under
+    # runtime/self_scratch/. No private bodies are written; only the goal's own
+    # derived intent. The scratch tree is ephemeral and safe to delete.
+    goal_id = _safe_token(candidate.goal_id) or "self"
+    scratch_dir_rel = _safe_str(candidate.params.get("scratch_dir")) or str(SCRATCH_DIR_REL).replace("\\", "/")
+    if not _is_safe_relative(scratch_dir_rel):
+        return "blocked", ("scratch dir not allowed",), "path_not_allowed"
+    note_id = _hash_json({"goal_id": goal_id, "checked_at": checked_at}, length=12)
+    rel = f"{scratch_dir_rel}/{goal_id}/{note_id}.md"
+    body = "\n".join(
+        [
+            "---",
+            "title: Self Scratch Reflection",
+            "memory_type: self_scratch_reflection",
+            "time_scope: ephemeral",
+            "subject_ids: [xinyu]",
+            "protected: false",
+            "source: xinyu_self_action_gateway",
+            f"updated_at: {_timestamp_or_now_iso(checked_at)}",
+            "status: scratch",
+            "tags: [initiative, autonomy, scratch, reversible]",
+            "---",
+            "",
+            "# Self Scratch Reflection",
+            "",
+            f"- goal_id: {goal_id}",
+            f"- checked_at: {_timestamp_or_now_iso(checked_at)}",
+            f"- intent: {_compact(candidate.reason, 200)}",
+            "- boundary: reversible scratch artifact only; no stable memory, code, or outward effect",
+        ]
+    )
+    try:
+        write_self_action_gateway_text(root / rel, body)
+    except OSError as exc:
+        return "failed", (f"scratch write failed: {type(exc).__name__}",), "scratch_write_failed"
+    return "success", (f"scratch reflection written: {rel}",), ""
 
 
 def _execute_trace_probe(root: Path, candidate: ActionCandidate) -> tuple[str, tuple[str, ...], str]:
@@ -595,6 +729,134 @@ def _approval_signature(candidate: ActionCandidate) -> str:
         },
         length=24,
     )
+
+
+def _apply_trusted_auto_approval(
+    root: Path,
+    state: dict[str, Any],
+    queued: list[dict[str, Any]],
+    *,
+    checked_at: str,
+) -> dict[str, Any]:
+    """Auto-approve freshly queued items that fall inside the owner-trusted scope.
+
+    This only removes the owner approval click for narrow, reversible code-patch
+    scopes. It reuses ``decide_self_action_approval`` so the audit log, queue events,
+    and downstream staged execution are identical to an owner approval — the only
+    difference is ``decided_by="trusted_auto_approval"``. Outward messages and stable
+    memory changes are hard-excluded in the policy module and can never reach here.
+    """
+    policy = load_trusted_autoapproval_policy(root, reader=lambda path: _read_json(path, default=None))
+    summary: dict[str, Any] = {
+        "enabled": policy.enabled,
+        "auto_approved": [],
+        "skipped_budget": 0,
+        "skipped_scope": 0,
+    }
+    if not policy.enabled:
+        return summary
+
+    ledger = state.get("trusted_auto_approvals")
+    ledger = prune_trusted_autoapproval_ledger(
+        ledger if isinstance(ledger, list) else [],
+        now_iso=checked_at,
+        window_hours=policy.window_hours,
+    )
+    budget = trusted_autoapproval_remaining_budget(ledger, policy)
+    # #4: autonomy grows with demonstrated reliability — a goal that keeps succeeding
+    # earns a larger (capped) auto-approval window.
+    autonomy_policy = load_autonomy_policy(root)
+    bonus = _reliability_budget_bonus(root, queued, autonomy_policy)
+    if bonus:
+        budget += bonus
+        summary["reliability_bonus"] = bonus
+
+    for item in queued:
+        action_kind = _safe_str(item.get("action_kind"))
+        scope = _safe_str(_params(item).get("approval_scope"))
+        if not scope_is_auto_approvable(action_kind, scope, policy):
+            summary["skipped_scope"] += 1
+            continue
+        if budget <= 0:
+            summary["skipped_budget"] += 1
+            continue
+        queue_id = _safe_str(item.get("queue_id"))
+        decision = decide_self_action_approval(
+            root,
+            queue_id=queue_id,
+            decision="approved",
+            decided_at=checked_at,
+            decided_by="trusted_auto_approval",
+            reason=f"trusted_scope_auto_approval:{scope}",
+            execute=policy.auto_execute_handoff,
+            write_state=True,
+        )
+        if not decision.get("accepted"):
+            continue
+        ledger.append(
+            {
+                "signature": _safe_str(item.get("signature")),
+                "queue_id": queue_id,
+                "scope": scope,
+                "action_kind": action_kind,
+                "decided_at": checked_at,
+            }
+        )
+        budget -= 1
+        executed = isinstance(decision.get("execution"), dict)
+        codex = None
+        if executed and scope_is_codex_auto_runnable(action_kind, scope, policy):
+            codex = _auto_run_codex_for_scope(root, checked_at=checked_at)
+        summary["auto_approved"].append(
+            {
+                "queue_id": queue_id,
+                "scope": scope,
+                "action_kind": action_kind,
+                "executed": executed,
+                "codex_status": codex,
+            }
+        )
+
+    state["trusted_auto_approvals"] = ledger[-100:]
+    return summary
+
+
+def _auto_run_codex_for_scope(root: Path, *, checked_at: str) -> str:
+    """#3: close the loop to Codex for an auto-approved, Codex-eligible patch.
+
+    Runs the patch executor in background schedule mode, which creates a watchdog
+    snapshot first (rollback safety) and never edits source from the gateway itself.
+    Imported lazily to avoid the executor->gateway import cycle. Any failure here is
+    contained: the approval still stands and a human can run the executor manually.
+    """
+    try:
+        from xinyu_self_action_patch_executor import run_self_action_patch_executor
+
+        executor_result = run_self_action_patch_executor(
+            root,
+            checked_at=checked_at,
+            execution_level="schedule_codex",
+            allow_codex=True,
+        )
+        codex = executor_result.get("codex") if isinstance(executor_result.get("codex"), dict) else {}
+        return _safe_str(codex.get("status"), "unknown")
+    except Exception as exc:  # contained: approval remains valid, human can retry
+        return f"error:{type(exc).__name__}"
+
+
+def _reliability_budget_bonus(root: Path, queued: list[dict[str, Any]], autonomy_policy: Any) -> int:
+    if not getattr(autonomy_policy, "reliability_budget_enabled", False) or not queued:
+        return 0
+    goal_state = _read_json(root / GOAL_ECOLOGY_STATE_REL, default={})
+    goals = goal_state.get("goals") if isinstance(goal_state, dict) else {}
+    if not isinstance(goals, dict):
+        return 0
+    best = 0
+    for item in queued:
+        goal_id = _safe_str(item.get("goal_id"))
+        record = goals.get(goal_id) if isinstance(goals.get(goal_id), dict) else {}
+        best = max(best, reliability_budget_bonus(_safe_int(record.get("success_count")), autonomy_policy))
+    return best
 
 
 def _approval_queue_snapshot(root: Path) -> dict[str, dict[str, Any]]:
@@ -885,7 +1147,7 @@ def _write_execution_handoff(
     if signal_refs:
         lines.extend(["", "## Signal Refs"])
         lines.extend(f"- {_compact(ref, 180)}" for ref in signal_refs[:8])
-    atomic_write_text(root / APPROVAL_HANDOFF_REL, "\n".join(lines))
+    write_self_action_gateway_text(root / APPROVAL_HANDOFF_REL, "\n".join(lines))
 
 
 def _update_state(
@@ -1025,7 +1287,7 @@ def _write_state_markdown(root: Path, state: dict[str, Any]) -> None:
             "- approval_handoff: memory/context/self_action_gateway_execution_handoff.md",
         ]
     )
-    atomic_write_text(root / STATE_MD_REL, "\n".join(lines))
+    write_self_action_gateway_text(root / STATE_MD_REL, "\n".join(lines))
 
 
 def _load_state(root: Path) -> dict[str, Any]:
@@ -1041,7 +1303,7 @@ def _load_state(root: Path) -> dict[str, Any]:
 def _persist_state(root: Path, state: dict[str, Any]) -> None:
     normalized = dict(state)
     normalized["version"] = GATEWAY_VERSION
-    atomic_write_json(root / STATE_JSON_REL, normalized)
+    write_self_action_gateway_json(root / STATE_JSON_REL, normalized)
 
 
 def _scrub_params(params: dict[str, Any]) -> dict[str, Any]:
@@ -1068,23 +1330,7 @@ def _markdown_fields(text: str) -> dict[str, str]:
 
 
 def _jsonl_summary(path: Path) -> tuple[int, str]:
-    rows = 0
-    last = ""
-    try:
-        with path.open("r", encoding="utf-8-sig", errors="replace") as handle:
-            for line in handle:
-                if not line.strip():
-                    continue
-                rows += 1
-                try:
-                    data = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if isinstance(data, dict):
-                    last = _safe_str(data.get("event_kind") or data.get("status"))
-    except OSError:
-        return 0, ""
-    return rows, last
+    return read_self_action_gateway_jsonl_summary(path)
 
 
 def _is_safe_relative(value: str) -> bool:
@@ -1093,18 +1339,11 @@ def _is_safe_relative(value: str) -> bool:
 
 
 def _read_json(path: Path, *, default: Any) -> Any:
-    try:
-        return json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
-        return default
+    return read_self_action_gateway_json(path, default=default)
 
 
 def _read_text(path: Path, *, limit: int) -> str:
-    try:
-        text = path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
-        return ""
-    return text if len(text) <= limit else text[-limit:]
+    return read_self_action_gateway_text(path, limit=limit)
 
 
 def _hash_json(value: Any, *, length: int) -> str:
@@ -1167,9 +1406,21 @@ def main() -> int:
     parser.add_argument("--deny", nargs="?", const="latest", default=None, metavar="QUEUE_ID")
     parser.add_argument("--approval-reason", default="")
     parser.add_argument("--execute-approved", nargs="?", const="next", default=None, metavar="QUEUE_ID")
+    parser.add_argument("--write-example-autoapproval-policy", action="store_true")
+    parser.add_argument("--write-example-autonomy-policy", action="store_true")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
-    if args.list_approvals:
+    if args.write_example_autoapproval_policy:
+        from xinyu_self_action_trusted_autoapproval import write_example_policy
+
+        path = write_example_policy(args.root)
+        result = {"status": "completed", "wrote_example_policy": str(path)}
+    elif args.write_example_autonomy_policy:
+        from xinyu_autonomy_policy import write_example_policy as write_example_autonomy_policy
+
+        path = write_example_autonomy_policy(args.root)
+        result = {"status": "completed", "wrote_example_policy": str(path)}
+    elif args.list_approvals:
         result = list_self_action_approvals(args.root)
     elif args.approve is not None:
         result = decide_self_action_approval(
@@ -1210,6 +1461,7 @@ def main() -> int:
             print(f"selected_goal_id={result.get('selected_goal_id')}")
             print(f"executed_action_count={result.get('executed_action_count')}")
             print(f"queued_approval_count={result.get('queued_approval_count')}")
+            print(f"auto_approved_count={result.get('auto_approved_count', 0)}")
         if "approval_queue" in result:
             queue = result.get("approval_queue") if isinstance(result.get("approval_queue"), dict) else {}
             print(f"pending_count={queue.get('pending_count', 0)}")

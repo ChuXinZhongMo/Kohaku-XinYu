@@ -6,7 +6,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 
-from state_service import append_jsonl, atomic_write_json, atomic_write_text, read_json
+from xinyu_code_awareness_store import append_source_change_trace
+from xinyu_code_awareness_store import read_code_awareness_state_text
+from xinyu_code_awareness_store import read_source_snapshot
+from xinyu_code_awareness_store import write_code_awareness_state
+from xinyu_code_awareness_store import write_source_snapshot
 from xinyu_runtime_security import BRIDGE_RUNTIME_SOURCE_RELS, runtime_source_paths, source_files_digest
 
 
@@ -42,7 +46,7 @@ def record_code_awareness(
 ) -> dict[str, Any]:
     root = Path(root)
     current = collect_source_snapshot(root)
-    previous = read_json(root / SNAPSHOT_REL, default={})
+    previous = read_source_snapshot(root / SNAPSHOT_REL)
     previous = previous if isinstance(previous, dict) else {}
     previous_exists = bool(previous.get("digest"))
     changes = _diff_snapshots(previous, current) if previous_exists else []
@@ -87,7 +91,7 @@ def record_code_awareness(
     }
 
     if status in {"initialized", "changed"}:
-        append_jsonl(
+        append_source_change_trace(
             root / TRACE_REL,
             {
                 "observed_at": _timestamp_or_now_iso(observed_at),
@@ -100,8 +104,8 @@ def record_code_awareness(
                 "gateway_restart_may_be_needed": gateway_restart_may_be_needed,
             },
         )
-    atomic_write_json(root / SNAPSHOT_REL, current, sort_keys=True, indent=2)
-    atomic_write_text(root / STATE_REL, render_code_awareness_state(summary))
+    write_source_snapshot(root / SNAPSHOT_REL, current)
+    write_code_awareness_state(root / STATE_REL, render_code_awareness_state(summary))
     return summary
 
 
@@ -304,9 +308,8 @@ def _changed_file_lines(items: Any) -> list[str]:
 
 
 def _load_state_fields(path: Path) -> dict[str, str]:
-    try:
-        text = path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
+    text = read_code_awareness_state_text(path)
+    if not text:
         return {}
     fields: dict[str, str] = {}
     for line in text.splitlines():

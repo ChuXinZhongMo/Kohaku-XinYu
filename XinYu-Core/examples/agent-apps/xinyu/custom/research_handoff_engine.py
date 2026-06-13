@@ -15,9 +15,11 @@ from source_search_provider_engine import run_source_search_provider
 STATE_REL = Path("memory/context/research_handoff_state.md")
 TRACE_REL = Path("runtime/research_handoff_trace.jsonl")
 SELF_THOUGHT_REL = Path("memory/context/self_thought_state.md")
+OWNER_GRANTS_REL = Path("memory/context/owner_permission_grants.md")
 
 CODEX_WINDOW_TITLE = "Xinyu codex"
 EXECUTION_LEVELS = {"state_only", "activate", "execute", "execute_codex"}
+CODEX_RESEARCH_GRANT = "grant_autonomous_codex_research_collect: approved_visible_bounded_report_only"
 
 _FIELD_RE = re.compile(r"(?m)^\s*-\s*([A-Za-z0-9_]+):\s*(.*?)\s*$")
 _SECRET_PATTERNS: tuple[re.Pattern[str], ...] = (
@@ -165,7 +167,8 @@ def _handle_codex_route(
     codex["visible_window_required"] = "true"
     codex["window_title"] = CODEX_WINDOW_TITLE
     codex["launch_permission"] = handoff["codex_launch_permission"]
-    if handoff["codex_launch_permission"] != "owner_granted_state_gated":
+    codex["explicit_grant"] = str(_codex_launch_explicitly_granted(root)).lower()
+    if not _codex_launch_allowed(root, handoff):
         notes.append("codex_collect_not_granted")
         return "codex_blocked"
     if execution_level != "execute_codex" or not allow_codex:
@@ -205,6 +208,19 @@ def _handle_codex_route(
         }
     )
     return "codex_completed" if result.accepted and not result.timed_out else "codex_not_completed"
+
+
+def _codex_launch_explicitly_granted(root: Path) -> bool:
+    return CODEX_RESEARCH_GRANT in _read_text(root / OWNER_GRANTS_REL)
+
+
+def _codex_launch_allowed(root: Path, handoff: dict[str, str]) -> bool:
+    permission = handoff["codex_launch_permission"]
+    if permission == "owner_granted_state_gated":
+        return True
+    if permission == "requires_owner_private_or_explicit_grant" and _codex_launch_explicitly_granted(root):
+        return True
+    return False
 
 
 def _handoff_from_self_thought(text: str) -> dict[str, str]:
@@ -282,6 +298,7 @@ tags: [self-thought, research, source, codex, boundary]
 
 ## Codex Route
 - codex_launch_permission: {_one_line(handoff['codex_launch_permission'])}
+- codex_explicit_grant: {_one_line(codex.get('explicit_grant', 'false'))}
 - visible_codex_window_required: true
 - codex_window_title: {CODEX_WINDOW_TITLE}
 - codex_status: {_one_line(codex.get('status', 'none'))}

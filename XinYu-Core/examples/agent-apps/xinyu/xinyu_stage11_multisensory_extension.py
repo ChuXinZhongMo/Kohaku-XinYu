@@ -12,11 +12,14 @@ from xinyu_perception_importance import build_perception_importance_report, perc
 from xinyu_stage10_proactive_life_loop import build_stage10_proactive_life_loop
 from xinyu_stage11_visual_ingress_diagnostics import build_stage11_visual_ingress_diagnostics
 from xinyu_stage11_voice_ingress_diagnostics import build_stage11_voice_ingress_diagnostics
+from xinyu_stage11_multisensory_extension_store import REPORT_REL
+from xinyu_stage11_multisensory_extension_store import STATE_REL
+from xinyu_stage11_multisensory_extension_store import TRACE_REL
+from xinyu_stage11_multisensory_extension_store import append_stage11_multisensory_trace_event
+from xinyu_stage11_multisensory_extension_store import stage11_multisensory_report_path
+from xinyu_stage11_multisensory_extension_store import write_stage11_multisensory_report_text
+from xinyu_stage11_multisensory_extension_store import write_stage11_multisensory_state_text
 
-
-REPORT_REL = Path("worklog") / "xinyu-stage11-multisensory-extension-latest.md"
-STATE_REL = Path("memory/context/stage11_multisensory_extension_state.md")
-TRACE_REL = Path("runtime/stage11_multisensory_extension_trace.jsonl")
 
 NONE_VALUES = {"", "none", "unknown", "missing", "null"}
 
@@ -363,13 +366,11 @@ def write_stage11_multisensory_extension_report(
     *,
     output: Path | None = None,
 ) -> Path:
-    root = Path(root).resolve()
-    path = output if output is not None else root / REPORT_REL
-    if not path.is_absolute():
-        path = root / path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_stage11_multisensory_extension(report), encoding="utf-8")
-    return path
+    return write_stage11_multisensory_report_text(
+        root,
+        render_stage11_multisensory_extension(report),
+        output=output,
+    )
 
 
 def write_stage11_multisensory_extension_state(
@@ -379,12 +380,10 @@ def write_stage11_multisensory_extension_state(
     report_path: Path | None = None,
 ) -> Path:
     root = Path(root).resolve()
-    path = root / STATE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     model = report.get("model") if isinstance(report.get("model"), dict) else {}
     gate_proof = report.get("gate_proof") if isinstance(report.get("gate_proof"), dict) else {}
     boundaries = report.get("boundaries") if isinstance(report.get("boundaries"), dict) else {}
-    target_report = report_path or (root / REPORT_REL)
+    target_report = report_path or stage11_multisensory_report_path(root)
     text = f"""---
 title: Stage 11 Multisensory Extension State
 memory_type: stage11_multisensory_extension_state
@@ -453,14 +452,11 @@ tags: [autonomy, multisensory, perception, stage11, audit]
 - consciousness_claim: {_bool_text(boundaries.get('consciousness_claim', False))}
 - report_path: {target_report.as_posix()}
 """
-    path.write_text(text, encoding="utf-8")
-    return path
+    return write_stage11_multisensory_state_text(root, text)
 
 
 def append_stage11_multisensory_extension_trace(root: Path | str, report: dict[str, Any]) -> Path:
     root = Path(root).resolve()
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     model = report.get("model") if isinstance(report.get("model"), dict) else {}
     event = {
         "event_id": "stage11-multisensory-" + datetime.now().astimezone().strftime("%Y%m%dT%H%M%S"),
@@ -492,9 +488,7 @@ def append_stage11_multisensory_extension_trace(root: Path | str, report: dict[s
         "qq_message_enqueued": False,
         "consciousness_claim": False,
     }
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
-    return path
+    return append_stage11_multisensory_trace_event(root, event)
 
 
 def main(argv: list[str] | None = None) -> int:

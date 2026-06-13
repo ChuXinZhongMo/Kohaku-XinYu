@@ -11,11 +11,12 @@ from typing import Any
 from xinyu_dialogue_archive import list_memory_candidates, update_memory_candidate_status
 from xinyu_memory_candidate_analysis import candidate_claim_metadata_from_row, candidate_review_context
 from xinyu_memory_health_report import DUPLICATE_BACKLOG_STATUSES, build_memory_health_report
-
-
-PACKET_REL = Path("worklog") / "xinyu-stage8-duplicate-consolidation-latest.md"
-STATE_REL = Path("memory/context/stage8_duplicate_consolidation_state.md")
-APPLY_TRACE_REL = Path("runtime/stage8_duplicate_consolidation_apply_trace.jsonl")
+from xinyu_stage8_duplicate_consolidation_packet_store import APPLY_TRACE_REL
+from xinyu_stage8_duplicate_consolidation_packet_store import PACKET_REL
+from xinyu_stage8_duplicate_consolidation_packet_store import STATE_REL
+from xinyu_stage8_duplicate_consolidation_packet_store import append_stage8_duplicate_consolidation_apply_trace_event
+from xinyu_stage8_duplicate_consolidation_packet_store import write_stage8_duplicate_consolidation_packet_text
+from xinyu_stage8_duplicate_consolidation_packet_store import write_stage8_duplicate_consolidation_state_text
 ARCHIVED_DUPLICATE_STATUS = "archived_duplicate"
 PROTECTED_NON_REPRESENTATIVE_STATUSES = {"approved"}
 PRIVATE_TEXT_MARKERS = (
@@ -358,12 +359,11 @@ def write_stage8_duplicate_consolidation_packet(
     output: Path | None = None,
 ) -> Path:
     root = root.resolve()
-    path = output if output is not None else root / PACKET_REL
-    if not path.is_absolute():
-        path = root / path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_stage8_duplicate_consolidation_packet(packet), encoding="utf-8")
-    return path
+    return write_stage8_duplicate_consolidation_packet_text(
+        root,
+        render_stage8_duplicate_consolidation_packet(packet),
+        output=output,
+    )
 
 
 def write_stage8_duplicate_consolidation_state(
@@ -373,8 +373,6 @@ def write_stage8_duplicate_consolidation_state(
     packet_path: Path | None = None,
 ) -> Path:
     root = root.resolve()
-    path = root / STATE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     summary = packet.get("summary") if isinstance(packet.get("summary"), dict) else {}
     boundaries = packet.get("boundaries") if isinstance(packet.get("boundaries"), dict) else {}
     apply_result = packet.get("apply_result") if isinstance(packet.get("apply_result"), dict) else {}
@@ -423,8 +421,7 @@ tags: [autonomy, memory, governance, duplicate-consolidation, stage8]
 - qq_message_enqueued: {str(bool(boundaries.get('qq_message_enqueued', False))).lower()}
 - consciousness_claim: {str(bool(boundaries.get('consciousness_claim', False))).lower()}
 """
-    path.write_text(text, encoding="utf-8")
-    return path
+    return write_stage8_duplicate_consolidation_state_text(root, text)
 
 
 def _append_review_note(row: dict[str, Any], note: str) -> str:
@@ -435,8 +432,6 @@ def _append_review_note(row: dict[str, Any], note: str) -> str:
 
 
 def _append_apply_trace(root: Path, result: dict[str, Any]) -> None:
-    path = root / APPLY_TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         "applied_at": result.get("applied_at"),
         "applied_cluster_count": result.get("applied_cluster_count"),
@@ -445,8 +440,7 @@ def _append_apply_trace(root: Path, result: dict[str, Any]) -> None:
         "stable_memory_write": result.get("stable_memory_write"),
         "candidate_status_changed": result.get("candidate_status_changed"),
     }
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
+    append_stage8_duplicate_consolidation_apply_trace_event(root, payload)
 
 
 def apply_stage8_duplicate_consolidation(

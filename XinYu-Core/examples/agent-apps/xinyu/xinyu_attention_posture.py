@@ -6,9 +6,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_attention_posture_store import read_attention_life_event_trace_rows
+from xinyu_attention_posture_store import read_attention_posture_text
+from xinyu_attention_posture_store import write_attention_life_event_trace_rows
+from xinyu_attention_posture_store import write_attention_posture_text
 from xinyu_life_event_contract import LifeEvent, event_to_short_trace, normalize_life_event, route_life_event
 from xinyu_perception_importance import build_perception_importance_report, perception_gap_signal
-from xinyu_state_io import read_text, write_text_atomic
 
 STATE_REL = Path("memory/context/attention_posture_state.md")
 TRACE_REL = Path("memory/context/life_event_trace.jsonl")
@@ -73,7 +76,7 @@ def update_attention_from_perception_importance(
 
 
 def read_attention_posture(root: Path) -> dict[str, str]:
-    text = read_text(root / STATE_REL)
+    text = read_attention_posture_text(root / STATE_REL)
     if not text:
         return {
             "status": "missing",
@@ -298,21 +301,16 @@ tags: [attention, initiative, life_event, boundary]
 - device_capture: disabled
 - network_access: disabled
 """
-    write_text_atomic(root / STATE_REL, text)
+    write_attention_posture_text(root / STATE_REL, text)
 
 
 def _append_life_event_trace(root: Path, event: LifeEvent) -> None:
     path = root / TRACE_REL
-    rows: list[dict[str, Any]] = []
-    if path.exists():
-        for line in path.read_text(encoding="utf-8-sig").splitlines():
-            if line.strip():
-                rows.append(json.loads(line))
+    rows = read_attention_life_event_trace_rows(path)
     trace = event_to_short_trace(event)
     rows = [row for row in rows if row.get("event_id") != event.event_id]
     rows.append(trace)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(json.dumps(row, ensure_ascii=False, sort_keys=True) for row in rows) + "\n", encoding="utf-8")
+    write_attention_life_event_trace_rows(path, rows)
 
 
 def _write_self_thought_candidate(root: Path, event: LifeEvent, route: dict[str, Any], *, evaluated_at: str) -> None:
@@ -354,7 +352,7 @@ tags: [self_thought, life_event, proactive]
 - owner_memory_write: blocked_without_owner_reply_and_memory_gates
 - raw_private_body_retained: false
 """
-    write_text_atomic(root / SELF_THOUGHT_REL, text)
+    write_attention_posture_text(root / SELF_THOUGHT_REL, text)
 
 
 def _extract_fields(text: str) -> dict[str, str]:

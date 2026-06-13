@@ -8,16 +8,22 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_state_io import write_text_atomic
+from xinyu_qq_reply_integrity_diagnostics_store import ACK_SPOOL_REL
+from xinyu_qq_reply_integrity_diagnostics_store import REPORT_REL
+from xinyu_qq_reply_integrity_diagnostics_store import ROUTE_TRACE_REL
+from xinyu_qq_reply_integrity_diagnostics_store import STATE_REL
+from xinyu_qq_reply_integrity_diagnostics_store import TRACE_REL
+from xinyu_qq_reply_integrity_diagnostics_store import WORKING_MEMORY_DIR_REL
+from xinyu_qq_reply_integrity_diagnostics_store import append_qq_reply_integrity_trace_event
+from xinyu_qq_reply_integrity_diagnostics_store import qq_reply_integrity_ack_spool_path
+from xinyu_qq_reply_integrity_diagnostics_store import qq_reply_integrity_report_path
+from xinyu_qq_reply_integrity_diagnostics_store import qq_reply_integrity_route_trace_path
+from xinyu_qq_reply_integrity_diagnostics_store import read_qq_reply_integrity_jsonl_tail
+from xinyu_qq_reply_integrity_diagnostics_store import read_qq_reply_integrity_working_memory_rows
+from xinyu_qq_reply_integrity_diagnostics_store import write_qq_reply_integrity_report_text
+from xinyu_qq_reply_integrity_diagnostics_store import write_qq_reply_integrity_state_text
 from xinyu_visible_text_sanitizer import sanitize_visible_text
 
-
-ACK_SPOOL_REL = Path("runtime/gateway_ack_spool.jsonl")
-ROUTE_TRACE_REL = Path("runtime/turn_route_trace.jsonl")
-WORKING_MEMORY_DIR_REL = Path("runtime/dialogue_working_memory")
-STATE_REL = Path("memory/context/qq_reply_integrity_diagnostics_state.md")
-REPORT_REL = Path("worklog/xinyu-qq-reply-integrity-diagnostics-latest.md")
-TRACE_REL = Path("runtime/qq_reply_integrity_diagnostics_trace.jsonl")
 
 DEFAULT_ACK_LIMIT = 500
 DEFAULT_ROUTE_TRACE_LIMIT = 1200
@@ -51,7 +57,7 @@ def build_qq_reply_integrity_diagnostics(
     now = _parse_timestamp(generated_at)
     since_time = _parse_timestamp(since)
 
-    route_rows = _read_jsonl_tail(root / ROUTE_TRACE_REL, max_lines=max(1, int(route_trace_limit)))
+    route_rows = _read_jsonl_tail(qq_reply_integrity_route_trace_path(root), max_lines=max(1, int(route_trace_limit)))
     direct_events = _semantic_fast_direct_events(
         route_rows,
         now=now,
@@ -60,7 +66,7 @@ def build_qq_reply_integrity_diagnostics(
     )
     direct_turns = {event["turn_id"]: event for event in direct_events if event.get("turn_id")}
 
-    ack_rows = _read_jsonl_tail(root / ACK_SPOOL_REL, max_lines=max(1, int(ack_limit)))
+    ack_rows = _read_jsonl_tail(qq_reply_integrity_ack_spool_path(root), max_lines=max(1, int(ack_limit)))
     replies = _visible_chat_replies(
         ack_rows,
         now=now,
@@ -236,11 +242,11 @@ def write_qq_reply_integrity_diagnostics(
     output: Path | None = None,
 ) -> dict[str, str]:
     root = root.resolve()
-    report_path = output if output is not None else root / REPORT_REL
-    if not report_path.is_absolute():
-        report_path = root / report_path
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(render_qq_reply_integrity_diagnostics(report), encoding="utf-8")
+    report_path = write_qq_reply_integrity_report_text(
+        root,
+        render_qq_reply_integrity_diagnostics(report),
+        output=output,
+    )
     _write_state(root, report, report_path=report_path)
     _append_trace(root, report)
     return {"report_path": str(report_path), "state_path": str(root / STATE_REL)}
@@ -291,7 +297,7 @@ tags: [qq, continuity, diagnostics, working-memory, semantic-fast]
 - visible_reply_text_in_state: false
 - stable_memory_write: blocked
 """
-    write_text_atomic(root / STATE_REL, text)
+    write_qq_reply_integrity_state_text(root, text)
 
 
 def _append_trace(root: Path, report: dict[str, Any]) -> None:
@@ -318,10 +324,7 @@ def _append_trace(root: Path, report: dict[str, Any]) -> None:
         "raw_owner_text_in_trace": False,
         "visible_reply_text_in_trace": False,
     }
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as fh:
-        fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+    append_qq_reply_integrity_trace_event(root, row)
 
 
 def _semantic_fast_direct_events(
@@ -402,37 +405,23 @@ def _visible_chat_replies(
 
 
 def _working_memory_index(root: Path) -> dict[str, Any]:
-    working_dir = root / WORKING_MEMORY_DIR_REL
-    files = list(working_dir.glob("*.jsonl")) if working_dir.exists() else []
     assistant_hashes: set[str] = set()
     assistant_texts: set[str] = set()
     row_count = 0
     assistant_row_count = 0
-    for path in files:
-        try:
-            lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
-        except OSError:
+    rows, file_count = read_qq_reply_integrity_working_memory_rows(root)
+    for data in rows:
+        row_count += 1
+        if _safe_str(data.get("role")) != "assistant":
             continue
-        for line in lines:
-            if not line.strip():
-                continue
-            try:
-                data = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            if not isinstance(data, dict):
-                continue
-            row_count += 1
-            if _safe_str(data.get("role")) != "assistant":
-                continue
-            content = _safe_str(data.get("content")).strip()
-            if not content:
-                continue
-            assistant_row_count += 1
-            assistant_hashes.add(_content_hash(content))
-            assistant_texts.add(_normalize_content(sanitize_visible_text(content)))
+        content = _safe_str(data.get("content")).strip()
+        if not content:
+            continue
+        assistant_row_count += 1
+        assistant_hashes.add(_content_hash(content))
+        assistant_texts.add(_normalize_content(sanitize_visible_text(content)))
     return {
-        "file_count": len(files),
+        "file_count": file_count,
         "row_count": row_count,
         "assistant_row_count": assistant_row_count,
         "assistant_hashes": assistant_hashes,
@@ -578,21 +567,7 @@ def _is_naked_ack(value: Any) -> bool:
 
 
 def _read_jsonl_tail(path: Path, *, max_lines: int) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-    try:
-        lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
-    except OSError:
-        return []
-    rows: list[dict[str, Any]] = []
-    for line in lines[-max(1, int(max_lines)) :]:
-        try:
-            data = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(data, dict):
-            rows.append(data)
-    return rows
+    return read_qq_reply_integrity_jsonl_tail(path, max_lines=max_lines)
 
 
 def _parse_timestamp(value: Any) -> datetime | None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import xinyu_qq_visible_send_shadow as visible_shadow
 from xinyu_qq_visible_send_shadow import (
     STATE_REL,
     TRACE_REL,
@@ -80,3 +81,22 @@ def test_visible_send_shadow_recomputes_placeholder_reply_hash(tmp_path: Path) -
     assert result["reply_hash"].startswith("sha256:")
     assert result["reply_hash"] != "sha256:reply"
     assert len(result["reply_hash"]) == len("sha256:") + 64
+
+
+def test_visible_send_shadow_store_failure_does_not_block_send(tmp_path: Path, monkeypatch) -> None:
+    def fail_append(*_args, **_kwargs) -> None:
+        raise OSError("disk unavailable")
+
+    monkeypatch.setattr(visible_shadow, "append_visible_send_shadow_trace", fail_append)
+
+    result = record_visible_send_shadow(
+        tmp_path,
+        reply="ok",
+        source="qq_outbox_pre_send",
+        route="qq_outbox",
+        target_kind="private",
+    )
+
+    assert result["recorded"] is False
+    assert result["record_error"] == "OSError"
+    assert result["send_blocked"] is False

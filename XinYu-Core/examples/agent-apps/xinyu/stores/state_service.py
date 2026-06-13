@@ -32,6 +32,15 @@ def read_json(path: Path, default: Any = None) -> Any:
         return default
 
 
+def read_text_safe(path: Path, default: str = "") -> str:
+    try:
+        if not path.exists():
+            return default
+        return path.read_text(encoding="utf-8-sig", errors="replace")
+    except OSError:
+        return default
+
+
 def append_jsonl(path: Path, row: dict[str, Any], *, sort_keys: bool = True) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps(row, ensure_ascii=False, sort_keys=sort_keys, separators=(",", ":"), default=str)

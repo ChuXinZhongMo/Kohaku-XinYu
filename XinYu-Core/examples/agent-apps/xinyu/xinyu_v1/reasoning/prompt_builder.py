@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from xinyu_persona_voice import persona_voice_header, unified_voice_enabled
+
 from ..types import TokenBudget
 from .models import ReasoningRequest
 
@@ -36,12 +38,18 @@ class PromptBuilder:
             vector = request.emotion_state.vector
             active = [f"{key}={value:.2f}" for key, value in vector.to_json().items() if abs(float(value)) >= 0.08]
             emotion_line = ", ".join(active[:8])
-        system_parts = [
-            "You are XinYu's slow reasoning runtime.",
-            "Preserve hidden reasoning boundaries. Do not expose chain-of-thought.",
-            "Return only the outward reply text unless the caller asks for structured maintenance output.",
-            "Treat prior chat messages as authoritative short-term context for callbacks and corrections.",
-        ]
+        if unified_voice_enabled():
+            # This path otherwise carries zero persona; give it the one shared
+            # voice (persona contract + thin-expression + output boundaries) so
+            # the slow path sounds like the same person as the live path.
+            system_parts = [persona_voice_header()]
+        else:
+            system_parts = [
+                "You are XinYu's slow reasoning runtime.",
+                "Preserve hidden reasoning boundaries. Do not expose chain-of-thought.",
+                "Return only the outward reply text unless the caller asks for structured maintenance output.",
+                "Treat prior chat messages as authoritative short-term context for callbacks and corrections.",
+            ]
         if request.system_context:
             system_parts.append(request.system_context[: self._budget.prompt_context])
         if emotion_line:

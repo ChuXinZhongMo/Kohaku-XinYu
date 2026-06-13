@@ -7,9 +7,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-
-LIFE_MONTH_SLOTS_REL = "memory/context/life_month_slots.md"
-CURRENT_LIFE_MONTH_CONTEXT_REL = "memory/context/current_life_month_context.md"
+from xinyu_life_month_slots_store import CURRENT_LIFE_MONTH_CONTEXT_REL
+from xinyu_life_month_slots_store import LIFE_MONTH_SLOTS_REL
+from xinyu_life_month_slots_store import current_life_month_context_path
+from xinyu_life_month_slots_store import life_month_slots_path
+from xinyu_life_month_slots_store import read_life_month_text
+from xinyu_life_month_slots_store import write_current_life_month_context
 
 VALID_STATUSES = {"empty", "light", "active", "important"}
 VALID_SOURCES = {"owner_supplied", "inferred_style_anchor", "runtime_event", "unset"}
@@ -133,9 +136,7 @@ def _coerce_datetime(value: datetime | str | None) -> datetime:
 
 
 def _read_text(path: Path) -> str:
-    if not path.exists():
-        return ""
-    return path.read_text(encoding="utf-8-sig", errors="replace")
+    return read_life_month_text(path)
 
 
 def _field(text: str, name: str, default: str = "") -> str:
@@ -170,7 +171,7 @@ def _split_slot_bodies(text: str) -> list[tuple[str, str]]:
 
 
 def parse_life_month_slots(root: Path) -> LifeMonthBlueprint:
-    text = _read_text(root / LIFE_MONTH_SLOTS_REL)
+    text = _read_text(life_month_slots_path(root))
     slot_start = _field(text, "slot_start", "2010-05")
     slot_end = _field(text, "slot_end", "2026-04")
     slot_count = _int_field(text, "slot_count", 192)
@@ -388,11 +389,10 @@ def refresh_current_life_month_context(
         evaluated_at=evaluated_at,
         max_slots=max_slots,
     )
-    path = root / CURRENT_LIFE_MONTH_CONTEXT_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path = current_life_month_context_path(root)
     old = _read_text(path)
     if old != text:
-        path.write_text(text, encoding="utf-8")
+        write_current_life_month_context(root, text)
     return text
 
 

@@ -30,17 +30,18 @@ CONTEXT_REL = Path("memory/context/proactive_decision_context.md")
 DEFAULT_EXPIRES_SECONDS = 86400
 RECENT_TRACE_SCAN_LINES = 200
 STYLE_REPAIR_REALTIME_CAP_THRESHOLD = 8
+OWNER_LONG_IDLE_MINUTES = 90
 
 SOURCE_TYPES = set(PROACTIVE_SOURCE_TYPES)
 
 THRESHOLDS: dict[str, tuple[int, int | None]] = {
     "task_failed": (45, 70),
     "runtime_error": (45, 70),
-    "task_done": (50, 75),
-    "reflection_question": (55, 90),
-    "style_repair": (55, 90),
-    "dream_residue": (60, 95),
-    "owner_long_idle": (70, None),
+    "task_done": (46, 75),
+    "reflection_question": (48, 90),
+    "style_repair": (48, 90),
+    "dream_residue": (52, 95),
+    "owner_long_idle": (52, None),
 }
 
 COOLDOWN_SECONDS: dict[str, int] = {
@@ -50,7 +51,7 @@ COOLDOWN_SECONDS: dict[str, int] = {
     "reflection_question": 21600,
     "style_repair": 21600,
     "dream_residue": 86400,
-    "owner_long_idle": 43200,
+    "owner_long_idle": 14400,
 }
 
 POSITIVE_BASES: dict[str, dict[str, int]] = {
@@ -732,8 +733,10 @@ def _candidate_from_owner_long_idle(root: Path, *, checked_at: str) -> Proactive
     if not text:
         return None
     fields = _parse_fields(text)
-    minutes = _safe_int(fields.get("minutes_since_last_owner_private"), -1)
-    if minutes < 720:
+    stored_minutes = _safe_int(fields.get("minutes_since_last_owner_private"), -1)
+    computed_minutes = _minutes_since(fields.get("last_owner_private_at", ""), checked_at, default=stored_minutes)
+    minutes = max(stored_minutes, computed_minutes)
+    if minutes < OWNER_LONG_IDLE_MINUTES:
         return None
     return _make_candidate(
         source_type="owner_long_idle",
@@ -807,8 +810,9 @@ def _build_gate_context(root: Path, *, checked_at: str, overrides: dict[str, Any
         context.get("owner_recent_private_minutes"),
         _safe_int(interaction.get("minutes_since_last_owner_private"), 999),
     )
-    if owner_recent_minutes == 999 and interaction.get("last_owner_private_at"):
-        owner_recent_minutes = _minutes_since(interaction.get("last_owner_private_at", ""), checked_at, default=999)
+    if interaction.get("last_owner_private_at"):
+        computed_owner_minutes = _minutes_since(interaction.get("last_owner_private_at", ""), checked_at, default=999)
+        owner_recent_minutes = max(owner_recent_minutes, computed_owner_minutes)
     last_sent = (
         context.get("last_proactive_sent_at")
         or proactive_dispatch.get("last_acked_at")

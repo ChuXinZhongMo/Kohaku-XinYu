@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 import hashlib
-import json
-import os
 import re
-import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -12,13 +9,15 @@ from typing import Any
 from stores.daily_digest_state import (
     BOUNDARY_ID as DAILY_DIGEST_STORE_BOUNDARY,
     DIGEST_REL,
+    SOURCE_STATE_REL,
+    STATE_REL,
+    TRACE_REL,
+    append_daily_digest_trace,
     read_daily_digest,
+    read_daily_digest_source_state,
     write_daily_digest,
+    write_daily_digest_state_text,
 )
-
-SOURCE_STATE_REL = Path("memory/context/watched_source_state.md")
-STATE_REL = Path("memory/context/daily_digest_state.md")
-TRACE_REL = Path("runtime/daily_digest_trace.jsonl")
 
 TTL_SECONDS = 24 * 3600
 MAX_COMMENT_CHARS = 50
@@ -97,34 +96,6 @@ def _one_line(value: Any, *, limit: int = 220, default: str = "none") -> str:
 
 def _sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest()
-
-
-def _read_text(path: Path) -> str:
-    if not path.exists():
-        return ""
-    return path.read_text(encoding="utf-8-sig", errors="replace")
-
-
-def _atomic_write_text(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
-    tmp_path = Path(tmp_name)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
-            handle.write(text)
-        os.replace(tmp_path, path)
-    finally:
-        try:
-            tmp_path.unlink()
-        except OSError:
-            pass
-
-
-def _append_trace(root: Path, payload: dict[str, Any]) -> None:
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
 
 
 def _field(text: str, name: str, default: str = "") -> str:
@@ -423,7 +394,7 @@ def run_daily_digest_maintenance(
 ) -> dict[str, Any]:
     root = root.resolve()
     observed = _timestamp_or_now_iso(observed_at or _now())
-    source_text = _read_text(root / SOURCE_STATE_REL)
+    source_text = read_daily_digest_source_state(root)
     if _field(source_text, "status") != "fetched":
         result = {
             "accepted": True,
@@ -431,7 +402,7 @@ def run_daily_digest_maintenance(
             "generated": False,
             "notes": ["watched_source_not_fetched"],
         }
-        _append_trace(root, {"event_kind": "source_not_ready", "observed_at": _timestamp_or_now_iso(observed)})
+        append_daily_digest_trace(root, {"event_kind": "source_not_ready", "observed_at": _timestamp_or_now_iso(observed)})
         return result
 
     items = _item_blocks(source_text)
@@ -442,7 +413,7 @@ def run_daily_digest_maintenance(
             "generated": False,
             "notes": ["watched_source_no_items"],
         }
-        _append_trace(root, {"event_kind": "no_items", "observed_at": _timestamp_or_now_iso(observed)})
+        append_daily_digest_trace(root, {"event_kind": "no_items", "observed_at": _timestamp_or_now_iso(observed)})
         return result
 
     digest = _source_digest(items)
@@ -452,7 +423,7 @@ def run_daily_digest_maintenance(
         and not _is_expired(_safe_str(existing.get("expires_at")))
         and existing.get("comment")
     ):
-        _append_trace(
+        append_daily_digest_trace(
             root,
             {
                 "event_kind": "daily_digest_reused",
@@ -492,8 +463,8 @@ def run_daily_digest_maintenance(
         "history": history,
     }
     write_daily_digest(root, payload)
-    _atomic_write_text(root / STATE_REL, _render_state(payload))
-    _append_trace(
+    write_daily_digest_state_text(root, _render_state(payload))
+    append_daily_digest_trace(
         root,
         {
             "event_kind": "daily_digest_generated",

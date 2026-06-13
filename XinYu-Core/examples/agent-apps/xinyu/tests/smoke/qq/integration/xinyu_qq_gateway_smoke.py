@@ -443,9 +443,8 @@ def main() -> int:
     raw_image_event["raw_message"] = raw_image_event["message"]
     raw_image_prepared = gateway.prepare_message(raw_image_event)
     assert raw_image_prepared is not None
-    assert raw_image_prepared.route == "learning_ingest"
-    assert raw_image_prepared.payload["file_url"] == "https://example.com/scan.png"
-    assert raw_image_prepared.payload["reason"] == "看这个"
+    assert raw_image_prepared.route == "chat"
+    assert raw_image_prepared.payload["metadata"]["qq_image_count"] == 1
 
     punctuated_owner_text = dict(private_event)
     punctuated_owner_text["message_id"] = 10083
@@ -1130,12 +1129,21 @@ def main() -> int:
     image_event["raw_message"] = "[CQ:image,file=scan.png]"
     image_prepared = gateway.prepare_message(image_event)
     assert image_prepared is not None
-    assert image_prepared.route == "learning_ingest"
-    assert image_prepared.payload["file_path"].endswith("scan.png")
+    assert image_prepared.route == "chat"
+    assert image_prepared.payload["metadata"]["qq_image_count"] == 1
+    image_material = gateway._extract_image_context_material(image_event)
+    assert image_material is not None
+    image_learning_payload = gateway._build_learning_ingest_payload(
+        image_event,
+        target=image_prepared.target,
+        material=image_material,
+        text=image_prepared.payload["text"],
+    )
+    assert image_learning_payload["file_path"].endswith("scan.png")
     image_followup_payload = gateway._build_attachment_followup_chat_payload(
         image_event,
         target=image_prepared.target,
-        learning_payload=image_prepared.payload,
+        learning_payload=image_learning_payload,
         learning_response={
             "extracted_text": True,
             "learning_item_id": "learn-scan",
@@ -1159,7 +1167,7 @@ def main() -> int:
             extracted.write_text("截图里写着：权限配置失败。", encoding="utf-8")
             context = build_image_context(
                 tmp,
-                learning_payload=image_prepared.payload,
+                learning_payload=image_learning_payload,
                 learning_response={
                     "extracted_text": True,
                     "extracted_text_path": "learning/owner_supplied/item/extracted_text.md",
@@ -1177,7 +1185,7 @@ def main() -> int:
         image_context_followup = gateway._build_attachment_followup_chat_payload(
             image_event,
             target=image_prepared.target,
-            learning_payload=image_prepared.payload,
+            learning_payload=image_learning_payload,
             learning_response={
                 "extracted_text": False,
                 "learning_item_id": "learn-scan",
@@ -1190,7 +1198,7 @@ def main() -> int:
         empty_image_context_followup = gateway._build_attachment_followup_chat_payload(
             image_event,
             target=image_prepared.target,
-            learning_payload=image_prepared.payload,
+            learning_payload=image_learning_payload,
             learning_response={
                 "extracted_text": False,
                 "learning_item_id": "learn-empty-scan",

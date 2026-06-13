@@ -1,6 +1,6 @@
 # XinYu Stage 12 Long-Term Evaluation
 
-- generated_at: 2026-06-01T01:51:03+08:00
+- generated_at: 2026-06-09T21:03:40+08:00
 - status: active_ready_for_stage13
 - ready_for_stage13: true
 - reason: core_long_term_evaluation_metrics_are_clean
@@ -18,22 +18,22 @@
 - latest_dialogue_recall_window_minutes: 1440
 - latest_dialogue_recall_status: pass
 - latest_dialogue_recall_success_rate_pct: 100.0
-- latest_dialogue_recall_recent_sample_count: 3
+- latest_dialogue_recall_recent_sample_count: 1
 - latest_dialogue_recall_recent_sample_present: true
 - feedback_consumption_status: pass
 - feedback_consumption_rate_pct: 100.0
-- proactive_candidate_window_count: 1
+- proactive_candidate_window_count: 0
 - proactive_candidate_blocked_count: 0
 - proactive_candidate_block_rate_pct: 0.0
 - proactive_candidate_send_count: 0
 - proactive_candidate_send_rate_pct: 0.0
 - raw_private_leak_count: 0
 - stable_memory_miswrite_count: 0
-- owner_repair_count: 106
-- owner_success_count: 8
-- owner_repair_recurrence_rate_pct: 92.98
-- explainable_silence_window_count: 11
-- explainable_silence_explained_count: 11
+- owner_repair_count: 112
+- owner_success_count: 11
+- owner_repair_recurrence_rate_pct: 91.06
+- explainable_silence_window_count: 18
+- explainable_silence_explained_count: 18
 - explainable_silence_rate_pct: 100.0
 - v1_canary_readiness_decision: ready_for_owner_canary_request
 - v1_canary_proposal_status: held_review_only
@@ -47,13 +47,13 @@
 - stage12_contract: long_term_evaluation_uses_metrics_not_consciousness_claim
 
 ## Historical Recall Debt
-- historical_dialogue_recall_debt_status: debt_present
-- historical_dialogue_recall_issue_count: 2
-- historical_dialogue_recall_status: needs_check
+- historical_dialogue_recall_debt_status: clean
+- historical_dialogue_recall_issue_count: 0
+- historical_dialogue_recall_status: pass
 - historical_dialogue_recall_success_rate_pct: 100.0
-- historical_dialogue_recall_direct_reference_count: 28
-- historical_dialogue_recall_unmatched_reply_count: 1
-- historical_dialogue_recall_which_sentence_recurrence_count: 1
+- historical_dialogue_recall_direct_reference_count: 4
+- historical_dialogue_recall_unmatched_reply_count: 0
+- historical_dialogue_recall_which_sentence_recurrence_count: 0
 
 ## Gate Proof
 - feedback_consumption_window_clean: true

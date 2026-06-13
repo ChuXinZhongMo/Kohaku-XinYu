@@ -9,12 +9,15 @@ from typing import Any
 
 from xinyu_action_feedback_coverage import build_action_feedback_coverage_report
 from xinyu_bridge_values import as_int, compact_text, safe_str
-from xinyu_state_io import read_text, write_text_atomic
-
-
-STATE_REL = Path("memory/context/owner_feedback_effect_state.md")
-TRACE_REL = Path("runtime/owner_feedback_effect_trace.jsonl")
-REPORT_REL = Path("worklog/xinyu-owner-feedback-effect-latest.md")
+from xinyu_owner_feedback_effects_store import REPORT_REL
+from xinyu_owner_feedback_effects_store import STATE_REL
+from xinyu_owner_feedback_effects_store import TRACE_REL
+from xinyu_owner_feedback_effects_store import append_owner_feedback_effect_trace_event
+from xinyu_owner_feedback_effects_store import owner_feedback_effect_state_path
+from xinyu_owner_feedback_effects_store import read_owner_feedback_effect_state_text
+from xinyu_owner_feedback_effects_store import write_owner_feedback_effect_report_text
+from xinyu_owner_feedback_effects_store import write_owner_feedback_effect_state_text
+from xinyu_state_io import read_text
 
 LEARNING_STATE_REL = Path("memory/self/learning_closed_loop_state.md")
 LEARNING_TRACE_REL = Path("runtime/learning_closed_loop_trace.jsonl")
@@ -241,7 +244,7 @@ def build_owner_feedback_effect_report(root: Path, *, generated_at: str | None =
 
 
 def read_owner_feedback_effect_state(root: Path) -> dict[str, str]:
-    text = read_text(Path(root) / STATE_REL)
+    text = read_owner_feedback_effect_state_text(root)
     if not text:
         return {"status": "missing", "latest_feedback_kind": "none", "intention_bias": "none"}
     return _parse_fields(text)
@@ -257,15 +260,15 @@ def write_owner_feedback_effect(
     root = Path(root).resolve()
     paths: dict[str, str] = {}
     if write_report:
-        report_path = output if output is not None else root / REPORT_REL
-        if not report_path.is_absolute():
-            report_path = root / report_path
-        report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(render_owner_feedback_effect_report(report), encoding="utf-8")
+        report_path = write_owner_feedback_effect_report_text(
+            root,
+            render_owner_feedback_effect_report(report),
+            output=output,
+        )
         paths["report_path"] = str(report_path)
     _write_state(root, report, report_path=paths.get("report_path", "not_written"))
     _append_trace(root, report)
-    paths["state_path"] = str(root / STATE_REL)
+    paths["state_path"] = str(owner_feedback_effect_state_path(root))
     return paths
 
 
@@ -376,7 +379,7 @@ tags: [autonomy, owner-feedback, expression-strategy, scoring]
 - visible_reply_text_in_report: false
 - stable_personality_write: blocked
 """
-    write_text_atomic(root / STATE_REL, text)
+    write_owner_feedback_effect_state_text(root, text)
 
 
 def _append_trace(root: Path, report: dict[str, Any]) -> None:
@@ -409,10 +412,7 @@ def _append_trace(root: Path, report: dict[str, Any]) -> None:
         "visible_reply_text_retained": False,
         "stable_personality_write": "blocked",
     }
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as fh:
-        fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+    append_owner_feedback_effect_trace_event(root, row)
 
 
 def _effect_for_kind(latest_kind: str, *, realtime_pressure_status: str) -> dict[str, str]:

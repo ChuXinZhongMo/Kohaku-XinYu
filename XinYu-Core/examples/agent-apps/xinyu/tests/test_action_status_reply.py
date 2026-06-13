@@ -69,6 +69,38 @@ def test_explicit_kohaku_command_routes_to_external_plugin(tmp_path: Path) -> No
     }
 
 
+def test_codex_delegate_requires_explicit_task_after_directive(tmp_path: Path) -> None:
+    router = ToolIntentRouter(TargetRegistry(tmp_path))
+
+    for text in (
+        "/codex 核查当前架构",
+        "启动codex查查？",
+        "你群聊逻辑爆炸了，调用codex自主修复一下群聊逻辑",
+        "用codex搜索 consciousness is useful philosophy",
+    ):
+        decision = router.route(text, OWNER_PAYLOAD, turn_id="turn-codex")
+
+        assert decision.kind == "action_request", text
+        assert decision.request is not None
+        assert decision.request.tool == "codex_delegate"
+        assert decision.request.params["task_text"]
+
+
+def test_codex_observations_and_meta_questions_do_not_launch(tmp_path: Path) -> None:
+    router = ToolIntentRouter(TargetRegistry(tmp_path))
+
+    for text in (
+        "丫头刚刚在想什么？看见你调用codex了",
+        "心玉为什么不能调用codex进行搜索",
+        "说起来你运行codex好像每次都没成功的样子",
+        "怎么直接就开codex",
+        "codex查完了没",
+    ):
+        decision = router.route(text, OWNER_PAYLOAD, turn_id="turn-codex-meta")
+
+        assert decision.kind == "no_action", text
+
+
 def test_status_reply_surfaces_offline_qq_without_core_version_noise() -> None:
     reply = compose_action_reply(
         {

@@ -96,6 +96,35 @@ def test_combined_reply_action_response_returns_last_when_all_fail(tmp_path: Pat
     assert result == {"status": "failed", "message": "second"}
 
 
+def test_combined_reply_action_response_preserves_delivery_kinds(tmp_path: Path) -> None:
+    gateway = FakeGateway(tmp_path)
+
+    result = combined_reply_action_response(
+        gateway,
+        [
+            {
+                "status": "ok",
+                "retcode": 0,
+                "xinyu_delivery_kind": "voice",
+                "data": {"message_id": "msg-1", "delivery_kind": "voice"},
+            },
+            {
+                "status": "ok",
+                "retcode": 0,
+                "xinyu_delivery_kind": "text",
+                "xinyu_voice_fallback_reason": "tts_down",
+                "data": {"message_id": "msg-2", "delivery_kind": "text"},
+            },
+        ],
+    )
+
+    assert result is not None
+    assert result["xinyu_delivery_kind"] == "mixed"
+    assert result["xinyu_voice_fallback_reason"] == "tts_down"
+    assert result["data"]["reply_bubble_delivery_kinds"] == ["voice", "text"]
+    assert result["data"]["delivery_kind"] == "mixed"
+
+
 def test_record_direct_visible_send_shadow_uses_hashes(tmp_path: Path) -> None:
     gateway = FakeGateway(tmp_path)
     target = ReplyTarget(message_kind="private", user_id="42", group_id="")

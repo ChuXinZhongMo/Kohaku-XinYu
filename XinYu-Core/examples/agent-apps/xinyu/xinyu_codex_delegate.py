@@ -12,6 +12,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from xinyu_bridge_trusted_search import (
+    trusted_public_search_task_allowed as _adapter_trusted_public_search_task_allowed,
+)
 from xinyu_learning_library import DEFAULT_MAX_BYTES, add_url_material, stage_manifest_record
 from xinyu_local_scope import default_local_scope_root, ensure_local_scope, resolve_local_scope_path
 from xinyu_text_variants import readable_markers
@@ -383,76 +386,6 @@ READABLE_CODEX_EXPLICIT_ACTION_MARKERS = (
     "处理",
 )
 
-TRUSTED_PUBLIC_SEARCH_MARKERS = (
-    "搜索",
-    "搜一下",
-    "搜下",
-    "搜东西",
-    "联网",
-    "查一下",
-    "查下",
-    "查资料",
-    "核对",
-    "验证",
-    "找资料",
-    "公开资料",
-    "网页",
-    "新闻",
-    "资料来源",
-    "source",
-    "search",
-    "web",
-    "verify",
-)
-TRUSTED_LOCAL_BLOCK_MARKERS = (
-    "本机",
-    "本地",
-    "电脑",
-    "文件",
-    "目录",
-    "路径",
-    "代码",
-    "项目",
-    "仓库",
-    "安装",
-    "pip",
-    "修改",
-    "删除",
-    "移动",
-    "上传",
-    "token",
-    "密钥",
-    "密码",
-    "cookie",
-    "日志",
-    "配置",
-    "local",
-    "localhost",
-    "127.0.0.1",
-    "file://",
-    "localfile",
-    "localpath",
-    "localconfig",
-    "config.yaml",
-    ".env",
-    "code",
-    "repo",
-    "repository",
-    "project",
-    "install",
-    "package",
-    "admin",
-    "permission",
-    "delete",
-    "modify",
-    "write",
-    "readfile",
-    "openfile",
-    "log",
-    "secret",
-    "api_key",
-)
-
 CODEX_QUESTION_MARKERS = ("怎么", "如何", "为什么", "是什么", "什么意思", "？", "?")
 CODEX_IMPERATIVE_MARKERS = (
     "帮我",
@@ -596,15 +529,21 @@ def _contains_compact_marker(normalized: str, markers: tuple[str, ...]) -> bool:
     return any(_compact_for_request_detection(marker) in normalized for marker in markers if marker)
 
 
+def _looks_like_codex_meta_or_correction(normalized: str) -> bool:
+    if re.search(r"(为什么|为啥|为何|怎么|咋|是不是|是否).{0,24}codex", normalized):
+        return True
+    if re.search(r"(看见|看到|注意到|刚刚|刚才).{0,24}codex", normalized):
+        return True
+    return bool(
+        re.search(
+            r"codex.{0,18}(为什么|为啥|为何|怎么|咋|是不是|是否|自动|直接|误触发|没成功|没跑顺|在动|启动了|开了|跑了|用了|调用了|查完|跑完|完成)",
+            normalized,
+        )
+    )
+
+
 def _trusted_public_search_task_allowed(task_text: str) -> bool:
-    normalized = _compact_for_request_detection(task_text)
-    if not normalized:
-        return False
-    if LOCAL_PATH_PATTERN.search(task_text):
-        return False
-    if any(marker.lower() in normalized for marker in TRUSTED_LOCAL_BLOCK_MARKERS):
-        return False
-    return any(marker.lower() in normalized for marker in TRUSTED_PUBLIC_SEARCH_MARKERS)
+    return _adapter_trusted_public_search_task_allowed(task_text)
 
 
 def _codex_home() -> Path:
@@ -673,6 +612,7 @@ def _blocks_codex_delegation_intent(normalized: str) -> bool:
         or _contains_any(normalized, READABLE_CODEX_META_OR_CORRECTION_MARKERS)
         or _contains_any(normalized, CODEX_DESCRIPTIVE_INTENT_MARKERS)
         or _contains_any(normalized, READABLE_CODEX_DESCRIPTIVE_INTENT_MARKERS)
+        or _looks_like_codex_meta_or_correction(normalized)
     )
 
 

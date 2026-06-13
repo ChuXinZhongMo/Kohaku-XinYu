@@ -8,12 +8,15 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_autonomy_loop_report import build_autonomy_loop_report
-from xinyu_state_io import write_text_atomic
+from xinyu_decision_chain_latest_store import REPORT_REL
+from xinyu_decision_chain_latest_store import STATE_REL
+from xinyu_decision_chain_latest_store import TRACE_REL
+from xinyu_decision_chain_latest_store import append_decision_chain_latest_trace_event
+from xinyu_decision_chain_latest_store import decision_chain_latest_state_path
+from xinyu_decision_chain_latest_store import write_decision_chain_latest_report_text
+from xinyu_decision_chain_latest_store import write_decision_chain_latest_state_text
 
 
-STATE_REL = Path("memory/context/decision_chain_latest_state.md")
-TRACE_REL = Path("runtime/decision_chain_latest_trace.jsonl")
-REPORT_REL = Path("worklog/xinyu-decision-chain-latest.md")
 DEFAULT_WINDOW_MINUTES = 240
 
 NONE_VALUES = {"", "missing", "unknown", "none", "null"}
@@ -162,14 +165,14 @@ def write_decision_chain_latest(
     output: Path | None = None,
 ) -> dict[str, str]:
     root = Path(root).resolve()
-    report_path = output if output is not None else root / REPORT_REL
-    if not report_path.is_absolute():
-        report_path = root / report_path
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(render_decision_chain_latest_report(report), encoding="utf-8")
+    report_path = write_decision_chain_latest_report_text(
+        root,
+        render_decision_chain_latest_report(report),
+        output=output,
+    )
     _write_state(root, report, report_path=report_path)
     _append_trace(root, report)
-    return {"report_path": str(report_path), "state_path": str(root / STATE_REL)}
+    return {"report_path": str(report_path), "state_path": str(decision_chain_latest_state_path(root))}
 
 
 def _write_state(root: Path, report: dict[str, Any], *, report_path: Path) -> None:
@@ -246,7 +249,7 @@ tags: [autonomy, decision-chain, feedback, status]
 - state_contains_refs_status_and_bounded_labels_only: true
 - consciousness_claim: false
 """
-    write_text_atomic(root / STATE_REL, text)
+    write_decision_chain_latest_state_text(root, text)
 
 
 def _append_trace(root: Path, report: dict[str, Any]) -> None:
@@ -295,10 +298,7 @@ def _append_trace(root: Path, report: dict[str, Any]) -> None:
         "prompt_text_retained": False,
         "consciousness_claim": False,
     }
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+    append_decision_chain_latest_trace_event(root, row)
 
 
 def _selected_checks(report: dict[str, Any]) -> dict[str, dict[str, Any]]:

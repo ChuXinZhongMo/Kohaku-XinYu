@@ -2,13 +2,21 @@ from __future__ import annotations
 
 import argparse
 import json
-import subprocess
 import sys
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from xinyu_live_loop_report_store import GATEWAY_ACK_SPOOL_REL
+from xinyu_live_loop_report_store import QQ_INBOUND_TRACE_REL
+from xinyu_live_loop_report_store import VISIBLE_SEND_SHADOW_TRACE_REL
+from xinyu_live_loop_report_store import live_loop_gateway_ack_spool_path
+from xinyu_live_loop_report_store import live_loop_qq_inbound_trace_path
+from xinyu_live_loop_report_store import live_loop_visible_send_shadow_trace_path
+from xinyu_live_loop_report_store import load_live_loop_status
+from xinyu_live_loop_report_store import read_live_loop_jsonl_tail
 
 
 DEFAULT_CORE_URL = "http://127.0.0.1:8765"
@@ -97,21 +105,7 @@ def _split_ids(value: Any) -> set[str]:
 
 
 def _read_jsonl_tail(path: Path, max_lines: int = 500) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-    try:
-        lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
-    except OSError:
-        return []
-    rows: list[dict[str, Any]] = []
-    for line in lines[-max_lines:]:
-        try:
-            value = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(value, dict):
-            rows.append(value)
-    return rows
+    return read_live_loop_jsonl_tail(path, max_lines=max_lines)
 
 
 def _latest(rows: list[dict[str, Any]], predicate) -> dict[str, Any] | None:
@@ -225,38 +219,7 @@ def _known_error_count(status_data: dict[str, Any] | None) -> str:
 
 
 def _load_live_status(root: Path, core_url: str) -> tuple[dict[str, Any] | None, str]:
-    status_path = root / "xinyu_status.py"
-    if not status_path.exists():
-        return None, f"missing_status_script:{status_path}"
-    command = [
-        sys.executable,
-        str(status_path),
-        "--json",
-        "--root",
-        str(root),
-        "--core-url",
-        core_url,
-    ]
-    try:
-        completed = subprocess.run(
-            command,
-            cwd=str(root),
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=60,
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        return None, f"status_error:{exc}"
-    try:
-        data = json.loads(completed.stdout)
-    except json.JSONDecodeError:
-        detail = completed.stderr.strip() or completed.stdout.strip()[:200] or "no_status_json"
-        return None, f"status_json_error:{detail}"
-    if not isinstance(data, dict):
-        return None, "status_json_error:not_object"
-    return data, ""
+    return load_live_loop_status(root, core_url, python_executable=sys.executable)
 
 
 def _ack_records(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -371,10 +334,9 @@ def build_report(
 ) -> dict[str, Any]:
     root = root.resolve()
     now = now or datetime.now(timezone.utc)
-    runtime = root / "runtime"
-    trace_rows = _read_jsonl_tail(runtime / "qq_inbound_trace.jsonl", max_lines=800)
-    shadow_rows = _read_jsonl_tail(runtime / "answer_discipline_visible_send_shadow.jsonl", max_lines=200)
-    ack_rows = _read_jsonl_tail(runtime / "gateway_ack_spool.jsonl", max_lines=400)
+    trace_rows = _read_jsonl_tail(live_loop_qq_inbound_trace_path(root), max_lines=800)
+    shadow_rows = _read_jsonl_tail(live_loop_visible_send_shadow_trace_path(root), max_lines=200)
+    ack_rows = _read_jsonl_tail(live_loop_gateway_ack_spool_path(root), max_lines=400)
     acked_rows = _ack_records(ack_rows)
 
     latest_private_input = _latest(

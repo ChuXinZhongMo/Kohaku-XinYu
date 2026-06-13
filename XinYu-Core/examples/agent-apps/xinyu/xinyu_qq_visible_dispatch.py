@@ -108,21 +108,42 @@ def combined_reply_action_response(gateway: Any, responses: list[dict[str, Any] 
     if len(responses) == 1:
         return responses[0]
     message_ids: list[str] = []
+    delivery_kinds: list[str] = []
+    fallback_reasons: list[str] = []
     errors: list[str] = []
     for response in responses:
         ok, adapter_message_id, adapter_error = gateway._onebot_action_result(response)
+        if isinstance(response, dict):
+            delivery_kind = _safe_str(response.get("xinyu_delivery_kind")).strip()
+            if not delivery_kind:
+                data = response.get("data")
+                if isinstance(data, dict):
+                    delivery_kind = _safe_str(data.get("delivery_kind")).strip()
+            if delivery_kind:
+                delivery_kinds.append(delivery_kind)
+            fallback_reason = _safe_str(response.get("xinyu_voice_fallback_reason")).strip()
+            if fallback_reason:
+                fallback_reasons.append(fallback_reason)
         if ok and adapter_message_id:
             message_ids.append(adapter_message_id)
         elif adapter_error:
             errors.append(adapter_error)
     if message_ids:
+        if not delivery_kinds:
+            combined_kind = "text"
+        else:
+            combined_kind = delivery_kinds[0] if all(kind == delivery_kinds[0] for kind in delivery_kinds) else "mixed"
         return {
             "status": "ok",
             "retcode": 0,
+            "xinyu_delivery_kind": combined_kind,
+            "xinyu_voice_fallback_reason": "; ".join(fallback_reasons),
             "data": {
                 "message_id": ",".join(message_ids),
                 "reply_bubble_message_ids": message_ids,
+                "reply_bubble_delivery_kinds": delivery_kinds,
                 "reply_bubble_count": len(responses),
+                "delivery_kind": combined_kind,
             },
             "message": "; ".join(errors),
         }

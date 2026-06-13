@@ -7,14 +7,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_state_io import read_text, write_text_atomic
-
-
-INTENTION_TRACE_REL = Path("runtime/intention_ecology_trace.jsonl")
-INTENTION_STATE_REL = Path("memory/context/intention_ecology_state.md")
-STATE_REL = Path("memory/context/feedback_consumption_diagnostics_state.md")
-TRACE_REL = Path("runtime/feedback_consumption_diagnostics_trace.jsonl")
-REPORT_REL = Path("worklog/xinyu-feedback-consumption-diagnostics-latest.md")
+from xinyu_feedback_consumption_diagnostics_store import INTENTION_TRACE_REL
+from xinyu_feedback_consumption_diagnostics_store import INTENTION_STATE_REL
+from xinyu_feedback_consumption_diagnostics_store import REPORT_REL
+from xinyu_feedback_consumption_diagnostics_store import STATE_REL
+from xinyu_feedback_consumption_diagnostics_store import TRACE_REL
+from xinyu_feedback_consumption_diagnostics_store import append_feedback_consumption_trace_event
+from xinyu_feedback_consumption_diagnostics_store import read_feedback_consumption_jsonl_tail
+from xinyu_feedback_consumption_diagnostics_store import read_feedback_consumption_state_text
+from xinyu_feedback_consumption_diagnostics_store import write_feedback_consumption_report_text
+from xinyu_feedback_consumption_diagnostics_store import write_feedback_consumption_state_text
 
 DEFAULT_TRACE_LIMIT = 200
 PASS_RATE_PCT = 80.0
@@ -39,7 +41,7 @@ def build_feedback_consumption_diagnostics(
 ) -> dict[str, Any]:
     root = Path(root).resolve()
     generated_at = generated_at or _now_iso()
-    rows = _read_jsonl_tail(root / INTENTION_TRACE_REL, max_lines=max(1, int(trace_limit)))
+    rows = read_feedback_consumption_jsonl_tail(root / INTENTION_TRACE_REL, max_lines=max(1, int(trace_limit)))
     samples = [_sample_from_row(row, source="trace") for row in rows]
     samples = [sample for sample in samples if sample]
 
@@ -187,11 +189,11 @@ def write_feedback_consumption_diagnostics(
     output: Path | None = None,
 ) -> dict[str, str]:
     root = Path(root).resolve()
-    report_path = output if output is not None else root / REPORT_REL
-    if not report_path.is_absolute():
-        report_path = root / report_path
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(render_feedback_consumption_diagnostics(report), encoding="utf-8")
+    report_path = write_feedback_consumption_report_text(
+        root,
+        render_feedback_consumption_diagnostics(report),
+        output=output,
+    )
     _write_state(root, report, report_path=report_path)
     _append_trace(root, report)
     return {"report_path": str(report_path), "state_path": str(root / STATE_REL)}
@@ -262,7 +264,7 @@ tags: [autonomy, feedback, diagnostics, closed-loop]
 - stable_memory_write: blocked
 - consciousness_claim: false
 """
-    write_text_atomic(root / STATE_REL, text)
+    write_feedback_consumption_state_text(root, text)
 
 
 def _append_trace(root: Path, report: dict[str, Any]) -> None:
@@ -299,14 +301,11 @@ def _append_trace(root: Path, report: dict[str, Any]) -> None:
         "visible_reply_text_in_trace": False,
         "consciousness_claim": False,
     }
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+    append_feedback_consumption_trace_event(root, row)
 
 
 def _sample_from_state(root: Path) -> dict[str, str]:
-    fields = _parse_fields(read_text(root / INTENTION_STATE_REL))
+    fields = _parse_fields(read_feedback_consumption_state_text(root))
     if not fields:
         return {}
     return _sample_from_row(fields, source="current_state")
@@ -554,24 +553,6 @@ def _parse_fields(text: str) -> dict[str, str]:
         key, value = stripped[2:].split(":", 1)
         fields[key.strip()] = value.strip()
     return fields
-
-
-def _read_jsonl_tail(path: Path, *, max_lines: int) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-    try:
-        lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
-    except OSError:
-        return []
-    rows: list[dict[str, Any]] = []
-    for line in lines[-max(1, int(max_lines)) :]:
-        try:
-            data = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(data, dict):
-            rows.append(data)
-    return rows
 
 
 def _join_parts(parts: list[str]) -> str:

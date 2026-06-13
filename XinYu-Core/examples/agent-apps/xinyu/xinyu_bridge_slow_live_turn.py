@@ -1,40 +1,146 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
-from dataclasses import dataclass, field
-from datetime import datetime
+import time
+from collections.abc import Mapping
+from http import HTTPStatus
 from typing import Any, Callable
 
+import xinyu_bridge_semantic_fast_routes
+import xinyu_bridge_codex_runtime
+from xinyu_bridge_errors import BridgeRequestError
+from xinyu_bridge_reply_pipeline import render_outward_reply_with_trace
+from xinyu_bridge_reply_text import normalize_bridge_reply
+from xinyu_bridge_slow_live_state import (
+    SlowLiveEntryState,
+    SlowLiveMemoryRecallResult,
+    SlowLiveModelContexts,
+    SlowLiveModelTurnState,
+    SlowLivePostModelReplyState,
+    SlowLiveResponseState,
+    coerce_model_turn_state as _coerce_model_turn_state,
+    coerce_post_model_reply_state as _coerce_post_model_reply_state,
+)
+from xinyu_bridge_slow_live_finish import (
+    finish_and_publish_slow_live_success_turn as _runtime_finish_and_publish_slow_live_success_turn,
+    finish_prepared_slow_live_success_turn as _runtime_finish_prepared_slow_live_success_turn,
+    run_slow_live_finish_sidecars_with_trace as _runtime_run_slow_live_finish_sidecars_with_trace,
+)
+from xinyu_bridge_slow_live_entry import enter_slow_live_route_with_trace as _runtime_enter_slow_live_route_with_trace
+from xinyu_bridge_slow_live_publish import (
+    build_slow_live_success_notes as _runtime_build_slow_live_success_notes,
+    notes_from_sidecar as _runtime_notes_from_sidecar,
+    publish_slow_live_failed_turn as _runtime_publish_slow_live_failed_turn,
+    publish_slow_live_success_turn as _runtime_publish_slow_live_success_turn,
+)
+from xinyu_bridge_slow_live_turn_publish_bindings import (
+    build_slow_live_success_notes_runtime,
+    notes_from_sidecar_runtime,
+    publish_slow_live_failed_turn_runtime,
+    publish_slow_live_success_turn_runtime,
+)
+from xinyu_bridge_slow_live_model_injection import (
+    create_empty_visible_retry_event as _runtime_create_empty_visible_retry_event,
+    has_visible_chunks as _runtime_has_visible_chunks,
+    inject_slow_live_model_event as _runtime_inject_slow_live_model_event,
+    owner_private_payload_matches as _runtime_owner_private_payload_matches,
+    session_output_notes as _runtime_session_output_notes,
+)
+from xinyu_bridge_slow_live_model_turn import (
+    run_slow_live_model_turn_with_failure_publish as _runtime_run_slow_live_model_turn_with_failure_publish,
+)
+from xinyu_bridge_slow_live_post_model import (
+    prepare_slow_live_post_model_reply_state as _runtime_prepare_slow_live_post_model_reply_state,
+    prepare_slow_live_post_model_reply_state_for_turn as _runtime_prepare_slow_live_post_model_reply_state_for_turn,
+)
+from xinyu_bridge_slow_live_service import (
+    run_slow_live_turn_from_pre_model_phase_with_trace as _runtime_run_slow_live_turn_from_pre_model_phase_with_trace,
+)
+from xinyu_bridge_slow_live_contexts import (
+    build_slow_live_model_contexts as _runtime_build_slow_live_model_contexts,
+    build_slow_live_response_state as _runtime_build_slow_live_response_state,
+    observe_slow_live_persona_sidecar as _runtime_observe_slow_live_persona_sidecar,
+    run_slow_live_emotion_council_shadow as _runtime_run_slow_live_emotion_council_shadow,
+    run_slow_live_memory_recall as _runtime_run_slow_live_memory_recall,
+)
+from xinyu_bridge_slow_live_context_bindings import (
+    build_slow_live_model_contexts_runtime,
+    build_slow_live_response_state_runtime,
+    observe_slow_live_persona_sidecar_runtime,
+    run_slow_live_emotion_council_shadow_runtime,
+    run_slow_live_memory_recall_runtime,
+)
+from xinyu_bridge_slow_live_model_bindings import (
+    inject_slow_live_model_event_runtime,
+    prepare_slow_live_post_model_reply_state_for_turn_runtime,
+    prepare_slow_live_post_model_reply_state_runtime,
+    run_slow_live_model_turn_with_failure_publish_runtime,
+)
+from xinyu_bridge_slow_live_finish_bindings import (
+    finish_and_publish_slow_live_success_turn_runtime,
+    finish_prepared_slow_live_success_turn_runtime,
+    run_slow_live_finish_sidecars_with_trace_runtime,
+    run_slow_live_turn_from_pre_model_phase_with_trace_runtime,
+)
+from xinyu_bridge_slow_live_reply_adjustment_bindings import (
+    apply_slow_live_current_reference_repair_runtime,
+    apply_slow_live_final_reply_guard_runtime,
+    apply_slow_live_life_reply_policy_runtime,
+    apply_slow_live_outward_renderer_runtime,
+    apply_slow_live_reply_adjustment_pipeline_runtime,
+    apply_slow_live_reply_bubble_policy_runtime,
+    apply_slow_live_stale_context_repair_runtime,
+    apply_slow_live_sticker_reply_override_runtime,
+    apply_slow_live_style_pressure_empty_fallback_runtime,
+    apply_slow_live_visible_dedupe_runtime,
+    recover_slow_live_empty_visible_reply_runtime,
+)
+from xinyu_bridge_slow_live_reply_adjustments import (
+    apply_slow_live_current_reference_repair as _runtime_apply_slow_live_current_reference_repair,
+    apply_slow_live_final_reply_guard as _runtime_apply_slow_live_final_reply_guard,
+    apply_slow_live_life_reply_policy as _runtime_apply_slow_live_life_reply_policy,
+    apply_slow_live_outward_renderer as _runtime_apply_slow_live_outward_renderer,
+    apply_slow_live_reply_bubble_policy as _runtime_apply_slow_live_reply_bubble_policy,
+    apply_slow_live_reply_adjustment_pipeline as _runtime_apply_slow_live_reply_adjustment_pipeline,
+    apply_slow_live_stale_context_repair as _runtime_apply_slow_live_stale_context_repair,
+    apply_slow_live_sticker_reply_override as _runtime_apply_slow_live_sticker_reply_override,
+    apply_slow_live_style_pressure_empty_fallback as _runtime_apply_slow_live_style_pressure_empty_fallback,
+    apply_slow_live_visible_dedupe as _runtime_apply_slow_live_visible_dedupe,
+    recover_slow_live_empty_visible_reply as _runtime_recover_slow_live_empty_visible_reply,
+)
+from xinyu_bridge_time_utils import timestamp_or_now_iso
+from xinyu_bridge_turn_finish_sidecars import run_slow_turn_finish_sidecars
+from xinyu_bridge_turn_pipeline import try_pre_slow_semantic_fast_route_with_trace
+from xinyu_bridge_values import dedupe as _dedupe
 from xinyu_bridge_values import safe_str as _safe_str
 from xinyu_continuity_handoff import build_continuity_handoff_prompt_block, refresh_continuity_handoff
-from xinyu_life_reply_policy import build_life_reply_prompt_block
+from xinyu_current_reference_guard import repair_current_reference_reply
+from xinyu_expression_self_learning import record_expression_self_learning_event
+from xinyu_life_reply_policy import apply_life_reply_policy, build_life_reply_prompt_block
 from xinyu_living_memory_recall import run_living_memory_recall_algorithm
-from xinyu_emotion_council import build_emotion_council_prompt_block
+from xinyu_emotion_council import build_emotion_council_prompt_block, run_emotion_council_shadow
 from xinyu_early_visible_segment import observe_early_visible_segment_shadow
+from xinyu_persona_state import observe_persona_turn
+from xinyu_response_error_loop import classify_response_error
 from xinyu_runtime_presence import build_runtime_presence_prompt_block
+from xinyu_runtime_presence import record_turn_finished
+from xinyu_scene_frame import build_scene_frame
+from xinyu_sent_reply_index import visible_text_hash
+from xinyu_slow_state_modulator import build_slow_state
+from xinyu_turn_classifier import classify_visible_turn
 from xinyu_uncertainty_pause import build_uncertainty_pause_prompt_block
+from xinyu_visible_reply_guard import dedupe_visible_reply
 
 
 TraceRouteStage = Callable[..., Any]
 MemoryRecallRunner = Callable[..., Any]
 FinishSidecarsRunner = Callable[..., Any]
 EMPTY_VISIBLE_RETRY_TIMEOUT_SECONDS = 45
+FALSE_SINGLE_BUBBLE_REPLY = "可以拆。你要我拆哪段，我按一条一条发。"
+STYLE_PRESSURE_EMPTY_REPLY = "哪句最明显？"
 
-
-@dataclass
-class SlowLiveMemoryRecallResult:
-    recalled_context: Any = None
-    recalled_context_event: dict[str, Any] = field(default_factory=dict)
-    recalled_context_notes: list[str] = field(default_factory=list)
-
-
-@dataclass
-class SlowLiveModelContexts:
-    continuity_handoff: dict[str, Any]
-    runtime_presence_context: str
-    life_reply_policy: dict[str, Any]
-    emotion_council_context: str
+def _deps() -> dict[str, Any]:
+    return globals()
 
 
 def _int_or_zero(value: Any) -> int:
@@ -45,65 +151,19 @@ def _int_or_zero(value: Any) -> int:
 
 
 def _session_output_notes(session: Any) -> list[str]:
-    chunks = getattr(session, "chunks", None)
-    if isinstance(chunks, list):
-        chunk_count = len(chunks)
-        visible_chars = sum(len(_safe_str(chunk)) for chunk in chunks)
-    else:
-        chunk_count = 0
-        visible_chars = 0
-
-    agent = getattr(session, "agent", None)
-    controller = getattr(agent, "controller", None)
-    raw_assistant = _safe_str(getattr(controller, "_last_assistant_content", ""))
-    llm = getattr(agent, "llm", None)
-    try:
-        usage = getattr(llm, "last_usage", {}) if llm is not None else {}
-    except Exception:
-        usage = {}
-    if not isinstance(usage, dict):
-        usage = {}
-    try:
-        tool_calls = getattr(llm, "last_tool_calls", []) if llm is not None else []
-    except Exception:
-        tool_calls = []
-    try:
-        tool_call_count = len(tool_calls or [])
-    except TypeError:
-        tool_call_count = 0
-
-    notes = [
-        f"chunk_count:{chunk_count}",
-        f"visible_chars:{visible_chars}",
-        f"raw_assistant_chars:{len(raw_assistant)}",
-        f"completion_tokens:{_int_or_zero(usage.get('completion_tokens'))}",
-        f"tool_call_count:{tool_call_count}",
-    ]
-    if visible_chars <= 0:
-        if raw_assistant:
-            notes.append("empty_visible_parser_or_action_output")
-        elif _int_or_zero(usage.get("completion_tokens")) <= 0:
-            notes.append("empty_completion_no_visible_tokens")
-        else:
-            notes.append("empty_visible_model_or_provider_output")
-    return notes
+    return _runtime_session_output_notes(
+        session,
+        safe_str_func=_safe_str,
+        int_or_zero_func=_int_or_zero,
+    )
 
 
 def _has_visible_chunks(session: Any) -> bool:
-    chunks = getattr(session, "chunks", None)
-    if not isinstance(chunks, list):
-        return False
-    return bool("".join(_safe_str(chunk) for chunk in chunks).strip())
+    return _runtime_has_visible_chunks(session, safe_str_func=_safe_str)
 
 
 def _owner_private_payload_matches(runtime: Any, payload: dict[str, Any]) -> bool:
-    matcher = getattr(runtime, "_owner_private_payload_matches", None)
-    if not callable(matcher):
-        return False
-    try:
-        return bool(matcher(payload))
-    except Exception:
-        return False
+    return _runtime_owner_private_payload_matches(runtime, payload)
 
 
 def _create_empty_visible_retry_event(
@@ -114,37 +174,13 @@ def _create_empty_visible_retry_event(
     turn_id: str,
     session_key: str,
 ) -> Any:
-    factory = getattr(runtime, "_create_user_input_event", None)
-    if not callable(factory):
-        return None
-    retry_prompt = "\n".join(
-        [
-            "[internal visible-reply recovery]",
-            "The previous model turn returned no visible text.",
-            "Reply now to the immediately previous owner QQ private message.",
-            "Produce a concise visible Chinese private-chat reply.",
-            (
-                "Do not call tools, do not output tool blocks, and do not mention this "
-                "recovery, model output, logs, memory, or system mechanics."
-            ),
-            (
-                "If the owner explicitly asked XinYu to wait or stay silent, return "
-                "exactly [WAITING]. Otherwise do not stay silent."
-            ),
-        ]
-    )
-    return factory(
-        retry_prompt,
-        source="qq_gateway_empty_visible_retry",
-        bridge_payload=payload,
-        platform=_safe_str(payload.get("platform"), "qq"),
-        message_type=_safe_str(payload.get("message_type")),
-        session_id=session_key,
-        user_id=_safe_str(payload.get("user_id")),
-        received_at=_safe_str(payload.get("received_at") or payload.get("time") or ""),
+    return _runtime_create_empty_visible_retry_event(
+        runtime,
+        payload=payload,
+        text=text,
         turn_id=turn_id,
-        recovery_for="empty_visible_reply",
-        original_text_len=len(_safe_str(text)),
+        session_key=session_key,
+        safe_str_func=_safe_str,
     )
 
 
@@ -161,60 +197,7 @@ async def run_slow_live_memory_recall(
     trace_route_stage: TraceRouteStage,
     recall_runner: MemoryRecallRunner | None = None,
 ) -> SlowLiveMemoryRecallResult:
-    recalled_context = None
-    recalled_context_event: dict[str, Any] = {}
-    recalled_context_notes: list[str] = []
-    recall_runner = recall_runner or run_living_memory_recall_algorithm
-    try:
-        trace_route_stage("memory_recall_started", route="slow_live")
-        recalled_algorithm = recall_runner(
-            runtime.xinyu_dir,
-            payload,
-            user_text=user_text,
-            dialogue_tail=session.dialogue_tail,
-            visible_turn=visible_turn,
-            evaluated_at=evaluated_at,
-        )
-        recalled_context = recalled_algorithm.result
-        recalled_context_notes.extend(_safe_str(note) for note in recalled_algorithm.notes[:2])
-        recalled_context_notes.extend(_safe_str(note) for note in recalled_context.notes[:3])
-        recalled_context_event = await runtime._desktop_publish_memory_recall(
-            payload,
-            recalled_context,
-            session_key=session_key,
-            turn_id=turn_id,
-        )
-        trace_route_stage(
-            "memory_recall_finished",
-            route="slow_live",
-            status="ok",
-            notes=recalled_context_notes[:4],
-        )
-    except TimeoutError as exc:
-        print(f"[xinyu_core_bridge] context retrieval timed out: {exc}", flush=True)
-        timeout_note = f"context_retrieval_timeout:{type(exc).__name__}"
-        recalled_context_notes.append(timeout_note)
-        trace_route_stage(
-            "memory_recall_timeout",
-            route="slow_live",
-            status="timeout",
-            notes=[timeout_note],
-        )
-    except Exception as exc:
-        print(f"[xinyu_core_bridge] context retrieval failed: {exc}", flush=True)
-        error_note = f"context_retrieval_error:{type(exc).__name__}"
-        recalled_context_notes.append(error_note)
-        trace_route_stage(
-            "memory_recall_error",
-            route="slow_live",
-            status="error",
-            notes=[error_note],
-        )
-    return SlowLiveMemoryRecallResult(
-        recalled_context=recalled_context,
-        recalled_context_event=recalled_context_event,
-        recalled_context_notes=recalled_context_notes,
-    )
+    return await run_slow_live_memory_recall_runtime(locals(), _deps())
 
 
 async def build_slow_live_model_contexts(
@@ -226,33 +209,326 @@ async def build_slow_live_model_contexts(
     recalled_context: Any,
     evaluated_at: str,
 ) -> SlowLiveModelContexts:
-    del payload
-    continuity_handoff: dict[str, Any] = {"notes": []}
-    try:
-        continuity_handoff = refresh_continuity_handoff(
-            runtime.xinyu_dir,
-            user_text=user_text,
-            observed_at=datetime.now().astimezone().isoformat(),
-        )
-    except Exception as exc:
-        print(f"[xinyu_core_bridge] continuity handoff failed: {exc}", flush=True)
-        continuity_handoff = {"notes": [f"continuity_handoff_error:{type(exc).__name__}"]}
-    runtime_presence_context = build_runtime_presence_prompt_block(runtime.xinyu_dir, limit=2200)
-    life_reply_policy = await runtime._build_life_reply_policy(
-        user_text=user_text,
-        visible_turn=visible_turn,
-        canonical_recall_context=_safe_str(getattr(recalled_context, "prompt_block", "")),
-        evaluated_at=evaluated_at,
+    return await build_slow_live_model_contexts_runtime(locals(), _deps())
+
+
+async def publish_slow_live_failed_turn(
+    runtime: Any,
+    payload: dict[str, Any],
+    *,
+    session: Any,
+    text: str,
+    session_key: str,
+    turn_id: str,
+    turn_started_wall: str,
+    turn_started_at: float,
+    status: str,
+    notes: list[str],
+    recalled_context_event: dict[str, Any],
+    recalled_context: Any,
+) -> int:
+    return await publish_slow_live_failed_turn_runtime(locals(), _deps())
+
+
+async def publish_slow_live_success_turn(
+    runtime: Any,
+    payload: dict[str, Any],
+    *,
+    text: str,
+    reply: str,
+    session_key: str,
+    turn_id: str,
+    turn_started_wall: str,
+    turn_started_at: float,
+    before_memory: Any,
+    after_memory: Any,
+    notes: list[str],
+    archive_result: dict[str, Any],
+    recalled_context_event: dict[str, Any],
+    recalled_context: Any,
+    reply_bubble_force_units: list[int],
+    trace_route_stage: TraceRouteStage,
+) -> dict[str, Any]:
+    return await publish_slow_live_success_turn_runtime(locals(), _deps())
+
+
+def _notes_from_sidecar(sidecar: dict[str, Any], limit: int) -> list[str]:
+    return notes_from_sidecar_runtime(sidecar, limit, _deps())
+
+
+def build_slow_live_success_notes(
+    *,
+    reply: str,
+    empty_visible_reply_no_fallback: bool,
+    rendered: bool,
+    renderer_reason: str,
+    outward_renderer: bool,
+    renderer_mode: str,
+    final_guard_flags: list[str],
+    final_guard_applied: bool,
+    stale_context_reply_replaced: bool,
+    visible_dedupe: Any,
+    finish_sidecars: dict[str, Any],
+    proactive_tail_synced: bool,
+    model_codex_delegate_note: str,
+    wait_to_think_task: str,
+    curiosity_eval: dict[str, Any],
+    private_thought_outcome: dict[str, Any],
+    uncertainty_pause_reply: dict[str, Any],
+    continuity_handoff: dict[str, Any],
+    life_reply_policy: dict[str, Any],
+    life_reply_adjustment: dict[str, Any],
+    response_error_loop: dict[str, Any],
+    slow_state_runtime: dict[str, Any],
+    current_sticker_reply: str,
+    recent_sticker_reply: str,
+    reply_bubble_force_units: list[int],
+    persona_sidecar: dict[str, Any],
+    event_sidecar: dict[str, Any],
+    v1_shadow: dict[str, Any],
+    tinykernel_shadow: dict[str, Any],
+    emotion_council: dict[str, Any],
+    recalled_context_notes: list[str],
+    expression_learning: dict[str, Any],
+    cleanup: dict[str, Any],
+    session: Any,
+) -> list[str]:
+    return build_slow_live_success_notes_runtime(locals(), _deps())
+
+
+def observe_slow_live_persona_sidecar(
+    runtime: Any,
+    payload: dict[str, Any],
+    *,
+    text: str,
+    observer: Callable[..., dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    return observe_slow_live_persona_sidecar_runtime(locals(), _deps())
+
+
+def run_slow_live_emotion_council_shadow(
+    runtime: Any,
+    payload: dict[str, Any],
+    *,
+    text: str,
+    checked_at: str | None = None,
+    runner: Callable[..., dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    return run_slow_live_emotion_council_shadow_runtime(locals(), _deps())
+
+
+async def enter_slow_live_route_with_trace(
+    runtime: Any,
+    payload: dict[str, Any],
+    *,
+    text: str,
+    session_key: str,
+    turn_id: str,
+    turn_started_wall: str,
+    turn_started_at: float,
+    before_memory: dict[str, Any],
+    cleanup: dict[str, Any],
+    event_sidecar: dict[str, Any],
+    trace_route_stage: TraceRouteStage,
+) -> SlowLiveEntryState:
+    return await _runtime_enter_slow_live_route_with_trace(
+        runtime,
+        payload,
+        text=text,
+        session_key=session_key,
+        turn_id=turn_id,
+        turn_started_wall=turn_started_wall,
+        turn_started_at=turn_started_at,
+        before_memory=before_memory,
+        cleanup=cleanup,
+        event_sidecar=event_sidecar,
+        trace_route_stage=trace_route_stage,
+        emotion_council_func=run_slow_live_emotion_council_shadow,
+        semantic_fast_func=try_pre_slow_semantic_fast_route_with_trace,
     )
-    emotion_council_context = ""
-    if runtime.emotion_council_prompt_enabled:
-        emotion_council_context = build_emotion_council_prompt_block(runtime.xinyu_dir)
-    return SlowLiveModelContexts(
-        continuity_handoff=continuity_handoff,
-        runtime_presence_context=runtime_presence_context,
-        life_reply_policy=life_reply_policy,
-        emotion_council_context=emotion_council_context,
-    )
+
+
+def build_slow_live_response_state(
+    runtime: Any,
+    payload: dict[str, Any],
+    *,
+    user_text: str,
+    reply: str,
+    visible_turn: Any,
+    recalled_context: Any,
+    evaluated_at: str,
+    response_classifier: Callable[..., Any] | None = None,
+    scene_builder: Callable[..., Any] | None = None,
+    slow_state_builder: Callable[..., Any] | None = None,
+) -> SlowLiveResponseState:
+    return build_slow_live_response_state_runtime(locals(), _deps())
+
+
+def apply_slow_live_visible_dedupe(runtime: Any, session: Any, reply: str) -> dict[str, Any]:
+    return apply_slow_live_visible_dedupe_runtime(locals(), _deps())
+
+
+def apply_slow_live_stale_context_repair(
+    runtime: Any,
+    session: Any,
+    payload: dict[str, Any],
+    *,
+    reply: str,
+    user_text: str,
+    final_guard_flags: list[str],
+    blocked_by_delegate: bool,
+) -> dict[str, Any]:
+    return apply_slow_live_stale_context_repair_runtime(locals(), _deps())
+
+
+def apply_slow_live_life_reply_policy(
+    runtime: Any,
+    session: Any,
+    *,
+    reply: str,
+    user_text: str,
+    life_reply_policy: dict[str, Any],
+    blocked_by_delegate: bool,
+) -> dict[str, Any]:
+    return apply_slow_live_life_reply_policy_runtime(locals(), _deps())
+
+
+def apply_slow_live_current_reference_repair(
+    runtime: Any,
+    session: Any,
+    payload: dict[str, Any],
+    *,
+    reply: str,
+    user_text: str,
+    final_guard_flags: list[str],
+    blocked_by_delegate: bool,
+) -> dict[str, Any]:
+    return apply_slow_live_current_reference_repair_runtime(locals(), _deps())
+
+
+def apply_slow_live_reply_bubble_policy(
+    runtime: Any,
+    session: Any,
+    *,
+    reply: str,
+    user_text: str,
+    dialogue_tail: list[dict[str, Any]],
+    final_guard_flags: list[str],
+) -> dict[str, Any]:
+    return apply_slow_live_reply_bubble_policy_runtime(locals(), _deps())
+
+
+def apply_slow_live_sticker_reply_override(
+    runtime: Any,
+    session: Any,
+    payload: dict[str, Any],
+    *,
+    reply: str,
+    user_text: str,
+) -> dict[str, Any]:
+    return apply_slow_live_sticker_reply_override_runtime(locals(), _deps())
+
+
+def apply_slow_live_style_pressure_empty_fallback(
+    runtime: Any,
+    session: Any,
+    *,
+    reply: str,
+    final_guard_flags: list[str],
+) -> dict[str, Any]:
+    return apply_slow_live_style_pressure_empty_fallback_runtime(locals(), _deps())
+
+
+async def recover_slow_live_empty_visible_reply(
+    runtime: Any,
+    session: Any,
+    payload: dict[str, Any],
+    *,
+    reply: str,
+    user_text: str,
+    final_guard_flags: list[str],
+    rendered: bool,
+    renderer_reason: str,
+    recalled_context: Any,
+    blocked_by_delegate: bool,
+) -> dict[str, Any]:
+    return await recover_slow_live_empty_visible_reply_runtime(locals(), _deps())
+
+
+async def apply_slow_live_final_reply_guard(
+    runtime: Any,
+    session: Any,
+    payload: dict[str, Any],
+    *,
+    reply: str,
+    user_text: str,
+    recalled_context: Any,
+    trace_route_stage: TraceRouteStage,
+    codex_delegate_blocked: bool,
+) -> dict[str, Any]:
+    return await apply_slow_live_final_reply_guard_runtime(locals(), _deps())
+
+
+async def apply_slow_live_outward_renderer(
+    runtime: Any,
+    session: Any,
+    payload: dict[str, Any],
+    *,
+    reply: str,
+    draft_reply: str,
+    user_text: str,
+    recalled_context: Any,
+    trace_route_stage: TraceRouteStage,
+    blocked_by_delegate: bool,
+) -> dict[str, Any]:
+    return await apply_slow_live_outward_renderer_runtime(locals(), _deps())
+
+
+async def apply_slow_live_reply_adjustment_pipeline(
+    runtime: Any,
+    session: Any,
+    payload: dict[str, Any],
+    *,
+    reply: str,
+    draft_reply: str,
+    user_text: str,
+    recalled_context: Any,
+    life_reply_policy: dict[str, Any],
+    trace_route_stage: TraceRouteStage,
+    blocked_by_delegate: bool,
+    codex_delegate_blocked: bool,
+) -> dict[str, Any]:
+    return await apply_slow_live_reply_adjustment_pipeline_runtime(locals(), _deps())
+
+
+async def prepare_slow_live_post_model_reply_state(
+    runtime: Any,
+    session: Any,
+    payload: dict[str, Any],
+    *,
+    text: str,
+    session_key: str,
+    recalled_context: Any,
+    life_reply_policy: dict[str, Any],
+    visible_turn: Any,
+    evaluated_at: str,
+    trace_route_stage: TraceRouteStage,
+) -> SlowLivePostModelReplyState:
+    return await prepare_slow_live_post_model_reply_state_runtime(locals(), _deps())
+
+
+async def prepare_slow_live_post_model_reply_state_for_turn(
+    runtime: Any,
+    session: Any,
+    payload: dict[str, Any],
+    *,
+    text: str,
+    session_key: str,
+    model_turn: SlowLiveModelTurnState | Mapping[str, Any],
+    evaluated_at: str,
+    trace_route_stage: TraceRouteStage,
+) -> SlowLivePostModelReplyState:
+    return await prepare_slow_live_post_model_reply_state_for_turn_runtime(locals(), _deps())
 
 
 async def inject_slow_live_model_event(
@@ -272,126 +548,26 @@ async def inject_slow_live_model_event(
     emotion_council_context: str,
     trace_route_stage: TraceRouteStage,
 ) -> None:
-    stop_early_shadow = asyncio.Event()
-    loop = asyncio.get_running_loop()
-    early_shadow_task: asyncio.Task[Any] | None = None
-    session_chunks = getattr(session, "chunks", None)
-    if isinstance(session_chunks, list):
-        early_shadow_task = asyncio.create_task(
-            observe_early_visible_segment_shadow(
-                runtime.xinyu_dir,
-                session_chunks,
-                payload=payload,
-                user_text=text,
-                turn_id=turn_id,
-                session_key=_safe_str(getattr(session, "key", "")),
-                visible_turn=visible_turn,
-                started_monotonic=loop.time(),
-                stop_event=stop_early_shadow,
-            ),
-            name=f"xinyu-early-visible-segment-shadow-{turn_id or 'turn'}",
-        )
-    try:
-        trace_route_stage("model_inject_started", route="slow_live")
-        runtime._inject_live_turn_context(
-            session.agent,
-            payload=payload,
-            text=text,
-            dialogue_tail=session.dialogue_tail,
-            turn_id=turn_id,
-            persona_context=_safe_str(persona_sidecar.get("prompt_block")),
-            curiosity_context=_safe_str(curiosity_eval.get("prompt_block")),
-            visible_turn=visible_turn,
-            recalled_context=_safe_str(getattr(recalled_context, "prompt_block", "")),
-            runtime_presence_context=runtime_presence_context,
-            continuity_context=build_continuity_handoff_prompt_block(runtime.xinyu_dir, user_text=text),
-            uncertainty_pause_context=build_uncertainty_pause_prompt_block(runtime.xinyu_dir),
-            life_reply_context=build_life_reply_prompt_block(life_reply_policy),
-            emotion_council_context=emotion_council_context,
-        )
-        await asyncio.wait_for(
-            session.agent.inject_event(event),
-            timeout=runtime.turn_timeout_seconds,
-        )
-        output_notes = _session_output_notes(session)
-        if (
-            not _has_visible_chunks(session)
-            and _owner_private_payload_matches(runtime, payload)
-        ):
-            trace_route_stage(
-                "model_inject_empty_visible",
-                route="slow_live",
-                status="empty",
-                notes=output_notes,
-            )
-            retry_event = _create_empty_visible_retry_event(
-                runtime,
-                payload=payload,
-                text=text,
-                turn_id=turn_id,
-                session_key=_safe_str(getattr(session, "key", "")),
-            )
-            if retry_event is None:
-                output_notes = output_notes + ["empty_visible_retry_unavailable"]
-            else:
-                retry_timeout = min(
-                    EMPTY_VISIBLE_RETRY_TIMEOUT_SECONDS,
-                    max(1, _int_or_zero(getattr(runtime, "turn_timeout_seconds", 1))),
-                )
-                trace_route_stage(
-                    "model_inject_empty_visible_retry_started",
-                    route="slow_live",
-                    status="running",
-                    notes=[f"timeout_seconds:{retry_timeout}"],
-                )
-                await asyncio.wait_for(
-                    session.agent.inject_event(retry_event),
-                    timeout=retry_timeout,
-                )
-                retry_notes = _session_output_notes(session)
-                if _has_visible_chunks(session):
-                    trace_route_stage(
-                        "model_inject_empty_visible_retry_finished",
-                        route="slow_live",
-                        status="ok",
-                        notes=retry_notes,
-                    )
-                    output_notes = retry_notes + ["empty_visible_retry_recovered"]
-                else:
-                    trace_route_stage(
-                        "model_inject_empty_visible_retry_finished",
-                        route="slow_live",
-                        status="empty",
-                        notes=retry_notes,
-                    )
-                    output_notes = retry_notes + ["empty_visible_retry_failed"]
-        trace_route_stage(
-            "model_inject_finished",
-            route="slow_live",
-            status="ok",
-            notes=output_notes,
-        )
-    except TimeoutError:
-        trace_route_stage(
-            "model_inject_timeout",
-            route="slow_live",
-            status="timeout",
-            notes=["turn_timeout"],
-        )
-        raise
-    except Exception as exc:
-        trace_route_stage(
-            "model_inject_error",
-            route="slow_live",
-            status="error",
-            notes=[f"turn_error:{type(exc).__name__}"],
-        )
-        raise
-    finally:
-        stop_early_shadow.set()
-        if early_shadow_task is not None:
-            with contextlib.suppress(Exception):
-                await asyncio.wait_for(early_shadow_task, timeout=1)
+    await inject_slow_live_model_event_runtime(locals(), _deps())
+
+
+async def run_slow_live_model_turn_with_failure_publish(
+    runtime: Any,
+    payload: dict[str, Any],
+    *,
+    session: Any,
+    text: str,
+    session_key: str,
+    turn_id: str,
+    llm_failover_turn_id: str,
+    turn_started_wall: str,
+    turn_started_at: float,
+    turn_event_timestamp: int,
+    evaluated_at: str,
+    curiosity_eval: dict[str, Any],
+    trace_route_stage: TraceRouteStage,
+) -> SlowLiveModelTurnState:
+    return await run_slow_live_model_turn_with_failure_publish_runtime(locals(), _deps())
 
 
 async def run_slow_live_finish_sidecars_with_trace(
@@ -401,24 +577,99 @@ async def run_slow_live_finish_sidecars_with_trace(
     trace_route_stage: TraceRouteStage,
     **kwargs: Any,
 ) -> dict[str, Any]:
-    try:
-        trace_route_stage("finish_sidecars_started", route="slow_live")
-        finish_sidecars = await sidecars_runner(runtime, **kwargs)
-        trace_route_stage("finish_sidecars_finished", route="slow_live", status="ok")
-        return finish_sidecars
-    except TimeoutError:
-        trace_route_stage(
-            "finish_sidecars_timeout",
-            route="slow_live",
-            status="timeout",
-            notes=["finish_sidecars_timeout"],
-        )
-        raise
-    except Exception as exc:
-        trace_route_stage(
-            "finish_sidecars_error",
-            route="slow_live",
-            status="error",
-            notes=[f"finish_sidecars_error:{type(exc).__name__}"],
-        )
-        raise
+    return await run_slow_live_finish_sidecars_with_trace_runtime(locals(), _deps())
+
+
+async def finish_and_publish_slow_live_success_turn(
+    runtime: Any,
+    payload: dict[str, Any],
+    *,
+    text: str,
+    reply: str,
+    draft_reply: str,
+    session: Any,
+    session_key: str,
+    turn_id: str,
+    publish_turn_id: str,
+    turn_started_wall: str,
+    turn_started_at: float,
+    before_memory: dict[str, Any],
+    visible_turn: Any,
+    final_guard_flags: list[str],
+    final_guard_applied: bool,
+    stale_context_reply_replaced: bool,
+    expression_learning: dict[str, Any],
+    recalled_context: Any,
+    recalled_context_event: dict[str, Any],
+    recalled_context_notes: list[str],
+    private_thought_outcome: dict[str, Any],
+    emotion_council: dict[str, Any],
+    persona_sidecar: dict[str, Any],
+    continuity_handoff: dict[str, Any],
+    wait_to_think_sidecar: dict[str, Any],
+    self_code_task: str,
+    direct_codex_task: str,
+    model_codex_task: str,
+    wait_to_think_task: str,
+    model_codex_delegate_note: str,
+    empty_visible_reply_no_fallback: bool,
+    rendered: bool,
+    renderer_reason: str,
+    visible_dedupe: Any,
+    proactive_tail_synced: bool,
+    curiosity_eval: dict[str, Any],
+    uncertainty_pause_reply: dict[str, Any],
+    life_reply_policy: dict[str, Any],
+    life_reply_adjustment: dict[str, Any],
+    response_error_loop: dict[str, Any],
+    slow_state_runtime: dict[str, Any],
+    current_sticker_reply: str,
+    recent_sticker_reply: str,
+    reply_bubble_force_units: list[str],
+    event_sidecar: dict[str, Any],
+    v1_shadow: dict[str, Any],
+    tinykernel_shadow: dict[str, Any],
+    cleanup: dict[str, Any],
+    trace_route_stage: TraceRouteStage,
+) -> dict[str, Any]:
+    return await finish_and_publish_slow_live_success_turn_runtime(locals(), _deps())
+
+
+async def finish_prepared_slow_live_success_turn(
+    runtime: Any,
+    payload: dict[str, Any],
+    *,
+    text: str,
+    session_key: str,
+    turn_id: str,
+    publish_turn_id: str,
+    turn_started_wall: str,
+    turn_started_at: float,
+    pre_model_phase: Mapping[str, Any],
+    slow_live_entry: SlowLiveEntryState | Mapping[str, Any],
+    model_turn: SlowLiveModelTurnState | Mapping[str, Any],
+    post_model_reply: SlowLivePostModelReplyState | Mapping[str, Any],
+    cleanup: dict[str, Any],
+    trace_route_stage: TraceRouteStage,
+) -> dict[str, Any]:
+    return await finish_prepared_slow_live_success_turn_runtime(locals(), _deps())
+
+
+async def run_slow_live_turn_from_pre_model_phase_with_trace(
+    runtime: Any,
+    payload: dict[str, Any],
+    *,
+    text: str,
+    session_key: str,
+    turn_id: str,
+    publish_turn_id: str,
+    turn_started_wall: str,
+    turn_started_at: float,
+    turn_event_time: str,
+    turn_event_timestamp: int,
+    pre_model_phase: Mapping[str, Any],
+    cleanup: dict[str, Any],
+    settle_seconds: float,
+    trace_route_stage: TraceRouteStage,
+) -> dict[str, Any]:
+    return await run_slow_live_turn_from_pre_model_phase_with_trace_runtime(locals(), _deps())

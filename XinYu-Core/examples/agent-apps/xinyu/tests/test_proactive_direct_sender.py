@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from xinyu_proactive_direct_sender import send_proactive_direct
+from xinyu_proactive_direct_sender import main, send_proactive_direct
+from xinyu_proactive_request_loop import run_proactive_request_loop
 
 
 def _write(path: Path, text: str) -> None:
@@ -11,7 +12,34 @@ def _write(path: Path, text: str) -> None:
     path.write_text(text.rstrip() + "\n", encoding="utf-8")
 
 
-def _seed_direct_ready(root: Path, *, grant: bool = True, question: str = "要不要我先把人格状态卡接到 Desktop？") -> None:
+def _seed_share_grant(root: Path, *, enabled: bool = True, paused: bool = False) -> None:
+    _write(
+        root / "memory/context/private_ecosystem_grants.json",
+        json.dumps(
+            {
+                "owner_private_autonomous_share": {
+                    "enabled": enabled,
+                    "paused": paused,
+                    "daily_limit": 8,
+                    "cooldown_minutes": 30,
+                    "max_message_chars": 800,
+                    "quiet_hours": "00:00-06:00",
+                }
+            },
+            ensure_ascii=False,
+        ),
+    )
+
+
+def _seed_direct_ready(
+    root: Path,
+    *,
+    grant: bool = True,
+    share_enabled: bool = True,
+    share_paused: bool = False,
+    question: str = "要不要我先把人格状态卡接到 Desktop？",
+) -> None:
+    _seed_share_grant(root, enabled=share_enabled, paused=share_paused)
     _write(root / "xinyu_qq_gateway.config.json", '{"owner_user_ids": ["owner-1"]}')
     _write(root / "memory/context/current_life_posture.md", "- no_proactive_constraint: unchanged\n")
     _write(root / "memory/context/owner_permission_grants.md", "")
@@ -74,10 +102,10 @@ def test_proactive_direct_sender_enqueues_owner_private_outbox(tmp_path: Path) -
     }
     assert "我想问你一件小事" not in items[0]["message"]
     assert "persona next step" not in items[0]["message"]
-    assert "- status: queued_qq" in state or "- status: sent" in state
+    assert "- status: queued_qq" in state
     assert f"- qq_outbox_message_id: {items[0]['id']}" in state
     assert "- request_answer_state: sent_waiting_owner_reply" in state
-    assert "- last_ack_status: sent" in dispatch
+    assert "- last_ack_status: queued" in dispatch
     assert not (tmp_path / "memory/people/owner.md").exists()
     assert not (tmp_path / "memory/self/personality_profile.md").exists()
 
@@ -94,6 +122,38 @@ def test_proactive_direct_sender_requires_owner_enabled_grant(tmp_path: Path) ->
 
     assert result["queued"] is False
     assert result["status"] == "not_ready"
+    assert not (tmp_path / "memory/context/qq_outbox_queue.json").exists()
+
+
+def test_proactive_direct_sender_blocks_when_owner_private_share_paused(tmp_path: Path) -> None:
+    _seed_direct_ready(tmp_path, share_enabled=True, share_paused=True)
+
+    result = send_proactive_direct(
+        tmp_path,
+        evaluated_at="2026-06-03T23:45:00+08:00",
+        min_interval_seconds=0,
+        claim_id="claim-direct-share-paused",
+    )
+
+    assert result["queued"] is False
+    assert result["status"] == "blocked"
+    assert "owner_private_autonomous_share_paused" in result["notes"]
+    assert not (tmp_path / "memory/context/qq_outbox_queue.json").exists()
+
+
+def test_proactive_direct_sender_blocks_when_owner_private_share_disabled(tmp_path: Path) -> None:
+    _seed_direct_ready(tmp_path, share_enabled=False, share_paused=True)
+
+    result = send_proactive_direct(
+        tmp_path,
+        evaluated_at="2026-06-03T23:45:00+08:00",
+        min_interval_seconds=0,
+        claim_id="claim-direct-share-disabled",
+    )
+
+    assert result["queued"] is False
+    assert result["status"] == "blocked"
+    assert "owner_private_autonomous_share_disabled" in result["notes"]
     assert not (tmp_path / "memory/context/qq_outbox_queue.json").exists()
 
 
@@ -204,3 +264,51 @@ def test_proactive_direct_sender_dry_run_acknowledges_claim_without_outbox(tmp_p
     )
 
     assert followup["status"] == "queued_qq"
+
+
+def test_proactive_direct_sender_cli_json_outputs_result(tmp_path: Path, capsys) -> None:
+    _seed_direct_ready(tmp_path)
+
+    exit_code = main(
+        [
+            "--root",
+            str(tmp_path),
+            "--evaluated-at",
+            "2026-05-23T23:55:00+08:00",
+            "--min-interval-seconds",
+            "0",
+            "--claim-id",
+            "claim-direct-cli-json",
+            "--dry-run",
+            "--json",
+        ]
+    )
+
+    output = json.loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert output["status"] == "dry_run_claimed_not_enqueued"
+    assert output["queued"] is False
+
+
+def test_proactive_direct_sender_can_claim_existing_ready_request(tmp_path: Path) -> None:
+    _seed_direct_ready(tmp_path)
+    request = run_proactive_request_loop(
+        tmp_path,
+        evaluated_at="2026-05-23T23:55:00+08:00",
+        delivery_level="queue_owner_private",
+        cooldown_seconds=0,
+    )
+
+    result = send_proactive_direct(
+        tmp_path,
+        evaluated_at="2026-05-23T23:55:10+08:00",
+        min_interval_seconds=0,
+        claim_id="claim-direct-existing",
+        prepare_request=False,
+    )
+
+    queue = json.loads((tmp_path / "memory/context/qq_outbox_queue.json").read_text(encoding="utf-8"))
+    assert request["status"] == "ready"
+    assert result["status"] == "queued_qq"
+    assert result["queued"] is True
+    assert len(queue["items"]) == 1

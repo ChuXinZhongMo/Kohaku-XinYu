@@ -1,19 +1,19 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_state_io import write_text_atomic
+from xinyu_short_term_continuity_store import STATE_REL
+from xinyu_short_term_continuity_store import TRACE_REL
+from xinyu_short_term_continuity_store import append_short_term_continuity_trace
+from xinyu_short_term_continuity_store import write_short_term_continuity_state
 from xinyu_visible_text_sanitizer import sanitize_visible_text
 
 
-STATE_REL = Path("memory/context/short_term_continuity_state.md")
-TRACE_REL = Path("runtime/short_term_continuity_trace.jsonl")
 ARCHIVE_FALLBACK_LIMIT = 8
 
 DIRECT_REFERENCE_MARKERS = (
@@ -418,14 +418,11 @@ tags: [continuity, dialogue-tail, recall, autonomy]
 - visible_reply_text_retained: false
 - stable_memory_write: blocked
 """
-    write_text_atomic(root / STATE_REL, text)
+    write_short_term_continuity_state(root, text)
 
 
 def _append_trace(root: Path, state: ShortTermContinuityState) -> None:
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as fh:
-        fh.write(json.dumps(state.to_trace_dict(), ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+    append_short_term_continuity_trace(root, state.to_trace_dict())
 
 
 def _content_ref(value: Any) -> str:

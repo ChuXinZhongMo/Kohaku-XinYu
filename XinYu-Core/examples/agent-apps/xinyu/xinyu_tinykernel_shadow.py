@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import json
-import os
 import time
 import urllib.error
 import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
+
+from xinyu_tinykernel_shadow_store import append_tinykernel_shadow_trace_line
+from xinyu_tinykernel_shadow_store import read_tinykernel_shadow_env
 
 
 TRACE_REL = Path("runtime/tinykernel_compose_shadow_trace.jsonl")
@@ -43,7 +45,7 @@ def _parse_iso(value: Any) -> datetime | None:
 
 
 def shadow_enabled() -> bool:
-    return str(os.environ.get(ENABLED_ENV, "")).strip().lower() in {"1", "true", "yes", "on"}
+    return str(read_tinykernel_shadow_env(ENABLED_ENV)).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def build_tinykernel_payload(
@@ -100,9 +102,9 @@ def record_tinykernel_shadow(
     if not enabled_value:
         return {"recorded": False, "ok": False, "notes": ["tinykernel_shadow_disabled"]}
 
-    endpoint = endpoint or os.environ.get(ENDPOINT_ENV, DEFAULT_ENDPOINT)
+    endpoint = endpoint or read_tinykernel_shadow_env(ENDPOINT_ENV, DEFAULT_ENDPOINT)
     try:
-        timeout_seconds = max(0.1, min(10.0, float(os.environ.get(TIMEOUT_ENV, "2.0"))))
+        timeout_seconds = max(0.1, min(10.0, float(read_tinykernel_shadow_env(TIMEOUT_ENV, "2.0"))))
     except ValueError:
         timeout_seconds = 2.0
     payload = build_tinykernel_payload(
@@ -144,7 +146,5 @@ def record_tinykernel_shadow(
         "notes": [str(item) for item in response.get("notes", [])] if isinstance(response.get("notes"), list) else [],
     }
     trace_path = root / TRACE_REL
-    trace_path.parent.mkdir(parents=True, exist_ok=True)
-    with trace_path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+    append_tinykernel_shadow_trace_line(trace_path, json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
     return {"recorded": True, "ok": row["ok"], "row": row, "notes": ["tinykernel_shadow_recorded"]}

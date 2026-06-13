@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
+from xinyu_bridge_proactive_delivery_state_store import proactive_delivery_state_paths
 from xinyu_qq_outbox_state import parse_outbox_time as _parse_time
 from xinyu_qq_outbox_state import summarize_outbox_items
 
@@ -123,19 +124,19 @@ def _owner_user_id_from_config(root: Path, config_path: Path | None = None) -> t
 
 
 def _queue_path(root: Path) -> Path:
-    return root / "memory/context/qq_outbox_queue.json"
+    return proactive_delivery_state_paths(root).qq_outbox_queue
 
 
 def _state_path(root: Path) -> Path:
-    return root / "memory/context/qq_outbox_dispatch_state.md"
+    return proactive_delivery_state_paths(root).qq_outbox_dispatch_state
 
 
 def _proactive_request_state_path(root: Path) -> Path:
-    return root / "memory/context/proactive_request_state.md"
+    return proactive_delivery_state_paths(root).proactive_request_state
 
 
 def _lock_path(root: Path) -> Path:
-    return root / "memory/context/.qq_outbox_queue.lock"
+    return proactive_delivery_state_paths(root).qq_outbox_lock
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -267,6 +268,65 @@ def _update_proactive_request_from_outbox_ack(
     return True
 
 
+def _proactive_dispatch_state_path(root: Path) -> Path:
+    return proactive_delivery_state_paths(root).proactive_dispatch_state
+
+
+def _update_proactive_dispatch_from_outbox_ack(
+    root: Path,
+    item: dict[str, Any],
+    *,
+    ack_status: str,
+    adapter_message_id: str,
+    adapter_error: str,
+    updated_at: str,
+) -> bool:
+    metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+    request_id = _one_line(
+        metadata.get("proactive_request_id")
+        or metadata.get("request_id")
+        or metadata.get("desktop_candidate_id"),
+        limit=160,
+    )
+    claim_id = _one_line(metadata.get("claim_id"), limit=160)
+    message_id = _one_line(item.get("id"), limit=160)
+    proactive_hint = bool(
+        request_id
+        or claim_id
+        or metadata.get("direct_proactive") is True
+        or metadata.get("desktop_action") == "approve_qq"
+        or metadata.get("source") in {"xinyu_desktop_shell", "xinyu_proactive_direct_sender"}
+    )
+    if not proactive_hint:
+        return False
+
+    path = _proactive_dispatch_state_path(root)
+    state = _read_text_file(path)
+    if not state:
+        return False
+
+    state_claim_id = _state_field(state, "last_claim_id", "")
+    state_request_id = _state_field(state, "proactive_request_id", "")
+    state_adapter_ref = _state_field(state, "adapter_message_id", "")
+    claim_matches = bool(claim_id and state_claim_id and claim_id == state_claim_id)
+    request_matches = bool(request_id and state_request_id and request_id == state_request_id)
+    message_matches = bool(message_id and state_adapter_ref and message_id == state_adapter_ref)
+    if not claim_matches and not request_matches and not message_matches:
+        return False
+
+    error_text = _one_line(adapter_error or ("" if ack_status == "sent" else f"qq_outbox_{ack_status}"), limit=500)
+    adapter_ref = _one_line(adapter_message_id or message_id, limit=160)
+    timestamp = _timestamp_or_now_iso(updated_at)
+    updated = _replace_frontmatter_field(state, "updated_at", timestamp)
+    updated = _replace_list_field(updated, "last_claim_status", ack_status)
+    updated = _replace_list_field(updated, "last_ack_status", ack_status)
+    updated = _replace_list_field(updated, "last_acked_at", timestamp)
+    updated = _replace_list_field(updated, "adapter_message_id", adapter_ref or "none")
+    updated = _replace_list_field(updated, "adapter_error", error_text or "none")
+    _atomic_write_text(path, updated.rstrip() + "\n")
+    return True
+
+
 def _write_json(path: Path, data: dict[str, Any]) -> None:
     data["version"] = QUEUE_VERSION
     data["updated_at"] = _now()
@@ -351,6 +411,8 @@ tags: [qq, outbox, dispatch, codex, adapter]
 - sent_count: {summary["sent_count"]}
 - failed_count: {summary["failed_count"]}
 - dead_count: {summary["dead_count"]}
+- suppressed_count: {summary["suppressed_count"]}
+- unknown_status_count: {summary["unknown_status_count"]}
 - recent_failed_count: {summary["recent_failed_count"]}
 - recent_dead_count: {summary["recent_dead_count"]}
 - last_failed_at: {summary["last_failed_at"]}
@@ -695,6 +757,22 @@ def ack_qq_outbox_message(root: Path, payload: dict[str, Any] | None = None) -> 
             }
 
         attempts = int(selected.get("attempts") or 0)
+        current_status = _safe_str(selected.get("status")).lower()
+        if current_status in {"sent", "dead"}:
+            notes = ["terminal_ack_already_recorded"]
+            if current_status == "sent" and ack_status != "sent":
+                notes.append("late_ack_ignored_terminal_sent")
+            elif current_status == "dead" and ack_status != "failed":
+                notes.append("late_ack_ignored_terminal_dead")
+            return {
+                "accepted": True,
+                "ack_recorded": False,
+                "message_id": message_id,
+                "ack_status": current_status,
+                "attempts": attempts,
+                "notes": notes,
+            }
+
         final_status = "sent" if ack_status == "sent" else ("dead" if attempts >= MAX_ATTEMPTS else "failed")
         acked_at = _now()
         selected["status"] = final_status
@@ -713,11 +791,23 @@ def ack_qq_outbox_message(root: Path, payload: dict[str, Any] | None = None) -> 
             adapter_error=adapter_error,
             updated_at=acked_at,
         )
+        dispatch_updated = _update_proactive_dispatch_from_outbox_ack(
+            root,
+            selected,
+            ack_status=final_status,
+            adapter_message_id=adapter_message_id or message_id,
+            adapter_error=adapter_error,
+            updated_at=acked_at,
+        )
         return {
             "accepted": True,
             "ack_recorded": True,
             "message_id": message_id,
             "ack_status": final_status,
             "attempts": attempts,
-            "notes": ["ack_recorded"] + (["proactive_request_state_updated"] if request_updated else []),
+            "notes": (
+                ["ack_recorded"]
+                + (["proactive_request_state_updated"] if request_updated else [])
+                + (["proactive_dispatch_state_updated"] if dispatch_updated else [])
+            ),
         }

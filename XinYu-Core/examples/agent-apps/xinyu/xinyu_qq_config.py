@@ -147,6 +147,7 @@ class GatewayConfig:
     sticker_import_url: str = "http://127.0.0.1:8765/sticker/import"
     qq_file_learning_enabled: bool = True
     qq_file_learning_private_owner_only: bool = True
+    qq_file_learning_allowed_group_ids: frozenset[str] = frozenset()
     qq_file_learning_stage: bool = True
     qq_file_learning_curated: bool = True
     qq_sticker_import_enabled: bool = True
@@ -175,6 +176,11 @@ class GatewayConfig:
     group_shadow_enabled: bool = False
     group_shadow_allowed_group_ids: frozenset[str] = frozenset()
     group_shadow_max_text_chars: int = 260
+    group_interest_reply_enabled: bool = False
+    group_interest_reply_allowed_group_ids: frozenset[str] = frozenset()
+    group_interest_reply_min_score: int = 7
+    group_interest_reply_cooldown_seconds: int = 900
+    group_interest_followup_max_turns: int = 2
     ignore_prefixes: tuple[str, ...] = ("/", "!", "！", ".")
     blocked_commands: frozenset[str] = frozenset({"#napcat"})
     passthrough_commands: frozenset[str] = frozenset({"sid", "help", "xinyu_qq_status"})
@@ -194,6 +200,7 @@ class GatewayConfig:
     behavior_shadow_log_url: str = "http://127.0.0.1:8877/behavior_shadow_log"
     behavior_shadow_include_text: bool = False
     behavior_shadow_timeout_seconds: float = 1.0
+    napcat_restart_bat: str = ""
 
     @classmethod
     def from_file(cls, path: Path) -> "GatewayConfig":
@@ -246,6 +253,7 @@ class GatewayConfig:
             sticker_import_url=sticker_import_url,
             qq_file_learning_enabled=as_bool(raw.get("qq_file_learning_enabled"), True),
             qq_file_learning_private_owner_only=as_bool(raw.get("qq_file_learning_private_owner_only"), True),
+            qq_file_learning_allowed_group_ids=frozenset(as_str_list(raw.get("qq_file_learning_allowed_group_ids"))),
             qq_file_learning_stage=as_bool(raw.get("qq_file_learning_stage"), True),
             qq_file_learning_curated=as_bool(raw.get("qq_file_learning_curated"), True),
             qq_sticker_import_enabled=as_bool(raw.get("qq_sticker_import_enabled"), True),
@@ -286,6 +294,19 @@ class GatewayConfig:
             group_shadow_enabled=as_bool(raw.get("group_shadow_enabled"), False),
             group_shadow_allowed_group_ids=frozenset(as_str_list(raw.get("group_shadow_allowed_group_ids"))),
             group_shadow_max_text_chars=max(80, min(1000, as_int(raw.get("group_shadow_max_text_chars"), 260))),
+            group_interest_reply_enabled=as_bool(raw.get("group_interest_reply_enabled"), False),
+            group_interest_reply_allowed_group_ids=frozenset(
+                as_str_list(raw.get("group_interest_reply_allowed_group_ids"))
+            ),
+            group_interest_reply_min_score=max(1, min(20, as_int(raw.get("group_interest_reply_min_score"), 7))),
+            group_interest_reply_cooldown_seconds=max(
+                0,
+                min(86400, as_int(raw.get("group_interest_reply_cooldown_seconds"), 900)),
+            ),
+            group_interest_followup_max_turns=max(
+                0,
+                min(5, as_int(raw.get("group_interest_followup_max_turns"), 2)),
+            ),
             ignore_prefixes=with_required_prefixes(as_str_list(raw.get("ignore_prefixes")) or ["/", "!", "！", "."]),
             blocked_commands=frozenset(
                 item.lower() for item in (as_str_list(raw.get("blocked_commands")) or ["#napcat"])
@@ -337,6 +358,9 @@ class GatewayConfig:
                     ),
                 ),
             ),
+            napcat_restart_bat=_safe_str(
+                os.environ.get("XINYU_NAPCAT_RESTART_BAT") or raw.get("napcat_restart_bat"), ""
+            ).strip(),
         )
 
     def with_overrides(
@@ -415,6 +439,7 @@ class GatewayConfig:
             sticker_import_url=sticker_import_url,
             qq_file_learning_enabled=self.qq_file_learning_enabled,
             qq_file_learning_private_owner_only=self.qq_file_learning_private_owner_only,
+            qq_file_learning_allowed_group_ids=self.qq_file_learning_allowed_group_ids,
             qq_file_learning_stage=self.qq_file_learning_stage,
             qq_file_learning_curated=self.qq_file_learning_curated,
             qq_sticker_import_enabled=self.qq_sticker_import_enabled,
@@ -443,6 +468,11 @@ class GatewayConfig:
             group_shadow_enabled=self.group_shadow_enabled,
             group_shadow_allowed_group_ids=self.group_shadow_allowed_group_ids,
             group_shadow_max_text_chars=self.group_shadow_max_text_chars,
+            group_interest_reply_enabled=self.group_interest_reply_enabled,
+            group_interest_reply_allowed_group_ids=self.group_interest_reply_allowed_group_ids,
+            group_interest_reply_min_score=self.group_interest_reply_min_score,
+            group_interest_reply_cooldown_seconds=self.group_interest_reply_cooldown_seconds,
+            group_interest_followup_max_turns=self.group_interest_followup_max_turns,
             ignore_prefixes=self.ignore_prefixes,
             blocked_commands=self.blocked_commands,
             passthrough_commands=self.passthrough_commands,
@@ -462,4 +492,5 @@ class GatewayConfig:
             behavior_shadow_log_url=self.behavior_shadow_log_url,
             behavior_shadow_include_text=self.behavior_shadow_include_text,
             behavior_shadow_timeout_seconds=self.behavior_shadow_timeout_seconds,
+            napcat_restart_bat=self.napcat_restart_bat,
         )

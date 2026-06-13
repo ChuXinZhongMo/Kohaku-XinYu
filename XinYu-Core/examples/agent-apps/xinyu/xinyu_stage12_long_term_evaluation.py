@@ -14,12 +14,13 @@ from xinyu_owner_feedback_effects import build_owner_feedback_effect_report
 from xinyu_proactive_response_diagnostics import build_proactive_response_diagnostics
 from xinyu_short_term_continuity_canary import build_short_term_continuity_canary_report
 from xinyu_stage11_multisensory_extension import build_stage11_multisensory_extension
-from xinyu_state_io import read_text, write_text_atomic
-
-
-REPORT_REL = Path("worklog") / "xinyu-stage12-long-term-evaluation-latest.md"
-STATE_REL = Path("memory/context/stage12_long_term_evaluation_state.md")
-TRACE_REL = Path("runtime/stage12_long_term_evaluation_trace.jsonl")
+from xinyu_stage12_long_term_evaluation_store import REPORT_REL
+from xinyu_stage12_long_term_evaluation_store import STATE_REL
+from xinyu_stage12_long_term_evaluation_store import TRACE_REL
+from xinyu_stage12_long_term_evaluation_store import append_stage12_long_term_evaluation_trace_event
+from xinyu_stage12_long_term_evaluation_store import write_stage12_long_term_evaluation_report_text
+from xinyu_stage12_long_term_evaluation_store import write_stage12_long_term_evaluation_state_text
+from xinyu_state_io import read_text
 
 V1_CANARY_STATE_REL = Path("memory/context/v1_canary_readiness_state.md")
 PRIVATE_REPLY_SELFTEST_STATE_REL = Path("runtime/private_reply_selftest_state.json")
@@ -661,12 +662,11 @@ def write_stage12_long_term_evaluation_report(
     output: Path | None = None,
 ) -> Path:
     root = Path(root).resolve()
-    path = output if output is not None else root / REPORT_REL
-    if not path.is_absolute():
-        path = root / path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_stage12_long_term_evaluation(report), encoding="utf-8")
-    return path
+    return write_stage12_long_term_evaluation_report_text(
+        root,
+        render_stage12_long_term_evaluation(report),
+        output=output,
+    )
 
 
 def write_stage12_long_term_evaluation_state(
@@ -676,8 +676,6 @@ def write_stage12_long_term_evaluation_state(
     report_path: Path | None = None,
 ) -> Path:
     root = Path(root).resolve()
-    path = root / STATE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     model = report.get("model") if isinstance(report.get("model"), dict) else {}
     gate_proof = report.get("gate_proof") if isinstance(report.get("gate_proof"), dict) else {}
     privacy = report.get("privacy") if isinstance(report.get("privacy"), dict) else {}
@@ -765,14 +763,11 @@ tags: [autonomy, long-term, canary, evaluation, stage12]
 - consciousness_claim: {_bool_text(privacy.get('consciousness_claim', False))}
 - report_path: {target_report.as_posix()}
 """
-    write_text_atomic(path, text)
-    return path
+    return write_stage12_long_term_evaluation_state_text(root, text)
 
 
 def append_stage12_long_term_evaluation_trace(root: Path | str, report: dict[str, Any]) -> Path:
     root = Path(root).resolve()
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     model = report.get("model") if isinstance(report.get("model"), dict) else {}
     event = {
         "event_id": "stage12-long-term-" + datetime.now().astimezone().strftime("%Y%m%dT%H%M%S"),
@@ -791,9 +786,7 @@ def append_stage12_long_term_evaluation_trace(root: Path | str, report: dict[str
         "qq_message_enqueued": False,
         "consciousness_claim": False,
     }
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
-    return path
+    return append_stage12_long_term_evaluation_trace_event(root, event)
 
 
 def _reason(status: str) -> str:

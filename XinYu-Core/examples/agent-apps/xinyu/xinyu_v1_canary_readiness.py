@@ -1,20 +1,24 @@
 from __future__ import annotations
 
-import json
 import os
 import re
-import time
-from collections import Counter, deque
+from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from xinyu_qq_outbox import enqueue_qq_outbox_message
+from xinyu_v1_canary_readiness_store import OWNER_CONFIG_REL
+from xinyu_v1_canary_readiness_store import STATE_REL
+from xinyu_v1_canary_readiness_store import TRACE_REL
+from xinyu_v1_canary_readiness_store import append_v1_canary_trace_event
+from xinyu_v1_canary_readiness_store import read_v1_canary_text
+from xinyu_v1_canary_readiness_store import read_v1_owner_config
+from xinyu_v1_canary_readiness_store import read_v1_shadow_observation_tail
+from xinyu_v1_canary_readiness_store import v1_owner_config_path
+from xinyu_v1_canary_readiness_store import write_v1_canary_text
 
-
-STATE_REL = Path("memory/context/v1_canary_readiness_state.md")
-TRACE_REL = Path("runtime/v1_shadow_trace.jsonl")
 
 DEFAULT_MIN_SHADOW_TURNS = 100
 DEFAULT_MAX_ERROR_RATE = 0.02
@@ -366,45 +370,16 @@ def _notes_for_state(state: dict[str, Any]) -> list[str]:
 
 
 def _read_shadow_observation_tail(path: Path, limit: int) -> tuple[list[dict[str, Any]], int]:
-    rows: deque[dict[str, Any]] = deque(maxlen=max(1, limit))
-    total = 0
-    try:
-        with path.open("r", encoding="utf-8-sig", errors="replace") as handle:
-            for line in handle:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    data = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if not isinstance(data, dict) or data.get("event_kind") != "v1_shadow_observation":
-                    continue
-                total += 1
-                rows.append(data)
-    except OSError:
-        return [], 0
-    return list(rows), total
+    return read_v1_shadow_observation_tail(path, limit)
 
 
 def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
     clean = _clean_json_value(row)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(clean, ensure_ascii=False, sort_keys=True) + "\n")
+    append_v1_canary_trace_event(path, clean)
 
 
 def _atomic_write_text(path: Path, text: str) -> None:
-    tmp = path.with_name(f".{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        tmp.write_text(_scrub(text).rstrip() + "\n", encoding="utf-8")
-        os.replace(tmp, path)
-    finally:
-        try:
-            tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
+    write_v1_canary_text(path, _scrub(text))
 
 
 def _clean_json_value(value: Any) -> Any:
@@ -421,9 +396,8 @@ def _clean_json_value(value: Any) -> Any:
 
 def _read_state_fields(path: Path) -> dict[str, str]:
     fields: dict[str, str] = {}
-    try:
-        text = path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
+    text = read_v1_canary_text(path)
+    if not text:
         return fields
     for line in text.splitlines():
         match = _FIELD_RE.match(line)
@@ -442,12 +416,11 @@ def _owner_user_id(root: Path) -> tuple[str, list[str]]:
             if text and text.lower() != "none":
                 return text, []
 
-    config_path = root / "xinyu_qq_gateway.config.json"
-    try:
-        raw = json.loads(config_path.read_text(encoding="utf-8-sig"))
-    except FileNotFoundError:
+    config_path = v1_owner_config_path(root)
+    status, raw = read_v1_owner_config(config_path)
+    if status == "not_found":
         return "", ["owner_config_not_found"]
-    except Exception:
+    if status != "ok":
         return "", ["owner_config_unreadable"]
     if not isinstance(raw, dict):
         return "", ["owner_config_invalid"]

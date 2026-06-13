@@ -8,8 +8,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from state_service import append_jsonl, atomic_write_json, atomic_write_text
 from xinyu_codex_delegate import preview_codex_delegate_paths, run_codex_delegate
+from xinyu_self_action_patch_executor_store import append_self_action_patch_executor_trace
+from xinyu_self_action_patch_executor_store import read_self_action_patch_executor_json
+from xinyu_self_action_patch_executor_store import read_self_action_patch_executor_text
+from xinyu_self_action_patch_executor_store import write_self_action_patch_executor_json
+from xinyu_self_action_patch_executor_store import write_self_action_patch_executor_text
 from xinyu_self_action_gateway import APPROVAL_HANDOFF_REL
 from xinyu_self_code_approval import mark_self_code_execution_scheduled
 from xinyu_self_code_watchdog import create_self_code_snapshot
@@ -283,8 +287,8 @@ def _write_patch_task(root: Path, task: dict[str, Any]) -> dict[str, str]:
     task_id = _safe_token(task.get("task_id"), default="selfaction-patch")
     json_path = root / TASK_DIR_REL / f"{task_id}.json"
     md_path = root / TASK_MD_REL
-    atomic_write_json(json_path, task)
-    atomic_write_text(root / TASK_MD_REL, _render_task_markdown(task))
+    write_self_action_patch_executor_json(json_path, task)
+    write_self_action_patch_executor_text(root / TASK_MD_REL, _render_task_markdown(task))
     return {
         "json": str(json_path.relative_to(root)).replace("\\", "/"),
         "markdown": str(md_path.relative_to(root)).replace("\\", "/"),
@@ -415,9 +419,12 @@ def _persist_result(root: Path, result: dict[str, Any]) -> None:
         "last_error": _safe_str(result.get("reason")),
         "history": [*history, _history_record(result)][-50:],
     }
-    atomic_write_json(root / STATE_JSON_REL, state)
-    atomic_write_text(root / STATE_MD_REL, _render_state_markdown(state, result))
-    append_jsonl(root / TRACE_REL, {"event_kind": "self_action_patch_executor_run", **_history_record(result)})
+    write_self_action_patch_executor_json(root / STATE_JSON_REL, state)
+    write_self_action_patch_executor_text(root / STATE_MD_REL, _render_state_markdown(state, result))
+    append_self_action_patch_executor_trace(
+        root / TRACE_REL,
+        {"event_kind": "self_action_patch_executor_run", **_history_record(result)},
+    )
 
 
 def _render_state_markdown(state: dict[str, Any], result: dict[str, Any]) -> str:
@@ -513,18 +520,11 @@ def _markdown_fields(text: str) -> dict[str, str]:
 
 
 def _read_json(path: Path, *, default: Any) -> Any:
-    try:
-        return json.loads(path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
-        return default
+    return read_self_action_patch_executor_json(path, default=default)
 
 
 def _read_text(path: Path, *, limit: int) -> str:
-    try:
-        text = path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
-        return ""
-    return text if len(text) <= limit else text[-limit:]
+    return read_self_action_patch_executor_text(path, limit=limit)
 
 
 def _hash_json(value: Any, *, length: int) -> str:

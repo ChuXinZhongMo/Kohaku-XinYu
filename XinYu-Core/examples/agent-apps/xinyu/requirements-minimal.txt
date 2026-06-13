@@ -11,3 +11,4 @@ kohakuvault>=0.1
 websockets>=12.0
 pypdf>=6.0
 PyMuPDF>=1.27
+markitdown[pdf,docx,pptx,xlsx,xls,outlook]>=0.1.6

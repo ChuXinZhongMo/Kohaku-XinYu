@@ -11,11 +11,16 @@ from typing import Any
 from xinyu_dialogue_archive import list_memory_candidates
 from xinyu_feedback_consumption_diagnostics import build_feedback_consumption_diagnostics
 from xinyu_memory_candidate_analysis import candidate_claim_metadata_from_row, candidate_review_context
+from xinyu_memory_health_report_store import REPORT_REL
+from xinyu_memory_health_report_store import STAGE8_DUPLICATE_CONSOLIDATION_STATE_REL
+from xinyu_memory_health_report_store import STAGE8_LEARNING_TRIAL_VALIDATION_STATE_REL
+from xinyu_memory_health_report_store import STAGE8_STATE_REL
+from xinyu_memory_health_report_store import memory_health_report_path
+from xinyu_memory_health_report_store import read_memory_health_source_text
+from xinyu_memory_health_report_store import read_memory_health_text
+from xinyu_memory_health_report_store import write_memory_health_report_text
+from xinyu_memory_health_report_store import write_stage8_memory_governance_state_text
 
-REPORT_REL = Path("worklog") / "xinyu-memory-health-latest.md"
-STAGE8_STATE_REL = Path("memory/context/stage8_memory_governance_state.md")
-STAGE8_DUPLICATE_CONSOLIDATION_STATE_REL = Path("memory/context/stage8_duplicate_consolidation_state.md")
-STAGE8_LEARNING_TRIAL_VALIDATION_STATE_REL = Path("memory/context/stage8_learning_trial_validation_state.md")
 CANDIDATE_STATUSES = (
     "pending",
     "owner_review_required",
@@ -92,11 +97,7 @@ def _one_line(value: Any, *, limit: int = 180, default: str = "none") -> str:
 
 
 def _read_text(path: Path, *, limit: int = 20000) -> str:
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError:
-        return ""
-    return text[:limit]
+    return read_memory_health_text(path, limit=limit)
 
 
 def _field(text: str, name: str, default: str = "none") -> str:
@@ -129,7 +130,7 @@ def _duplicate_consolidation_summary(root: Path, *, duplicate_cluster_count: int
             "duplicate_consolidation_conflict_cluster_count": 0,
             "duplicate_consolidation_ready_cluster_count": 0,
         }
-    state = _read_text(root / STAGE8_DUPLICATE_CONSOLIDATION_STATE_REL)
+    state = read_memory_health_source_text(root, "stage8_duplicate_consolidation_state")
     if not state.strip():
         return {
             "duplicate_consolidation_status": "missing",
@@ -164,7 +165,7 @@ def _learning_trial_validation_summary(root: Path, personality: dict[str, Any]) 
             ),
             "learning_trial_validation_packet_path": "none",
         }
-    state = _read_text(root / STAGE8_LEARNING_TRIAL_VALIDATION_STATE_REL)
+    state = read_memory_health_source_text(root, "stage8_learning_trial_validation_state")
     if not state.strip():
         return {
             "learning_trial_validation_status": "missing",
@@ -347,11 +348,11 @@ def _learning_trial_gate_summary(learning: str, self_review: str) -> dict[str, A
 
 
 def _personality_summary(root: Path) -> dict[str, Any]:
-    evolution = _read_text(root / "memory/self/personality_evolution_state.md")
-    self_review = _read_text(root / "memory/self/personality_self_review_state.md")
-    change = _read_text(root / "memory/self/personality_change_state.md")
-    learning = _read_text(root / "memory/self/learning_closed_loop_state.md")
-    growth = _read_text(root / "memory/reflection/growth_log.md", limit=80000)
+    evolution = read_memory_health_source_text(root, "personality_evolution")
+    self_review = read_memory_health_source_text(root, "personality_self_review")
+    change = read_memory_health_source_text(root, "personality_change")
+    learning = read_memory_health_source_text(root, "learning_closed_loop")
+    growth = read_memory_health_source_text(root, "growth_log", limit=80000)
     combined = "\n".join([evolution, self_review, change])
     summary: dict[str, Any] = {
         "stable_profile_write": "blocked_review_only_not_auto_apply",
@@ -681,19 +682,13 @@ def render_memory_health_report(report: dict[str, Any]) -> str:
 
 
 def write_memory_health_report(root: Path, report: dict[str, Any], *, output: Path | None = None) -> Path:
-    path = output if output is not None else root / REPORT_REL
-    if not path.is_absolute():
-        path = root / path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_memory_health_report(report), encoding="utf-8")
-    return path
+    return write_memory_health_report_text(root, render_memory_health_report(report), output=output)
 
 
 def write_stage8_memory_governance_state(root: Path, report: dict[str, Any], *, report_path: Path | None = None) -> Path:
     root = root.resolve()
     stage8 = report.get("stage8_memory_governance") if isinstance(report.get("stage8_memory_governance"), dict) else {}
-    path = root / STAGE8_STATE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
+    target_report = report_path or memory_health_report_path(root)
     text = f"""---
 title: Stage 8 Memory Governance State
 memory_type: stage8_memory_governance_state
@@ -743,10 +738,9 @@ tags: [autonomy, memory, governance, stage8]
 - visible_reply_text_in_state: false
 - stable_memory_write_without_owner_apply: false
 - consciousness_claim: false
-- report_path: {(report_path or (root / REPORT_REL)).as_posix()}
+- report_path: {target_report.as_posix()}
 """
-    path.write_text(text, encoding="utf-8")
-    return path
+    return write_stage8_memory_governance_state_text(root, text)
 
 
 def main() -> int:

@@ -9,22 +9,21 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_action_feedback_coverage import build_action_feedback_coverage_report
-from xinyu_state_io import read_text, write_text_atomic
-
-
-STATE_REL = Path("memory/context/perception_event_layer_state.md")
-TRACE_REL = Path("runtime/perception_event_layer_trace.jsonl")
-REPORT_REL = Path("worklog/xinyu-perception-event-layer-latest.md")
-
-QQ_TRACE_REL = Path("runtime/qq_inbound_trace.jsonl")
-QQ_ACK_REL = Path("runtime/gateway_ack_spool.jsonl")
-PROACTIVE_REQUEST_STATE_REL = Path("memory/context/proactive_request_state.md")
-OCR_TRACE_REL = Path("runtime/learning_ocr_trace.jsonl")
-VOICE_TRACE_RELS = (
-    Path("runtime/voice_input_trace.jsonl"),
-    Path("runtime/speech_transcript_trace.jsonl"),
-    Path("runtime/audio_transcript_trace.jsonl"),
-)
+from xinyu_perception_event_layer_store import OCR_TRACE_REL
+from xinyu_perception_event_layer_store import PROACTIVE_REQUEST_STATE_REL
+from xinyu_perception_event_layer_store import QQ_ACK_REL
+from xinyu_perception_event_layer_store import QQ_TRACE_REL
+from xinyu_perception_event_layer_store import REPORT_REL
+from xinyu_perception_event_layer_store import STATE_REL
+from xinyu_perception_event_layer_store import TRACE_REL
+from xinyu_perception_event_layer_store import VOICE_TRACE_RELS
+from xinyu_perception_event_layer_store import append_perception_event_layer_trace_event
+from xinyu_perception_event_layer_store import perception_event_layer_state_path
+from xinyu_perception_event_layer_store import read_perception_event_layer_jsonl_tail
+from xinyu_perception_event_layer_store import read_perception_event_layer_proactive_request_state_text
+from xinyu_perception_event_layer_store import read_perception_event_layer_state_text
+from xinyu_perception_event_layer_store import write_perception_event_layer_report_text
+from xinyu_perception_event_layer_store import write_perception_event_layer_state_text
 
 NONE_VALUES = {"", "missing", "none", "unknown", "null"}
 SECRET_PATTERNS: tuple[re.Pattern[str], ...] = (
@@ -146,18 +145,18 @@ def write_perception_event_layer_report(
     output: Path | None = None,
 ) -> dict[str, str]:
     root = Path(root).resolve()
-    report_path = output if output is not None else root / REPORT_REL
-    if not report_path.is_absolute():
-        report_path = root / report_path
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(render_perception_event_layer_report(report), encoding="utf-8")
+    report_path = write_perception_event_layer_report_text(
+        root,
+        render_perception_event_layer_report(report),
+        output=output,
+    )
     _write_state(root, report, report_path=report_path)
     _append_trace(root, report)
-    return {"report_path": str(report_path), "state_path": str(root / STATE_REL)}
+    return {"report_path": str(report_path), "state_path": str(perception_event_layer_state_path(root))}
 
 
 def read_perception_event_layer_state(root: Path) -> dict[str, str]:
-    text = read_text(Path(root) / STATE_REL)
+    text = read_perception_event_layer_state_text(root)
     if not text:
         return {"status": "missing", "event_count": "0", "source_count": "0"}
     return _parse_fields(text)
@@ -240,7 +239,7 @@ def _qq_events(root: Path, *, generated_at: str) -> list[dict[str, Any]]:
 
 
 def _desktop_events(root: Path, *, generated_at: str) -> list[dict[str, Any]]:
-    fields = _parse_fields(read_text(root / PROACTIVE_REQUEST_STATE_REL))
+    fields = _parse_fields(read_perception_event_layer_proactive_request_state_text(root))
     status = fields.get("status", "missing")
     answer_state = fields.get("request_answer_state", "missing")
     last_ack = fields.get("last_ack_status", "missing")
@@ -617,7 +616,7 @@ tags: [autonomy, perception, input, event-layer]
 - private_text_in_report: false
 - stable_memory_write: blocked
 """
-    write_text_atomic(root / STATE_REL, text)
+    write_perception_event_layer_state_text(root, text)
 
 
 def _append_trace(root: Path, report: dict[str, Any]) -> None:
@@ -643,10 +642,7 @@ def _append_trace(root: Path, report: dict[str, Any]) -> None:
         "raw_private_body_retained": False,
         "visible_reply_text_retained": False,
     }
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as fh:
-        fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+    append_perception_event_layer_trace_event(root, row)
 
 
 def _public_event(event: dict[str, Any]) -> dict[str, Any]:
@@ -692,21 +688,7 @@ def _latest_event(events: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _read_jsonl_tail(path: Path, max_lines: int = 500) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-    try:
-        lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
-    except OSError:
-        return []
-    rows: list[dict[str, Any]] = []
-    for line in lines[-max(1, int(max_lines)) :]:
-        try:
-            data = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(data, dict):
-            rows.append(data)
-    return rows
+    return read_perception_event_layer_jsonl_tail(path, max_lines=max_lines)
 
 
 def _ack_records(path: Path) -> list[dict[str, Any]]:

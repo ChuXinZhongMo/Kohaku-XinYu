@@ -6,7 +6,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from state_service import append_jsonl, atomic_write_json, read_json
+from xinyu_turn_route_trace_store import append_turn_route_trace
+from xinyu_turn_route_trace_store import read_turn_route_state
+from xinyu_turn_route_trace_store import read_turn_route_trace_text
+from xinyu_turn_route_trace_store import write_turn_route_state
 
 
 TRACE_REL = Path("runtime/turn_route_trace.jsonl")
@@ -76,15 +79,15 @@ def record_turn_route_stage(
         }
         if elapsed_ms is not None:
             row["elapsed_ms"] = max(0, _safe_int(elapsed_ms))
-        append_jsonl(root / TRACE_REL, row)
-        atomic_write_json(root / STATE_REL, row)
+        append_turn_route_trace(root / TRACE_REL, row)
+        write_turn_route_state(root / STATE_REL, row)
         return {"ok": True, "notes": ["turn_route_trace_recorded"]}
     except Exception as exc:
         return {"ok": False, "notes": [f"turn_route_trace_error:{type(exc).__name__}"]}
 
 
 def read_turn_route_summary(root: Path) -> dict[str, Any]:
-    state = read_json(root / STATE_REL, default={})
+    state = read_turn_route_state(root / STATE_REL)
     if not isinstance(state, dict):
         state = {}
     last_timeout = _read_last_timeout(root / TRACE_REL)
@@ -108,10 +111,10 @@ def read_turn_route_summary(root: Path) -> dict[str, Any]:
 
 
 def _read_last_timeout(path: Path) -> dict[str, Any]:
-    try:
-        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-    except OSError:
+    text = read_turn_route_trace_text(path)
+    if not text:
         return {}
+    lines = text.splitlines()
     for line in reversed(lines[-500:]):
         try:
             row = json.loads(line)

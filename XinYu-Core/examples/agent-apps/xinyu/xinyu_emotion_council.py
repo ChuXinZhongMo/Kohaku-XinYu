@@ -14,6 +14,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
+from xinyu_llm_api import (
+    anthropic_headers,
+    anthropic_messages_endpoint,
+    extract_anthropic_text,
+    extract_openai_text,
+    is_anthropic_messages_provider,
+    openai_headers,
+)
 from xinyu_neuro_memory_rules import rule_ids_for_flow
 from xinyu_scene_frame import build_scene_frame
 
@@ -26,6 +34,7 @@ SCHEMA_VERSION = "emotion_council_shadow_v1"
 ACTIVE_THRESHOLD = 0.35
 MAX_ACTIVE_LENSES = 5
 MODEL_ENABLED_ENV = "XINYU_EMOTION_COUNCIL_MODEL_ENABLED"
+MODEL_PROVIDER_ENV = "XINYU_EMOTION_COUNCIL_PROVIDER"
 MODEL_BASE_URL_ENV = "XINYU_EMOTION_COUNCIL_BASE_URL"
 MODEL_NAME_ENV = "XINYU_EMOTION_COUNCIL_MODEL"
 MODEL_API_KEY_ENV = "XINYU_EMOTION_COUNCIL_API_KEY"
@@ -71,6 +80,7 @@ class ModelRuntimeConfig:
     lens_timeout_ms: int
     total_timeout_ms: int
     max_workers: int
+    provider: str = ""
 
 
 LENSES: tuple[LensConfig, ...] = (
@@ -525,35 +535,62 @@ def _call_lens_model(config: LensConfig, context: dict[str, Any], model_config: 
             "activation_delta must be between -0.12 and 0.18. confidence must be 0..1.",
         ]
     )
+    user_content = json.dumps(context, ensure_ascii=False, sort_keys=True)
+    if is_anthropic_messages_provider(model_config.provider):
+        payload = {
+            "model": model_config.model,
+            "temperature": 0.2,
+            "max_tokens": 160,
+            "system": system,
+            "messages": [{"role": "user", "content": user_content}],
+        }
+        data = _post_lens_json(
+            anthropic_messages_endpoint(model_config.base_url),
+            payload,
+            anthropic_headers(model_config.api_key),
+            model_config.lens_timeout_ms / 1000.0,
+        )
+        return _one_line(extract_anthropic_text(data), limit=1600)
+
     payload = {
         "model": model_config.model,
         "temperature": 0.2,
         "max_tokens": 160,
         "messages": [
             {"role": "system", "content": system},
-            {"role": "user", "content": json.dumps(context, ensure_ascii=False, sort_keys=True)},
+            {"role": "user", "content": user_content},
         ],
     }
-    headers = {"Content-Type": "application/json; charset=utf-8", "Accept": "application/json"}
-    if model_config.api_key:
-        headers["Authorization"] = f"Bearer {model_config.api_key}"
-    request = urllib.request.Request(
+    data = _post_lens_json(
         model_config.base_url.rstrip("/") + "/chat/completions",
+        payload,
+        openai_headers(model_config.api_key),
+        model_config.lens_timeout_ms / 1000.0,
+    )
+    return _one_line(extract_openai_text(data), limit=1600)
+
+
+def _post_lens_json(
+    url: str,
+    payload: dict[str, Any],
+    headers: dict[str, str],
+    timeout_seconds: float,
+) -> dict[str, Any]:
+    request = urllib.request.Request(
+        url,
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
         headers=headers,
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=model_config.lens_timeout_ms / 1000.0) as response:
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
             body = response.read().decode("utf-8", errors="replace")
     except (urllib.error.URLError, TimeoutError) as exc:
         raise RuntimeError(f"lens model request failed: {type(exc).__name__}") from exc
     data = json.loads(body)
-    choices = data.get("choices") if isinstance(data.get("choices"), list) else []
-    if choices and isinstance(choices[0], dict):
-        message = choices[0].get("message") if isinstance(choices[0].get("message"), dict) else {}
-        return _one_line(message.get("content") or choices[0].get("text"), limit=1600)
-    return _one_line(data.get("text") or data.get("reply"), limit=1600)
+    if not isinstance(data, dict):
+        raise RuntimeError("lens model returned non-object JSON")
+    return data
 
 
 def _parse_lens_review(config: LensConfig, raw: dict[str, Any] | str) -> dict[str, Any]:
@@ -653,8 +690,10 @@ def _model_runtime_config(root: Path, *, lens_runner: LensRunner | None) -> Mode
             lens_timeout_ms=lens_timeout_ms,
             total_timeout_ms=total_timeout_ms,
             max_workers=max_workers,
+            provider="injected",
         )
     _load_local_env(root)
+    provider = _one_line(os.environ.get(MODEL_PROVIDER_ENV) or os.environ.get("XINYU_LLM_PROVIDER"), limit=80)
     base_url = _one_line(os.environ.get(MODEL_BASE_URL_ENV) or os.environ.get("XINYU_BASE_URL"), limit=500)
     model = _one_line(os.environ.get(MODEL_NAME_ENV) or os.environ.get("XINYU_LLM_MODEL"), limit=120)
     if not base_url or not model:
@@ -670,6 +709,7 @@ def _model_runtime_config(root: Path, *, lens_runner: LensRunner | None) -> Mode
         lens_timeout_ms=lens_timeout_ms,
         total_timeout_ms=total_timeout_ms,
         max_workers=max_workers,
+        provider=provider,
     )
 
 

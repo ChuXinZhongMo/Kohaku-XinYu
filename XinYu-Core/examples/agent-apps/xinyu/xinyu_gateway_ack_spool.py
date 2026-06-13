@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import contextlib
-import json
-import os
-import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_gateway_ack_spool_store import append_gateway_ack_spool_event
+from xinyu_gateway_ack_spool_store import gateway_ack_spool_file_size
+from xinyu_gateway_ack_spool_store import read_gateway_ack_spool_events
+from xinyu_gateway_ack_spool_store import write_gateway_ack_spool_events
 from xinyu_visible_text_sanitizer import sanitize_visible_text
 
 
@@ -127,48 +128,24 @@ class SentAckSpool:
 
     def compact(self) -> dict[str, Any]:
         pending, _acked = self._fold_events()
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        fd, tmp_name = tempfile.mkstemp(prefix=f".{self.path.name}.", suffix=".tmp", dir=str(self.path.parent))
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
-                for payload in pending.values():
-                    event = {
-                        "event": "pending",
-                        "key": ack_unique_key(payload),
-                        "created_at": _safe_str(payload.get("spooled_at") or payload.get("sent_at") or _now_iso()),
-                        "attempts": _safe_int(payload.get("ack_attempts")),
-                        "payload": payload,
-                    }
-                    fh.write(json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n")
-            os.replace(tmp_name, self.path)
-        finally:
-            if os.path.exists(tmp_name):
-                with contextlib.suppress(OSError):
-                    os.unlink(tmp_name)
+        events = [
+            {
+                "event": "pending",
+                "key": ack_unique_key(payload),
+                "created_at": _safe_str(payload.get("spooled_at") or payload.get("sent_at") or _now_iso()),
+                "attempts": _safe_int(payload.get("ack_attempts")),
+                "payload": payload,
+            }
+            for payload in pending.values()
+        ]
+        write_gateway_ack_spool_events(self.path, events)
         return {"compacted": True, "pending_count": len(pending)}
 
     def _append_event(self, event: dict[str, Any]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self.path.open("a", encoding="utf-8", newline="\n") as fh:
-            fh.write(json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n")
+        append_gateway_ack_spool_event(self.path, event)
 
     def _iter_events(self) -> tuple[list[dict[str, Any]], int]:
-        try:
-            lines = self.path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
-        except OSError:
-            return [], 0
-        events: list[dict[str, Any]] = []
-        for line in lines:
-            stripped = line.strip()
-            if not stripped:
-                continue
-            try:
-                data = json.loads(stripped)
-            except json.JSONDecodeError:
-                continue
-            if isinstance(data, dict):
-                events.append(data)
-        return events, len(lines)
+        return read_gateway_ack_spool_events(self.path)
 
     def _fold_events(self) -> tuple[dict[str, dict[str, Any]], set[str]]:
         events, _line_count = self._iter_events()
@@ -205,9 +182,8 @@ class SentAckSpool:
         return pending, acked
 
     def _compact_if_needed(self) -> None:
-        try:
-            size = self.path.stat().st_size
-        except OSError:
+        size = gateway_ack_spool_file_size(self.path)
+        if size is None:
             return
         _events, line_count = self._iter_events()
         if line_count > self.max_entries * 3 or size > self.max_bytes:

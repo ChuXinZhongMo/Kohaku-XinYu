@@ -24,6 +24,18 @@ def text_message_action(target: Any, text: str) -> tuple[str, dict[str, Any]]:
     return action, params
 
 
+def record_message_action(target: Any, record_file: str) -> tuple[str, dict[str, Any]]:
+    """Build a OneBot voice (record) send action. `record_file` may be a path,
+    a URL, or a `base64://<data>` payload — NapCat transcodes to silk."""
+    action = "send_group_msg" if target.message_kind == "group" else "send_private_msg"
+    params: dict[str, Any] = {
+        "message": [{"type": "record", "data": {"file": record_file}}],
+        "auto_escape": False,
+        **_target_params(target),
+    }
+    return action, params
+
+
 def image_message_action(target: Any, image_file: str) -> tuple[str, dict[str, Any]]:
     action = "send_group_msg" if target.message_kind == "group" else "send_private_msg"
     params: dict[str, Any] = {

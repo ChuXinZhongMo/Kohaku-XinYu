@@ -81,6 +81,7 @@ class SelfChoiceStore:
             recovered = False
             recovered_reason = ""
             state: dict[str, Any] | None = None
+            flush_after_load = False
             try:
                 with _FileLock(self.lock_path):
                     if not self.state_path.exists():
@@ -113,7 +114,9 @@ class SelfChoiceStore:
                             },
                         )
                     if self._dirty:
-                        self._flush_locked(now_dt=now_dt)
+                        flush_after_load = True
+                if flush_after_load:
+                    self._flush_locked(now_dt=now_dt)
             except Exception as exc:
                 self._state = _default_state(now_dt, recovery=True)
                 _add_cue(self._state, "recovered_from_corrupt_state", snapshots=2)

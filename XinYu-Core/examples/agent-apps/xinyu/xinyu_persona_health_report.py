@@ -7,15 +7,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-REPORT_REL = Path("worklog") / "xinyu-persona-health-latest.md"
-DIMENSIONS_REL = Path("memory/self/personality_dimensions.md")
-EVAL_CASES_REL = Path("memory/self/persona_eval_cases.md")
-PROFILE_REL = Path("memory/self/personality_profile.md")
-EVOLUTION_REL = Path("memory/self/personality_evolution_state.md")
-SELF_REVIEW_REL = Path("memory/self/personality_self_review_state.md")
-TRIAL_FEEDBACK_REL = Path("memory/self/personality_trial_feedback.md")
-GROWTH_LOG_REL = Path("memory/reflection/growth_log.md")
-REFLECTION_LOG_REL = Path("memory/reflection/reflection_log.md")
+from xinyu_persona_health_report_store import DIMENSIONS_REL
+from xinyu_persona_health_report_store import EVAL_CASES_REL
+from xinyu_persona_health_report_store import EVOLUTION_REL
+from xinyu_persona_health_report_store import GROWTH_LOG_REL
+from xinyu_persona_health_report_store import PROFILE_REL
+from xinyu_persona_health_report_store import REFLECTION_LOG_REL
+from xinyu_persona_health_report_store import REPORT_REL
+from xinyu_persona_health_report_store import SELF_REVIEW_REL
+from xinyu_persona_health_report_store import TRIAL_FEEDBACK_REL
+from xinyu_persona_health_report_store import read_persona_health_source_text
+from xinyu_persona_health_report_store import read_persona_health_text
+from xinyu_persona_health_report_store import write_persona_health_report_text
 
 BLOCKED_STABLE_WRITE = "review_only_not_auto_apply"
 BLOCKED_OWNER_WRITE = "blocked_without_explicit_owner_apply"
@@ -26,11 +29,7 @@ def _now_iso() -> str:
 
 
 def _read_text(path: Path, *, limit: int = 80000) -> str:
-    try:
-        text = path.read_text(encoding="utf-8")
-    except OSError:
-        return ""
-    return text[:limit]
+    return read_persona_health_text(path, limit=limit)
 
 
 def _extract_dash_value(text: str, key: str, default: str = "unknown") -> str:
@@ -59,14 +58,14 @@ def _case_names(text: str) -> list[str]:
 
 def build_persona_health_report(root: Path) -> dict[str, Any]:
     root = root.resolve()
-    dimensions = _read_text(root / DIMENSIONS_REL)
-    eval_cases = _read_text(root / EVAL_CASES_REL)
-    profile = _read_text(root / PROFILE_REL)
-    evolution = _read_text(root / EVOLUTION_REL)
-    self_review = _read_text(root / SELF_REVIEW_REL)
-    trial_feedback = _read_text(root / TRIAL_FEEDBACK_REL)
-    growth = _read_text(root / GROWTH_LOG_REL)
-    reflection = _read_text(root / REFLECTION_LOG_REL)
+    dimensions = read_persona_health_source_text(root, "dimensions")
+    eval_cases = read_persona_health_source_text(root, "eval_cases")
+    profile = read_persona_health_source_text(root, "profile")
+    evolution = read_persona_health_source_text(root, "evolution")
+    self_review = read_persona_health_source_text(root, "self_review")
+    trial_feedback = read_persona_health_source_text(root, "trial_feedback")
+    growth = read_persona_health_source_text(root, "growth_log")
+    reflection = read_persona_health_source_text(root, "reflection_log")
     combined_state = "\n".join([evolution, self_review, trial_feedback])
 
     dimension_names = _dimension_names(dimensions)
@@ -260,10 +259,7 @@ def render_persona_health_report(report: dict[str, Any], proposals: list[dict[st
 
 
 def write_persona_health_report(root: Path, report: dict[str, Any], proposals: list[dict[str, Any]]) -> Path:
-    path = root / REPORT_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_persona_health_report(report, proposals), encoding="utf-8")
-    return path
+    return write_persona_health_report_text(root, render_persona_health_report(report, proposals))
 
 
 def main(argv: list[str] | None = None) -> int:

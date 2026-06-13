@@ -66,6 +66,31 @@ def test_qq_outbox_ack_updates_proactive_request_without_copying_message_body(tm
         - adapter_error: none
         """,
     )
+    _write(
+        tmp_path / "memory/context/proactive_qq_dispatch_state.md",
+        f"""
+        ---
+        title: Proactive QQ Dispatch State
+        updated_at: 2026-05-27T17:10:00+08:00
+        ---
+
+        # Proactive QQ Dispatch State
+
+        ## Last Claim
+        - last_claimed_at: 2026-05-27T17:10:00+08:00
+        - last_claim_id: desktop-claim-outbox-ack
+        - last_claim_status: queued
+        - proactive_request_id: proreq-outbox-ack
+        - min_interval_seconds: 0
+        - last_claimed_message: safe candidate preview
+
+        ## Last Ack
+        - last_acked_at: 2026-05-27T17:10:00+08:00
+        - last_ack_status: queued
+        - adapter_message_id: {message_id}
+        - adapter_error: none
+        """,
+    )
 
     claim = claim_next_qq_outbox_message(tmp_path, {"claim_id": "claim-outbox-1"})
     ack = ack_qq_outbox_message(
@@ -79,13 +104,18 @@ def test_qq_outbox_ack_updates_proactive_request_without_copying_message_body(tm
     )
 
     state = (tmp_path / "memory/context/proactive_request_state.md").read_text(encoding="utf-8")
+    dispatch = (tmp_path / "memory/context/proactive_qq_dispatch_state.md").read_text(encoding="utf-8")
     assert ack["ack_recorded"] is True
     assert "proactive_request_state_updated" in ack["notes"]
+    assert "proactive_dispatch_state_updated" in ack["notes"]
     assert "- status: sent" in state
     assert "- request_answer_state: sent_waiting_owner_reply" in state
     assert "- last_ack_status: sent" in state
     assert "- last_acked_at:" in state
     assert "- adapter_message_id: adapter-msg-1" in state
+    assert "- last_claim_status: sent" in dispatch
+    assert "- last_ack_status: sent" in dispatch
+    assert "- adapter_message_id: adapter-msg-1" in dispatch
     assert raw_outbox_message not in state
 
 

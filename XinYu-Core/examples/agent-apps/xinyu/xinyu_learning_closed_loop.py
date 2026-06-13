@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from xinyu_learning_closed_loop_store import append_learning_closed_loop_trace
+from xinyu_learning_closed_loop_store import read_learning_closed_loop_text
+from xinyu_learning_closed_loop_store import write_learning_closed_loop_text
 from xinyu_text_variants import readable_markers
 
 
@@ -279,21 +281,15 @@ def _hash(value: str, length: int = 16) -> str:
 
 
 def _read(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
-        return ""
+    return read_learning_closed_loop_text(path)
 
 
 def _write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text.rstrip() + "\n", encoding="utf-8")
+    write_learning_closed_loop_text(path, text)
 
 
 def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+    append_learning_closed_loop_trace(path, row)
 
 
 def _field(text: str, name: str, default: str = "none") -> str:
@@ -617,7 +613,7 @@ tags: [self, learning, replay, habits]
 
 def _ensure_cases_file(root: Path, created_at: str) -> None:
     path = root / CASES_REL
-    if path.exists() and "# Learning Closed Loop Cases" in _read(path):
+    if "# Learning Closed Loop Cases" in _read(path):
         return
     _write(path, _render_cases_header(created_at))
 

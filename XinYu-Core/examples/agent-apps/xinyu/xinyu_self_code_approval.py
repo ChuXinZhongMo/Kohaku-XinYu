@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from xinyu_self_code_approval_store import append_self_code_approval_trace
+from xinyu_self_code_approval_store import read_self_code_approval_text
+from xinyu_self_code_approval_store import write_self_code_approval_text
 
 
 STATE_REL = Path("memory/context/self_code_approval_state.md")
@@ -85,21 +88,15 @@ def _hash(value: str, length: int = 16) -> str:
 
 
 def _read(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
-        return ""
+    return read_self_code_approval_text(path)
 
 
 def _write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text.rstrip() + "\n", encoding="utf-8")
+    write_self_code_approval_text(path, text)
 
 
 def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+    append_self_code_approval_trace(path, row)
 
 
 def _field(text: str, name: str, default: str = "none") -> str:

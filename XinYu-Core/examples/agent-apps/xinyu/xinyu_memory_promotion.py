@@ -10,9 +10,15 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_dialogue_archive import list_memory_candidates, update_memory_candidate_status
+from xinyu_memory_promotion_store import PROMOTION_DRY_RUN_REL
+from xinyu_memory_promotion_store import promotion_dry_run_path
+from xinyu_memory_promotion_store import promotion_path_exists
+from xinyu_memory_promotion_store import promotion_target_path
+from xinyu_memory_promotion_store import read_promotion_text
+from xinyu_memory_promotion_store import write_promotion_dry_run_text
+from xinyu_memory_promotion_store import write_promotion_text
 
 
-PROMOTION_DRY_RUN_REL = Path("runtime/memory_promotion_dry_runs")
 APPLIED_GROWTH_LOG_STATUS = "applied_growth_log"
 GROWTH_LOG_TARGET_MEMORY_LAYER = "memory/reflection/growth_log.md"
 PROMOTION_ELIGIBLE_STATUSES = ("approved",)
@@ -98,7 +104,7 @@ def build_stable_memory_promotion_dry_run(
     generated = generated_at or _now_iso()
     blockers = _promotion_blockers(row, allow_unapproved=allow_unapproved)
     target_rel = _target_rel(row)
-    target_path = root / target_rel if target_rel else root
+    target_path = promotion_target_path(root, target_rel) if target_rel else root
     before = _read_text(target_path) if target_rel else ""
     proposed_entry = _render_proposed_entry(row, generated_at=generated)
     after = _append_entry(before, proposed_entry)
@@ -119,7 +125,7 @@ def build_stable_memory_promotion_dry_run(
         "candidate_type": row.get("candidate_type"),
         "target_memory_layer": row.get("target_memory_layer"),
         "target_path": str(target_path),
-        "target_exists": target_path.exists() if target_rel else False,
+        "target_exists": promotion_path_exists(target_path) if target_rel else False,
         "before_hash": _text_hash(before),
         "after_hash": _text_hash(after),
         "stable_memory_write": "dry_run_only",
@@ -137,11 +143,7 @@ def build_stable_memory_promotion_dry_run(
 
 
 def write_promotion_dry_run(root: Path, result: dict[str, Any]) -> Path:
-    candidate_id = _safe_filename(result.get("candidate_id"), default="unknown")
-    path = root / PROMOTION_DRY_RUN_REL / f"{candidate_id}.md"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_promotion_dry_run(result), encoding="utf-8")
-    return path
+    return write_promotion_dry_run_text(root, result.get("candidate_id"), render_promotion_dry_run(result))
 
 
 def render_promotion_dry_run(result: dict[str, Any]) -> str:
@@ -181,7 +183,7 @@ def list_growth_candidate_promotions(root: Path, *, limit: int = 50) -> dict[str
     pending_apply: list[dict[str, Any]] = []
     applied: list[dict[str, Any]] = []
     owner_review_required: list[dict[str, Any]] = []
-    target_path = root / GROWTH_LOG_TARGET_MEMORY_LAYER
+    target_path = promotion_target_path(root, Path(GROWTH_LOG_TARGET_MEMORY_LAYER))
     seen: set[str] = set()
 
     for row in list_memory_candidates(root, status="owner_review_required", limit=max(clean_limit * 2, 50)):
@@ -253,8 +255,8 @@ def list_growth_candidate_promotions(root: Path, *, limit: int = 50) -> dict[str
                 "reason_preview": _one_line(row.get("reason"), limit=240, default=""),
                 "candidate_text_preview": _one_line(row.get("candidate_text"), limit=500, default=""),
             }
-            preview_path = root / PROMOTION_DRY_RUN_REL / f"{_safe_filename(candidate_id, default='unknown')}.md"
-            if preview_path.exists():
+            preview_path = promotion_dry_run_path(root, candidate_id)
+            if promotion_path_exists(preview_path):
                 item["preview_path"] = str(preview_path)
             pending_apply.append(item)
             if len(pending_apply) >= clean_limit:
@@ -376,8 +378,7 @@ def apply_stable_memory_promotion(
             "actual_before_hash": _text_hash(before),
         }
     after = _append_entry(before, proposed_entry)
-    target_path.parent.mkdir(parents=True, exist_ok=True)
-    target_path.write_text(after, encoding="utf-8")
+    write_promotion_text(target_path, after)
     status_notes = _one_line(f"{review_notes}; applied_at={generated}; stable_personality_write=blocked", limit=1000)
     if not update_memory_candidate_status(
         root,
@@ -408,14 +409,7 @@ def _append_entry(before: str, proposed_entry: str) -> str:
 
 
 def _read_text(path: Path) -> str:
-    if not path.exists():
-        return ""
-    return path.read_text(encoding="utf-8-sig", errors="replace")
-
-
-def _safe_filename(value: Any, *, default: str = "item") -> str:
-    text = re.sub(r"[^A-Za-z0-9_.-]+", "-", _safe_str(value).strip()).strip(".-")
-    return text or default
+    return read_promotion_text(path)
 
 
 def _build_parser() -> argparse.ArgumentParser:

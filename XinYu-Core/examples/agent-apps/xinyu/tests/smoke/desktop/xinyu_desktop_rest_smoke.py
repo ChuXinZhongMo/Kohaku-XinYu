@@ -334,6 +334,17 @@ def main() -> int:
             elif [item.get("candidateId") for item in proactive.get("items", [])] != ["proreq-smoke"]:
                 failures.append("desktop proactive inbox did not return the runtime candidate")
 
+            status, private_desktop_start = _post_json(
+                f"{base_url}/desktop/private-desktop/start",
+                {},
+                token=token,
+            )
+            if status != 403 or private_desktop_start.get("error") != "owner_private_context_required":
+                failures.append(
+                    "desktop private desktop start did not dispatch to the owner-private route: "
+                    f"{status}: {private_desktop_start}"
+                )
+
             status, proactive_ack = _post_json(
                 f"{base_url}/desktop/proactive/ack",
                 {"candidateId": "proreq-smoke", "action": "read_locally"},

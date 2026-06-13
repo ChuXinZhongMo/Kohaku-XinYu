@@ -9,15 +9,16 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from xinyu_state_io import read_text, write_text_atomic
-
-
-STATE_REL = Path("memory/context/proactive_response_diagnostics_state.md")
-TRACE_REL = Path("runtime/proactive_response_diagnostics_trace.jsonl")
-REPORT_REL = Path("worklog/xinyu-proactive-response-diagnostics-latest.md")
-
-PROACTIVE_REQUEST_STATE_REL = Path("memory/context/proactive_request_state.md")
-PROACTIVE_DISPATCH_STATE_REL = Path("memory/context/proactive_qq_dispatch_state.md")
+from xinyu_proactive_response_diagnostics_store import PROACTIVE_DISPATCH_STATE_REL
+from xinyu_proactive_response_diagnostics_store import PROACTIVE_REQUEST_STATE_REL
+from xinyu_proactive_response_diagnostics_store import REPORT_REL
+from xinyu_proactive_response_diagnostics_store import STATE_REL
+from xinyu_proactive_response_diagnostics_store import TRACE_REL
+from xinyu_proactive_response_diagnostics_store import append_proactive_response_diagnostics_trace_event
+from xinyu_proactive_response_diagnostics_store import read_proactive_dispatch_state_text
+from xinyu_proactive_response_diagnostics_store import read_proactive_request_state_text
+from xinyu_proactive_response_diagnostics_store import write_proactive_response_diagnostics_report_text
+from xinyu_proactive_response_diagnostics_store import write_proactive_response_diagnostics_state_text
 
 OWNER_NO_RESPONSE_TIMEOUT_MINUTES = 180
 NONE_VALUES = {"", "missing", "none", "unknown", "null"}
@@ -47,8 +48,8 @@ RESPONSE_SIGNAL_BY_ANSWER_STATE = {
 def build_proactive_response_diagnostics(root: Path, *, generated_at: str | None = None) -> dict[str, Any]:
     root = Path(root).resolve()
     generated_at = generated_at or _now_iso()
-    request = _parse_fields(read_text(root / PROACTIVE_REQUEST_STATE_REL))
-    dispatch = _parse_fields(read_text(root / PROACTIVE_DISPATCH_STATE_REL))
+    request = _parse_fields(read_proactive_request_state_text(root))
+    dispatch = _parse_fields(read_proactive_dispatch_state_text(root))
     if not request:
         return _empty_report(root, generated_at)
 
@@ -141,11 +142,11 @@ def write_proactive_response_diagnostics(
     root = Path(root).resolve()
     paths: dict[str, str] = {}
     if write_report:
-        report_path = output if output is not None else root / REPORT_REL
-        if not report_path.is_absolute():
-            report_path = root / report_path
-        report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(render_proactive_response_diagnostics(report), encoding="utf-8")
+        report_path = write_proactive_response_diagnostics_report_text(
+            root,
+            render_proactive_response_diagnostics(report),
+            output=output,
+        )
         paths["report_path"] = str(report_path)
     _write_state(root, report, report_path=paths.get("report_path", "not_written"))
     _append_trace(root, report)
@@ -268,7 +269,7 @@ tags: [proactive, owner-response, diagnostics, feedback]
 - visible_reply_text_retained: false
 - state_contains_refs_and_status_only: true
 """
-    write_text_atomic(root / STATE_REL, text)
+    write_proactive_response_diagnostics_state_text(root, text)
 
 
 def _append_trace(root: Path, report: dict[str, Any]) -> None:
@@ -289,10 +290,7 @@ def _append_trace(root: Path, report: dict[str, Any]) -> None:
         "request_body_text_retained": False,
         "visible_reply_text_retained": False,
     }
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+    append_proactive_response_diagnostics_trace_event(root, row)
 
 
 def _response_signal(

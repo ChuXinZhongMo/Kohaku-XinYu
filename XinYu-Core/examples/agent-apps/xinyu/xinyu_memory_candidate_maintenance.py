@@ -12,6 +12,10 @@ from xinyu_dialogue_archive import (
     update_memory_candidate_status,
 )
 from xinyu_memory_candidate_analysis import candidate_claim_metadata_from_row, candidate_review_context
+from xinyu_memory_candidate_maintenance_store import STATE_REL
+from xinyu_memory_candidate_maintenance_store import TRACE_REL
+from xinyu_memory_candidate_maintenance_store import append_memory_candidate_maintenance_trace
+from xinyu_memory_candidate_maintenance_store import write_memory_candidate_maintenance_state
 
 
 MAINTENANCE_STATUSES = (
@@ -38,10 +42,6 @@ ARCHIVE_STATUS_BY_SOURCE = {
     "blocked_scope_mismatch": "archived_blocked",
     "blocked_sensitive": "archived_blocked",
 }
-STATE_REL = Path("memory/context/memory_candidate_maintenance_state.md")
-TRACE_REL = Path("runtime/memory_candidate_maintenance_trace.jsonl")
-
-
 def _now_iso() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
@@ -239,9 +239,7 @@ tags: [memory, candidates, maintenance]
 - blocked_cleanup: archive_after_review_window
 - approved_candidates: never_archived_by_maintenance
 """
-    path = root / STATE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text.rstrip() + "\n", encoding="utf-8")
+    write_memory_candidate_maintenance_state(root, text)
 
 
 def _append_trace(root: Path, result: dict[str, Any]) -> None:
@@ -251,10 +249,7 @@ def _append_trace(root: Path, result: dict[str, Any]) -> None:
         "archived": result.get("cleanup", {}).get("archived"),
         "notes": result.get("notes", [])[:8],
     }
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
+    append_memory_candidate_maintenance_trace(root, payload)
 
 
 def _build_parser() -> argparse.ArgumentParser:

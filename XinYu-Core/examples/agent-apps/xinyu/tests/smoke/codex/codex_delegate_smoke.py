@@ -274,22 +274,41 @@ def main() -> int:
             os.environ.pop("XINYU_OPENAI_API_KEY", None)
 
     checks = {
-        ROOT / "xinyu_bridge_http.py": ('"/codex/execute"', "runtime.codex_execute"),
+        ROOT / "xinyu_bridge_http_routes.py": ('"/codex/execute"',),
+        ROOT / "xinyu_bridge_http_dispatch.py": ('"/codex/execute"', "runtime.codex_execute"),
         ROOT / "xinyu_core_bridge.py": (
-            "async def codex_execute",
-            "run_codex_delegate",
-            "preview_codex_delegate_paths",
-            "handoff_codex_to_dream",
-            "codex_delegate_background:scheduled",
-            "dream_handoff_on_timeout:armed",
             'BRIDGE_VERSION = "',
+        ),
+        ROOT / "xinyu_bridge_runtime_codex_aliases.py": (
+            "runtime_cls.codex_execute",
             "_codex_reply_variant",
             "_codex_task_subject",
             "_enqueue_codex_completion_if_needed",
-            "enqueue_qq_outbox_message",
-            "enqueue_qq_outbox_image",
             "_codex_generated_image_artifacts",
             "_looks_like_codex_image_generation_task",
+        ),
+        ROOT / "xinyu_bridge_codex_runtime.py": (
+            "enqueue_qq_outbox_message",
+            "codex_background_scheduled_response",
+        ),
+        ROOT / "xinyu_bridge_codex_runner.py": (
+            "run_codex_delegate",
+            "memory_snapshot",
+            "_codex_delegate_lock",
+        ),
+        ROOT / "xinyu_bridge_codex_finalization.py": (
+            "runtime_codex_delegate_background",
+            "stage_codex_report_material",
+            "handoff_codex_to_dream",
+            "codex_foreground_result_response",
+            "codex_dream_handoff_failed",
+        ),
+        ROOT / "xinyu_bridge_codex_execution.py": (
+            "codex_background_scheduled_response",
+            "codex_delegate_background:scheduled",
+            "dream_handoff_on_timeout:armed",
+            'payload["visible_window"] = True',
+            'payload["window_title"]',
         ),
         ROOT / "xinyu_codex_service.py": (
             "codex_status_reply",
@@ -365,9 +384,10 @@ def main() -> int:
         failures.append("xinyu_qq_config.py missing safe Codex route marker: codex_command_prefixes")
 
     core_text = (ROOT / "xinyu_core_bridge.py").read_text(encoding="utf-8-sig")
+    codex_execution_text = (ROOT / "xinyu_bridge_codex_execution.py").read_text(encoding="utf-8-sig")
     for marker in ('payload["visible_window"] = True', 'payload["window_title"]'):
-        if marker not in core_text:
-            failures.append(f"xinyu_core_bridge.py missing forced visible Codex window marker: {marker}")
+        if marker not in codex_execution_text:
+            failures.append(f"xinyu_bridge_codex_execution.py missing forced visible Codex window marker: {marker}")
     for forbidden in (
         "开了，我让 Codex 在新窗口里跑",
         "窗口标题是 {CODEX_VISIBLE_WINDOW_TITLE}",

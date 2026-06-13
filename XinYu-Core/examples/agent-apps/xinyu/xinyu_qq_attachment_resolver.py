@@ -134,10 +134,14 @@ async def resolve_onebot_file(
 ) -> dict[str, str]:
     group_id = _safe_str(metadata.get("group_id")).strip()
     if group_id:
+        group_params: dict[str, Any] = {"group_id": _maybe_int(group_id), "file_id": file_id}
+        busid = _safe_str(metadata.get("busid") or metadata.get("bus_id")).strip()
+        if busid:
+            group_params["busid"] = _maybe_int(busid)
         group_url = await gateway._onebot_file_url_action(
             websocket,
             "get_group_file_url",
-            {"group_id": _maybe_int(group_id), "file_id": file_id},
+            group_params,
         )
         if group_url:
             return {"file_url": group_url, "resolved_by": "get_group_file_url"}
@@ -311,7 +315,11 @@ def learning_material_from_data(segment_type: str, data: dict[str, Any]) -> dict
         or _safe_str(data.get("file")).strip()
         or f"qq-{segment_type}"
     )
-    url = _safe_str(data.get("url")).strip()
+    url = (
+        _safe_str(data.get("url")).strip()
+        or _safe_str(data.get("file_url")).strip()
+        or _safe_str(data.get("download_url")).strip()
+    )
     path = (
         _safe_str(data.get("file_path")).strip()
         or _safe_str(data.get("path")).strip()
@@ -320,8 +328,14 @@ def learning_material_from_data(segment_type: str, data: dict[str, Any]) -> dict
     file_value = _safe_str(data.get("file")).strip()
     file_id = (
         _safe_str(data.get("file_id")).strip()
+        or _safe_str(data.get("fileId")).strip()
         or _safe_str(data.get("id")).strip()
         or _safe_str(data.get("fid")).strip()
+    )
+    busid = (
+        _safe_str(data.get("busid")).strip()
+        or _safe_str(data.get("bus_id")).strip()
+        or _safe_str(data.get("business_id")).strip()
     )
     if not path and looks_like_file_path(file_value):
         path = file_value
@@ -335,6 +349,7 @@ def learning_material_from_data(segment_type: str, data: dict[str, Any]) -> dict
         "url": url,
         "path": path,
         "file_id": file_id,
+        "busid": busid,
     }
 
 

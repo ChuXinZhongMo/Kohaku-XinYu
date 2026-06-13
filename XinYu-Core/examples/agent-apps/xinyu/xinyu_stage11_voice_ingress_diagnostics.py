@@ -4,23 +4,23 @@ import argparse
 import hashlib
 import json
 import re
-from collections import deque
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-
-REPORT_REL = Path("worklog") / "xinyu-stage11-voice-ingress-diagnostics-latest.md"
-STATE_REL = Path("memory/context/stage11_voice_ingress_diagnostics_state.md")
-TRACE_REL = Path("runtime/stage11_voice_ingress_diagnostics_trace.jsonl")
-
-QQ_TRACE_REL = Path("runtime/qq_inbound_trace.jsonl")
-QQ_RICH_TRACE_REL = Path("runtime/qq_rich_context_trace.jsonl")
-VOICE_TRACE_RELS = (
-    Path("runtime/voice_input_trace.jsonl"),
-    Path("runtime/speech_transcript_trace.jsonl"),
-    Path("runtime/audio_transcript_trace.jsonl"),
-)
+from xinyu_stage11_voice_ingress_diagnostics_store import QQ_RICH_TRACE_REL
+from xinyu_stage11_voice_ingress_diagnostics_store import QQ_TRACE_REL
+from xinyu_stage11_voice_ingress_diagnostics_store import REPORT_REL
+from xinyu_stage11_voice_ingress_diagnostics_store import STATE_REL
+from xinyu_stage11_voice_ingress_diagnostics_store import TRACE_REL
+from xinyu_stage11_voice_ingress_diagnostics_store import VOICE_TRACE_RELS
+from xinyu_stage11_voice_ingress_diagnostics_store import append_stage11_voice_trace_event
+from xinyu_stage11_voice_ingress_diagnostics_store import read_stage11_voice_jsonl_tail
+from xinyu_stage11_voice_ingress_diagnostics_store import read_stage11_voice_transcript_rows
+from xinyu_stage11_voice_ingress_diagnostics_store import stage11_voice_qq_rich_trace_path
+from xinyu_stage11_voice_ingress_diagnostics_store import stage11_voice_qq_trace_path
+from xinyu_stage11_voice_ingress_diagnostics_store import write_stage11_voice_report_text
+from xinyu_stage11_voice_ingress_diagnostics_store import write_stage11_voice_state_text
 
 VOICE_COUNT_FIELDS = (
     "voice_count",
@@ -78,41 +78,6 @@ def _hash_ref(value: Any) -> str:
         return "none"
     digest = hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest()[:16]
     return f"sha256:{digest}"
-
-
-def _read_jsonl_tail(path: Path, *, max_lines: int) -> tuple[list[dict[str, Any]], int]:
-    if not path.exists():
-        return [], 0
-    tail: deque[str] = deque(maxlen=max(1, int(max_lines)))
-    total = 0
-    try:
-        with path.open("r", encoding="utf-8-sig", errors="replace") as handle:
-            for total, line in enumerate(handle, start=1):
-                tail.append(line)
-    except OSError:
-        return [], 0
-    rows: list[dict[str, Any]] = []
-    for line in tail:
-        try:
-            item = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(item, dict):
-            rows.append(item)
-    return rows, total
-
-
-def _count_jsonl_lines(path: Path) -> int:
-    if not path.exists():
-        return 0
-    total = 0
-    try:
-        with path.open("r", encoding="utf-8-sig", errors="replace") as handle:
-            for total, _line in enumerate(handle, start=1):
-                pass
-    except OSError:
-        return 0
-    return total
 
 
 def _row_time_text(row: dict[str, Any]) -> str:
@@ -194,24 +159,6 @@ def _transcript_failed(row: dict[str, Any]) -> bool:
     return bool(status and any(marker in status for marker in TRANSCRIPT_FAILURE_MARKERS))
 
 
-def _transcript_rows(root: Path) -> tuple[list[dict[str, Any]], int, int]:
-    rows: list[dict[str, Any]] = []
-    file_count = 0
-    line_count = 0
-    for rel in VOICE_TRACE_RELS:
-        path = root / rel
-        if not path.exists():
-            continue
-        file_count += 1
-        line_count += _count_jsonl_lines(path)
-        tail_rows, _total = _read_jsonl_tail(path, max_lines=200)
-        for row in tail_rows:
-            copied = dict(row)
-            copied["_trace_rel"] = rel.as_posix()
-            rows.append(copied)
-    return rows, file_count, line_count
-
-
 def _voice_like_ref(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "observed_at": _row_time_text(row) or "unknown",
@@ -251,11 +198,11 @@ def build_stage11_voice_ingress_diagnostics(
 ) -> dict[str, Any]:
     root = Path(root).resolve()
     generated_at = generated_at or _now_iso()
-    qq_path = root / QQ_TRACE_REL
-    rich_path = root / QQ_RICH_TRACE_REL
-    qq_rows, qq_line_count = _read_jsonl_tail(qq_path, max_lines=max_qq_lines)
-    rich_rows, rich_line_count = _read_jsonl_tail(rich_path, max_lines=max_qq_lines)
-    transcript_rows, transcript_file_count, transcript_line_count = _transcript_rows(root)
+    qq_path = stage11_voice_qq_trace_path(root)
+    rich_path = stage11_voice_qq_rich_trace_path(root)
+    qq_rows, qq_line_count = read_stage11_voice_jsonl_tail(qq_path, max_lines=max_qq_lines)
+    rich_rows, rich_line_count = read_stage11_voice_jsonl_tail(rich_path, max_lines=max_qq_lines)
+    transcript_rows, transcript_file_count, transcript_line_count = read_stage11_voice_transcript_rows(root)
 
     qq_voice_rows = [row for row in qq_rows if _row_has_voice_payload(row)]
     rich_voice_rows = [row for row in rich_rows if _row_has_voice_payload(row)]
@@ -405,12 +352,7 @@ def write_stage11_voice_ingress_diagnostics_report(
     output: Path | None = None,
 ) -> Path:
     root = Path(root).resolve()
-    path = output if output is not None else root / REPORT_REL
-    if not path.is_absolute():
-        path = root / path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_stage11_voice_ingress_diagnostics(report), encoding="utf-8")
-    return path
+    return write_stage11_voice_report_text(root, render_stage11_voice_ingress_diagnostics(report), output=output)
 
 
 def write_stage11_voice_ingress_diagnostics_state(
@@ -423,8 +365,6 @@ def write_stage11_voice_ingress_diagnostics_state(
     model = report.get("model") if isinstance(report.get("model"), dict) else {}
     privacy = report.get("privacy") if isinstance(report.get("privacy"), dict) else {}
     target_report = report_path or (root / REPORT_REL)
-    path = root / STATE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     text = f"""---
 title: Stage 11 Voice Ingress Diagnostics State
 memory_type: stage11_voice_ingress_diagnostics_state
@@ -474,15 +414,12 @@ tags: [autonomy, multisensory, voice, stage11, audit]
 - consciousness_claim: {_bool_text(privacy.get('consciousness_claim', False))}
 - report_path: {target_report.as_posix()}
 """
-    path.write_text(text, encoding="utf-8")
-    return path
+    return write_stage11_voice_state_text(root, text)
 
 
 def append_stage11_voice_ingress_diagnostics_trace(root: Path | str, report: dict[str, Any]) -> Path:
     root = Path(root).resolve()
     model = report.get("model") if isinstance(report.get("model"), dict) else {}
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
     row = {
         "observed_at": report.get("generated_at", _now_iso()),
         "status": report.get("status", "missing"),
@@ -499,9 +436,7 @@ def append_stage11_voice_ingress_diagnostics_trace(root: Path | str, report: dic
         "qq_message_enqueued": False,
         "consciousness_claim": False,
     }
-    with path.open("a", encoding="utf-8", newline="\n") as handle:
-        handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
-    return path
+    return append_stage11_voice_trace_event(root, row)
 
 
 def build_parser() -> argparse.ArgumentParser:

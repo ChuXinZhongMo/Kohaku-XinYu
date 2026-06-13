@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
+import xinyu_qq_gateway
 from xinyu_qq_core_client import BridgeError
 import xinyu_qq_voice_transcript
 from xinyu_qq_gateway import GatewayConfig, NativeQQGateway, PreparedMessage, ReplyTarget
@@ -71,6 +72,10 @@ class _StaleGateway(NativeQQGateway):
         queue_depth=None,
         drop_reason="",
         error="",
+        delivery_kind="",
+        adapter_message_id="",
+        adapter_error="",
+        voice_fallback_reason="",
     ):
         self.traces.append({"stage": stage, "drop_reason": drop_reason})
 
@@ -145,6 +150,20 @@ class _VoiceTranscriptionGateway(_StaleGateway):
         }
 
 
+class _ImageContextGateway(_StaleGateway):
+    def __init__(self, root: Path, image_path: Path) -> None:
+        super().__init__()
+        self.xinyu_dir = root
+        self.image_path = image_path
+        self.actions: list[tuple[str, dict]] = []
+
+    async def _onebot_action_data(self, websocket, action, params):
+        self.actions.append((action, dict(params)))
+        if action == "get_image":
+            return {"file": str(self.image_path)}
+        return {}
+
+
 def _private_text_event(text: str, *, message_id: str = "m-text") -> dict:
     return {
         "post_type": "message",
@@ -183,6 +202,82 @@ def _private_voice_event(*, message_id: str = "m-voice") -> dict:
             }
         ],
     }
+
+
+def _private_image_event(*, message_id: str = "m-image") -> dict:
+    return {
+        "post_type": "message",
+        "message_type": "private",
+        "user_id": "42",
+        "message_id": message_id,
+        "message": [
+            {
+                "type": "image",
+                "data": {"file": "scan.png"},
+            }
+        ],
+        "raw_message": "[CQ:image,file=scan.png]",
+    }
+
+
+def test_owner_private_image_routes_to_chat_not_learning_ingest() -> None:
+    prepared = _StaleGateway().prepare_message(_private_image_event())
+
+    assert prepared is not None
+    assert prepared.route == "chat"
+    assert prepared.payload["metadata"]["qq_image_count"] == 1
+    assert prepared.payload["metadata"]["qq_rich_message"] is True
+
+
+def test_chat_image_context_enrichment_resolves_current_turn_image(tmp_path: Path, monkeypatch) -> None:
+    async def _run() -> None:
+        image_path = tmp_path / "scan.png"
+        image_path.write_bytes(b"fake png bytes")
+        gateway = _ImageContextGateway(tmp_path, image_path)
+        event = _private_image_event()
+        prepared = PreparedMessage(
+            target=ReplyTarget(message_kind="private", user_id="42", group_id=""),
+            payload={
+                "text": "图片:scan.png",
+                "message_id": "m-image",
+                "session_id": "qq:private:42",
+                "metadata": {
+                    "source": "onebot_message_event",
+                    "is_owner_user": True,
+                    "qq_image_count": 1,
+                    "qq_rich_message": True,
+                },
+            },
+            route="chat",
+        )
+
+        def _fake_context(root, *, image_path, image_payload, owner_text, image_only=False):
+            assert root == tmp_path
+            assert image_path == gateway.image_path
+            assert image_payload["file_path"] == str(gateway.image_path)
+            assert owner_text == "图片:scan.png"
+            return {
+                "available": True,
+                "kind": "image",
+                "ocr_text": "截图里写着：通道已经通了。",
+                "vision_summary": "",
+                "notes": ["image_context_requested", "ocr_text_available"],
+            }
+
+        monkeypatch.setattr(xinyu_qq_gateway, "build_image_context_from_path", _fake_context)
+
+        enriched = await gateway._maybe_enrich_current_image_context(None, event, prepared)
+
+        assert enriched is not None
+        metadata = enriched.payload["metadata"]
+        assert metadata["qq_image_context_available"] is True
+        assert metadata["qq_image_context"]["ocr_text"] == "截图里写着：通道已经通了。"
+        assert metadata["qq_image_context_route"] == "direct_current_turn"
+        assert metadata["file_resolution_status"] == "resolved"
+        assert metadata["file_resolved_by"] == "get_image"
+        assert gateway.actions[0] == ("get_image", {"file": "scan.png"})
+
+    asyncio.run(_run())
 
 
 def test_owner_private_voice_payload_is_a_bounded_rich_context_event() -> None:

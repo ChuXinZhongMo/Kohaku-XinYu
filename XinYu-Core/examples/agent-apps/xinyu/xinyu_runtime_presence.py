@@ -15,6 +15,7 @@ from xinyu_qq_outbox_state import summarize_outbox_items
 
 PRESENCE_MD_REL = Path("memory/context/runtime_self_presence.md")
 PROGRAM_AWARENESS_MD_REL = Path("memory/context/runtime_program_awareness.md")
+CAPABILITY_MANIFEST_MD_REL = Path("memory/context/capability_manifest_state.md")
 PRESENCE_TRACE_REL = Path("runtime/self_presence_trace.jsonl")
 CODEX_STATE_REL = Path("runtime/codex_presence_state.json")
 INITIATIVE_METRICS_REL = Path("runtime/initiative_metrics.json")
@@ -99,6 +100,56 @@ _PROGRAM_STATE_FILES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
             "task_id",
             "codex_status",
             "report_path",
+        ),
+    ),
+    (
+        "private_ecosystem",
+        "memory/context/private_ecosystem_state.md",
+        (
+            "rollout_state",
+            "selected_goal_id",
+            "selected_action_kind",
+            "last_action_status",
+            "tick_count",
+            "low_risk_executed_count",
+            "approval_queued_count",
+            "owner_private_shares_prepared",
+            "owner_private_shares_sent",
+            "owner_private_shares_held",
+            "owner_private_share_status",
+            "owner_private_share_paused",
+            "stable_memory_write",
+            "qq_message_enqueued_directly",
+        ),
+    ),
+    (
+        "private_desktop",
+        "memory/context/private_ecosystem_desktop_state.md",
+        (
+            "session_id",
+            "backend",
+            "last_action_kind",
+            "last_result",
+            "last_risk",
+            "actions_total",
+            "actions_executed",
+            "actions_blocked",
+            "frame_count",
+        ),
+    ),
+    (
+        "private_owner_share",
+        "memory/context/private_ecosystem_owner_share_state.md",
+        (
+            "enabled",
+            "paused",
+            "last_delivery_level",
+            "last_allowed",
+            "last_queued",
+            "last_block_reasons",
+            "daily_remaining",
+            "cooldown_minutes",
+            "channel",
         ),
     ),
     (
@@ -916,6 +967,8 @@ def build_runtime_presence_prompt_block(root: Path, *, limit: int = DEFAULT_PROM
             )
             if code_status:
                 lines.append(f"- code_awareness: {code_status}")
+        awareness = _collect_program_awareness(root, presence_fields=fields)
+        capability_manifest = _collect_capability_manifest(root, awareness=awareness)
         lines.extend(
             [
                 f"- codex_delegate: {_scrub_field(codex_line)}",
@@ -929,7 +982,10 @@ def build_runtime_presence_prompt_block(root: Path, *, limit: int = DEFAULT_PROM
                 "",
                 "program_awareness:",
                 "- scope: known bridge state plus observed subsystem state files; not raw OS introspection",
-                *_program_awareness_prompt_lines(_collect_program_awareness(root, presence_fields=fields)),
+                *_program_awareness_prompt_lines(awareness),
+                "",
+                "capability_manifest:",
+                *_capability_manifest_prompt_lines(capability_manifest),
             ]
         )
         return _join_limited(lines, limit)
@@ -973,6 +1029,7 @@ def read_runtime_presence_summary(root: Path) -> dict[str, Any]:
             "stale_running": stale_running,
         }
         summary["program_awareness"] = _collect_program_awareness(root, presence_fields=fields)
+        summary["capability_manifest"] = _collect_capability_manifest(root, awareness=summary["program_awareness"])
         summary["initiative_lifecycle"] = summary["program_awareness"].get("subsystems", {}).get(
             "initiative_lifecycle",
             {},
@@ -1190,13 +1247,10 @@ def _program_awareness_prompt_lines(awareness: dict[str, Any]) -> list[str]:
         "initiative_metrics",
         "initiative_feedback",
         "early_visible_segment_shadow",
-        "proactive_dispatch",
         "qq_outbox",
-        "v1_canary_readiness",
         "codex_delegate",
         "research_handoff",
         "watched_source",
-        "github_learning",
         "memory_self_review",
         "inner_cycle",
         "interaction_journal",
@@ -1206,14 +1260,20 @@ def _program_awareness_prompt_lines(awareness: dict[str, Any]) -> list[str]:
         "post_reply_self_observation",
         "learning_closed_loop",
         "self_state_capsule",
+        "self_code_watchdog",
+        "runtime_bridge",
+        "code_awareness",
+        "proactive_dispatch",
+        "private_ecosystem",
+        "private_desktop",
+        "private_owner_share",
+        "github_learning",
+        "v1_canary_readiness",
         "continuity_handoff",
         "uncertainty_pause",
         "async_exploration",
         "self_code_approval",
-        "self_code_watchdog",
-        "runtime_bridge",
         "memory_gate",
-        "code_awareness",
     ]
     for name in ordered_names:
         data = subsystems.get(name)
@@ -1237,6 +1297,336 @@ def _program_awareness_prompt_lines(awareness: dict[str, Any]) -> list[str]:
         lines.append(f"- traces: {trace_line}")
     lines.append(f"- unknown_boundary: {_scrub_field(awareness.get('unknown_boundary'))}")
     return lines
+
+
+def _collect_capability_manifest(root: Path, *, awareness: dict[str, Any] | None = None) -> dict[str, Any]:
+    awareness = awareness if isinstance(awareness, dict) else _collect_program_awareness(root)
+    subsystems = awareness.get("subsystems")
+    if not isinstance(subsystems, dict):
+        subsystems = {}
+    zones = _load_markdown_state_fields(root, "memory/context/capability_zones_state.md")
+    grants = _load_json_object(root / "memory/context/private_ecosystem_grants.json")
+
+    def sub(name: str) -> dict[str, str]:
+        data = subsystems.get(name)
+        return data if isinstance(data, dict) else {}
+
+    def zone(key: str, default: str = "unknown") -> str:
+        value = zones.get(key)
+        if value is None or value == "":
+            return default
+        return _scrub_field(value)
+
+    def grant(path: tuple[str, str], default: str = "unknown") -> str:
+        node: Any = grants
+        for key in path:
+            if not isinstance(node, dict):
+                return default
+            node = node.get(key)
+        if node is None:
+            return default
+        return _scrub_field(str(node).lower() if isinstance(node, bool) else node)
+
+    def observed(name: str) -> bool:
+        return sub(name).get("observed") == "true"
+
+    def add(
+        capability_id: str,
+        *,
+        status: str,
+        trigger: str,
+        authorization: str,
+        output: str,
+        boundary: str,
+        current: str,
+        source_subsystems: tuple[str, ...],
+    ) -> None:
+        capabilities[capability_id] = {
+            "status": _scrub_field(status),
+            "trigger": _scrub_field(trigger),
+            "authorization": _scrub_field(authorization),
+            "output": _scrub_field(output),
+            "boundary": _scrub_field(boundary),
+            "current": _clip_preview(current, limit=180),
+            "source_subsystems": ",".join(source_subsystems),
+        }
+
+    bridge = sub("bridge_core")
+    autonomous = sub("autonomous_loop")
+    initiative = sub("initiative_lifecycle")
+    metrics = sub("initiative_metrics")
+    dispatch = sub("proactive_dispatch")
+    qq_outbox = sub("qq_outbox")
+    codex = sub("codex_delegate")
+    self_action = sub("self_action_gateway")
+    patch = sub("self_action_patch_executor")
+    watched = sub("watched_source")
+    github = sub("github_learning")
+    memory_review = sub("memory_self_review")
+    expression = sub("expression_self_learning")
+    learning = sub("learning_closed_loop")
+    personality = sub("personality_self_review")
+    private_ecosystem = sub("private_ecosystem")
+    private_desktop = sub("private_desktop")
+    private_share = sub("private_owner_share")
+    code_surface = awareness.get("code_surface") if isinstance(awareness.get("code_surface"), dict) else {}
+
+    capabilities: dict[str, dict[str, str]] = {}
+    bridge_status = "available" if bridge.get("bridge_process") == "running" else "unavailable"
+    add(
+        "live_chat",
+        status=bridge_status,
+        trigger="owner_or_authorized_message",
+        authorization="configured_chat_routes",
+        output="visible_reply",
+        boundary="hide_runtime_labels_in_ordinary_chat",
+        current=f"turn={bridge.get('current_turn_state', 'unknown')} sessions={bridge.get('active_sessions', 'unknown')} last={bridge.get('last_turn_status', 'unknown')}",
+        source_subsystems=("bridge_core", "interaction_journal"),
+    )
+    add(
+        "runtime_self_awareness",
+        status="available" if _safe_int(awareness.get("observed_subsystem_count"), 0) > 0 else "unavailable",
+        trigger="owner_asks_system_state_or_capability",
+        authorization="read_state_mirrors",
+        output="natural_runtime_summary",
+        boundary="not_code_omniscience_needs_file_open_for_details",
+        current=f"observed_subsystems={awareness.get('observed_subsystem_count', '0')} python_files={code_surface.get('python_files', 'unknown')}",
+        source_subsystems=("runtime_program_awareness", "code_awareness"),
+    )
+    auto_enabled = autonomous.get("enabled", "false") == "true"
+    add(
+        "autonomous_maintenance",
+        status="active" if auto_enabled else "disabled",
+        trigger="timer",
+        authorization=zone("regular_mind_loop", "low_frequency_runtime_maintenance"),
+        output="state_updates_and_local_candidates",
+        boundary="no_visible_chat_unless_outward_gate_passes",
+        current=f"status={autonomous.get('status', 'unknown')} run_count={autonomous.get('run_count', '0')} next={autonomous.get('next_run_at', 'unknown')}",
+        source_subsystems=("autonomous_loop", "self_chosen_goal_ecology"),
+    )
+    desktop_visible = initiative.get("delivery_level") == "desktop_inbox" or _safe_int(
+        metrics.get("desktop_shown_count_24h"), 0
+    ) > 0
+    add(
+        "proactive_desktop_inbox",
+        status="active" if desktop_visible else "observing",
+        trigger="high_score_owner_relevant_event",
+        authorization="local_desktop_state_only",
+        output="desktop_inbox_candidate",
+        boundary="requires_owner_ack_no_qq_claim",
+        current=f"delivery={initiative.get('delivery_level', 'unknown')} pending={initiative.get('pending_feedback_count', metrics.get('pending_feedback_count', '0'))} shown_24h={metrics.get('desktop_shown_count_24h', '0')}",
+        source_subsystems=("initiative_lifecycle", "initiative_metrics"),
+    )
+    proactive_qq_zone = zone("proactive_qq_send", "not_granted")
+    proactive_qq_enabled = proactive_qq_zone.startswith("enabled")
+    add(
+        "proactive_owner_private_qq",
+        status="enabled_gated" if proactive_qq_enabled else "blocked",
+        trigger="owner_only_outward_candidate_after_gates",
+        authorization=proactive_qq_zone,
+        output="owner_private_qq_message",
+        boundary="one_short_message_min_interval_nonowner_and_group_blocked",
+        current=f"claim={dispatch.get('last_claim_status', 'unknown')} ack={dispatch.get('last_ack_status', 'unknown')} queued={qq_outbox.get('queued_count', 'unknown')} failed={qq_outbox.get('recent_failed_count', 'unknown')}",
+        source_subsystems=("proactive_dispatch", "qq_outbox", "capability_zones"),
+    )
+    codex_zone = zone("codex_as_eye_and_hand", "ask_owner_first")
+    codex_available = codex_zone.startswith("approved") or codex_zone.startswith("enabled")
+    add(
+        "codex_delegate",
+        status="available" if codex_available else "ask_first",
+        trigger="owner_approved_or_bounded_research_task",
+        authorization=codex_zone,
+        output="codex_report_or_material",
+        boundary="bounded_delegate_no_privacy_or_source_gate_bypass",
+        current=f"status={codex.get('status', 'unknown')} job={codex.get('job_id', '')} report={codex.get('report_label', '')}",
+        source_subsystems=("codex_delegate", "research_handoff"),
+    )
+    add(
+        "self_code_iteration",
+        status="approval_required" if observed("self_action_patch_executor") or observed("self_code_approval") else "available_when_requested",
+        trigger="owner_private_self_code_request_or_prepared_self_action",
+        authorization=zone("self_code_iteration_via_codex", "explicit_owner_approval_required"),
+        output="approval_queue_codex_patch_watchdog_snapshot",
+        boundary="one_time_scope_stable_memory_blocked_watchdog_required",
+        current=f"gateway_candidates={self_action.get('candidate_count', '0')} patch_status={patch.get('status', 'unknown')} codex={patch.get('codex_status', 'unknown')}",
+        source_subsystems=("self_action_gateway", "self_action_patch_executor", "self_code_watchdog"),
+    )
+    public_learning_ready = observed("watched_source") or observed("github_learning")
+    add(
+        "public_learning",
+        status="available" if public_learning_ready else "unobserved",
+        trigger="scheduled_public_source_scan_or_research_gap",
+        authorization=zone("autonomous_search_provider", "bounded_public_read_only"),
+        output="staged_learning_candidates",
+        boundary="read_only_no_posting_no_code_execution_learning_gates_required",
+        current=f"watched={watched.get('status', 'unknown')} github={github.get('status', 'unknown')} accepted={sub('runtime_bridge').get('ready_source_requests', '')}",
+        source_subsystems=("watched_source", "github_learning", "runtime_bridge"),
+    )
+    add(
+        "memory_review",
+        status=memory_review.get("status", "unknown") if observed("memory_self_review") else "unobserved",
+        trigger="memory_pressure_or_pending_candidates",
+        authorization="review_gate_then_owner_bulk_review_when_required",
+        output="review_decisions_or_owner_review_items",
+        boundary="stable_memory_write_blocked_until_gate_passes",
+        current=f"pending={memory_review.get('pending_seen', '0')} owner_review={memory_review.get('owner_review_required', '0')} stable={memory_review.get('stable_memory_write', 'blocked')}",
+        source_subsystems=("memory_self_review", "inner_cycle"),
+    )
+    add(
+        "expression_learning",
+        status=learning.get("status", expression.get("status", "unknown")),
+        trigger="owner_feedback_or_reply_self_observation",
+        authorization="runtime_trial_only",
+        output="voice_behavior_bias",
+        boundary=f"stable_personality_auto_apply={zone('stable_personality_auto_apply', 'disabled')}",
+        current=f"failure={learning.get('latest_failure_kind', expression.get('failure_kind', 'none'))} repair_count={learning.get('repair_count', '0')} profile_changed={personality.get('profile_changed', 'false')}",
+        source_subsystems=("expression_self_learning", "learning_closed_loop", "personality_self_review"),
+    )
+    private_enabled = grant(("private_ecosystem", "enabled"), "false") == "true"
+    add(
+        "private_ecosystem",
+        status="enabled" if private_enabled else private_ecosystem.get("rollout_state", "disabled"),
+        trigger="private_self_space_tick",
+        authorization=f"grant_enabled={grant(('private_ecosystem', 'enabled'), 'false')}",
+        output="self_private_observations_and_gated_owner_share",
+        boundary="low_risk_local_only_no_stable_memory_no_direct_send",
+        current=f"rollout={private_ecosystem.get('rollout_state', grant(('private_ecosystem', 'rollout_state'), 'unknown'))} action={private_ecosystem.get('last_action_status', 'unknown')} shares_sent={private_ecosystem.get('owner_private_shares_sent', '0')}",
+        source_subsystems=("private_ecosystem", "private_owner_share"),
+    )
+    desktop_enabled = grant(("private_desktop", "enabled"), "false") == "true"
+    desktop_observe_only = grant(("private_desktop", "observe_only"), "true") == "true"
+    add(
+        "private_desktop",
+        status="enabled_observe_only" if desktop_enabled and desktop_observe_only else ("enabled" if desktop_enabled else "disabled"),
+        trigger="desktop_panel_or_authorized_single_step",
+        authorization=f"enabled={grant(('private_desktop', 'enabled'), 'false')} observe_only={grant(('private_desktop', 'observe_only'), 'true')} single_step={grant(('private_desktop', 'single_step_actions'), 'false')}",
+        output="sanitized_isolated_desktop_frames",
+        boundary="isolated_linux_desktop_not_owner_host_click_type_need_grant",
+        current=f"backend={private_desktop.get('backend', 'unknown')} last={private_desktop.get('last_action_kind', 'none')}/{private_desktop.get('last_result', 'unknown')} risk={private_desktop.get('last_risk', 'unknown')}",
+        source_subsystems=("private_desktop", "private_ecosystem_grants"),
+    )
+    browser_enabled = grant(("private_browser", "enabled"), "false") == "true"
+    add(
+        "private_browser",
+        status="enabled_read_only" if browser_enabled else "disabled",
+        trigger="desktop_panel_or_authorized_browser_observation",
+        authorization=f"enabled={grant(('private_browser', 'enabled'), 'false')} read_only={grant(('private_browser', 'read_only'), 'true')} single_step={grant(('private_browser', 'single_step_actions'), 'false')}",
+        output="private_browser_snapshot",
+        boundary="read_only_by_default_single_step_actions_need_grant",
+        current=f"max_tabs={grant(('private_browser', 'max_tabs'), 'unknown')} screenshot_ttl_hours={grant(('private_browser', 'screenshot_ttl_hours'), 'unknown')}",
+        source_subsystems=("private_browser_grants",),
+    )
+    share_enabled = private_share.get("enabled", grant(("owner_private_autonomous_share", "enabled"), "false"))
+    share_paused = private_share.get("paused", grant(("owner_private_autonomous_share", "paused"), "true"))
+    add(
+        "owner_private_share",
+        status="paused" if share_paused == "true" else ("enabled_gated" if share_enabled == "true" else "disabled"),
+        trigger="private_ecosystem_share_candidate",
+        authorization=f"enabled={share_enabled} paused={share_paused} channel=owner_private_only",
+        output="owner_private_share_candidate_or_hold",
+        boundary="owner_only_never_group_public_or_third_party",
+        current=f"last_allowed={private_share.get('last_allowed', 'unknown')} last_queued={private_share.get('last_queued', 'unknown')} daily_remaining={private_share.get('daily_remaining', grant(('owner_private_autonomous_share', 'daily_limit'), 'unknown'))}",
+        source_subsystems=("private_owner_share", "private_ecosystem_grants"),
+    )
+    active_count = sum(1 for data in capabilities.values() if data.get("status") not in {"disabled", "blocked", "unavailable", "unobserved"})
+    return {
+        "available": True,
+        "updated_at": _scrub_field(awareness.get("updated_at") or _now_iso()),
+        "scope": "runtime_capability_map_from_state_mirrors_and_owner_grants",
+        "direct_capability_omniscience": "false",
+        "capability_count": str(len(capabilities)),
+        "active_capability_count": str(active_count),
+        "capabilities": capabilities,
+        "runtime_use": "answer capability questions from this map; distinguish current status from authorization and boundary",
+    }
+
+
+def _capability_manifest_prompt_lines(manifest: dict[str, Any]) -> list[str]:
+    capabilities = manifest.get("capabilities")
+    if not isinstance(capabilities, dict):
+        return ["- capability_status: unavailable"]
+    lines = [
+        f"- capability_count: {_scrub_field(manifest.get('capability_count'))}",
+        f"- active_capability_count: {_scrub_field(manifest.get('active_capability_count'))}",
+        "- use_rule: answer what XinYu can do from status+authorization+boundary; do not treat configured ability as permission to act",
+    ]
+    for name in (
+        "live_chat",
+        "runtime_self_awareness",
+        "autonomous_maintenance",
+        "proactive_desktop_inbox",
+        "proactive_owner_private_qq",
+        "codex_delegate",
+        "self_code_iteration",
+        "public_learning",
+        "memory_review",
+        "expression_learning",
+        "private_ecosystem",
+        "private_desktop",
+        "private_browser",
+        "owner_private_share",
+    ):
+        data = capabilities.get(name)
+        if not isinstance(data, dict):
+            continue
+        compact = _format_subsystem_line(
+            _select_state_fields(
+                data,
+                ("status", "authorization", "output", "boundary", "current"),
+            )
+        )
+        if compact:
+            lines.append(f"- {name}: {compact}")
+    return lines
+
+
+def _render_capability_manifest_markdown(root: Path, fields: dict[str, str]) -> str:
+    awareness = _collect_program_awareness(root, presence_fields=fields)
+    manifest = _collect_capability_manifest(root, awareness=awareness)
+    value = lambda item, default="": _scrub_field(item or default)
+    lines = [
+        "---",
+        "title: Runtime Capability Manifest State",
+        "memory_type: capability_manifest_state",
+        "time_scope: immediate_runtime",
+        "subject_ids: [xinyu]",
+        "protected: true",
+        "source: xinyu_runtime_presence",
+        f"updated_at: {value(manifest.get('updated_at'))}",
+        "status: active",
+        "tags: [runtime, capability, autonomy, boundary]",
+        "---",
+        "",
+        "# Runtime Capability Manifest State",
+        "",
+        "## Boundary",
+        f"- scope: {value(manifest.get('scope'))}",
+        f"- direct_capability_omniscience: {value(manifest.get('direct_capability_omniscience'), 'false')}",
+        "- not_identity_contract: true",
+        "- stable_memory_write_permission: blocked",
+        "- permission_rule: current ability does not imply permission to act",
+        "- source_rule: derived from runtime state mirrors and owner grant files",
+        f"- capability_count: {value(manifest.get('capability_count'), '0')}",
+        f"- active_capability_count: {value(manifest.get('active_capability_count'), '0')}",
+        "",
+        "## Capabilities",
+    ]
+    capabilities = manifest.get("capabilities")
+    if isinstance(capabilities, dict):
+        for name, data in capabilities.items():
+            if isinstance(data, dict):
+                lines.append(f"- {name}: {_format_subsystem_line(data) or 'status=unknown'}")
+    lines.extend(
+        [
+            "",
+            "## Runtime Use",
+            f"- {value(manifest.get('runtime_use'))}",
+            "- For autonomous iteration, check status, authorization, output, and boundary before proposing or acting.",
+            "- For owner-facing answers, summarize naturally; do not dump this manifest as raw machinery.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def _render_program_awareness_markdown(root: Path, fields: dict[str, str]) -> str:
@@ -1286,6 +1676,9 @@ def _render_program_awareness_markdown(root: Path, fields: dict[str, str]) -> st
             "self_chosen_goal_ecology",
             "self_action_gateway",
             "self_action_patch_executor",
+            "private_ecosystem",
+            "private_desktop",
+            "private_owner_share",
             "proactive_request",
             "proactive_decision_shadow",
             "contextual_self_loop",
@@ -1450,6 +1843,14 @@ def _select_state_fields(fields: dict[str, str], wanted_keys: tuple[str, ...]) -
             continue
         selected[key] = _scrub_field(value)
     return selected
+
+
+def _load_json_object(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def _load_qq_queue_counts(root: Path) -> dict[str, str]:
@@ -1864,6 +2265,7 @@ def _render_presence_markdown(fields: dict[str, str]) -> str:
 def _write_presence_markdown(root: Path, fields: dict[str, str]) -> list[str]:
     notes = _atomic_write_text(root / PRESENCE_MD_REL, _render_presence_markdown(fields))
     notes.extend(_atomic_write_text(root / PROGRAM_AWARENESS_MD_REL, _render_program_awareness_markdown(root, fields)))
+    notes.extend(_atomic_write_text(root / CAPABILITY_MANIFEST_MD_REL, _render_capability_manifest_markdown(root, fields)))
     return notes
 
 

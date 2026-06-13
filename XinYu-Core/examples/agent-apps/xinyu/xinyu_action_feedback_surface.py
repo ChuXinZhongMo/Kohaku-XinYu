@@ -7,7 +7,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from xinyu_state_io import read_text, write_text_atomic
+from xinyu_action_feedback_surface_store import append_action_feedback_trace
+from xinyu_action_feedback_surface_store import read_action_feedback_state_text
+from xinyu_action_feedback_surface_store import write_action_feedback_state_text
 
 
 STATE_REL = Path("memory/context/action_feedback_state.md")
@@ -114,14 +116,11 @@ tags: [autonomy, action-result, feedback, future-behavior]
 - visible_reply_text_retained: false
 - stable_memory_write: blocked
 """
-    write_text_atomic(root / STATE_REL, text)
+    write_action_feedback_state_text(root / STATE_REL, text)
 
 
 def _append_trace(root: Path, event: dict[str, Any]) -> None:
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as fh:
-        fh.write(json.dumps(event, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+    append_action_feedback_trace(root / TRACE_REL, event)
 
 
 def record_action_feedback_event(
@@ -224,7 +223,7 @@ def record_action_feedback_from_message_drop(
 
 
 def read_action_feedback_state(root: Path) -> dict[str, str]:
-    text = read_text(Path(root) / STATE_REL)
+    text = read_action_feedback_state_text(Path(root) / STATE_REL)
     if not text:
         return {"status": "missing", "feedback_signal": "missing", "future_effect": "missing"}
     return _parse_fields(text)

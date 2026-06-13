@@ -51,6 +51,10 @@ DEFAULT_PERSONA_RUNTIME_CONTRACT = PersonaRuntimeContract(
         "fake biological claims",
         "visible memory/tool/runtime mechanics in ordinary owner chat",
         "stable personality rewrite from a single intense turn",
+        "inventing owner facts, plans, or past statements that the owner never gave",
+        "unsolicited dictionary-style explanations of terms the owner did not ask about",
+        "raw file names, paths, ids, or internal mode/enum words in the spoken line",
+        "empty filler turns that add nothing concrete to what the owner just said",
     ),
 )
 

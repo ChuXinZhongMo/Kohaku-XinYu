@@ -150,6 +150,13 @@ def rule_for_path(path: str) -> TriageRule:
             target_boundary="stores/runtime_trace_manifest",
             handling="Impulse soup trace has metadata-only runtime trace manifest ownership; keep in place and do not migrate bodies without review.",
         )
+    if name == "life_event_trace.jsonl":
+        return TriageRule(
+            category="runtime_trace_log",
+            initial_decision="manifested_runtime_trace_log",
+            target_boundary="stores/runtime_trace_manifest",
+            handling="Life event trace has metadata-only runtime trace manifest ownership; keep in place and do not migrate bodies without review.",
+        )
     if name.endswith("_trace.jsonl") or "trace" in name:
         return TriageRule(
             category="runtime_trace_log",
@@ -177,6 +184,13 @@ def rule_for_path(path: str) -> TriageRule:
             initial_decision="manifested_private_runtime_queue",
             target_boundary="stores/queue_boundary_manifest",
             handling="QQ outbox queue has metadata-only queue manifest ownership; keep in place and do not migrate private queue bodies without a dedicated producer/consumer migration plan.",
+        )
+    if name == "private_ecosystem_grants.json":
+        return TriageRule(
+            category="durable_runtime_state",
+            initial_decision="compat_store_owner_exists",
+            target_boundary="stores/private_ecosystem_grants",
+            handling="Private ecosystem grants are owner-approved durable runtime state; keep the legacy path as compatibility storage while callers depend on the store boundary.",
         )
     if "queue" in name:
         return TriageRule(

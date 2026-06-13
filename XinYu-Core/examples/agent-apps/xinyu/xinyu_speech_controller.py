@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_persona_runtime import PersonaRuntimeState, build_persona_runtime_state
+from xinyu_persona_voice import thin_expression_contract, unified_voice_enabled
 from xinyu_bridge_state_text import build_payload_time_context_block
 from xinyu_self_state_capsule import classify_self_state_query
 from xinyu_text_variants import readable_markers
@@ -1253,6 +1254,10 @@ class XinyuSpeechController:
             for part in [
                 output_prompt,
                 self._controller_contract(),
+                # Persona already arrives via persona_state in the user block, so
+                # the renderer only needs the new thin-expression contract to
+                # share the one voice (plan 11.1).
+                thin_expression_contract() if unified_voice_enabled() else "",
                 self._voice_mode_prompt(scene),
                 self._style_hard_mode_prompt() if scene.style_pressure else "",
                 self._retry_hard_mode_prompt(flags) if flags else "",

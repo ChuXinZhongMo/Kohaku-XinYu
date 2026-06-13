@@ -7,7 +7,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_state_io import read_text, write_text_atomic
+from xinyu_action_feedback_coverage_store import append_action_feedback_coverage_trace
+from xinyu_action_feedback_coverage_store import latest_action_feedback_jsonl_row
+from xinyu_action_feedback_coverage_store import read_action_feedback_coverage_json
+from xinyu_action_feedback_coverage_store import read_action_feedback_coverage_text
+from xinyu_action_feedback_coverage_store import write_action_feedback_coverage_text
 
 
 STATE_REL = Path("memory/context/action_feedback_coverage_state.md")
@@ -96,7 +100,7 @@ def build_action_feedback_coverage_report(root: Path, *, generated_at: str | Non
 
 
 def read_action_feedback_coverage_state(root: Path) -> dict[str, str]:
-    text = read_text(Path(root) / STATE_REL)
+    text = read_action_feedback_coverage_text(Path(root) / STATE_REL)
     if not text:
         return {"status": "missing", "observed_surface_count": "0", "non_qq_surface_count": "0"}
     return _parse_fields(text)
@@ -163,15 +167,14 @@ def write_action_feedback_coverage(
     report_path = output if output is not None else root / REPORT_REL
     if not report_path.is_absolute():
         report_path = root / report_path
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(render_action_feedback_coverage_report(report), encoding="utf-8")
+    write_action_feedback_coverage_text(report_path, render_action_feedback_coverage_report(report))
     _write_state(root, report, report_path=report_path)
     _append_trace(root, report)
     return {"report_path": str(report_path), "state_path": str(root / STATE_REL)}
 
 
 def _qq_surface(root: Path) -> dict[str, Any]:
-    fields = _parse_fields(read_text(root / ACTION_FEEDBACK_STATE_REL))
+    fields = _parse_fields(read_action_feedback_coverage_text(root / ACTION_FEEDBACK_STATE_REL))
     signal = fields.get("feedback_signal", "missing")
     observed = _present(signal)
     result = fields.get("action_result", "missing")
@@ -192,7 +195,7 @@ def _qq_surface(root: Path) -> dict[str, Any]:
 
 
 def _desktop_surface(root: Path) -> dict[str, Any]:
-    fields = _parse_fields(read_text(root / PROACTIVE_REQUEST_STATE_REL))
+    fields = _parse_fields(read_action_feedback_coverage_text(root / PROACTIVE_REQUEST_STATE_REL))
     state_status = fields.get("status", "missing")
     answer_state = fields.get("request_answer_state", "missing")
     last_ack = fields.get("last_ack_status", "missing")
@@ -319,7 +322,7 @@ def _local_tool_surface(root: Path) -> dict[str, Any]:
             evidence_ref=_content_ref(executed.get("action_id") or executed.get("report_ref") or ""),
         )
 
-    fields = _parse_fields(read_text(root / SELF_ACTION_GATEWAY_STATE_REL))
+    fields = _parse_fields(read_action_feedback_coverage_text(root / SELF_ACTION_GATEWAY_STATE_REL))
     execution_result = fields.get("execution_result", "missing")
     observed = _present(execution_result)
     signal = "self_action_handoff_created" if execution_result == "handoff_created" else "self_action_state_seen"
@@ -337,7 +340,7 @@ def _local_tool_surface(root: Path) -> dict[str, Any]:
 
 
 def _patch_executor_surface(root: Path) -> dict[str, Any]:
-    fields = _parse_fields(read_text(root / PATCH_EXECUTOR_STATE_REL))
+    fields = _parse_fields(read_action_feedback_coverage_text(root / PATCH_EXECUTOR_STATE_REL))
     status = fields.get("status", "missing")
     codex_status = fields.get("codex_status", "missing")
     observed = _present(status)
@@ -380,7 +383,7 @@ def _patch_executor_surface(root: Path) -> dict[str, Any]:
 
 
 def _code_probe_surface(root: Path) -> dict[str, Any]:
-    fields = _parse_fields(read_text(root / CODE_AWARENESS_STATE_REL))
+    fields = _parse_fields(read_action_feedback_coverage_text(root / CODE_AWARENESS_STATE_REL))
     status = fields.get("status", "missing")
     observed = _present(status)
     source_changed = _bool_field(fields, "source_changed")
@@ -421,7 +424,7 @@ def _code_probe_surface(root: Path) -> dict[str, Any]:
 
 
 def _runtime_probe_surface(root: Path) -> dict[str, Any]:
-    fields = _parse_fields(read_text(root / RUNTIME_PRESENCE_STATE_REL))
+    fields = _parse_fields(read_action_feedback_coverage_text(root / RUNTIME_PRESENCE_STATE_REL))
     bridge_process = fields.get("bridge_process", "missing")
     turn_state = fields.get("current_turn_state", "missing")
     last_turn_status = fields.get("last_turn_status", "missing")
@@ -526,7 +529,7 @@ tags: [autonomy, action-result, feedback, coverage]
 - runtime_preview_text_retained: false
 - stable_memory_write: blocked
 """
-    write_text_atomic(root / STATE_REL, text)
+    write_action_feedback_coverage_text(root / STATE_REL, text)
 
 
 def _append_trace(root: Path, report: dict[str, Any]) -> None:
@@ -555,10 +558,7 @@ def _append_trace(root: Path, report: dict[str, Any]) -> None:
         "visible_reply_text_retained": False,
         "runtime_preview_text_retained": False,
     }
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as fh:
-        fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+    append_action_feedback_coverage_trace(root / TRACE_REL, row)
 
 
 def _surface(
@@ -661,30 +661,11 @@ def _parse_fields(text: str) -> dict[str, str]:
 
 
 def _read_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8-sig", errors="replace"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    return data if isinstance(data, dict) else {}
+    return read_action_feedback_coverage_json(path)
 
 
 def _latest_jsonl_row(path: Path, predicate: Any, *, max_lines: int = 400) -> dict[str, Any]:
-    if not path.exists():
-        return {}
-    try:
-        lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
-    except OSError:
-        return {}
-    for line in reversed(lines[-max(1, int(max_lines)) :]):
-        try:
-            data = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(data, dict) and predicate(data):
-            return data
-    return {}
+    return latest_action_feedback_jsonl_row(path, predicate, max_lines=max_lines)
 
 
 def _parse_timestamp(value: Any) -> datetime | None:

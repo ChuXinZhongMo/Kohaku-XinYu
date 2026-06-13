@@ -8,11 +8,13 @@ from xinyu_attention_posture import (
     update_attention_from_perception_importance,
     update_attention_posture,
 )
+from xinyu_private_ecosystem_grants import save_grants_patch
 from xinyu_proactive_direct_sender import send_proactive_direct
 
 
 def _seed_owner_private_send_grant(root: Path) -> None:
     (root / "memory/context").mkdir(parents=True, exist_ok=True)
+    save_grants_patch(root, {"owner_private_autonomous_share": {"enabled": True, "paused": False}})
     (root / "xinyu_qq_gateway.config.json").write_text('{"owner_user_ids": ["owner-1"]}', encoding="utf-8")
     (root / "memory/context/current_life_posture.md").write_text("- no_proactive_constraint: unchanged\n", encoding="utf-8")
     (root / "memory/context/owner_permission_grants.md").write_text("", encoding="utf-8")

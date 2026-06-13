@@ -13,6 +13,7 @@ from xinyu_bridge_state_text import (
     desktop_replace_list_field,
     payload_event_time_iso,
     payload_event_timestamp_seconds,
+    read_text_safe,
     replace_frontmatter_field,
     replace_list_field,
 )
@@ -55,6 +56,15 @@ def test_desktop_state_text_compat_exports_shared_functions() -> None:
     assert desktop_replace_list_field is replace_list_field
     assert compat_frontmatter is replace_frontmatter_field
     assert compat_list is replace_list_field
+
+
+def test_read_text_safe_keeps_bridge_compat_semantics(tmp_path) -> None:
+    path = tmp_path / "state.md"
+    path.write_bytes(b"\xef\xbb\xbf- status: ready\n")
+
+    assert read_text_safe(path) == "- status: ready\n"
+    assert read_text_safe(tmp_path / "missing.md") == ""
+    assert read_text_safe(tmp_path / "missing.md", default="fallback") == "fallback"
 
 
 def test_payload_event_time_prefers_top_level_timestamp() -> None:

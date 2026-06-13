@@ -3,32 +3,20 @@ from __future__ import annotations
 import argparse
 import ast
 import json
-import subprocess
 import sys
 from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from xinyu_module_ecology_audit_store import SKIP_SCAN_DIRS
+from xinyu_module_ecology_audit_store import SKIP_SCAN_PREFIXES
+from xinyu_module_ecology_audit_store import collect_module_ecology_paths
+from xinyu_module_ecology_audit_store import read_module_ecology_git_status_text
+from xinyu_module_ecology_audit_store import read_module_ecology_reference_sources
+from xinyu_module_ecology_audit_store import read_module_ecology_status_file
+from xinyu_module_ecology_audit_store import write_module_ecology_output
 
-SKIP_SCAN_DIRS = {
-    ".git",
-    ".pytest_cache",
-    ".venv",
-    "__pycache__",
-    "node_modules",
-    "dist",
-    "build",
-    "memory",
-    "runtime",
-    "data",
-    "library",
-    "cases",
-    "logs",
-}
-SKIP_SCAN_PREFIXES = {
-    ("ops", "reports"),
-}
 NON_LIVE_REFERENCE_PREFIXES = (
     "tests/",
     "lab/",
@@ -157,7 +145,11 @@ def build_module_ecology_audit(
     max_items: int = 500,
 ) -> dict[str, Any]:
     app_root = root.resolve()
-    paths = [_norm(item) for item in module_paths] if module_paths is not None else _collect_module_paths(app_root, max_items=max_items)
+    paths = (
+        [_norm(item) for item in module_paths]
+        if module_paths is not None
+        else collect_module_ecology_paths(app_root, max_items=max_items)
+    )
     reference_index = _build_reference_index(app_root)
     statuses = {_norm(key): value for key, value in (statuses or {}).items()}
     if module_paths is None and statuses:
@@ -278,45 +270,9 @@ def filter_module_ecology_audit(
     }
 
 
-def _collect_module_paths(app_root: Path, *, max_items: int) -> list[str]:
-    if not app_root.exists():
-        return []
-    paths: list[str] = []
-    pending = [app_root]
-    while pending and len(paths) < max_items:
-        current = pending.pop()
-        try:
-            children = sorted(current.iterdir(), key=lambda item: item.as_posix().lower())
-        except OSError:
-            continue
-        for child in children:
-            rel = child.relative_to(app_root).as_posix()
-            parts = Path(rel).parts
-            if child.is_dir():
-                if _skip_scan_parts(parts):
-                    continue
-                pending.append(child)
-                continue
-            if _skip_scan_parts(parts):
-                continue
-            if child.suffix.lower() in {".py", ".ps1", ".md", ".yaml", ".yml", ".json"}:
-                paths.append(rel)
-                if len(paths) >= max_items:
-                    break
-    return sorted(paths)
-
-
 def _build_reference_index(app_root: Path) -> list[tuple[str, str, set[str]]]:
-    allowed_suffixes = {".py", ".md", ".yaml", ".yml", ".ps1", ".ts", ".tsx", ".js", ".json"}
     index: list[tuple[str, str, set[str]]] = []
-    for rel in _collect_module_paths(app_root, max_items=5000):
-        path = app_root / rel
-        if path.suffix.lower() not in allowed_suffixes:
-            continue
-        try:
-            text = path.read_text(encoding="utf-8-sig", errors="replace")
-        except OSError:
-            continue
+    for rel, text in read_module_ecology_reference_sources(app_root, max_items=5000):
         index.append((rel, text, _python_imports_for_source(rel, text)))
     return index
 
@@ -411,19 +367,7 @@ def _resolve_import_from(source_package: str, module: str, level: int) -> str:
 
 def collect_git_statuses(root: Path) -> dict[str, str]:
     app_root = root.resolve()
-    try:
-        completed = subprocess.run(
-            ["git", "-C", str(app_root), "-c", "core.quotepath=false", "status", "--short", "--", "."],
-            check=False,
-            capture_output=True,
-            encoding="utf-8",
-            errors="replace",
-        )
-    except OSError:
-        return {}
-    if completed.returncode != 0:
-        return {}
-    return parse_git_short_status(completed.stdout)
+    return parse_git_short_status(read_module_ecology_git_status_text(app_root))
 
 
 def parse_git_short_status(text: str) -> dict[str, str]:
@@ -543,14 +487,6 @@ def _safe(value: Any) -> str:
     return "" if value is None else str(value).strip()
 
 
-def _skip_scan_parts(parts: tuple[str, ...]) -> bool:
-    if not parts:
-        return False
-    if parts[0] in SKIP_SCAN_DIRS:
-        return True
-    return any(len(parts) >= len(prefix) and parts[: len(prefix)] == prefix for prefix in SKIP_SCAN_PREFIXES)
-
-
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Build a metadata-only XinYu module ecology audit.")
     parser.add_argument("--root", default=".", help="XinYu app root to scan.")
@@ -578,7 +514,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.no_git_status:
         statuses.update(collect_git_statuses(root))
     if args.status_file:
-        statuses.update(parse_git_short_status(Path(args.status_file).read_text(encoding="utf-8-sig", errors="replace")))
+        statuses.update(parse_git_short_status(read_module_ecology_status_file(Path(args.status_file))))
     audit = build_module_ecology_audit(
         root,
         statuses=statuses,
@@ -596,9 +532,7 @@ def main(argv: list[str] | None = None) -> int:
         else render_module_ecology_report(audit)
     )
     if args.output:
-        output = Path(args.output)
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(rendered, encoding="utf-8")
+        write_module_ecology_output(Path(args.output), rendered)
     else:
         print(rendered, end="")
     return 0

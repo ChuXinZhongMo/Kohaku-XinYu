@@ -4,8 +4,10 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from state_service import append_jsonl, atomic_write_text
 from xinyu_owner_context_bridge import extract_protected_recent_anchors, merge_protected_recent_anchors
+from xinyu_recent_context_guard_store import append_recent_context_guard_trace
+from xinyu_recent_context_guard_store import read_recent_context_guard_text
+from xinyu_recent_context_guard_store import write_recent_context_guard_text
 
 
 RECENT_CONTEXT_REL = Path("memory/context/recent_context.md")
@@ -18,10 +20,7 @@ STALE_CONTEXT_TOLERANCE = timedelta(minutes=2)
 
 
 def _read(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
-        return ""
+    return read_recent_context_guard_text(path)
 
 
 def _valid_recent_context(text: str) -> bool:
@@ -144,7 +143,7 @@ last_updated: "{last_at}"
 
 def _trace(root: Path, result: dict[str, str]) -> None:
     try:
-        append_jsonl(
+        append_recent_context_guard_trace(
             root / TRACE_REL,
             {
                 "checked_at": datetime.now().astimezone().isoformat(),
@@ -172,11 +171,11 @@ def ensure_recent_context_health(root: Path) -> dict[str, str]:
         merged_recent = merge_protected_recent_anchors(recent, protected_anchors)
         action = "anchor_synced"
         if merged_recent != recent.strip():
-            atomic_write_text(recent_path, merged_recent)
+            write_recent_context_guard_text(recent_path, merged_recent)
             recent = merged_recent
             action = "protected_anchors_merged"
         if recent != anchor:
-            atomic_write_text(anchor_path, recent)
+            write_recent_context_guard_text(anchor_path, recent)
         result = {"status": "ok", "action": action}
         _trace(root, result)
         return result
@@ -184,7 +183,7 @@ def ensure_recent_context_health(root: Path) -> dict[str, str]:
     if not anchor_problem:
         protected_anchors = extract_protected_recent_anchors(anchor)
         restored = merge_protected_recent_anchors(anchor, protected_anchors)
-        atomic_write_text(recent_path, restored)
+        write_recent_context_guard_text(recent_path, restored)
         result = {"status": "repaired", "action": f"restored_from_anchor:{recent_problem}"}
         _trace(root, result)
         return result
@@ -193,8 +192,8 @@ def ensure_recent_context_health(root: Path) -> dict[str, str]:
     if latest is not None:
         protected_anchors = extract_protected_recent_anchors(anchor) + extract_protected_recent_anchors(recent)
         restored = _build_recent_context_from_interaction_state(root, protected_anchors)
-        atomic_write_text(recent_path, restored)
-        atomic_write_text(anchor_path, restored)
+        write_recent_context_guard_text(recent_path, restored)
+        write_recent_context_guard_text(anchor_path, restored)
         result = {"status": "repaired", "action": f"restored_from_interaction_journal:{recent_problem or 'invalid'}"}
         _trace(root, result)
         return result

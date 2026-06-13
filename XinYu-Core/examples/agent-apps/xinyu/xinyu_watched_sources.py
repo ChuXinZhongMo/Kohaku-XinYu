@@ -16,6 +16,10 @@ from urllib.parse import urljoin, urlparse
 
 import httpx
 
+from xinyu_watched_sources_store import append_watched_source_trace
+from xinyu_watched_sources_store import read_watched_source_text
+from xinyu_watched_sources_store import write_watched_source_text
+
 
 WATCH_CONFIG_REL = Path("memory/context/watch_sources.md")
 STATE_REL = Path("memory/context/watched_source_state.md")
@@ -526,10 +530,7 @@ def _append_trace(root: Path, result: dict[str, Any]) -> None:
         "latest_title": result["latest_title"],
         "notes": result["notes"][:8],
     }
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
+    append_watched_source_trace(root / TRACE_REL, payload)
 
 
 def _same_source(previous_state: str, source: dict[str, str]) -> bool:
@@ -588,15 +589,11 @@ def _allowed_public_url(url: str) -> bool:
 
 
 def _read(path: Path) -> str:
-    try:
-        return path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
-        return ""
+    return read_watched_source_text(path)
 
 
 def _write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text.rstrip() + "\n", encoding="utf-8")
+    write_watched_source_text(path, text)
 
 
 def _now_iso() -> str:

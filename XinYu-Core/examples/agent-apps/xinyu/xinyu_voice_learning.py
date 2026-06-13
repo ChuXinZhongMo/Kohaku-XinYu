@@ -4,6 +4,10 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from xinyu_voice_calibration_store import read_voice_calibration_text
+from xinyu_voice_calibration_store import voice_calibration_log_path
+from xinyu_voice_calibration_store import voice_calibration_text_exists
+from xinyu_voice_calibration_store import write_voice_calibration_text
 
 STYLE_CORRECTION_MARKERS = (
     "AI味",
@@ -162,10 +166,10 @@ def record_voice_correction(
     if not should_record_voice_correction(user_text):
         return False
 
-    path = root / "memory/self/voice_calibration_log.md"
-    if not path.exists():
+    path = voice_calibration_log_path(root)
+    if not voice_calibration_text_exists(path):
         return False
-    text = path.read_text(encoding="utf-8-sig", errors="replace")
+    text = read_voice_calibration_text(path)
     entry_id = _entry_id(user_text)
     if f"## {entry_id}" in text:
         return False
@@ -191,7 +195,7 @@ def record_voice_correction(
     else:
         text = text.rstrip() + entry
     text = re.sub(r"(?m)^updated_at:\s*.+$", f"updated_at: {_timestamp_or_now_iso(recorded_at)}", text, count=1)
-    path.write_text(text.rstrip() + "\n", encoding="utf-8")
+    write_voice_calibration_text(path, text)
     try:
         from xinyu_voice_promotion_gate import build_voice_promotion_review
 

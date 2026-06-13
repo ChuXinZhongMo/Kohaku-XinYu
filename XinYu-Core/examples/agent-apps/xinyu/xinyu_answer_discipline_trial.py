@@ -17,6 +17,15 @@ from xinyu_answer_discipline_visible_guard import (
     evaluate_visible_reply_for_answer_discipline,
     synthetic_visible_reply_for_constraints,
 )
+from xinyu_llm_api import (
+    anthropic_headers,
+    anthropic_messages_endpoint,
+    anthropic_payload_from_messages,
+    extract_anthropic_text,
+    extract_openai_text,
+    is_anthropic_messages_provider,
+    openai_headers,
+)
 from xinyu_runtime_context import build_renderer_memory_context
 
 
@@ -83,9 +92,10 @@ class LiveLLMConfig:
     base_url: str
     api_key_env: str
     api_key: str
-    temperature: float = 0.2
+    temperature: float = 0.7
     max_tokens: int = 360
     timeout_seconds: float = 45.0
+    provider: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -1295,12 +1305,12 @@ def _discipline_instruction(result: dict[str, Any]) -> str:
     pressure = str(result.get("retrieval_pressure") or "")
     evidence = str(result.get("evidence_sufficiency") or "")
     if pressure == "high" and evidence == "none":
+        # plan 11.8: keep the anti-fabrication semantics but drop the forced
+        # fixed Chinese opener; say the uncertainty naturally in your own words.
         return (
-            "Discipline for this turn: the message depends on prior context, but no usable prior evidence is available. "
-            "Your first sentence must say that you cannot verify the previous dialogue. "
-            "If replying in Chinese, the first sentence must include '我无法确认前面的完整对话'. "
-            "Then answer only the current message. "
-            "Do not state any specific prior event as fact."
+            "Discipline for this turn: the message leans on prior context, but no usable prior evidence is available. "
+            "Be honest in your own natural words that you are not sure about the earlier conversation, then answer only "
+            "the current message. Do not state any specific prior event as fact, and do not use a fixed template opener."
         )
     if pressure == "high" and evidence == "weak":
         return (
@@ -1332,9 +1342,13 @@ def _discover_live_llm_config(root: Path) -> LiveLLMConfig | None:
         base_url=base_url,
         api_key_env=api_key_env,
         api_key=api_key,
-        temperature=_float_env("XINYU_ANSWER_DISCIPLINE_LIVE_TEMPERATURE", 0.2),
+        temperature=_float_env(
+            "XINYU_ANSWER_DISCIPLINE_LIVE_TEMPERATURE",
+            _float_env("XINYU_LLM_TEMPERATURE", 0.7),
+        ),
         max_tokens=_int_env("XINYU_ANSWER_DISCIPLINE_LIVE_MAX_TOKENS", 360),
         timeout_seconds=_float_env("XINYU_ANSWER_DISCIPLINE_LIVE_TIMEOUT_SECONDS", 45.0),
+        provider=os.environ.get("XINYU_LLM_PROVIDER", "").strip(),
     )
 
 
@@ -1355,24 +1369,51 @@ def _load_trial_env_file(path: Path) -> None:
 
 
 def _call_openai_compatible_llm(messages: list[dict[str, str]], config: LiveLLMConfig) -> str:
-    payload = {
-        "model": config.model,
-        "temperature": config.temperature,
-        "max_tokens": config.max_tokens,
-        "messages": messages,
-    }
+    if is_anthropic_messages_provider(config.provider):
+        data = _post_live_llm_json(
+            anthropic_messages_endpoint(config.base_url),
+            anthropic_payload_from_messages(
+                messages,
+                model=config.model,
+                temperature=config.temperature,
+                max_tokens=config.max_tokens,
+            ),
+            anthropic_headers(config.api_key),
+            config.timeout_seconds,
+        )
+        reply = extract_anthropic_text(data)
+    else:
+        data = _post_live_llm_json(
+            config.base_url.rstrip("/") + "/chat/completions",
+            {
+                "model": config.model,
+                "temperature": config.temperature,
+                "max_tokens": config.max_tokens,
+                "messages": messages,
+            },
+            openai_headers(config.api_key),
+            config.timeout_seconds,
+        )
+        reply = extract_openai_text(data)
+    if not reply:
+        raise LiveLLMTrialError("llm_empty_reply")
+    return reply
+
+
+def _post_live_llm_json(
+    url: str,
+    payload: dict[str, Any],
+    headers: dict[str, str],
+    timeout_seconds: float,
+) -> dict[str, Any]:
     request = urllib.request.Request(
-        config.base_url.rstrip("/") + "/chat/completions",
+        url,
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json; charset=utf-8",
-            "Accept": "application/json",
-            "Authorization": f"Bearer {config.api_key}",
-        },
+        headers=headers,
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=config.timeout_seconds) as response:
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
             body = response.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as exc:
         raise LiveLLMTrialError(f"llm_http_{exc.code}") from exc
@@ -1382,22 +1423,9 @@ def _call_openai_compatible_llm(messages: list[dict[str, str]], config: LiveLLMC
         data = json.loads(body)
     except json.JSONDecodeError as exc:
         raise LiveLLMTrialError("llm_invalid_json") from exc
-    reply = _extract_openai_text(data)
-    if not reply:
-        raise LiveLLMTrialError("llm_empty_reply")
-    return reply
-
-
-def _extract_openai_text(data: dict[str, Any]) -> str:
-    choices = data.get("choices")
-    if isinstance(choices, list) and choices:
-        first = choices[0]
-        if isinstance(first, dict):
-            message = first.get("message")
-            if isinstance(message, dict):
-                return str(message.get("content") or "").strip()
-            return str(first.get("text") or "").strip()
-    return str(data.get("text") or data.get("reply") or "").strip()
+    if not isinstance(data, dict):
+        raise LiveLLMTrialError("llm_invalid_json")
+    return data
 
 
 def _judge_live_reply(reply: str, result: dict[str, Any]) -> dict[str, bool]:

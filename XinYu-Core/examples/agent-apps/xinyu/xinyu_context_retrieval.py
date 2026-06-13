@@ -662,13 +662,19 @@ def retrieve_recalled_context(
         )
     )
     archive_session_key = None if current_scope == OWNER_PRIVATE_SCOPE else scope.session_key
+    archive_group_id_hash = None
     if current_scope == GROUP_SCOPE:
+        # Drop the per-speaker session filter so the whole group is recallable,
+        # but pin to THIS group's hash so social memory never leaks across groups
+        # (plan §6.5 / §9.1).
         archive_session_key = None
+        archive_group_id_hash = scope.group_id_hash or None
     archive_records = search_dialogue_archive(
         root,
         query_text,
         scopes=scopes,
         session_key=archive_session_key,
+        group_id_hash=archive_group_id_hash,
         limit=24,
     )
     items.extend(

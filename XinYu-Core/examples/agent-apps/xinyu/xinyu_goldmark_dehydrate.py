@@ -14,6 +14,15 @@ from typing import Any
 from stores.persona_runtime_overlay import write_goldmark_overlay
 from xinyu_dialogue_archive import dialogue_archive_path
 from xinyu_goldmark import read_goldmark_overlay
+from xinyu_llm_api import (
+    anthropic_headers,
+    anthropic_messages_endpoint,
+    anthropic_payload_from_messages,
+    extract_anthropic_text,
+    extract_openai_text,
+    is_anthropic_messages_provider,
+    openai_headers,
+)
 from xinyu_sent_reply_index import normalize_visible_text
 
 
@@ -217,27 +226,34 @@ def _call_llm_dehydrator(root: Path, *, visible_text: str, owner_note: str, time
     api_key = os.environ.get("XINYU_API_KEY", "").strip()
     model = os.environ.get("XINYU_GOLDMARK_DEHYDRATE_MODEL", "").strip() or os.environ.get("XINYU_LLM_MODEL", "").strip()
     model = model or "mimo-v2.5-pro"
+    provider = os.environ.get("XINYU_GOLDMARK_DEHYDRATE_LLM_PROVIDER", "").strip() or os.environ.get("XINYU_LLM_PROVIDER", "").strip()
     if not base_url or not api_key:
         raise RuntimeError("llm_not_configured")
 
     system, user = build_dehydration_prompt(visible_text=visible_text, owner_note=owner_note)
-    body = {
-        "model": model,
-        "temperature": 0.1,
-        "max_tokens": 500,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-    }
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ]
+    if is_anthropic_messages_provider(provider):
+        url = anthropic_messages_endpoint(base_url)
+        body = anthropic_payload_from_messages(messages, model=model, temperature=0.1, max_tokens=500)
+        headers = anthropic_headers(api_key)
+        extract_text = extract_anthropic_text
+    else:
+        url = base_url.rstrip("/") + "/chat/completions"
+        body = {
+            "model": model,
+            "temperature": 0.1,
+            "max_tokens": 500,
+            "messages": messages,
+        }
+        headers = openai_headers(api_key)
+        extract_text = extract_openai_text
     request = urllib.request.Request(
-        base_url.rstrip("/") + "/chat/completions",
+        url,
         data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
-        headers={
-            "Accept": "application/json",
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json; charset=utf-8",
-        },
+        headers=headers,
         method="POST",
     )
     try:
@@ -247,12 +263,9 @@ def _call_llm_dehydrator(root: Path, *, visible_text: str, owner_note: str, time
         raise RuntimeError(f"llm_request_failed:{type(exc).__name__}") from exc
     try:
         payload = json.loads(raw_body)
-        choices = payload.get("choices")
-        if isinstance(choices, list) and choices:
-            message = choices[0].get("message") if isinstance(choices[0], dict) else {}
-            text = _safe_str(message.get("content") if isinstance(message, dict) else choices[0].get("text")).strip()
-        else:
-            text = _safe_str(payload.get("text") or payload.get("reply")).strip()
+        if not isinstance(payload, dict):
+            raise AttributeError("non-object response")
+        text = extract_text(payload)
     except (AttributeError, json.JSONDecodeError) as exc:
         raise RuntimeError("llm_invalid_response") from exc
     return _parse_feature_json(text)

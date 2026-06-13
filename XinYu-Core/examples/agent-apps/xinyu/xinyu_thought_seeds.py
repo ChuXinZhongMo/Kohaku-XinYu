@@ -5,8 +5,22 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-
-STATE_REL = "memory/context/thought_seeds.md"
+from xinyu_thought_seeds_store import ACTIVE_QUESTIONS_REL
+from xinyu_thought_seeds_store import DREAM_LOG_REL
+from xinyu_thought_seeds_store import DREAM_WEIGHT_REL
+from xinyu_thought_seeds_store import INITIATIVE_STATE_REL
+from xinyu_thought_seeds_store import INNER_CYCLE_STATE_REL
+from xinyu_thought_seeds_store import MEMORY_WEIGHT_REL
+from xinyu_thought_seeds_store import MIND_LOOP_STATE_REL
+from xinyu_thought_seeds_store import PERSONALITY_EVOLUTION_REL
+from xinyu_thought_seeds_store import PERSONA_SURFACE_REL
+from xinyu_thought_seeds_store import RECENT_CONTEXT_REL
+from xinyu_thought_seeds_store import STATE_REL
+from xinyu_thought_seeds_store import UNFINISHED_EXPERIENCES_REL
+from xinyu_thought_seeds_store import read_thought_seed_text
+from xinyu_thought_seeds_store import read_thought_seeds_state
+from xinyu_thought_seeds_store import thought_seeds_source_path
+from xinyu_thought_seeds_store import write_thought_seeds_state
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,9 +34,7 @@ class ThoughtSeedSnapshot:
 
 
 def read_text(path: Path) -> str:
-    if not path.exists():
-        return ""
-    return path.read_text(encoding="utf-8-sig", errors="replace")
+    return read_thought_seed_text(path)
 
 
 def _field(text: str, name: str, default: str = "none") -> str:
@@ -129,8 +141,8 @@ def _active_question(active_questions: str) -> str:
 
 
 def _dream_residue(root: Path) -> dict[str, str]:
-    weight = read_text(root / "memory/dreams/dream_weight_state.md")
-    log = read_text(root / "memory/dreams/dream_log.md")
+    weight = read_text(thought_seeds_source_path(root, DREAM_WEIGHT_REL))
+    log = read_text(thought_seeds_source_path(root, DREAM_LOG_REL))
     dream_id, dream_body = _latest_section(log, "dream-")
     return {
         "dream_id": dream_id,
@@ -146,8 +158,8 @@ def _dream_residue(root: Path) -> dict[str, str]:
 
 
 def _recent_residue(root: Path) -> dict[str, str]:
-    surface = read_text(root / "memory/context/persona_surface_state.md")
-    recent = read_text(root / "memory/context/recent_context.md")
+    surface = read_text(thought_seeds_source_path(root, PERSONA_SURFACE_REL))
+    recent = read_text(thought_seeds_source_path(root, RECENT_CONTEXT_REL))
     return {
         "scene": _field(surface, "last_scene"),
         "pressure": _field(surface, "last_pressure"),
@@ -160,11 +172,11 @@ def _recent_residue(root: Path) -> dict[str, str]:
 
 
 def _current_drives(root: Path) -> dict[str, str]:
-    initiative = read_text(root / "memory/context/initiative_state.md")
-    inner = read_text(root / "memory/context/inner_cycle_state.md")
-    mind = read_text(root / "memory/self/mind_loop_state.md")
-    active_questions = read_text(root / "memory/context/active_questions.md")
-    evolution = read_text(root / "memory/self/personality_evolution_state.md")
+    initiative = read_text(thought_seeds_source_path(root, INITIATIVE_STATE_REL))
+    inner = read_text(thought_seeds_source_path(root, INNER_CYCLE_STATE_REL))
+    mind = read_text(thought_seeds_source_path(root, MIND_LOOP_STATE_REL))
+    active_questions = read_text(thought_seeds_source_path(root, ACTIVE_QUESTIONS_REL))
+    evolution = read_text(thought_seeds_source_path(root, PERSONALITY_EVOLUTION_REL))
     return {
         "initiative_decision": _field(initiative, "decision"),
         "initiative_reason": _field(initiative, "reason"),
@@ -223,8 +235,8 @@ def build_thought_seed_snapshot(
     seed_id = f"thought-seed-{seed_stamp[:15]}"
     recent = _recent_residue(root)
     dream = _dream_residue(root)
-    memory_rows = _top_memory_rows(read_text(root / "memory/context/memory_weight_state.md"))
-    unfinished = _unfinished_items(read_text(root / "memory/context/unfinished_experiences.md"))
+    memory_rows = _top_memory_rows(read_text(thought_seeds_source_path(root, MEMORY_WEIGHT_REL)))
+    unfinished = _unfinished_items(read_text(thought_seeds_source_path(root, UNFINISHED_EXPERIENCES_REL)))
     drives = _current_drives(root)
     dominant = _dominant_drive(recent, dream, unfinished, drives)
     balance = _source_balance(dominant)
@@ -364,11 +376,9 @@ must_preserve:
 
 def refresh_thought_seeds(root: Path, *, generated_at: str | None = None) -> ThoughtSeedSnapshot:
     snapshot = build_thought_seed_snapshot(root, generated_at=generated_at)
-    path = root / STATE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    old = read_text(path)
+    old = read_thought_seeds_state(root)
     if old != snapshot.text:
-        path.write_text(snapshot.text, encoding="utf-8")
+        write_thought_seeds_state(root, snapshot.text)
     return snapshot
 
 

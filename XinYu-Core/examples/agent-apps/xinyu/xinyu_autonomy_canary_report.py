@@ -5,11 +5,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from xinyu_state_io import read_text
-
-RELATION_STATE_REL = Path("memory/context/relation_posture_state.md")
-INTENTION_STATE_REL = Path("memory/context/intention_ecology_state.md")
-INTENTION_TRACE_REL = Path("runtime/intention_ecology_trace.jsonl")
+from xinyu_autonomy_canary_report_store import INTENTION_STATE_REL
+from xinyu_autonomy_canary_report_store import INTENTION_TRACE_REL
+from xinyu_autonomy_canary_report_store import RELATION_STATE_REL
+from xinyu_autonomy_canary_report_store import read_autonomy_canary_recent_traces
+from xinyu_autonomy_canary_report_store import read_autonomy_canary_text
 
 CANARY_PROMPTS = [
     {
@@ -78,9 +78,9 @@ def main() -> int:
 
 
 def build_report(root: Path, *, trace_limit: int = 5) -> dict[str, Any]:
-    relation_state = _parse_md_fields(read_text(root / RELATION_STATE_REL))
-    intention_state = _parse_md_fields(read_text(root / INTENTION_STATE_REL))
-    traces = _read_recent_traces(root / INTENTION_TRACE_REL, limit=trace_limit)
+    relation_state = _parse_md_fields(read_autonomy_canary_text(root / RELATION_STATE_REL))
+    intention_state = _parse_md_fields(read_autonomy_canary_text(root / INTENTION_STATE_REL))
+    traces = read_autonomy_canary_recent_traces(root / INTENTION_TRACE_REL, limit=trace_limit)
     warnings = _warnings(intention_state, traces)
     return {
         "root": str(root),
@@ -179,33 +179,6 @@ def _selected_fields(fields: dict[str, str], keys: list[str]) -> dict[str, str]:
 
 def _render_fields(fields: dict[str, str]) -> list[str]:
     return [f"- {key}: {value}" for key, value in fields.items()]
-
-
-def _read_recent_traces(path: Path, *, limit: int) -> list[dict[str, Any]]:
-    text = read_text(path)
-    if not text.strip():
-        return []
-    rows: list[dict[str, Any]] = []
-    for line in text.splitlines()[-limit:]:
-        try:
-            data = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if not isinstance(data, dict):
-            continue
-        rows.append(
-            {
-                "checked_at": data.get("checked_at", ""),
-                "selected_intent": data.get("selected_intent", ""),
-                "selected_gate": data.get("selected_gate", ""),
-                "autonomy_posture": data.get("autonomy_posture", ""),
-                "feedback_signal": data.get("feedback_signal", ""),
-                "proactive_candidate": data.get("proactive_candidate", ""),
-                "memory_candidate": data.get("memory_candidate", ""),
-                "restraint_reason": data.get("restraint_reason", ""),
-            }
-        )
-    return rows
 
 
 def _warnings(intention_state: dict[str, str], traces: list[dict[str, Any]]) -> list[str]:

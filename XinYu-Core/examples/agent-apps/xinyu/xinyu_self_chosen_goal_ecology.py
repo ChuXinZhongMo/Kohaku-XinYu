@@ -9,8 +9,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Iterable
 
-from state_service import atomic_write_json, atomic_write_text
+from xinyu_self_chosen_goal_ecology_store import append_self_chosen_goal_trace
+from xinyu_self_chosen_goal_ecology_store import read_self_chosen_goal_json
+from xinyu_self_chosen_goal_ecology_store import read_self_chosen_goal_text
+from xinyu_self_chosen_goal_ecology_store import write_self_chosen_goal_state_json
+from xinyu_self_chosen_goal_ecology_store import write_self_chosen_goal_state_markdown
 from xinyu_self_choice_store import public_affect_band_from_state
+from xinyu_autonomy_policy import load_policy as load_autonomy_policy
 
 
 ECOLOGY_VERSION = 1
@@ -131,7 +136,8 @@ def build_self_chosen_goal_decision(
     root = Path(root)
     checked_at = checked_at or _now_iso()
     state = _load_state(root)
-    candidates = _build_candidates(root, state=state, checked_at=checked_at)
+    policy = load_autonomy_policy(root)
+    candidates = _build_candidates(root, state=state, checked_at=checked_at, policy=policy)
     ranked = sorted(candidates, key=lambda item: (item.final_score, item.goal_id), reverse=True)
     selected = ranked[0] if ranked else _fallback_candidate()
     notes = ["self_chosen_goal_ecology_v1", "state_only_selection", "no_outward_action"]
@@ -200,10 +206,16 @@ def record_self_chosen_goal_outcome(
     }
 
 
-def _build_candidates(root: Path, *, state: dict[str, Any], checked_at: str) -> list[GoalCandidate]:
+def _build_candidates(
+    root: Path,
+    *,
+    state: dict[str, Any],
+    checked_at: str,
+    policy: Any = None,
+) -> list[GoalCandidate]:
     context = _read_context(root)
     goals = state.get("goals") if isinstance(state.get("goals"), dict) else {}
-    return [
+    candidates = [
         _score_candidate(
             "continue_bounded_work",
             "continue bounded technical work",
@@ -272,6 +284,45 @@ def _build_candidates(root: Path, *, state: dict[str, Any], checked_at: str) -> 
             ("runtime/qq_inbound_trace.jsonl", "runtime/self_presence_trace.jsonl"),
             "observe local traces and do nothing outward",
             "state_only; observation cannot send messages or claim work",
+            goals=goals,
+            checked_at=checked_at,
+            context=context,
+        ),
+    ]
+    if policy is not None and getattr(policy, "productive_goals_enabled", False):
+        candidates.extend(_productive_goal_candidates(goals=goals, checked_at=checked_at, context=context))
+    return candidates
+
+
+def _productive_goal_candidates(
+    *,
+    goals: dict[str, Any],
+    checked_at: str,
+    context: dict[str, Any],
+) -> list[GoalCandidate]:
+    # Output-producing goals (#2). Base scores stay at/below the quiet-presence floor so
+    # they only surface on real pressure and never disturb the existing goal ranking.
+    return [
+        _score_candidate(
+            "synthesize_knowledge",
+            "synthesize durable knowledge",
+            "Recent technical or learning material can be distilled into a durable note.",
+            0.15 + (0.30 if context["technical_pressure"] or context["repair_pressure"] else 0.0),
+            ("memory/context/recent_context.md", "memory/self/learning_closed_loop_state.md"),
+            "distill the active material into a reversible scratch synthesis note",
+            "state_only; writes only to reversible scratch space, never stable memory",
+            goals=goals,
+            checked_at=checked_at,
+            context=context,
+        ),
+        _score_candidate(
+            "draft_self_improvement",
+            "draft a self-improvement proposal",
+            "An active failure or technical thread can become a concrete improvement proposal.",
+            0.15 + (0.30 if context["repair_pressure"] or context["replay_pressure"] else 0.0),
+            ("memory/self/learning_closed_loop_state.md", "memory/context/initiative_spine_state.md"),
+            "draft a reversible improvement proposal note for later owner review",
+            "state_only; produces a proposal draft only, applies no code or memory change",
             goals=goals,
             checked_at=checked_at,
             context=context,
@@ -424,7 +475,7 @@ def _write_goal_ecology_state(root: Path, decision: GoalEcologyDecision) -> None
             "- owner direction, safety gates, and current-turn context outrank this goal",
         ]
     )
-    atomic_write_text(root / STATE_MD_REL, "\n".join(lines))
+    write_self_chosen_goal_state_markdown(root / STATE_MD_REL, "\n".join(lines))
     state = _load_state(root)
     goals = state.setdefault("goals", {})
     selected_state = _goal_state(goals, decision.selected_goal_id)
@@ -484,10 +535,7 @@ def _format_counts(values: dict[str, Any]) -> str:
 
 
 def _load_state(root: Path) -> dict[str, Any]:
-    try:
-        data = json.loads((root / STATE_JSON_REL).read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError):
-        data = {}
+    data = read_self_chosen_goal_json(root / STATE_JSON_REL)
     if not isinstance(data, dict):
         data = {}
     goals = data.get("goals") if isinstance(data.get("goals"), dict) else {}
@@ -502,7 +550,7 @@ def _persist_state(root: Path, state: dict[str, Any]) -> None:
     normalized = dict(state)
     normalized["version"] = ECOLOGY_VERSION
     normalized["goals"] = normalized.get("goals") if isinstance(normalized.get("goals"), dict) else {}
-    atomic_write_json(root / STATE_JSON_REL, normalized)
+    write_self_chosen_goal_state_json(root / STATE_JSON_REL, normalized)
 
 
 def _touch_state(state: dict[str, Any], *, checked_at: str) -> dict[str, Any]:
@@ -526,10 +574,7 @@ def _goal_state(goals: dict[str, Any], goal_id: str) -> dict[str, Any]:
 
 def _append_trace(root: Path, event_kind: str, payload: dict[str, Any]) -> None:
     event = {"event_kind": event_kind, "version": ECOLOGY_VERSION, **payload}
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as handle:
-        handle.write(json.dumps(event, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+    append_self_chosen_goal_trace(root / TRACE_REL, event)
 
 
 def _recent_selection_penalty(last_selected_at: Any, checked_at: str) -> float:
@@ -554,13 +599,7 @@ def _evidence_ref(text: str, path: str) -> str:
 
 
 def _read(path: Path, *, limit: int) -> str:
-    try:
-        text = path.read_text(encoding="utf-8-sig", errors="replace")
-    except OSError:
-        return ""
-    if len(text) <= limit:
-        return text
-    return text[-limit:]
+    return read_self_chosen_goal_text(path, limit=limit)
 
 
 def _json_obj(text: str) -> Any:

@@ -19,18 +19,19 @@ from xinyu_proactive_response_diagnostics import build_proactive_response_diagno
 from xinyu_qq_reply_integrity_diagnostics import build_qq_reply_integrity_diagnostics
 from xinyu_short_term_continuity_canary import build_short_term_continuity_canary_report
 from xinyu_short_term_recall_diagnostics import build_short_term_recall_diagnostics
-from xinyu_state_io import read_text
+from xinyu_autonomy_loop_report_store import ATTENTION_STATE_REL
+from xinyu_autonomy_loop_report_store import INTENTION_STATE_REL
+from xinyu_autonomy_loop_report_store import INTENTION_TRACE_REL
+from xinyu_autonomy_loop_report_store import RELATION_STATE_REL
+from xinyu_autonomy_loop_report_store import REPORT_REL
+from xinyu_autonomy_loop_report_store import SELF_THOUGHT_STATE_REL
+from xinyu_autonomy_loop_report_store import SHORT_TERM_CONTINUITY_STATE_REL
+from xinyu_autonomy_loop_report_store import read_autonomy_loop_state_text
+from xinyu_autonomy_loop_report_store import read_latest_intention_trace
+from xinyu_autonomy_loop_report_store import write_autonomy_loop_report_text
 
 
-REPORT_REL = Path("worklog") / "xinyu-autonomy-loop-latest.md"
 DEFAULT_WINDOW_MINUTES = 120
-
-INTENTION_STATE_REL = Path("memory/context/intention_ecology_state.md")
-INTENTION_TRACE_REL = Path("runtime/intention_ecology_trace.jsonl")
-ATTENTION_STATE_REL = Path("memory/context/attention_posture_state.md")
-RELATION_STATE_REL = Path("memory/context/relation_posture_state.md")
-SELF_THOUGHT_STATE_REL = Path("memory/context/self_thought_state.md")
-SHORT_TERM_CONTINUITY_STATE_REL = Path("memory/context/short_term_continuity_state.md")
 
 HOLD_OR_SILENCE_GATES = {"hold_or_silence", "hold_private", "silence", "blocked"}
 HOLD_OR_SILENCE_ACTION_LEVELS = {"hold", "silence", "none"}
@@ -572,20 +573,7 @@ def _trace_intent_list(candidates: list[dict[str, Any]]) -> str:
 
 
 def _latest_intention_trace(root: Path) -> dict[str, Any]:
-    path = root / INTENTION_TRACE_REL
-    if not path.exists():
-        return {}
-    latest: dict[str, Any] = {}
-    try:
-        for line in path.read_text(encoding="utf-8-sig").splitlines()[-200:]:
-            if not line.strip():
-                continue
-            row = json.loads(line)
-            if isinstance(row, dict):
-                latest = row
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-        return {}
-    return latest
+    return read_latest_intention_trace(root)
 
 
 def _truthful_action_evidence(
@@ -748,12 +736,12 @@ def build_autonomy_loop_report(
     )
     intention = _intention_with_trace_competition(
         root,
-        _parse_md_fields(read_text(root / INTENTION_STATE_REL)),
+        _parse_md_fields(read_autonomy_loop_state_text(root, INTENTION_STATE_REL)),
     )
-    attention = _parse_md_fields(read_text(root / ATTENTION_STATE_REL))
-    relation = _parse_md_fields(read_text(root / RELATION_STATE_REL))
-    self_thought = _parse_md_fields(read_text(root / SELF_THOUGHT_STATE_REL))
-    short_term_continuity = _parse_md_fields(read_text(root / SHORT_TERM_CONTINUITY_STATE_REL))
+    attention = _parse_md_fields(read_autonomy_loop_state_text(root, ATTENTION_STATE_REL))
+    relation = _parse_md_fields(read_autonomy_loop_state_text(root, RELATION_STATE_REL))
+    self_thought = _parse_md_fields(read_autonomy_loop_state_text(root, SELF_THOUGHT_STATE_REL))
+    short_term_continuity = _parse_md_fields(read_autonomy_loop_state_text(root, SHORT_TERM_CONTINUITY_STATE_REL))
     short_term_continuity_canary = build_short_term_continuity_canary_report(
         root,
         lookback_minutes=max(1, int(window_minutes)),
@@ -1642,12 +1630,7 @@ def render_autonomy_loop_report(report: dict[str, Any]) -> str:
 
 
 def write_autonomy_loop_report(root: Path, report: dict[str, Any], *, output: Path | None = None) -> Path:
-    path = output if output is not None else root / REPORT_REL
-    if not path.is_absolute():
-        path = root / path
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_autonomy_loop_report(report), encoding="utf-8")
-    return path
+    return write_autonomy_loop_report_text(root, render_autonomy_loop_report(report), output=output)
 
 
 def build_parser() -> argparse.ArgumentParser:

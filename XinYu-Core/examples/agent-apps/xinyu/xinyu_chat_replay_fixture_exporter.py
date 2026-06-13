@@ -12,7 +12,11 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Iterable
 
-from state_service import atomic_write_json, atomic_write_text
+from xinyu_chat_replay_fixture_exporter_store import chat_replay_path_exists
+from xinyu_chat_replay_fixture_exporter_store import read_chat_replay_jsonl_file
+from xinyu_chat_replay_fixture_exporter_store import read_chat_replay_text
+from xinyu_chat_replay_fixture_exporter_store import write_chat_replay_json
+from xinyu_chat_replay_fixture_exporter_store import write_chat_replay_text
 from xinyu_storage_paths import seed_owner_cases_path
 
 
@@ -217,11 +221,11 @@ def export_replay_candidates(
     }
 
     if not dry_run:
-        atomic_write_text(retrieval_path, _jsonl(retrieval_cases), final_newline=bool(retrieval_cases))
-        atomic_write_text(conversation_path, _jsonl(conversation_cases), final_newline=bool(conversation_cases))
-        atomic_write_json(summary_path, summary)
+        write_chat_replay_text(retrieval_path, _jsonl(retrieval_cases), final_newline=bool(retrieval_cases))
+        write_chat_replay_text(conversation_path, _jsonl(conversation_cases), final_newline=bool(conversation_cases))
+        write_chat_replay_json(summary_path, summary)
         if auto_promote_safe:
-            atomic_write_json(output_dir / PROMOTION_REPORT_NAME, promotion_report)
+            write_chat_replay_json(output_dir / PROMOTION_REPORT_NAME, promotion_report)
     return summary
 
 
@@ -254,9 +258,9 @@ def promote_safe_replay_cases(
 
     if not dry_run:
         if promoted_retrieval:
-            atomic_write_text(retrieval_path, _jsonl([*existing_retrieval, *promoted_retrieval]))
+            write_chat_replay_text(retrieval_path, _jsonl([*existing_retrieval, *promoted_retrieval]))
         if promoted_conversation:
-            atomic_write_text(conversation_path, _jsonl([*existing_conversation, *promoted_conversation]))
+            write_chat_replay_text(conversation_path, _jsonl([*existing_conversation, *promoted_conversation]))
 
     return {
         "auto_promote_enabled": True,
@@ -349,8 +353,7 @@ def _validate_retrieval_case(case: dict[str, Any]) -> bool:
         root = Path(tmp)
         for rel_path, text in dict(case.get("stable_memory", {})).items():
             path = root / str(rel_path)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(str(text).strip() + "\n", encoding="utf-8")
+            write_chat_replay_text(path, str(text).strip())
         for turn in case.get("archive_turns", []):
             if not isinstance(turn, dict):
                 continue
@@ -463,22 +466,7 @@ def _case_key(case: dict[str, Any]) -> str:
 
 
 def _read_jsonl_file(path: Path) -> list[dict[str, Any]]:
-    try:
-        lines = path.read_text(encoding="utf-8-sig").splitlines()
-    except OSError:
-        return []
-    rows: list[dict[str, Any]] = []
-    for line in lines:
-        clean = line.strip()
-        if not clean:
-            continue
-        try:
-            data = json.loads(clean)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(data, dict):
-            rows.append(data)
-    return rows
+    return read_chat_replay_jsonl_file(path)
 
 
 def _strict_redaction_shape_only(value: Any, *, key: str = "") -> bool:
@@ -514,7 +502,7 @@ def load_source_rows(sources: Iterable[Path]) -> tuple[list[ReplaySourceRow], li
     notes: list[str] = []
     for source in sources:
         path = Path(source)
-        if not path.exists():
+        if not chat_replay_path_exists(path):
             notes.append(f"missing_source:{path}")
             continue
         loaded, source_notes = _load_single_source(path)
@@ -527,7 +515,7 @@ def _load_single_source(path: Path) -> tuple[list[ReplaySourceRow], list[str]]:
     if path.suffix.lower() == ".jsonl":
         return _load_jsonl_source(path)
     try:
-        data = json.loads(path.read_text(encoding="utf-8-sig"))
+        data = json.loads(read_chat_replay_text(path))
     except (OSError, json.JSONDecodeError) as exc:
         return [], [f"source_json_failed:{path.name}:{type(exc).__name__}"]
     return _rows_from_data(data, source_ref=str(path), source_kind=_source_kind_for_data(data, path))
@@ -537,7 +525,7 @@ def _load_jsonl_source(path: Path) -> tuple[list[ReplaySourceRow], list[str]]:
     rows: list[ReplaySourceRow] = []
     notes: list[str] = []
     try:
-        lines = path.read_text(encoding="utf-8-sig").splitlines()
+        lines = read_chat_replay_text(path).splitlines()
     except OSError as exc:
         return [], [f"source_jsonl_failed:{path.name}:{type(exc).__name__}"]
     for index, line in enumerate(lines, start=1):
@@ -944,7 +932,7 @@ def _default_sources(root: Path) -> list[Path]:
     candidates = [
         root / "runtime" / "regression" / "last_live_chat_baseline.json",
     ]
-    return [path for path in candidates if path.exists()]
+    return [path for path in candidates if chat_replay_path_exists(path)]
 
 
 def run_replay_tests(root: Path) -> int:

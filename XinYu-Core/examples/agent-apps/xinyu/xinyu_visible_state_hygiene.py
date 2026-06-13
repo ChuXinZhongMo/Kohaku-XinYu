@@ -5,6 +5,9 @@ import re
 from pathlib import Path
 from typing import Any
 
+from xinyu_visible_state_hygiene_store import iter_visible_state_candidate_rels
+from xinyu_visible_state_hygiene_store import read_visible_state_text
+from xinyu_visible_state_hygiene_store import write_visible_state_text
 from xinyu_visible_text_sanitizer import sanitize_visible_text
 
 
@@ -57,16 +60,11 @@ FORBIDDEN_VISIBLE_MARKERS = (
 
 
 def _read_text(path: Path) -> str:
-    if not path.exists() or not path.is_file():
-        return ""
-    return path.read_text(encoding="utf-8-sig", errors="replace")
+    return read_visible_state_text(path)
 
 
 def _write_text_atomic(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(text.rstrip() + "\n", encoding="utf-8")
-    tmp.replace(path)
+    write_visible_state_text(path, text)
 
 
 def sanitize_visible_state_files(
@@ -78,10 +76,11 @@ def sanitize_visible_state_files(
 ) -> dict[str, Any]:
     changed: list[str] = []
     scanned = 0
-    candidates: list[str] = list(relative_files)
-    for pattern in relative_globs:
-        candidates.extend(path.relative_to(root).as_posix() for path in root.glob(pattern) if path.is_file())
-    for rel in sorted(dict.fromkeys(candidates)):
+    for rel in iter_visible_state_candidate_rels(
+        root,
+        relative_files=relative_files,
+        relative_globs=relative_globs,
+    ):
         path = root / rel
         original = _read_text(path)
         if not original:
@@ -110,10 +109,11 @@ def visible_state_marker_hits(
     relative_globs: tuple[str, ...] = DEFAULT_RELATIVE_GLOBS,
 ) -> dict[str, list[str]]:
     hits: dict[str, list[str]] = {}
-    candidates: list[str] = list(relative_files)
-    for pattern in relative_globs:
-        candidates.extend(path.relative_to(root).as_posix() for path in root.glob(pattern) if path.is_file())
-    for rel in sorted(dict.fromkeys(candidates)):
+    for rel in iter_visible_state_candidate_rels(
+        root,
+        relative_files=relative_files,
+        relative_globs=relative_globs,
+    ):
         text = _read_text(root / rel)
         if not text:
             continue

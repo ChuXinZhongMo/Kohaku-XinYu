@@ -7,14 +7,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_state_io import write_text_atomic
-
-
-SHORT_TRACE_REL = Path("runtime/short_term_continuity_trace.jsonl")
-ACK_SPOOL_REL = Path("runtime/gateway_ack_spool.jsonl")
-STATE_REL = Path("memory/context/short_term_continuity_canary_state.md")
-REPORT_REL = Path("worklog/xinyu-short-term-continuity-canary-latest.md")
-TRACE_REL = Path("runtime/short_term_continuity_canary_trace.jsonl")
+from xinyu_short_term_continuity_canary_store import ACK_SPOOL_REL
+from xinyu_short_term_continuity_canary_store import REPORT_REL
+from xinyu_short_term_continuity_canary_store import SHORT_TRACE_REL
+from xinyu_short_term_continuity_canary_store import STATE_REL
+from xinyu_short_term_continuity_canary_store import TRACE_REL
+from xinyu_short_term_continuity_canary_store import append_short_term_continuity_canary_trace_event
+from xinyu_short_term_continuity_canary_store import read_gateway_ack_spool_jsonl_tail
+from xinyu_short_term_continuity_canary_store import read_short_term_continuity_jsonl_tail
+from xinyu_short_term_continuity_canary_store import write_short_term_continuity_canary_report_text
+from xinyu_short_term_continuity_canary_store import write_short_term_continuity_canary_state_text
 
 WHICH_SENTENCE_MARKERS = (
     "哪一句",
@@ -41,8 +43,8 @@ def build_short_term_continuity_canary_report(
     generated_at = generated_at or _now_iso()
     now = _parse_timestamp(generated_at)
     since_time = _parse_timestamp(since)
-    trace_rows = _read_jsonl_tail(root / SHORT_TRACE_REL, max_lines=max(1, int(trace_limit)))
-    ack_rows = _read_jsonl_tail(root / ACK_SPOOL_REL, max_lines=max(1, int(ack_limit)))
+    trace_rows = read_short_term_continuity_jsonl_tail(root, max_lines=max(1, int(trace_limit)))
+    ack_rows = read_gateway_ack_spool_jsonl_tail(root, max_lines=max(1, int(ack_limit)))
     replies = _reply_records(ack_rows)
     direct_events = [
         _safe_continuity_event(row)
@@ -214,11 +216,11 @@ def write_short_term_continuity_canary(
     output: Path | None = None,
 ) -> dict[str, str]:
     root = root.resolve()
-    report_path = output if output is not None else root / REPORT_REL
-    if not report_path.is_absolute():
-        report_path = root / report_path
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(render_short_term_continuity_canary_report(report), encoding="utf-8")
+    report_path = write_short_term_continuity_canary_report_text(
+        root,
+        render_short_term_continuity_canary_report(report),
+        output=output,
+    )
     _write_state(root, report, report_path=report_path)
     _append_trace(root, report)
     return {"report_path": str(report_path), "state_path": str(root / STATE_REL)}
@@ -271,7 +273,7 @@ tags: [continuity, canary, recall, metrics]
 - visible_reply_text_in_state: false
 - stable_memory_write: blocked
 """
-    write_text_atomic(root / STATE_REL, text)
+    write_short_term_continuity_canary_state_text(root, text)
 
 
 def _append_trace(root: Path, report: dict[str, Any]) -> None:
@@ -288,10 +290,7 @@ def _append_trace(root: Path, report: dict[str, Any]) -> None:
         "raw_owner_text_in_trace": False,
         "visible_reply_text_in_trace": False,
     }
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as fh:
-        fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+    append_short_term_continuity_canary_trace_event(root, row)
 
 
 def _reply_records(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -362,24 +361,6 @@ def _safe_continuity_event(row: dict[str, Any]) -> dict[str, Any]:
         "raw_private_body_retained": row.get("raw_private_body_retained") is True,
         "visible_reply_text_retained": row.get("visible_reply_text_retained") is True,
     }
-
-
-def _read_jsonl_tail(path: Path, *, max_lines: int) -> list[dict[str, Any]]:
-    if not path.exists():
-        return []
-    try:
-        lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
-    except OSError:
-        return []
-    rows: list[dict[str, Any]] = []
-    for line in lines[-max(1, int(max_lines)) :]:
-        try:
-            data = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(data, dict):
-            rows.append(data)
-    return rows
 
 
 def _reply_asks_which_sentence(text: Any) -> bool:

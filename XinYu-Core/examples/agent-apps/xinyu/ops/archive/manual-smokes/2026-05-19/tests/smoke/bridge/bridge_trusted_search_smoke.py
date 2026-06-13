@@ -4,14 +4,14 @@ from _bootstrap import ensure_project_root_on_path
 
 ensure_project_root_on_path()
 
-from xinyu_bridge_trusted_search import trusted_public_search_task_allowed
-from xinyu_core_bridge import (
+from xinyu_bridge_trusted_search import (
     TRUSTED_CODEX_LOCAL_BLOCK_MARKERS,
     TRUSTED_CODEX_LOCAL_ENGLISH_BLOCK_MARKERS,
     TRUSTED_CODEX_LOCAL_PATH_RE,
     TRUSTED_CODEX_PUBLIC_SEARCH_MARKERS,
-    XinYuBridgeRuntime,
+    trusted_public_search_task_allowed,
 )
+from xinyu_core_bridge import XinYuBridgeRuntime
 
 
 def _allowed(task_text: str) -> bool:

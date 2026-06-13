@@ -4,6 +4,7 @@ import asyncio
 import json
 from types import SimpleNamespace
 
+import xinyu_bridge_intervention_routes_status
 from xinyu_bridge_intervention_routes import (
     turn_cancel,
     turn_continue,
@@ -66,7 +67,33 @@ def test_turn_current_returns_safe_current_state(tmp_path) -> None:
     assert result["current_turn"]["turn_id"] == turn_id
     assert result["current_turn"]["state"] == "running"
     assert result["route"]["last_stage"] == "model_inject_started"
+    assert result["operator"]["current_turn_state"] == "running"
     assert "secret text" not in json.dumps(result, ensure_ascii=False)
+
+
+def test_turn_current_delegates_to_health_diagnostics_service(tmp_path, monkeypatch) -> None:
+    runtime = _runtime(tmp_path)
+    payload = {"ignored": True}
+    calls: list[tuple[object, dict[str, object] | None, str]] = []
+
+    class Service:
+        @staticmethod
+        async def turn_current(
+            received_runtime: object,
+            received_payload: dict[str, object] | None = None,
+            *,
+            current_turn_snapshot_func,
+        ) -> dict[str, object]:
+            assert callable(current_turn_snapshot_func)
+            calls.append((received_runtime, received_payload, current_turn_snapshot_func.__name__))
+            return {"route": "service_turn_current"}
+
+    monkeypatch.setattr(xinyu_bridge_intervention_routes_status, "HealthDiagnosticsService", Service)
+
+    result = asyncio.run(turn_current(runtime, payload))
+
+    assert result == {"route": "service_turn_current"}
+    assert calls == [(runtime, payload, "current_turn_snapshot")]
 
 
 def test_turn_cancel_marks_running_turn_cancelled_and_traces_intervention(tmp_path) -> None:

@@ -967,6 +967,22 @@ def _session_clause(session_key: str | None, params: list[Any], *, table_alias: 
     return f" AND {table_alias}.session_key_hash = ?"
 
 
+def _group_clause(group_id_hash: str | None, params: list[Any]) -> str:
+    """Restrict results to one group (plan §6.5). Correlated EXISTS against
+    dialogue_sessions so it composes with FTS/LIKE/semantic without changing the
+    FROM/JOIN of each path. Prevents cross-group recall once the group scope
+    session_key filter is intentionally dropped."""
+
+    if not group_id_hash:
+        return ""
+    params.append(group_id_hash)
+    return (
+        " AND EXISTS (SELECT 1 FROM dialogue_sessions sess"
+        " WHERE sess.session_key_hash = m.session_key_hash AND sess.scope = m.scope"
+        " AND sess.group_id_hash = ?)"
+    )
+
+
 def _record_from_row(row: sqlite3.Row, *, rank_score: float = 0.0, retrieval_source: str = "") -> DialogueArchiveRecord:
     quality = _json_loads(_safe_str(row["quality_flags_json"]), {})
     metadata = _json_loads(_safe_str(row["metadata_json"]), {})
@@ -1005,6 +1021,7 @@ def _search_dialogue_archive_semantic_conn(
     *,
     scopes: Iterable[str] | None = None,
     session_key: str | None = None,
+    group_id_hash: str | None = None,
     limit: int = 12,
 ) -> list[DialogueArchiveRecord]:
     if not semantic_retrieval_enabled():
@@ -1017,6 +1034,7 @@ def _search_dialogue_archive_semantic_conn(
     missing_params: list[Any] = [model, dimensions]
     missing_scope_sql = _scope_clause(scopes, missing_params)
     missing_session_sql = _session_clause(session_key, missing_params)
+    missing_group_sql = _group_clause(group_id_hash, missing_params)
     missing_params.append(semantic_max_scan())
     missing_rows = conn.execute(
         f"""
@@ -1027,7 +1045,7 @@ def _search_dialogue_archive_semantic_conn(
             AND s.model = ?
             AND s.dimensions = ?
             AND s.text_hash = m.text_hash
-        WHERE s.message_id IS NULL{missing_scope_sql}{missing_session_sql}
+        WHERE s.message_id IS NULL{missing_scope_sql}{missing_session_sql}{missing_group_sql}
         ORDER BY m.created_at DESC, m.id DESC
         LIMIT ?
         """,
@@ -1044,13 +1062,14 @@ def _search_dialogue_archive_semantic_conn(
     params: list[Any] = [model, dimensions]
     scope_sql = _scope_clause(scopes, params)
     session_sql = _session_clause(session_key, params)
+    group_sql = _group_clause(group_id_hash, params)
     params.append(semantic_max_scan())
     rows = conn.execute(
         f"""
         SELECT {_select_sql("m")}, s.embedding_json
         FROM dialogue_messages m
         JOIN dialogue_semantic_index s ON s.message_id = m.id
-        WHERE s.model = ? AND s.dimensions = ?{scope_sql}{session_sql}
+        WHERE s.model = ? AND s.dimensions = ?{scope_sql}{session_sql}{group_sql}
         ORDER BY m.created_at DESC, m.id DESC
         LIMIT ?
         """,
@@ -1077,6 +1096,7 @@ def search_dialogue_archive(
     *,
     scopes: Iterable[str] | None = None,
     session_key: str | None = None,
+    group_id_hash: str | None = None,
     limit: int = 12,
 ) -> list[DialogueArchiveRecord]:
     if not archive_enabled():
@@ -1092,6 +1112,7 @@ def search_dialogue_archive(
                 params: list[Any] = [fts]
                 scope_sql = _scope_clause(scopes, params)
                 session_sql = _session_clause(session_key, params)
+                group_sql = _group_clause(group_id_hash, params)
                 params.append(safe_limit * 3)
                 try:
                     rows = conn.execute(
@@ -1099,7 +1120,7 @@ def search_dialogue_archive(
                         SELECT {_select_sql("m")}, bm25(dialogue_fts) AS fts_rank
                         FROM dialogue_fts
                         JOIN dialogue_messages m ON m.id = dialogue_fts.message_id
-                        WHERE dialogue_fts.text MATCH ?{scope_sql}{session_sql}
+                        WHERE dialogue_fts.text MATCH ?{scope_sql}{session_sql}{group_sql}
                         ORDER BY fts_rank ASC, m.created_at DESC
                         LIMIT ?
                         """,
@@ -1118,6 +1139,7 @@ def search_dialogue_archive(
         params = []
         scope_sql = _scope_clause(scopes, params)
         session_sql = _session_clause(session_key, params)
+        group_sql = _group_clause(group_id_hash, params)
         if terms:
             like_parts = []
             for term in terms[:8]:
@@ -1131,7 +1153,7 @@ def search_dialogue_archive(
             f"""
             SELECT {_select_sql("m")}
             FROM dialogue_messages m
-            WHERE 1=1{scope_sql}{session_sql}{text_sql}
+            WHERE 1=1{scope_sql}{session_sql}{group_sql}{text_sql}
             ORDER BY m.created_at DESC, m.id DESC
             LIMIT ?
             """,
@@ -1145,6 +1167,7 @@ def search_dialogue_archive(
                 query,
                 scopes=scopes,
                 session_key=session_key,
+                group_id_hash=group_id_hash,
                 limit=safe_limit,
             ):
                 records.setdefault(record.message_id, record)

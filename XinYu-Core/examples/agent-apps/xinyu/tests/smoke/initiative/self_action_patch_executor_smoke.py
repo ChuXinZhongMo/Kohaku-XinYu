@@ -55,11 +55,12 @@ def main() -> int:
         if "Owner-approved Self Action Gateway patch executor task" not in task:
             failures.append("patch executor task missing approved task text")
 
-    core_text = _read(ROOT / "xinyu_core_bridge.py")
+    autonomous_aliases_text = _read(ROOT / "xinyu_bridge_runtime_autonomous_aliases.py")
+    maintenance_text = _read(ROOT / "xinyu_bridge_autonomous_maintenance.py")
     context_text = _read(ROOT / "xinyu_runtime_context.py")
     presence_text = _read(ROOT / "xinyu_runtime_presence.py")
-    if "run_self_action_patch_executor(" not in core_text:
-        failures.append("xinyu_core_bridge.py does not prepare self action patch executor")
+    if "_append_self_action_patch_executor_note" not in autonomous_aliases_text or "run_self_action_patch_executor(" not in maintenance_text:
+        failures.append("runtime does not prepare self action patch executor")
     if "memory/context/self_action_patch_executor_state.md" not in context_text:
         failures.append("runtime context does not include patch executor state")
     if "runtime/self_action_patch_executor/trace.jsonl" not in presence_text:

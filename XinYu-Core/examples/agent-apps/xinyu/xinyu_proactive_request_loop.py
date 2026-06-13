@@ -25,6 +25,9 @@ DEFAULT_INITIAL_MESSAGE_BUDGET = 3
 DEFAULT_FOLLOWUP_BUDGET = 6
 DEFAULT_NO_REPLY_FOLLOWUP_BUDGET = 2
 REFLECTION_SHARE_DISMISSAL_COOLDOWN_SECONDS = 14 * 86400
+OWNER_LONG_IDLE_MINUTES = 90
+OWNER_LONG_IDLE_DEEP_MINUTES = 360
+OWNER_LONG_IDLE_COOLDOWN_SECONDS = 4 * 60 * 60
 
 ALLOWED_SELF_THOUGHT_INTENTIONS = {
     "ask_owner",
@@ -205,6 +208,94 @@ def run_proactive_request_loop(
     }
 
 
+def run_owner_long_idle_request_loop(
+    root: Path,
+    *,
+    evaluated_at: str | None = None,
+    delivery_level: str = "queue_owner_private",
+    cooldown_seconds: int = OWNER_LONG_IDLE_COOLDOWN_SECONDS,
+    expires_seconds: int = DEFAULT_EXPIRES_SECONDS,
+    max_chars: int = DEFAULT_MAX_CHARS,
+) -> dict[str, Any]:
+    root = root.resolve()
+    evaluated_at = _timestamp_or_now_iso(evaluated_at)
+    delivery_level = _normalize_delivery_level(delivery_level)
+    journal_state = _read_text(root / "memory/context/interaction_journal_state.md")
+    previous_state = _read_text(root / STATE_REL)
+    life_posture = _read_text(root / "memory/context/current_life_posture.md")
+    owner_grants = _read_text(root / "memory/context/owner_permission_grants.md")
+    capability = _read_text(root / "memory/context/capability_zones_state.md")
+    notes: list[str] = []
+
+    request = _candidate_from_owner_long_idle(
+        journal_state,
+        evaluated_at=evaluated_at,
+        expires_seconds=max(60, int(expires_seconds)),
+        max_chars=max(60, int(max_chars)),
+        notes=notes,
+    )
+    if not request["source_candidate_enabled"]:
+        return {
+            "accepted": True,
+            "request_id": request["request_id"],
+            "status": "none",
+            "kind": request["kind"],
+            "source": request["source"],
+            "delivery_level": "none",
+            "concrete_question": request["concrete_question"],
+            "dedupe_key": request["dedupe_key"],
+            "notes": sorted(set(_clean_note(note) for note in notes if _clean_note(note))),
+        }
+
+    preserved = _preserved_previous_request(previous_state, request, evaluated_at=evaluated_at)
+    if preserved:
+        preserved["notes"] = sorted(set(preserved["notes"] + ["previous_live_request_preserved"]))
+        _append_trace(root, preserved)
+        return {
+            "accepted": True,
+            "request_id": preserved["request_id"],
+            "status": preserved["status"],
+            "kind": preserved["kind"],
+            "source": preserved["source"],
+            "delivery_level": preserved["delivery_level"],
+            "concrete_question": preserved["concrete_question"],
+            "dedupe_key": preserved["dedupe_key"],
+            "notes": preserved["notes"],
+        }
+
+    gates = _evaluate_gates(
+        request,
+        previous_state=previous_state,
+        life_posture=life_posture,
+        owner_grants=owner_grants,
+        capability=capability,
+        delivery_level=delivery_level,
+        cooldown_seconds=max(0, int(cooldown_seconds)),
+        evaluated_at=evaluated_at,
+    )
+    status = _request_status(request, gates, delivery_level=delivery_level)
+    if status == "blocked":
+        notes.append("gate_blocked")
+    request["status"] = status
+    request["delivery_level"] = delivery_level if status in {"ready", "candidate_only"} else "none"
+    request["gates"] = gates
+    request["notes"] = sorted(set(_clean_note(note) for note in notes if _clean_note(note)))
+
+    _write_text(root / STATE_REL, _render_state(request))
+    _append_trace(root, request)
+    return {
+        "accepted": True,
+        "request_id": request["request_id"],
+        "status": request["status"],
+        "kind": request["kind"],
+        "source": request["source"],
+        "delivery_level": request["delivery_level"],
+        "concrete_question": request["concrete_question"],
+        "dedupe_key": request["dedupe_key"],
+        "notes": request["notes"],
+    }
+
+
 def read_proactive_request_summary(root: Path) -> dict[str, str]:
     state = _read_text(root / STATE_REL)
     if not state:
@@ -310,6 +401,74 @@ def _candidate_from_self_thought(
     }
 
 
+def _candidate_from_owner_long_idle(
+    state: str,
+    *,
+    evaluated_at: str,
+    expires_seconds: int,
+    max_chars: int,
+    notes: list[str],
+) -> dict[str, Any]:
+    last_owner_at = _extract_value(state, "last_owner_private_at", "none")
+    stored_minutes = _int_value(_extract_value(state, "minutes_since_last_owner_private", "-1"), -1)
+    computed_minutes = _minutes_since(last_owner_at, evaluated_at)
+    minutes = max(stored_minutes, computed_minutes if computed_minutes is not None else -1)
+    candidate_enabled = minutes >= OWNER_LONG_IDLE_MINUTES and last_owner_at not in {"", "none", "unknown"}
+    if not state:
+        notes.append("missing_interaction_journal_state")
+    if not candidate_enabled:
+        notes.append("owner_long_idle_threshold_not_met")
+
+    # Key the dedupe on a coarse tier (light / deep) instead of an ever-incrementing
+    # idle-window bucket, so a single quiet stretch surfaces at most one light ping
+    # and one deep ping instead of re-firing the same line every cooldown window.
+    idle_tier = "deep" if minutes >= OWNER_LONG_IDLE_DEEP_MINUTES else "light"
+    evidence_hash = _evidence_hash("owner_long_idle", last_owner_at, idle_tier)
+    message_limit = max(60, int(max_chars))
+    return {
+        "request_id": "proreq-owner-idle-" + _timestamp_id(evaluated_at),
+        "created_at": _timestamp_or_now_iso(evaluated_at),
+        "status": "none",
+        "kind": "clarify",
+        "priority": "low",
+        "owner_private_only": True,
+        "source": "owner_long_idle",
+        "source_pass_id": "interaction_journal",
+        "source_intention_id": "owner_long_idle",
+        "source_candidate_enabled": candidate_enabled,
+        "focus_kind": "owner_long_idle",
+        "focus_label": f"owner_private_idle_minutes={max(0, minutes)}",
+        "intention": "ask_owner",
+        "evidence_label": f"last owner private chat was {max(0, minutes)} minutes ago",
+        "evidence_hash": evidence_hash,
+        "reason": _reason_for("owner_long_idle", "ask_owner", f"last owner private chat was {max(0, minutes)} minutes ago"),
+        "urgency": "low",
+        "risk": "low_owner_private",
+        "owner_relevance": "owner_action:owner_response_optional",
+        "channel": "owner_private",
+        "request_family": "owner_long_idle",
+        "thread_id": f"prothread:owner_long_idle:{evidence_hash}",
+        "conversation_mode": "threaded",
+        "concrete_question": _one_line(_owner_long_idle_message(minutes), limit=message_limit),
+        "requested_action": "owner_response_optional",
+        "why_now": _one_line("owner-private idle threshold crossed", limit=message_limit),
+        "after_owner_replies": "reset idle pressure and continue local maintenance",
+        "dedupe_key": f"proreq:owner_long_idle:{evidence_hash}",
+        "cooldown_seconds": OWNER_LONG_IDLE_COOLDOWN_SECONDS,
+        "expires_at": _expires_at(evaluated_at, expires_seconds),
+        "expiration": _expires_at(evaluated_at, expires_seconds),
+        "delivery_level": "none",
+        "max_chars": message_limit,
+        "initial_message_budget": DEFAULT_INITIAL_MESSAGE_BUDGET,
+        "followup_budget": DEFAULT_FOLLOWUP_BUDGET,
+        "no_reply_followup_budget": 0,
+        "followup_policy": "no_followup_without_owner_reply",
+        "memory_feedback_target": "idle_pressure_feedback_only",
+        "owner_reply_feedback": "updates_request_and_idle_thread",
+        "stable_memory_permission": "blocked_until_owner_reply_and_memory_gates",
+    }
+
+
 def _evaluate_gates(
     request: dict[str, Any],
     *,
@@ -332,7 +491,7 @@ def _evaluate_gates(
         and previous_status in {"ready", "candidate_only", "claimed", "sent", "answered"}
     )
     cooldown_open = not duplicate or _age_seconds(previous_at, evaluated_at) >= cooldown_seconds
-    source_allowed = request.get("source") == "self_thought" and request.get("intention") in ALLOWED_SELF_THOUGHT_INTENTIONS
+    source_allowed = _source_allowed(request)
     grant_allows_send = _proactive_qq_enabled(capability, owner_grants)
     send_requested = delivery_level in {"queue_owner_private", "claim_ack"}
     life_block = _life_posture_blocks(life_posture)
@@ -399,6 +558,36 @@ def _request_status(request: dict[str, Any], gates: dict[str, str], *, delivery_
             return "ready"
         return "candidate_only"
     return "blocked"
+
+
+def _source_allowed(request: dict[str, Any]) -> bool:
+    intention = str(request.get("intention") or "")
+    if intention not in ALLOWED_SELF_THOUGHT_INTENTIONS:
+        return False
+    source = str(request.get("source") or "")
+    if source == "self_thought":
+        return True
+    return source == "owner_long_idle" and request.get("focus_kind") == "owner_long_idle"
+
+
+def _owner_long_idle_message(minutes: int) -> str:
+    # This text is delivered verbatim to the owner as a QQ private message, so it
+    # must read like a person idly checking in, never like an English status report
+    # or a maintenance heartbeat. Vary the wording so repeated idle windows do not
+    # surface the exact same line.
+    if minutes >= OWNER_LONG_IDLE_DEEP_MINUTES:
+        options = (
+            "好久没动静了，还好吧？",
+            "这半天没声了，在忙啥呢。",
+            "想起你了，最近怎么样。",
+        )
+    else:
+        options = (
+            "在忙吗？",
+            "这会儿干嘛呢。",
+            "歇会儿没，随便聊两句。",
+        )
+    return options[max(0, minutes // 30) % len(options)]
 
 
 def _preserved_previous_request(
@@ -845,6 +1034,21 @@ def _age_seconds(started_at: str, now: str) -> float:
     if start is None or current is None:
         return 999999.0
     return max(0.0, (current - start).total_seconds())
+
+
+def _minutes_since(started_at: str, now: str) -> int | None:
+    start = _parse_iso(started_at)
+    current = _parse_iso(now)
+    if start is None or current is None:
+        return None
+    return max(0, int((current - start).total_seconds() // 60))
+
+
+def _int_value(value: Any, default: int = 0) -> int:
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return default
 
 
 def _is_at_or_after(value: str, threshold: str) -> bool:

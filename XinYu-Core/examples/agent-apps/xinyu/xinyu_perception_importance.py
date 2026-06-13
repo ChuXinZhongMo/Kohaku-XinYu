@@ -8,12 +8,13 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_perception_event_layer import build_perception_event_layer_report
-from xinyu_state_io import read_text, write_text_atomic
-
-
-STATE_REL = Path("memory/context/perception_importance_state.md")
-TRACE_REL = Path("runtime/perception_importance_trace.jsonl")
-REPORT_REL = Path("worklog/xinyu-perception-importance-latest.md")
+from xinyu_perception_importance_store import REPORT_REL
+from xinyu_perception_importance_store import STATE_REL
+from xinyu_perception_importance_store import TRACE_REL
+from xinyu_perception_importance_store import append_perception_importance_trace_event
+from xinyu_perception_importance_store import read_perception_importance_state_text
+from xinyu_perception_importance_store import write_perception_importance_report_text
+from xinyu_perception_importance_store import write_perception_importance_state_text
 
 NONE_VALUES = {"", "missing", "none", "unknown", "null"}
 
@@ -122,18 +123,18 @@ def write_perception_importance_report(
     output: Path | None = None,
 ) -> dict[str, str]:
     root = Path(root).resolve()
-    report_path = output if output is not None else root / REPORT_REL
-    if not report_path.is_absolute():
-        report_path = root / report_path
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(render_perception_importance_report(report), encoding="utf-8")
+    report_path = write_perception_importance_report_text(
+        root,
+        render_perception_importance_report(report),
+        output=output,
+    )
     _write_state(root, report, report_path=report_path)
     _append_trace(root, report)
     return {"report_path": str(report_path), "state_path": str(root / STATE_REL)}
 
 
 def read_perception_importance_state(root: Path) -> dict[str, str]:
-    text = read_text(Path(root) / STATE_REL)
+    text = read_perception_importance_state_text(Path(root))
     if not text:
         return {"status": "missing", "event_count": "0", "judged_event_count": "0"}
     return _parse_fields(text)
@@ -413,7 +414,7 @@ tags: [autonomy, perception, importance, internal-gap]
 - private_text_in_report: false
 - stable_memory_write: blocked
 """
-    write_text_atomic(root / STATE_REL, text)
+    write_perception_importance_state_text(root, text)
 
 
 def _append_trace(root: Path, report: dict[str, Any]) -> None:
@@ -440,10 +441,7 @@ def _append_trace(root: Path, report: dict[str, Any]) -> None:
         "raw_private_body_retained": False,
         "visible_reply_text_retained": False,
     }
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as fh:
-        fh.write(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n")
+    append_perception_importance_trace_event(root, row)
 
 
 def _public_judgment(judgment: dict[str, Any]) -> dict[str, Any]:

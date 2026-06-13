@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import io
 import json
 import os
 import queue
@@ -16,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from state_service import append_jsonl
+from xinyu_tts_output_store import append_tts_output_trace
 
 try:
     import winsound
@@ -28,9 +29,13 @@ TRACE_REL = Path("runtime") / "tts_output_trace.jsonl"
 TEMP_REL = Path("runtime") / "tts_audio_tmp"
 LOCAL_ENV_FILES = ("xinyu.local.env", ".env")
 REQUEST_MODES = {"auto", "chat_audio", "audio_speech"}
+TTS_ENGINES = {"current", "genie"}
 DEFAULT_TTS_MODEL = "mimo-v2.5-tts"
 DEFAULT_TTS_FORMAT = "wav"
 DEFAULT_TTS_TIMEOUT_SECONDS = 60.0
+DEFAULT_GENIE_TTS_SAMPLE_RATE = 32000
+DEFAULT_GENIE_TTS_CHANNELS = 1
+DEFAULT_GENIE_TTS_SAMPLE_WIDTH = 2
 MAX_PENDING_JOBS = 4
 MAX_TEXT_CHARS = 1200
 
@@ -80,6 +85,13 @@ def _as_bool(value: Any, default: bool = False) -> bool:
 def _as_float(value: Any, default: float) -> float:
     try:
         return float(str(value).strip())
+    except (TypeError, ValueError):
+        return default
+
+
+def _as_int(value: Any, default: int) -> int:
+    try:
+        return int(str(value).strip())
     except (TypeError, ValueError):
         return default
 
@@ -156,17 +168,70 @@ def _tts_request_mode() -> str:
     return mode if mode in REQUEST_MODES else "auto"
 
 
+def _tts_engine() -> str:
+    engine = os.environ.get("XINYU_TTS_ENGINE", "current").strip().lower()
+    aliases = {
+        "legacy": "current",
+        "mimo": "current",
+        "openai": "current",
+        "genie-tts": "genie",
+    }
+    engine = aliases.get(engine, engine)
+    return engine if engine in TTS_ENGINES else "current"
+
+
+def _genie_tts_base_url() -> str:
+    return os.environ.get("XINYU_GENIE_TTS_BASE_URL", "").strip().rstrip("/")
+
+
+def _genie_tts_character() -> str:
+    return os.environ.get("XINYU_GENIE_TTS_CHARACTER", "xinyu").strip() or "xinyu"
+
+
+def _genie_tts_split_sentence() -> bool:
+    return _as_bool(os.environ.get("XINYU_GENIE_TTS_SPLIT_SENTENCE", "0"), default=False)
+
+
+def _genie_tts_sample_rate() -> int:
+    return max(8000, min(96000, _as_int(os.environ.get("XINYU_GENIE_TTS_SAMPLE_RATE"), DEFAULT_GENIE_TTS_SAMPLE_RATE)))
+
+
+def _genie_tts_channels() -> int:
+    return max(1, min(2, _as_int(os.environ.get("XINYU_GENIE_TTS_CHANNELS"), DEFAULT_GENIE_TTS_CHANNELS)))
+
+
+def _genie_tts_sample_width() -> int:
+    return max(1, min(4, _as_int(os.environ.get("XINYU_GENIE_TTS_SAMPLE_WIDTH"), DEFAULT_GENIE_TTS_SAMPLE_WIDTH)))
+
+
+def _pcm_to_wav_bytes(pcm: bytes, *, sample_rate: int, channels: int, sample_width: int) -> bytes:
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as handle:
+        handle.setnchannels(channels)
+        handle.setsampwidth(sample_width)
+        handle.setframerate(sample_rate)
+        handle.writeframes(pcm)
+    return buffer.getvalue()
+
+
 class XinYuTTSOutput:
     def __init__(self, root: Path) -> None:
         self.root = root.resolve()
         _load_local_env(self.root)
         self.enabled = _as_bool(os.environ.get("XINYU_TTS_ENABLED"), default=False)
+        self.engine = _tts_engine()
         self.base_url = _tts_base_url()
         self.api_key = _tts_api_key()
         self.model = _tts_model()
         self.voice = _tts_voice(self.model)
         self.audio_format = _tts_format()
         self.request_mode = _tts_request_mode()
+        self.genie_base_url = _genie_tts_base_url()
+        self.genie_character = _genie_tts_character()
+        self.genie_split_sentence = _genie_tts_split_sentence()
+        self.genie_sample_rate = _genie_tts_sample_rate()
+        self.genie_channels = _genie_tts_channels()
+        self.genie_sample_width = _genie_tts_sample_width()
         self.timeout_seconds = max(1.0, _as_float(os.environ.get("XINYU_TTS_TIMEOUT_SECONDS"), DEFAULT_TTS_TIMEOUT_SECONDS))
         self._jobs: queue.Queue[TTSJob | None] = queue.Queue(maxsize=MAX_PENDING_JOBS)
         self._retained_files: list[tuple[Path, float]] = []
@@ -269,14 +334,20 @@ class XinYuTTSOutput:
             return "tts_disabled"
         if winsound is None or not sys.platform.startswith("win"):
             return "winsound_unavailable"
+        if self.audio_format != "wav":
+            return "playback_requires_wav"
+        if self.engine == "genie":
+            if not self.genie_base_url:
+                return "missing_genie_tts_base_url"
+            if not self.genie_character:
+                return "missing_genie_tts_character"
+            return ""
         if not self.base_url:
             return "missing_base_url"
         if not self.api_key:
             return "missing_api_key"
         if not self.model:
             return "missing_model"
-        if self.audio_format != "wav":
-            return "playback_requires_wav"
         return ""
 
     def _worker_loop(self) -> None:
@@ -315,6 +386,8 @@ class XinYuTTSOutput:
             )
 
     def _synthesize_audio(self, text: str) -> tuple[bytes, str]:
+        if self.engine == "genie":
+            return self._request_genie_tts(text), "genie"
         tried: list[str] = []
         errors: list[str] = []
         mode = self.request_mode
@@ -340,6 +413,22 @@ class XinYuTTSOutput:
                     raise
         suffix = f":{'; '.join(errors)}" if errors else ""
         raise RuntimeError("tts_request_failed:" + ",".join(tried or [mode]) + suffix)
+
+    def _request_genie_tts(self, text: str) -> bytes:
+        payload = {
+            "character_name": self.genie_character,
+            "text": text,
+            "split_sentence": self.genie_split_sentence,
+        }
+        audio = self._post_genie_binary("/tts", payload)
+        if audio.startswith(b"RIFF"):
+            return audio
+        return _pcm_to_wav_bytes(
+            audio,
+            sample_rate=self.genie_sample_rate,
+            channels=self.genie_channels,
+            sample_width=self.genie_sample_width,
+        )
 
     def _request_chat_audio(self, text: str) -> bytes:
         payload = {
@@ -427,6 +516,28 @@ class XinYuTTSOutput:
             raise RuntimeError(_one_line(exc, limit=320)) from exc
         if not data:
             raise RuntimeError("empty_tts_audio_response")
+        return data
+
+    def _post_genie_binary(self, route: str, payload: dict[str, Any]) -> bytes:
+        request = urllib.request.Request(
+            self.genie_base_url + route,
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            method="POST",
+            headers={
+                "Accept": "audio/wav, application/octet-stream",
+                "Content-Type": "application/json",
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+                data = response.read()
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"genie_http_{exc.code}:{_one_line(body, limit=320)}") from exc
+        except (urllib.error.URLError, OSError, TimeoutError) as exc:
+            raise RuntimeError(f"genie_request_failed:{_one_line(exc, limit=320)}") from exc
+        if not data:
+            raise RuntimeError("empty_genie_tts_audio_response")
         return data
 
     def _write_audio_file(self, audio_bytes: bytes) -> Path:
@@ -517,9 +628,12 @@ class XinYuTTSOutput:
             "created_at": job.created_at,
             "status": status,
             "engine": engine,
+            "tts_engine": self.engine,
             "request_mode": self.request_mode,
             "model": self.model,
             "voice": self.voice,
+            "genie_character": self.genie_character if self.engine == "genie" else "",
+            "genie_sample_rate": self.genie_sample_rate if self.engine == "genie" else 0,
             "audio_format": self.audio_format,
             "timeout_seconds": self.timeout_seconds,
             "text_chars": len(job.text),
@@ -534,7 +648,7 @@ class XinYuTTSOutput:
             "stable_memory_write": "blocked",
             "visible_reply_text_retained": False,
         }
-        append_jsonl(self.root / TRACE_REL, row)
+        append_tts_output_trace(self.root / TRACE_REL, row)
 
 
 def main() -> int:

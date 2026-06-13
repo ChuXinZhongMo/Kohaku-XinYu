@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import json
 import re
-from collections import Counter, deque
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Sequence
 
-from state_service import append_jsonl, atomic_write_text
+from xinyu_early_visible_segment_store import append_early_visible_segment_shadow_trace
+from xinyu_early_visible_segment_store import read_recent_early_visible_segment_shadow_rows
+from xinyu_early_visible_segment_store import write_early_visible_segment_shadow_state
 
 
 TRACE_REL = Path("runtime/early_visible_segment_shadow.jsonl")
@@ -335,7 +336,7 @@ def _record_shadow(
             "message_type": _safe_str(payload.get("message_type"))[:80],
             "platform": _safe_str(payload.get("platform"))[:80],
         }
-        append_jsonl(root_path / TRACE_REL, row)
+        append_early_visible_segment_shadow_trace(root_path / TRACE_REL, row)
         _write_state(root_path)
     except Exception:
         return
@@ -376,29 +377,11 @@ def _write_state(root: Path) -> None:
         "",
         "This is shadow-only evidence for possible first natural segment delivery.",
     ]
-    atomic_write_text(root / STATE_REL, "\n".join(lines))
+    write_early_visible_segment_shadow_state(root / STATE_REL, "\n".join(lines))
 
 
 def _read_recent_shadow_rows(root: Path, *, max_rows: int) -> list[dict[str, Any]]:
-    path = root / TRACE_REL
-    if max_rows <= 0 or not path.exists():
-        return []
-    rows: deque[dict[str, Any]] = deque(maxlen=max_rows)
-    try:
-        with path.open("r", encoding="utf-8-sig") as handle:
-            for line in handle:
-                try:
-                    row = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if not isinstance(row, dict):
-                    continue
-                if row.get("event_kind") != "early_visible_segment_shadow":
-                    continue
-                rows.append(row)
-    except OSError:
-        return []
-    return list(rows)
+    return read_recent_early_visible_segment_shadow_rows(root / TRACE_REL, max_rows=max_rows)
 
 
 def _canary_readiness(

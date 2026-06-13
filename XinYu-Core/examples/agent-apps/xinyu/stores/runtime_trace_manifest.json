@@ -39,6 +39,24 @@
       "body_policy": "no_body_migration",
       "stable_memory_policy": "runtime_trace_not_stable_memory",
       "status": "compat_runtime_trace"
+    },
+    {
+      "trace_id": "life_event",
+      "path": "memory/context/life_event_trace.jsonl",
+      "owner_module": "xinyu_attention_posture",
+      "owner_symbol": "_append_life_event_trace",
+      "projection_paths": [
+        "memory/context/attention_posture_state.md"
+      ],
+      "allowed_raw_readers": [
+        "xinyu_attention_posture.py",
+        "xinyu_life_event_contract.py"
+      ],
+      "privacy": "internal_runtime_trace",
+      "retention_policy": "append_only_pending_rotation",
+      "body_policy": "no_body_migration",
+      "stable_memory_policy": "runtime_trace_not_stable_memory",
+      "status": "compat_runtime_trace"
     }
   ]
 }

@@ -17,10 +17,22 @@ async def gateway_poll_qq_outbox(gateway: Any, websocket: Any, connection_id: st
     await poll_qq_outbox(gateway, websocket, connection_id, gateway_name=GATEWAY_NAME)
 
 
+def qq_outbox_visible_dispatch_enabled(gateway: Any) -> bool:
+    config = getattr(gateway, "config", None)
+    return bool(
+        getattr(config, "qq_outbox_enabled", False)
+        and getattr(config, "bridge_token", "")
+        and getattr(config, "send_replies", False)
+    )
+
+
 async def poll_qq_outbox(gateway: Any, websocket: Any, connection_id: str, *, gateway_name: str) -> None:
     await asyncio.sleep(1)
     while True:
         try:
+            if not qq_outbox_visible_dispatch_enabled(gateway):
+                await asyncio.sleep(gateway.config.qq_outbox_poll_seconds)
+                continue
             claim_id = f"{connection_id}-{int(time.time() * 1000)}"
             claim = await gateway.client.qq_outbox_claim(
                 {
@@ -29,6 +41,15 @@ async def poll_qq_outbox(gateway: Any, websocket: Any, connection_id: str, *, ga
                 }
             )
             if not claim.get("message_claimed"):
+                await asyncio.sleep(gateway.config.qq_outbox_poll_seconds)
+                continue
+
+            if not qq_outbox_visible_dispatch_enabled(gateway):
+                await gateway._ack_qq_outbox(
+                    claim,
+                    status="failed",
+                    error="visible outbound dispatch disabled",
+                )
                 await asyncio.sleep(gateway.config.qq_outbox_poll_seconds)
                 continue
 

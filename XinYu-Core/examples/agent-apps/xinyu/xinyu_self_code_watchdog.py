@@ -3,13 +3,18 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import re
-import shutil
-import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from xinyu_self_code_watchdog_store import append_self_code_watchdog_trace
+from xinyu_self_code_watchdog_store import copy_self_code_watchdog_file
+from xinyu_self_code_watchdog_store import read_self_code_watchdog_bytes
+from xinyu_self_code_watchdog_store import read_self_code_watchdog_manifest
+from xinyu_self_code_watchdog_store import write_self_code_watchdog_bytes
+from xinyu_self_code_watchdog_store import write_self_code_watchdog_json
+from xinyu_self_code_watchdog_store import write_self_code_watchdog_text
 
 
 SNAPSHOT_ROOT_REL = Path("runtime/self_code_watchdog/snapshots")
@@ -82,24 +87,11 @@ def _is_relative_to(path: Path, root: Path) -> bool:
 
 
 def _atomic_write_text(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
-    tmp_path = Path(tmp_name)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
-            handle.write(text)
-        os.replace(tmp_path, path)
-    finally:
-        try:
-            tmp_path.unlink()
-        except OSError:
-            pass
+    write_self_code_watchdog_text(path, text)
 
 
 def _append_jsonl(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
+    append_self_code_watchdog_trace(path, payload)
 
 
 def _discover_snapshot_files(root: Path) -> list[Path]:
@@ -211,8 +203,8 @@ def create_self_code_snapshot(
         rel = source.relative_to(root).as_posix()
         backup = files_dir / rel
         backup.parent.mkdir(parents=True, exist_ok=True)
-        data = source.read_bytes()
-        backup.write_bytes(data)
+        data = read_self_code_watchdog_bytes(source)
+        write_self_code_watchdog_bytes(backup, data)
         entries.append(
             {
                 "rel_path": rel,
@@ -234,7 +226,7 @@ def create_self_code_snapshot(
         "files": entries,
     }
     manifest_path = snapshot_dir / "manifest.json"
-    _atomic_write_text(manifest_path, json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
+    write_self_code_watchdog_json(manifest_path, manifest)
     notes = ["snapshot_created", f"files:{len(entries)}"]
     _write_state(
         root,
@@ -271,9 +263,7 @@ def create_self_code_snapshot(
 
 
 def _load_manifest(manifest_path: Path) -> dict[str, Any]:
-    data = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
-    if not isinstance(data, dict):
-        raise ValueError("snapshot manifest must be a JSON object")
+    data = read_self_code_watchdog_manifest(manifest_path)
     files = data.get("files")
     if not isinstance(files, list):
         raise ValueError("snapshot manifest missing files list")
@@ -315,11 +305,10 @@ def restore_self_code_snapshot(
             skipped.append(rel)
             continue
         expected_sha256 = _safe_str(raw.get("sha256")).lower()
-        if expected_sha256 and _sha256_bytes(backup.read_bytes()) != expected_sha256:
+        if expected_sha256 and _sha256_bytes(read_self_code_watchdog_bytes(backup)) != expected_sha256:
             skipped.append(rel)
             continue
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(backup, target)
+        copy_self_code_watchdog_file(backup, target)
         restored += 1
 
     observed = _timestamp_or_now_iso(observed_at)

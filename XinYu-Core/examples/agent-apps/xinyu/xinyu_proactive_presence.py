@@ -5,6 +5,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+from xinyu_bridge_proactive_delivery_state_store import proactive_delivery_state_paths
 from xinyu_text_variants import readable_markers
 from xinyu_proactive_lifecycle_trace import append_proactive_lifecycle_event
 
@@ -177,11 +178,11 @@ def _one_line(text: str) -> str:
 
 
 def _dispatch_state_path(root: Path) -> Path:
-    return root / "memory/context/proactive_qq_dispatch_state.md"
+    return proactive_delivery_state_paths(root).proactive_dispatch_state
 
 
 def _request_state_path(root: Path) -> Path:
-    return root / "memory/context/proactive_request_state.md"
+    return proactive_delivery_state_paths(root).proactive_request_state
 
 
 def _replace_list_field(text: str, field: str, value: str) -> str:
@@ -287,7 +288,7 @@ def _request_preview_candidate(proactive_request: str) -> dict[str, str]:
     question = extract_value(proactive_request, "concrete_question", "none")
     requested_action = extract_value(proactive_request, "requested_action", "none")
 
-    if status in {"claimed", "sent", "answered"}:
+    if status in {"claimed", "queued_qq", "sent", "answered"}:
         return {
             "candidate": "none",
             "shape": f"request_status_{status}",
@@ -393,7 +394,7 @@ def _dispatch_hold_reason(
     min_interval_seconds: int,
 ) -> str:
     last_status = extract_value(dispatch_state, "last_claim_status", "")
-    if last_status not in {"claimed", "sent", "failed"}:
+    if last_status not in {"claimed", "queued", "queued_qq", "sent", "failed"}:
         return ""
 
     last_message = extract_value(dispatch_state, "last_claimed_message", "")
@@ -408,6 +409,8 @@ def _dispatch_hold_reason(
         )
         if last_status == "sent" and same_request:
             return "candidate_already_sent"
+        if last_status in {"queued", "queued_qq"}:
+            return "candidate_already_queued"
         if last_status == "claimed":
             return "candidate_already_claimed"
         if min_interval_seconds <= 0:
@@ -846,7 +849,7 @@ def acknowledge_proactive_qq_message(
     ack_status = ack_status.strip().lower()
     notes = ["no_agent_turn", "no_session_created"]
 
-    if ack_status not in {"sent", "failed", "dry_run"}:
+    if ack_status not in {"sent", "failed", "queued", "dry_run"}:
         append_proactive_lifecycle_event(
             root,
             event_kind="proactive_ack_rejected",
@@ -908,6 +911,34 @@ def acknowledge_proactive_qq_message(
             "notes": notes + ["claim_id_mismatch"],
         }
 
+    last_claim_status = extract_value(state, "last_claim_status", "")
+    last_ack_status = extract_value(state, "last_ack_status", "")
+    if "sent" in {last_claim_status, last_ack_status}:
+        terminal_notes = notes + ["terminal_ack_already_recorded"]
+        if ack_status != "sent":
+            terminal_notes.append("late_ack_ignored_terminal_sent")
+        else:
+            terminal_notes.append("duplicate_sent_ack_ignored")
+        append_proactive_lifecycle_event(
+            root,
+            event_kind="proactive_ack_ignored",
+            event_time=acked_at,
+            request_state=read_text(_request_state_path(root)),
+            dispatch_state=state,
+            claim_id=last_claim_id,
+            ack_status=ack_status,
+            adapter_status="terminal_ack_already_recorded",
+            notes=terminal_notes,
+        )
+        return {
+            "accepted": True,
+            "ack_recorded": False,
+            "claim_id": last_claim_id,
+            "ack_status": "sent",
+            "adapter_message_id": extract_value(state, "adapter_message_id", "none"),
+            "notes": terminal_notes,
+        }
+
     write_text(
         _dispatch_state_path(root),
         _render_acknowledged_dispatch_state(
@@ -918,7 +949,12 @@ def acknowledge_proactive_qq_message(
             adapter_error=adapter_error,
         ),
     )
-    request_status = extract_value(state, "last_claim_status", "ready") if ack_status == "dry_run" else ack_status
+    if ack_status == "dry_run":
+        request_status = extract_value(state, "last_claim_status", "ready")
+    elif ack_status == "queued":
+        request_status = "queued_qq"
+    else:
+        request_status = ack_status
     if request_status in {"claimed", "none", "unknown", ""}:
         request_status = "ready" if ack_status == "dry_run" else ack_status
     request_updated = _update_request_delivery_state(

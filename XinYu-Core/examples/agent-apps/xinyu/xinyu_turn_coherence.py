@@ -1,17 +1,20 @@
 from __future__ import annotations
 
-import json
-import os
 import re
-import time
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-
-STATE_MD_REL = Path("memory/context/turn_coherence_state.md")
-TRACE_REL = Path("runtime/turn_coherence_trace.jsonl")
+from xinyu_turn_coherence_store import MEMORY_BRAID_STATE_REL
+from xinyu_turn_coherence_store import PRIVATE_THOUGHT_STATE_REL
+from xinyu_turn_coherence_store import PROACTIVE_REQUEST_STATE_REL
+from xinyu_turn_coherence_store import SELF_THOUGHT_STATE_REL
+from xinyu_turn_coherence_store import STATE_MD_REL
+from xinyu_turn_coherence_store import TRACE_REL
+from xinyu_turn_coherence_store import append_turn_coherence_trace_event
+from xinyu_turn_coherence_store import read_turn_coherence_source_text
+from xinyu_turn_coherence_store import write_turn_coherence_state_text
 
 
 def _now_iso() -> str:
@@ -295,7 +298,7 @@ def write_turn_coherence_state(
         "- memory/thought/action should use the same turn_spine before creating new residue or follow-up",
         "- ordinary QQ chat must not quote this file or its field names",
     ]
-    _write_text_atomic(root / STATE_MD_REL, "\n".join(lines))
+    write_turn_coherence_state_text(root, "\n".join(lines))
 
 
 def append_turn_coherence_trace(
@@ -311,10 +314,7 @@ def append_turn_coherence_trace(
         **snapshot_to_json(snapshot),
     }
     event.update(extra or {})
-    path = root / TRACE_REL
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n")
+    append_turn_coherence_trace_event(root, event)
 
 
 def snapshot_to_json(snapshot: TurnCoherenceSnapshot) -> dict[str, Any]:
@@ -399,7 +399,7 @@ def _turn_spine(*, turn_id: str, current_turn_intent: str) -> str:
 def _memory_lane(root: Path, *, memory_braid_block: str, recalled_context: str, continuity_context: str) -> str:
     if _one_line(memory_braid_block):
         return "memory_braid_active"
-    state = _read(root, "memory/context/memory_braid_state.md", limit=1200)
+    state = _read(root, MEMORY_BRAID_STATE_REL, limit=1200)
     if _one_line(state):
         return "memory_braid_state_available"
     if _one_line(recalled_context) or _one_line(continuity_context):
@@ -408,8 +408,8 @@ def _memory_lane(root: Path, *, memory_braid_block: str, recalled_context: str, 
 
 
 def _thought_lane(root: Path, *, persona_context: str, emotion_council_context: str) -> str:
-    private_state = _read(root, "memory/self/private_thought_state.md", limit=1200)
-    self_thought = _read(root, "memory/context/self_thought_state.md", limit=1200)
+    private_state = _read(root, PRIVATE_THOUGHT_STATE_REL, limit=1200)
+    self_thought = _read(root, SELF_THOUGHT_STATE_REL, limit=1200)
     active_private = _field(private_state, "event_id")
     self_focus = _field(self_thought, "focus_kind") or _field(self_thought, "focus")
     parts: list[str] = []
@@ -433,7 +433,7 @@ def _action_lane(
     action_digest_context: str,
 ) -> str:
     intent = _classify_turn_intent(user_text)
-    proactive = _read(root, "memory/context/proactive_request_state.md", limit=900)
+    proactive = _read(root, PROACTIVE_REQUEST_STATE_REL, limit=900)
     if intent in {"technical_or_repair_action", "bounded_action_or_lookup"}:
         return "current_turn_may_require_bounded_action"
     if intent == "coherence_pressure":
@@ -510,14 +510,8 @@ def _field(text: str, key: str) -> str:
     return _one_line(match.group(1)) if match else ""
 
 
-def _read(root: Path, rel_path: str, *, limit: int) -> str:
-    try:
-        text = (root / rel_path).read_text(encoding="utf-8-sig", errors="replace").strip()
-    except OSError:
-        return ""
-    if len(text) <= limit:
-        return text
-    return text[:limit]
+def _read(root: Path, rel_path: str | Path, *, limit: int) -> str:
+    return read_turn_coherence_source_text(root, rel_path, limit=limit)
 
 
 def _as_bool(value: Any, default: bool = False) -> bool:
@@ -550,15 +544,3 @@ def _hash_text(text: str, length: int = 16) -> str:
 
     return hashlib.sha256(text.encode("utf-8", errors="replace")).hexdigest()[:length]
 
-
-def _write_text_atomic(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
-    try:
-        tmp.write_text(text.rstrip() + "\n", encoding="utf-8")
-        os.replace(tmp, path)
-    finally:
-        try:
-            tmp.unlink(missing_ok=True)
-        except OSError:
-            pass

@@ -146,6 +146,17 @@ CODEX_DELEGATION_VERB_MARKERS = (
     "runcodex",
     "askcodex",
 )
+GENERIC_CODEX_DELEGATION_MARKERS = (
+    "用codex",
+    "用一下codex",
+    "调用codex",
+    "让codex",
+    "叫codex",
+    "交给codex",
+    "usecodex",
+    "runcodex",
+    "askcodex",
+)
 CODEX_CONCRETE_TASK_MARKERS = (
     "查",
     "看",
@@ -189,6 +200,36 @@ def _has_any(text: str, markers: tuple[str, ...]) -> bool:
 
 def _has_compact_any(compact: str, markers: tuple[str, ...]) -> bool:
     return any(_compact(marker) in compact for marker in markers if marker)
+
+
+def _looks_like_codex_meta_discussion(compact: str) -> bool:
+    if _has_compact_any(compact, CODEX_META_DISCUSSION_MARKERS):
+        return True
+    if re.search(r"(为什么|为啥|为何|怎么|咋|是不是|是否).{0,24}codex", compact):
+        return True
+    if re.search(r"(看见|看到|注意到|刚刚|刚才).{0,24}codex", compact):
+        return True
+    if re.search(
+        r"codex.{0,18}(为什么|为啥|为何|怎么|咋|是不是|是否|自动|直接|误触发|没成功|没跑顺|在动|启动了|开了|跑了|用了|调用了|查完|跑完|完成)",
+        compact,
+    ):
+        return True
+    return False
+
+
+def _codex_directive_has_task_after_marker(compact: str) -> bool:
+    generic_markers = {_compact(marker) for marker in GENERIC_CODEX_DELEGATION_MARKERS}
+    for marker in sorted(CODEX_DELEGATION_VERB_MARKERS, key=lambda item: len(_compact(item)), reverse=True):
+        marker_compact = _compact(marker)
+        index = compact.find(marker_compact)
+        if index < 0:
+            continue
+        tail = compact[index + len(marker_compact) :]
+        if marker_compact not in generic_markers:
+            return True
+        if _has_compact_any(tail, CODEX_CONCRETE_TASK_MARKERS):
+            return True
+    return False
 
 
 def _is_owner_private(payload: dict[str, Any]) -> bool:
@@ -379,17 +420,15 @@ class ToolIntentRouter:
             return re.sub(r"(?is)^/codex", "", stripped, count=1).strip() or "检查当前本地任务"
         if "codex" not in compact:
             return ""
-        if _has_compact_any(compact, CODEX_META_DISCUSSION_MARKERS):
+        if _looks_like_codex_meta_discussion(compact):
             return ""
         if not _has_any(stripped, CODEX_MARKERS):
             return ""
         if not _has_compact_any(compact, CODEX_DELEGATION_VERB_MARKERS):
             return ""
-        if _has_compact_any(compact, CODEX_CONCRETE_TASK_MARKERS) or re.search(
+        if _codex_directive_has_task_after_marker(compact) or re.search(
             r"(?i)(?:[a-z]:[\\/]|\\\\|https?://)",
             stripped,
         ):
             return stripped
-        if not _has_any(stripped, ("检查", "查", "看", "分析", "构建", "失败", "项目", "代码", "日志", "运行", "测试", "修")):
-            return ""
-        return stripped
+        return ""

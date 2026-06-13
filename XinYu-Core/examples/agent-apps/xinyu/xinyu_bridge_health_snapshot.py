@@ -3,8 +3,14 @@ from __future__ import annotations
 from typing import Any
 
 from xinyu_action_experience_digest import read_recent_action_digest_snapshot
-from xinyu_code_awareness import record_code_awareness
-from xinyu_runtime_presence import DEFAULT_RUNNING_STALE_SECONDS, read_runtime_presence_summary
+from xinyu_bridge_health_diagnostics_service import (
+    HealthDiagnosticsDeps,
+    build_health_diagnostics_service,
+)
+from xinyu_bridge_health_provider_registry import health_diagnostics_provider_registry_providers
+from xinyu_bridge_health_snapshot_service import build_operator_health
+from xinyu_code_awareness import read_code_awareness_summary
+from xinyu_runtime_presence import read_runtime_presence_summary
 from xinyu_turn_route_trace import read_turn_route_summary
 
 
@@ -50,66 +56,43 @@ def health_snapshot(
     source_digest: str,
     runtime_source_digest: str,
 ) -> dict[str, Any]:
-    code_awareness = record_code_awareness(
-        runtime.xinyu_dir,
-        running_bridge_digest=source_digest,
-        running_runtime_digest=runtime_source_digest,
+    service = getattr(runtime, "_health_diagnostics_service", None)
+    if service is None:
+        service = build_runtime_health_diagnostics_service()
+    return service.health_snapshot(
+        runtime,
+        bridge_version=bridge_version,
+        source_digest=source_digest,
+        runtime_source_digest=runtime_source_digest,
     )
-    runtime_presence = read_runtime_presence_summary(runtime.xinyu_dir)
-    turn_route = read_turn_route_summary(runtime.xinyu_dir)
-    return {
-        "ok": True,
-        "bridge": "xinyu_core_bridge",
-        "version": bridge_version,
-        "source_digest": source_digest,
-        "runtime_source_digest": runtime_source_digest,
-        "xinyu_dir": str(runtime.xinyu_dir),
-        "memory_root": str(runtime.memory_root),
-        "sessions": len(runtime._sessions),
-        "turn_timeout_seconds": runtime.turn_timeout_seconds,
-        "pre_model_routes_timeout_seconds": runtime.pre_model_routes_timeout_seconds,
-        "outward_renderer": runtime.outward_renderer,
-        "renderer_mode": runtime.renderer_mode,
-        "render_timeout_seconds": runtime.render_timeout_seconds,
-        "session_idle_ttl_seconds": runtime.session_idle_ttl_seconds,
-        "max_sessions": runtime.max_sessions,
-        "dialogue_memory": {
-            "prompt_tail_entries": runtime.dialogue_prompt_tail_entries,
-            "session_tail_entries": runtime.dialogue_session_tail_entries,
-            "persisted_tail_entries": runtime.dialogue_persisted_tail_entries,
-        },
-        "proactive_min_interval_seconds": runtime.proactive_min_interval_seconds,
-        "autonomous_maintenance": autonomous_maintenance_health(runtime),
-        "runtime_presence": runtime_presence,
-        "turn_route": turn_route,
-        "operator": _operator_health(runtime_presence=runtime_presence, turn_route=turn_route),
-        "program_awareness": runtime_presence.get("program_awareness", {}),
-        "code_awareness": code_awareness,
-        "v1": runtime._v1_health(),
-        "metabolism": metabolism_health(runtime),
-        "self_choice": runtime.self_choice_store.health_snapshot(),
-        "action_experience_digest": read_recent_action_digest_snapshot(runtime.xinyu_dir, limit=3),
-        "closed": runtime._closed,
-    }
 
 
-def _operator_health(*, runtime_presence: dict[str, Any], turn_route: dict[str, Any]) -> dict[str, Any]:
-    current_turn_age_seconds = _safe_int(runtime_presence.get("current_turn_age_seconds"), 0)
-    stale_running = bool(runtime_presence.get("stale_running"))
-    stale_age_seconds = 0
-    if stale_running and current_turn_age_seconds > DEFAULT_RUNNING_STALE_SECONDS:
-        stale_age_seconds = current_turn_age_seconds - DEFAULT_RUNNING_STALE_SECONDS
-    return {
-        "current_turn_state": _safe_str(runtime_presence.get("current_turn_state"), "unknown"),
-        "current_turn_age_seconds": current_turn_age_seconds,
-        "route_stage": _safe_str(turn_route.get("last_stage"), "unknown"),
-        "route": _safe_str(turn_route.get("last_route"), "unknown"),
-        "route_status": _safe_str(turn_route.get("last_status"), "unknown"),
-        "stale_running": stale_running,
-        "stale_age_seconds": stale_age_seconds,
-        "last_timeout_stage": _safe_str(turn_route.get("last_timeout_stage")),
-        "last_timeout_reason": _safe_str(turn_route.get("last_timeout_reason")),
-    }
+def build_runtime_health_diagnostics_service():
+    return build_health_diagnostics_service(
+        HealthDiagnosticsDeps(
+            read_code_awareness_summary_func=read_code_awareness_summary,
+            read_runtime_presence_summary_func=read_runtime_presence_summary,
+            read_turn_route_summary_func=read_turn_route_summary,
+            read_recent_action_digest_snapshot_func=read_recent_action_digest_snapshot,
+            autonomous_maintenance_health_func=autonomous_maintenance_health,
+            metabolism_health_func=metabolism_health,
+            operator_health_func=build_operator_health,
+            service_health_providers_func=health_diagnostics_provider_registry_providers,
+        )
+    )
+
+
+def runtime_health_snapshot(runtime: Any) -> dict[str, Any]:
+    return health_snapshot(
+        runtime,
+        bridge_version=_safe_str(getattr(runtime, "bridge_version", ""), "unknown"),
+        source_digest=_safe_str(getattr(runtime, "bridge_source_digest", "")),
+        runtime_source_digest=_safe_str(getattr(runtime, "bridge_runtime_source_digest", "")),
+    )
+
+
+async def runtime_health(runtime: Any) -> dict[str, Any]:
+    return runtime_health_snapshot(runtime)
 
 
 def _safe_str(value: Any, default: str = "") -> str:
@@ -120,10 +103,3 @@ def _safe_str(value: Any, default: str = "") -> str:
     except Exception:
         return default
     return text if text else default
-
-
-def _safe_int(value: Any, default: int = 0) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default

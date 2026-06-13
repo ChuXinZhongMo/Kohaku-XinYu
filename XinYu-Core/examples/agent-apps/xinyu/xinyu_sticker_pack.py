@@ -16,6 +16,7 @@ from stores.sticker_send_state import (
     write_sticker_send_state,
 )
 from xinyu_local_scope import default_local_scope_root, ensure_local_scope
+from xinyu_private_ecosystem_grants import load_share_block_reasons
 from xinyu_qq_outbox import enqueue_qq_outbox_image
 
 
@@ -897,6 +898,21 @@ def maybe_enqueue_sticker_reply(
     state_key = _session_state_key(payload, session_key)
     auto_mode = decision.mode == "semantic_auto"
     if auto_mode:
+        try:
+            share_blocks = load_share_block_reasons(root)
+        except Exception:
+            share_blocks = ["owner_private_autonomous_share_unreadable"]
+        if share_blocks:
+            return {
+                "queued": False,
+                "notes": [
+                    *decision.notes,
+                    "sticker_skip:owner_private_autonomous_share_blocked",
+                    *[f"sticker_skip:{block}" for block in share_blocks],
+                ],
+                "mood": decision.mood,
+                "mode": decision.mode,
+            }
         allowed, cooldown_notes = _auto_cooldown_allows(root, state_key)
         if not allowed:
             return {"queued": False, "notes": [*decision.notes, *cooldown_notes], "mood": decision.mood, "mode": decision.mode}
