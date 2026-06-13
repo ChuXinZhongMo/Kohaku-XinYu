@@ -10,6 +10,7 @@ The WAV is returned as a `base64://...` payload NapCat transcodes to silk.
 """
 from __future__ import annotations
 
+import array
 import base64
 from dataclasses import dataclass
 import io
@@ -148,6 +149,78 @@ def _pcm_to_wav_bytes(pcm: bytes, *, sample_rate: int, channels: int, sample_wid
         handle.setframerate(sample_rate)
         handle.writeframes(pcm)
     return buffer.getvalue()
+
+
+def trim_wav_trailing_silence(
+    wav_bytes: bytes,
+    *,
+    floor_ratio: float = 0.04,
+    tail_pad_seconds: float = 0.25,
+    min_keep_seconds: float = 0.4,
+    min_trim_seconds: float = 0.8,
+) -> bytes:
+    """Cut a long silent tail off a synthesized WAV.
+
+    GPT-SoVITS / Genie sometimes fails to emit an end token and keeps generating
+    silence until it hits the max length, producing clips that are mostly dead
+    air (observed: 7.4s of speech + 33s of silence in a 40s clip). This finds the
+    last audible sample (relative to the clip's own peak) and keeps up to there
+    plus a short pad. Conservative by design: only trims when it would remove at
+    least ``min_trim_seconds``, never cuts below ``min_keep_seconds``, and returns
+    the input unchanged on any unexpected shape so voice replies never break.
+    """
+    try:
+        with wave.open(io.BytesIO(wav_bytes), "rb") as handle:
+            channels = handle.getnchannels()
+            sample_width = handle.getsampwidth()
+            rate = handle.getframerate()
+            frames = handle.getnframes()
+            raw = handle.readframes(frames)
+        if sample_width != 2 or channels < 1 or rate <= 0 or frames <= 0:
+            return wav_bytes
+        samples = array.array("h")
+        samples.frombytes(raw)
+        if sys.byteorder == "big":
+            samples.byteswap()
+        peak = 0
+        for value in samples:
+            magnitude = value if value >= 0 else -value
+            if magnitude > peak:
+                peak = magnitude
+        if peak <= 0:
+            return wav_bytes
+        threshold = peak * floor_ratio
+        last_audible_frame = -1
+        for frame_index in range(frames - 1, -1, -1):
+            base = frame_index * channels
+            loud = False
+            for channel in range(channels):
+                value = samples[base + channel]
+                magnitude = value if value >= 0 else -value
+                if magnitude > threshold:
+                    loud = True
+                    break
+            if loud:
+                last_audible_frame = frame_index
+                break
+        if last_audible_frame < 0:
+            return wav_bytes
+        keep_frames = last_audible_frame + 1 + int(tail_pad_seconds * rate)
+        keep_frames = max(int(min_keep_seconds * rate), min(keep_frames, frames))
+        if frames - keep_frames < int(min_trim_seconds * rate):
+            return wav_bytes
+        kept = samples[: keep_frames * channels]
+        if sys.byteorder == "big":
+            kept.byteswap()
+        out = io.BytesIO()
+        with wave.open(out, "wb") as writer:
+            writer.setnchannels(channels)
+            writer.setsampwidth(sample_width)
+            writer.setframerate(rate)
+            writer.writeframes(kept.tobytes())
+        return out.getvalue()
+    except (wave.Error, OSError, ValueError):
+        return wav_bytes
 
 
 def _wav_duration_seconds(wav_bytes: bytes) -> float:
@@ -302,7 +375,8 @@ def synth_voice_b64_result(text: str) -> VoiceSynthesisResult:
                         channels=_tts_channels(),
                         sample_width=_tts_sample_width(),
                     )
-                    audio_bytes = len(audio)
+                audio = trim_wav_trailing_silence(audio)
+                audio_bytes = len(audio)
                 return VoiceSynthesisResult(
                     ok=True,
                     record_file="base64://" + base64.b64encode(audio).decode("ascii"),
