@@ -230,6 +230,18 @@ def compose_review_inbox_command_reply(*, processed_count: int, stale_count: int
     return "".join(parts)
 
 
+_REFERENTLESS_NUDGE_RE = re.compile(r"^这个(还要|还接|还看|还弄)")
+
+
+def _is_referentless_nudge(message: str) -> bool:
+    """A proactive line with no concrete referent (a bare "这个还要吗" the owner
+    can't place). Owner-confirmed policy: 没具体事就别发 — suppress these."""
+    text = _safe_str(message).strip()
+    if not text:
+        return True
+    return bool(_REFERENTLESS_NUDGE_RE.match(text)) or text in {"这个还接吗", "这个还要吗", "这个还看吗"}
+
+
 def compose_proactive_visible_message(
     raw_text: Any,
     *,
@@ -243,16 +255,25 @@ def compose_proactive_visible_message(
     text = _visible_summary(text, limit=300)
     context_text = normalize_proactive_recent_context(recent_context)
     if not text:
-        return "我刚才还在想这个。"
+        # Nothing concrete to say (e.g. owner_long_idle with no live thread):
+        # suppress instead of sending a referent-less nudge. Callers treat an
+        # empty message as "don't send".
+        return ""
     if _looks_like_personal_voice(text):
         return text
     shortened = _shorten_proactive_question(text, recent_context=context_text)
-    if shortened:
+    if shortened and not _is_referentless_nudge(shortened):
         return shortened
     scene_reply = _scene_proactive_reply(text, recent_context=context_text)
-    if scene_reply:
+    if scene_reply and not _is_referentless_nudge(scene_reply):
         return scene_reply
-    return "这个还接吗"
+    # Only a referent-less nudge ("这个还要吗") could be produced. A real question
+    # still stands on its own — send it as-is rather than the meaningless short
+    # form. Otherwise (no concrete thread, e.g. owner_long_idle) suppress:
+    # owner chose 没具体事就别发.
+    if text.rstrip().endswith(("?", "？")):
+        return text
+    return ""
 
 
 def compose_async_exploration_outbox_message(update: dict[str, Any]) -> str:

@@ -95,11 +95,12 @@ def test_proactive_direct_sender_enqueues_owner_private_outbox(tmp_path: Path) -
     assert len(items) == 1
     assert items[0]["target"] == {"message_kind": "private", "user_id": "owner-1", "group_id": ""}
     assert items[0]["metadata"]["direct_proactive"] is True
-    assert items[0]["message"] in {
-        "Desktop 那张卡还要吗",
-        "这个还要吗",
-        "Desktop 那张卡还看吗",
-    }
+    # A meaningful, referent-ful proactive message is queued. When the terse
+    # nudge would degrade to a referent-less "这个还要吗" (owner: 没具体事就别发),
+    # the composer now keeps the concrete question instead of sending noise.
+    assert items[0]["message"]
+    assert not items[0]["message"].startswith("这个还")
+    assert "Desktop" in items[0]["message"] or "人格状态卡" in items[0]["message"]
     assert "我想问你一件小事" not in items[0]["message"]
     assert "persona next step" not in items[0]["message"]
     assert "- status: queued_qq" in state
