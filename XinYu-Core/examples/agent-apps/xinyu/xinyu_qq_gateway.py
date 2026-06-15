@@ -1039,6 +1039,31 @@ class NativeQQGateway:
                 image_only=True,
             )
 
+    def _sticker_vision_summary(self, sticker_payload: dict[str, Any]) -> str:
+        """Read an incoming sticker's emotion with the vision model (mimo-v2.5)
+        instead of trusting the local CLIP label. Returns a short read or ''.
+
+        Blocking (urllib); call via asyncio.to_thread off the event loop.
+        """
+        try:
+            context = self._build_direct_image_context(
+                sticker_payload,
+                owner_text="这是对方发来的一张 QQ 表情包，用一句话说它想表达的情绪或意思，不要描述画面细节。",
+            )
+        except Exception:
+            return ""
+        if not _as_bool(context.get("available"), default=False):
+            return ""
+        summary = _safe_str(context.get("vision_summary")).strip()
+        if not summary:
+            return ""
+        for separator in ("。", "\n", "；", ";", "！", "."):
+            index = summary.find(separator)
+            if 0 < index <= 60:
+                summary = summary[:index]
+                break
+        return summary[:80]
+
     async def _maybe_enrich_current_image_context(
         self,
         websocket: Any,
@@ -1584,11 +1609,15 @@ class NativeQQGateway:
         sticker_payload: dict[str, Any],
         sticker_response: dict[str, Any],
     ) -> None:
+        vision_meaning = ""
+        if target.message_kind == "private":
+            vision_meaning = await asyncio.to_thread(self._sticker_vision_summary, sticker_payload)
         followup_payload = self._build_sticker_followup_chat_payload(
             event,
             target=target,
             sticker_payload=sticker_payload,
             sticker_response=sticker_response,
+            vision_meaning=vision_meaning,
         )
         if followup_payload is None:
             return
@@ -3571,6 +3600,7 @@ class NativeQQGateway:
         target: ReplyTarget,
         sticker_payload: dict[str, Any],
         sticker_response: dict[str, Any] | None = None,
+        vision_meaning: str = "",
     ) -> dict[str, Any] | None:
         if target.message_kind != "private":
             return None
@@ -3579,6 +3609,12 @@ class NativeQQGateway:
         if not rich_context.get("segments"):
             return None
         sticker_context = self._sticker_context_from_import_response(sticker_payload, sticker_response)
+        if _safe_str(vision_meaning).strip():
+            sticker_context = {
+                **sticker_context,
+                "vision_meaning": _safe_str(vision_meaning).strip(),
+                "vision_inferred": True,
+            }
         text = self._sticker_followup_text(rich_context, sticker_payload, sticker_context)
         payload = self._build_chat_payload(event, target=target, text=text, rich_context=rich_context)
         metadata = dict(payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {})
@@ -3620,6 +3656,11 @@ class NativeQQGateway:
         sticker_payload: dict[str, Any],
         sticker_context: dict[str, Any],
     ) -> str:
+        vision_meaning = _safe_str(sticker_context.get("vision_meaning")).strip()
+        if vision_meaning:
+            # The vision model actually looked at the sticker; trust its read over
+            # the local CLIP label (which mislabels, e.g. 困惑 -> "shy 0.60").
+            return f"我刚发了一张表情包。{vision_meaning}"[:500]
         if _as_bool(sticker_context.get("import_completed"), default=False):
             label = _safe_str(sticker_context.get("mood_label") or sticker_context.get("mood")).strip()
             meaning = _safe_str(sticker_context.get("meaning")).strip()
