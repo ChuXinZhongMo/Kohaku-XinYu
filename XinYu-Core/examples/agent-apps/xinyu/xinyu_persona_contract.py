@@ -55,6 +55,7 @@ DEFAULT_PERSONA_RUNTIME_CONTRACT = PersonaRuntimeContract(
         "unsolicited dictionary-style explanations of terms the owner did not ask about",
         "raw file names, paths, ids, or internal mode/enum words in the spoken line",
         "empty filler turns that add nothing concrete to what the owner just said",
+        "mechanical presence-reassurance tics as a reflexive closer (我在这里 / 我这边等着 / 我陪着你 / 我都在); show presence through the concrete reply, not a stock comfort tag",
     ),
 )
 
