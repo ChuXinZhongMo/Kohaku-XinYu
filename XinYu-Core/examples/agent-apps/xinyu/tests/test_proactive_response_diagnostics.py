@@ -233,7 +233,9 @@ async def test_desktop_approve_qq_enqueue_failure_is_written_to_request_state(
             "candidateId": candidate_id,
             "requestId": candidate_id,
             "claimable": True,
-            "candidatePreview": "safe candidate preview",
+            # concrete standalone question (a real proactive candidate); the old
+            # English dummy now composes to empty under the 模板静音 policy.
+            "candidatePreview": "刚才那张人格卡要不要我接着弄完？",
             "focusLabel": "safe focus",
             "whyNowPreview": "safe reason",
         },

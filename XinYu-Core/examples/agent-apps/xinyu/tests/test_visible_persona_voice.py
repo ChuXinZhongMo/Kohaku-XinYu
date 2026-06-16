@@ -79,16 +79,16 @@ def test_control_plane_messages_are_first_person() -> None:
     watchdog = compose_watchdog_visible_message("self_code_watchdog_failed", error="RuntimeError: boom")
     for text in (review, review_reply, promise, proactive, direct_question, async_reply, watchdog):
         _assert_persona_visible(text)
-    assert direct_question in {
-        "Desktop 那张卡还要吗",
-        "这个还要吗",
-        "Desktop 那张卡还看吗",
-    }
+    # owner policy 2026-06-15 (模板静音): the mechanical "X还看吗 / X还要吗" check-in
+    # tic is suppressed; the concrete original question stands on its own instead.
+    assert direct_question
+    assert "还看吗" not in direct_question and "还要吗" not in direct_question
     assert "我想问你一件小事" not in direct_question
     loop_question = compose_proactive_visible_message("要不要我现在跑一遍生活事件到主动消息的闭环？")
     wording_question = compose_proactive_visible_message("要不要我先把这些主动消息的句子改得更像平时说话？")
     assert loop_question in {"刚才那条链我接着？", "那我接着？", "刚才那条链继续吗"}
-    assert wording_question in {"那几句还要吗", "这个还要吗", "那几句还看吗"}
+    assert wording_question
+    assert "还看吗" not in wording_question and "还要吗" not in wording_question
     assert "我" in review
     assert "我" in promise
     assert "token=secret" not in async_reply

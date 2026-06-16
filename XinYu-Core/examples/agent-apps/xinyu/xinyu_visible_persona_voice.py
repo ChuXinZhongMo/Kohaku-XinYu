@@ -231,6 +231,12 @@ def compose_review_inbox_command_reply(*, processed_count: int, stale_count: int
 
 
 _REFERENTLESS_NUDGE_RE = re.compile(r"^这个(还要|还接|还看|还弄)")
+# A slot-filled check-in tic: a short topic glued onto 还(看|要|接|弄)吗 with no
+# clause content ("Desktop那张卡还看吗"). Even with a topic it reads as a template,
+# which the owner finds inhuman (owner policy 2026-06-15: 模板静音). The whole
+# message must be just <short topic> + tic with no sentence-internal punctuation,
+# so a natural sentence that merely ends in 还要吗 is not caught.
+_TEMPLATED_CHECKIN_RE = re.compile(r"^[^，,。!！?？;；、\n]{0,16}(还看|还要|还接|还弄)(吗|嘛)?\s*[?？]?$")
 
 
 def _is_referentless_nudge(message: str) -> bool:
@@ -240,6 +246,17 @@ def _is_referentless_nudge(message: str) -> bool:
     if not text:
         return True
     return bool(_REFERENTLESS_NUDGE_RE.match(text)) or text in {"这个还接吗", "这个还要吗", "这个还看吗"}
+
+
+def _is_mechanical_checkin_nudge(message: str) -> bool:
+    """Referent-less bare nudge OR a slot-filled "<topic>还看吗" template — the
+    mechanical check-in tic the owner asked to silence. When only one of these can
+    be produced, suppress it (and let the original concrete question, if any, stand
+    on its own) rather than send the canned form."""
+    text = _safe_str(message).strip()
+    if _is_referentless_nudge(text):
+        return True
+    return bool(_TEMPLATED_CHECKIN_RE.match(text))
 
 
 def compose_proactive_visible_message(
@@ -262,16 +279,16 @@ def compose_proactive_visible_message(
     if _looks_like_personal_voice(text):
         return text
     shortened = _shorten_proactive_question(text, recent_context=context_text)
-    if shortened and not _is_referentless_nudge(shortened):
+    if shortened and not _is_mechanical_checkin_nudge(shortened):
         return shortened
     scene_reply = _scene_proactive_reply(text, recent_context=context_text)
-    if scene_reply and not _is_referentless_nudge(scene_reply):
+    if scene_reply and not _is_mechanical_checkin_nudge(scene_reply):
         return scene_reply
-    # Only a referent-less nudge ("这个还要吗") could be produced. A real question
-    # still stands on its own — send it as-is rather than the meaningless short
-    # form. Otherwise (no concrete thread, e.g. owner_long_idle) suppress:
-    # owner chose 没具体事就别发.
-    if text.rstrip().endswith(("?", "？")):
+    # Only a mechanical check-in tic ("这个还要吗" / "X还看吗") could be produced. A
+    # real, concrete question still stands on its own — send it as-is; but never
+    # fall back to the templated tic itself. Otherwise (no concrete thread, e.g.
+    # owner_long_idle) suppress: owner chose 模板静音 / 没具体事就别发.
+    if text.rstrip().endswith(("?", "？")) and not _is_mechanical_checkin_nudge(text):
         return text
     return ""
 

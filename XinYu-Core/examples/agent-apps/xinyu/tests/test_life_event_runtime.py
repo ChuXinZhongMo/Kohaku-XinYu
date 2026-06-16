@@ -64,7 +64,11 @@ def test_life_event_runtime_can_process_attention_to_direct_outbox_once(tmp_path
     assert result["direct_send"]["attempted"] is True
     assert result["direct_send"]["status"] == "queued_qq"
     assert len(queue["items"]) == 1
-    assert queue["items"][0]["message"] in {"刚才那条链还要吗", "这个还要吗", "刚才那条链还看吗"}
+    # owner policy 2026-06-15 (模板静音): no mechanical "X还看吗/还要吗" check-in tic;
+    # the concrete question is sent in its own words instead.
+    message = queue["items"][0]["message"]
+    assert message
+    assert "还看吗" not in message and "还要吗" not in message
 
 
 def test_life_event_runtime_refuses_generic_attention_even_when_direct_enabled(tmp_path: Path) -> None:

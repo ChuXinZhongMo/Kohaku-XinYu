@@ -3,6 +3,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from xinyu_human_voice_flags import natural_voice_enabled
+
 
 TECHNICAL_RE = re.compile(
     r"(代码|日志|报错|错误|异常|启动|运行|测试|构建|修|改|实现|文件|接口|端口|token|"
@@ -209,9 +211,14 @@ def apply_life_reply_policy(
     if not text or not policy:
         return {"reply": text, "changed": False, "notes": notes}
 
-    suppress_question = bool(policy.get("suppress_optional_question"))
+    natural = natural_voice_enabled()
+    # Aggressive naturalness: let her end on a question back (very human), and don't
+    # crush owner chat to 2 sentences — abruptness reads as stiff.
+    suppress_question = bool(policy.get("suppress_optional_question")) and not natural
     technical = bool(policy.get("technical_turn")) or _is_technical_turn(user_text)
     max_sentences = int(policy.get("max_sentences") or (5 if technical else 3))
+    if natural and not technical:
+        max_sentences = max(max_sentences, 3)
     mode = _safe_str(policy.get("mode"), "steady")
     next_text = text
 

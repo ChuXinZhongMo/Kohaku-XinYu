@@ -7,6 +7,7 @@ from typing import Any
 
 from xinyu_runtime.modules.plugin.base import BasePlugin, PluginContext
 from turn_mode_utils import read_external_turn_mode
+from xinyu_human_voice_flags import natural_voice_enabled
 from xinyu_speech_controller import XinyuSpeechController
 from xinyu_visible_reply_guard import dedupe_visible_reply
 
@@ -36,6 +37,10 @@ class VisibleReplyGuardPlugin(BasePlugin):
 
     async def pre_llm_call(self, messages: list[dict], **kwargs: Any) -> list[dict] | None:
         if not self._enabled or not self._ctx:
+            return None
+        if natural_voice_enabled():
+            # Aggressive naturalness: don't inject forced "best shape" exemplars;
+            # let the model phrase the line itself. Anti-leak still runs post-call.
             return None
         root = Path(self._ctx.working_dir)
         turn_mode = read_external_turn_mode(self._ctx, root)
@@ -68,9 +73,11 @@ class VisibleReplyGuardPlugin(BasePlugin):
         if not user_text:
             return None
 
+        natural = natural_voice_enabled()
         original = (response or "").strip()
         if not original:
-            return _fallback_private_line(user_text) or None
+            # natural mode: don't substitute a canned line — let regen/model handle it
+            return None if natural else (_fallback_private_line(user_text) or None)
 
         guarded, flags = self._controller.final_reply_guard(
             payload={"metadata": {"is_owner_user": True}},
@@ -78,14 +85,20 @@ class VisibleReplyGuardPlugin(BasePlugin):
             reply=original,
         )
         if not guarded and flags:
-            fallback = _fallback_private_line(user_text)
-            if fallback:
-                guarded = fallback
-            elif not _SUPPRESS_ONLY_FLAGS.intersection(flags):
-                return None
+            if natural:
+                # keep the (anti-leak) sanitizers but never swap in a fixed string
+                if not _SUPPRESS_ONLY_FLAGS.intersection(flags):
+                    return None
+            else:
+                fallback = _fallback_private_line(user_text)
+                if fallback:
+                    guarded = fallback
+                elif not _SUPPRESS_ONLY_FLAGS.intersection(flags):
+                    return None
 
         deduped = dedupe_visible_reply(guarded or original)
-        final = _repair_required_private_anchor(user_text, deduped.text.strip())
+        # natural mode skips the forced "anchor word" rewrite; keep her own wording
+        final = deduped.text.strip() if natural else _repair_required_private_anchor(user_text, deduped.text.strip())
         if final != original:
             return final
         return None

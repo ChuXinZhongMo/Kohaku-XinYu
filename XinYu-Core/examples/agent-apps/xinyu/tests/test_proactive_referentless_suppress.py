@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from xinyu_visible_persona_voice import (
+    _is_mechanical_checkin_nudge,
     _is_referentless_nudge,
     compose_proactive_visible_message,
 )
@@ -32,3 +33,20 @@ def test_concrete_topic_still_produces_a_message() -> None:
     assert out and not _is_referentless_nudge(out)
     out2 = compose_proactive_visible_message("要不要我把刚才的生活事件链路接到主动直发？")
     assert out2 and not _is_referentless_nudge(out2)
+
+
+def test_templated_topic_checkin_is_mechanical() -> None:
+    # owner policy 模板静音: a topic glued to 还看吗/还要吗 is still the canned tic
+    assert _is_mechanical_checkin_nudge("Desktop 那张卡还看吗") is True
+    assert _is_mechanical_checkin_nudge("刚才那条链还要吗") is True
+    assert _is_mechanical_checkin_nudge("这个还接吗") is True
+    # a natural multi-clause sentence that merely ends in 还要吗 is NOT the tic
+    assert _is_mechanical_checkin_nudge("那份报告我改完了，你还要吗") is False
+    # a concrete standalone question is not a check-in tic
+    assert _is_mechanical_checkin_nudge("要不要我先把人格状态卡接到 Desktop？") is False
+
+
+def test_templated_checkin_falls_back_to_concrete_question() -> None:
+    out = compose_proactive_visible_message("要不要我把刚才的生活事件链路接到主动直发？")
+    assert out
+    assert "还看吗" not in out and "还要吗" not in out

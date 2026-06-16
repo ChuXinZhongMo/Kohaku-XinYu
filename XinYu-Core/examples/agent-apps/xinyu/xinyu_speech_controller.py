@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from xinyu_human_voice_flags import natural_voice_enabled
 from xinyu_persona_runtime import PersonaRuntimeState, build_persona_runtime_state
 from xinyu_persona_voice import thin_expression_contract, unified_voice_enabled
 from xinyu_bridge_state_text import build_payload_time_context_block
@@ -1779,9 +1780,15 @@ class XinyuSpeechController:
         scene = self.classify(payload=payload, user_text=user_text)
         if not scene.is_owner or not scene.style_pressure:
             return False
-        if _contains_any(reply, ASSISTANT_SHAPE_WORDS):
-            return True
         if _contains_any(reply, CANNED_ASSISTANT_PATTERNS):
+            return True
+        if natural_voice_enabled():
+            # Aggressive naturalness: keep blocking only real customer-service
+            # templates (above); stop blanking the reply on ordinary shape words
+            # and connectives ("解释", "总结", "更像是", "不仅…更…"), which forced a
+            # regen that converged on stiff, bland phrasing.
+            return False
+        if _contains_any(reply, ASSISTANT_SHAPE_WORDS):
             return True
         if _contains_any(reply, STYLE_PRESSURE_BANNED):
             return True

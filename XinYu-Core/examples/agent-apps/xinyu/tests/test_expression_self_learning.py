@@ -2,8 +2,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from xinyu_expression_self_learning import record_expression_self_learning_event
 from xinyu_speech_controller import XinyuSpeechController
+
+
+@pytest.fixture(autouse=True)
+def _legacy_guard(monkeypatch: pytest.MonkeyPatch):
+    # These assert the legacy style-pressure guard, which XINYU_NATURAL_VOICE
+    # intentionally loosens. Pin it off so the legacy path is tested deterministically.
+    monkeypatch.setenv("XINYU_NATURAL_VOICE", "0")
 
 
 def test_expression_self_learning_records_failure_and_source_request(tmp_path: Path) -> None:

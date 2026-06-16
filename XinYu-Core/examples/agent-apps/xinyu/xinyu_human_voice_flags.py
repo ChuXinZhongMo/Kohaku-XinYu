@@ -13,6 +13,7 @@ import os
 _UNIFIED_VOICE_ENV = "XINYU_HUMAN_VOICE_UNIFIED_PROMPT"
 _BYPASS_MODEL_ENV = "XINYU_HUMAN_VOICE_BYPASS_MODEL"
 _REGEN_PIPELINE_ENV = "XINYU_HUMAN_VOICE_REGEN_PIPELINE"
+_NATURAL_VOICE_ENV = "XINYU_NATURAL_VOICE"
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -40,3 +41,13 @@ def regen_pipeline_enabled() -> bool:
     empty-recovery) instead of substituting a fixed string."""
 
     return _env_bool(_REGEN_PIPELINE_ENV, False)
+
+
+def natural_voice_enabled() -> bool:
+    """Loosen the over-firing output guards for a more human, less stiff voice:
+    skip forced 'good shape' canned phrasing, stop blanking the reply on ordinary
+    connective words under style-pressure, and relax the short-reply truncation.
+    Default False => byte-identical legacy behaviour; set XINYU_NATURAL_VOICE=1 to
+    enable. The anti-leak sanitizers and the check-in-tic guard stay active."""
+
+    return _env_bool(_NATURAL_VOICE_ENV, False)
