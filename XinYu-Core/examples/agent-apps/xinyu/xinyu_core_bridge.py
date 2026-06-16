@@ -23,7 +23,7 @@ from xinyu_runtime_security import (
 )
 from xinyu_visible_state_hygiene import sanitize_visible_state_files
 
-BRIDGE_VERSION = "0.9.1"
+BRIDGE_VERSION = "0.9.2"
 BRIDGE_SOURCE_PATH = Path(__file__).resolve()
 BRIDGE_SOURCE_DIGEST = source_file_digest(BRIDGE_SOURCE_PATH)
 BRIDGE_RUNTIME_SOURCE_DIGEST = source_files_digest(runtime_source_paths(BRIDGE_SOURCE_PATH.parent))
