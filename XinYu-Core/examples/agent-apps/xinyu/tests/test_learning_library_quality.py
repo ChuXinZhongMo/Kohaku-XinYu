@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import io
 import zipfile
 
@@ -7,6 +8,15 @@ import pytest
 
 import xinyu_image_context as image_context
 import xinyu_learning_library as library
+
+# The markitdown fallback path does a real `from markitdown import StreamInfo`
+# (xinyu_learning_library.py), so the fallback cases need the package installed
+# even though the converter instance is monkeypatched. Skip just those when it's
+# absent — the non-markitdown cases in this module still run.
+requires_markitdown = pytest.mark.skipif(
+    importlib.util.find_spec("markitdown") is None,
+    reason="markitdown not installed",
+)
 
 
 def test_unknown_extension_text_file_is_extracted(tmp_path) -> None:
@@ -24,6 +34,7 @@ def test_unknown_binary_file_is_not_extracted() -> None:
     assert library.extract_text_from_bytes(data, "blob.bin", "application/octet-stream") == ""
 
 
+@requires_markitdown
 def test_markitdown_fallback_reads_supported_archive(monkeypatch) -> None:
     class Result:
         markdown = "XinYu archive fallback text"
@@ -48,6 +59,7 @@ def test_markitdown_fallback_reads_supported_archive(monkeypatch) -> None:
     )
 
 
+@requires_markitdown
 def test_markitdown_fallback_uses_content_type_for_hidden_qq_xls_name(monkeypatch) -> None:
     class Result:
         markdown = "XinYu legacy xls fallback text"

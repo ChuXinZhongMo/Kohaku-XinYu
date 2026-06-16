@@ -106,6 +106,14 @@ Thumbs.db
 *.swo
 *~
 
+# Tooling artifacts and transient build/probe files
+.sentrux/
+_tmp_*/
+electron.vite.config.*.mjs
+
+# Archived ops reports/manifests (kept on disk + in history, not tracked going forward)
+XinYu-Core/examples/agent-apps/xinyu/ops/archive/
+
 runtime/external/super-agent-party/
 
 # Public raw datasets (too large for git)

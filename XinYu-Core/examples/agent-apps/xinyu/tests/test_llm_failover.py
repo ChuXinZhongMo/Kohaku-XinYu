@@ -9,6 +9,10 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# The core runtime transitively imports the TUI stack (textual); in a minimal env
+# without it, skip the whole module instead of erroring at collection.
+pytest.importorskip("textual")
+
 from xinyu_runtime.core.controller import Controller, ControllerConfig  # noqa: E402
 from xinyu_runtime.core.events import EventType, TriggerEvent  # noqa: E402
 from xinyu_runtime.llm.base import ChatResponse, LLMConfig, ToolSchema  # noqa: E402
