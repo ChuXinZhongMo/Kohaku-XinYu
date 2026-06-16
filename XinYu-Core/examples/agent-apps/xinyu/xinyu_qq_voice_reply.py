@@ -130,7 +130,9 @@ def _tts_split_sentence() -> bool:
 
 
 def _tts_sample_rate() -> int:
-    return max(8000, min(96000, _as_int(_env_value("XINYU_GENIE_TTS_SAMPLE_RATE", "32000"), 32000)))
+    # 24000 matches Higgs v3 output; 32000 was the old GPT-SoVITS engine's rate and
+    # would garble ("电子音") if a non-RIFF raw-PCM response ever bypasses the header.
+    return max(8000, min(96000, _as_int(_env_value("XINYU_GENIE_TTS_SAMPLE_RATE", "24000"), 24000)))
 
 
 def _tts_channels() -> int:
