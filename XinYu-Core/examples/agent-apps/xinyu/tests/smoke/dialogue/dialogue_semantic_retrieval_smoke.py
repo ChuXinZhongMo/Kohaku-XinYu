@@ -56,8 +56,8 @@ def main() -> int:
             )
             if not matches:
                 failures.append("semantic retrieval returned no matches")
-            if not any(match.retrieval_source == "semantic" for match in matches):
-                failures.append(f"semantic retrieval source missing: {[match.retrieval_source for match in matches]}")
+            if not any(match.retrieval_source == "hybrid" and match.rank_score > 0 for match in matches):
+                failures.append(f"hybrid fused retrieval missing: {[match.retrieval_source for match in matches]}")
 
             conn = sqlite3.connect(dialogue_archive_path(root))
             try:

@@ -14,9 +14,10 @@ and drops the always-on internal meta-state (intention ecology, relation/turn
 modulators, memory-coherence braids, initiative spine, self-state capsule,
 duplicated persona, runtime presence, etc.).
 
-It is gated behind XINYU_LEAN_PROMPT and defaults OFF, so the live path is
-byte-identical to the legacy prompt until the owner flips it on to A/B the
-difference in real chat.
+Lean mode is now the default baseline (the legacy full prompt regressed live
+coherence on the mid-tier live model). XINYU_LEAN_PROMPT remains the control:
+unset or a truthy value keeps lean on; set it to an explicit off value
+(0/false/no/off) to fall back to the legacy full prompt for A/B comparison.
 """
 
 from __future__ import annotations
@@ -25,6 +26,7 @@ import os
 
 LEAN_PROMPT_ENV = "XINYU_LEAN_PROMPT"
 _TRUE_VALUES = {"1", "true", "yes", "on"}
+_FALSE_VALUES = {"0", "false", "no", "off"}
 
 # Sidecar names (see xinyu_bridge_turn_sidecar_state.py /
 # xinyu_bridge_turn_sidecar_context.py) that carry genuine current-turn
@@ -47,7 +49,9 @@ LEAN_SIDECAR_WHITELIST = frozenset(
 
 
 def lean_prompt_enabled() -> bool:
-    return os.environ.get(LEAN_PROMPT_ENV, "").strip().lower() in _TRUE_VALUES
+    # Default ON: only an explicit off value (0/false/no/off) restores the legacy
+    # full prompt. Anything else (unset or truthy) keeps lean mode.
+    return os.environ.get(LEAN_PROMPT_ENV, "").strip().lower() not in _FALSE_VALUES
 
 
 def lean_sidecar_admitted(name: str) -> bool:

@@ -7,7 +7,7 @@ import os
 import re
 import sqlite3
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
@@ -138,6 +138,25 @@ def semantic_min_score() -> float:
 
 def semantic_max_scan() -> int:
     return max(50, _env_int("XINYU_DIALOGUE_SEMANTIC_MAX_SCAN", 500))
+
+
+def fts_retrieval_enabled() -> bool:
+    return _env_bool("XINYU_DIALOGUE_FTS_RETRIEVAL_ENABLED", True)
+
+
+def fusion_weights() -> dict[str, float]:
+    """Per-source weights for reciprocal-rank fusion. FTS is the strongest lexical
+    signal; LIKE is a weak recency-ordered fallback, so it is down-weighted."""
+
+    return {
+        "fts": max(0.0, _env_float("XINYU_DIALOGUE_FUSION_WEIGHT_FTS", 1.0)),
+        "semantic": max(0.0, _env_float("XINYU_DIALOGUE_FUSION_WEIGHT_SEMANTIC", 1.0)),
+        "like": max(0.0, _env_float("XINYU_DIALOGUE_FUSION_WEIGHT_LIKE", 0.5)),
+    }
+
+
+def fusion_rrf_k() -> int:
+    return max(1, _env_int("XINYU_DIALOGUE_FUSION_RRF_K", 60))
 
 
 def temporal_traces_enabled() -> bool:
@@ -690,6 +709,41 @@ def ensure_dialogue_semantic_index(root: Path, *, limit: int | None = None) -> d
     }
 
 
+def ensure_dialogue_fts_index(root: Path, *, limit: int | None = None) -> dict[str, Any]:
+    """Backfill the FTS5 index for messages archived before the table existed.
+
+    Insert/delete sync is already wired into archive_message/retract; this only
+    catches the historical gap (there was no FTS equivalent of the semantic
+    backfill)."""
+
+    if not archive_enabled():
+        return {"indexed": 0, "notes": ["dialogue_archive_disabled"]}
+    safe_limit = semantic_max_scan() if limit is None else max(1, int(limit))
+    indexed = 0
+    with _connection(root) as conn:
+        _ensure_schema(conn)
+        if not _fts_available(conn):
+            return {"indexed": 0, "notes": ["fts_unavailable"]}
+        rows = conn.execute(
+            """
+            SELECT m.id, m.text
+            FROM dialogue_messages m
+            LEFT JOIN dialogue_fts f ON f.message_id = m.id
+            WHERE f.message_id IS NULL
+            ORDER BY m.created_at DESC, m.id DESC
+            LIMIT ?
+            """,
+            (safe_limit,),
+        ).fetchall()
+        for row in rows:
+            conn.execute(
+                "INSERT INTO dialogue_fts(message_id, text) VALUES (?, ?)",
+                (int(row["id"]), _safe_str(row["text"])),
+            )
+            indexed += 1
+    return {"indexed": indexed}
+
+
 def _redacted_metadata(payload: dict[str, Any] | None, extra: dict[str, Any] | None = None) -> dict[str, Any]:
     payload = payload if isinstance(payload, dict) else {}
     metadata = dict(_metadata(payload))
@@ -1090,6 +1144,124 @@ def _search_dialogue_archive_semantic_conn(
     return scored[: max(1, int(limit))]
 
 
+def _search_dialogue_archive_fts_conn(
+    conn: sqlite3.Connection,
+    query_text: str,
+    *,
+    scopes: Iterable[str] | None = None,
+    session_key: str | None = None,
+    group_id_hash: str | None = None,
+    limit: int = 12,
+) -> list[DialogueArchiveRecord]:
+    """Keyword recall via the FTS5 index, ordered best-first (bm25 ascending)."""
+
+    query = _safe_str(query_text).strip()
+    if not query or not _fts_available(conn):
+        return []
+    fts = _fts_query(query)
+    if not fts:
+        return []
+    params: list[Any] = [fts]
+    scope_sql = _scope_clause(scopes, params)
+    session_sql = _session_clause(session_key, params)
+    group_sql = _group_clause(group_id_hash, params)
+    params.append(max(1, int(limit)))
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT {_select_sql("m")}, bm25(dialogue_fts) AS fts_rank
+            FROM dialogue_fts
+            JOIN dialogue_messages m ON m.id = dialogue_fts.message_id
+            WHERE dialogue_fts.text MATCH ?{scope_sql}{session_sql}{group_sql}
+            ORDER BY fts_rank ASC, m.created_at DESC
+            LIMIT ?
+            """,
+            params,
+        ).fetchall()
+    except sqlite3.OperationalError:
+        return []
+    return [
+        _record_from_row(row, rank_score=float(row["fts_rank"] or 0.0), retrieval_source="fts")
+        for row in rows
+    ]
+
+
+def _search_dialogue_archive_like_conn(
+    conn: sqlite3.Connection,
+    query_text: str,
+    *,
+    scopes: Iterable[str] | None = None,
+    session_key: str | None = None,
+    group_id_hash: str | None = None,
+    limit: int = 12,
+) -> list[DialogueArchiveRecord]:
+    """Substring fallback, recency-ordered. With no query terms it returns the most
+    recent rows so the archive still contributes a continuity baseline."""
+
+    query = _safe_str(query_text).strip()
+    terms = _tokenize_query(query)
+    params: list[Any] = []
+    scope_sql = _scope_clause(scopes, params)
+    session_sql = _session_clause(session_key, params)
+    group_sql = _group_clause(group_id_hash, params)
+    if terms:
+        like_parts = []
+        for term in terms[:8]:
+            like_parts.append("m.text LIKE ?")
+            params.append(f"%{term}%")
+        text_sql = " AND (" + " OR ".join(like_parts) + ")"
+    else:
+        text_sql = ""
+    params.append(max(1, int(limit)))
+    rows = conn.execute(
+        f"""
+        SELECT {_select_sql("m")}
+        FROM dialogue_messages m
+        WHERE 1=1{scope_sql}{session_sql}{group_sql}{text_sql}
+        ORDER BY m.created_at DESC, m.id DESC
+        LIMIT ?
+        """,
+        params,
+    ).fetchall()
+    return [_record_from_row(row, rank_score=0.0, retrieval_source="like") for row in rows]
+
+
+def _fuse_archive_records(
+    ranked_sources: list[tuple[float, list[DialogueArchiveRecord]]],
+    *,
+    limit: int,
+) -> list[DialogueArchiveRecord]:
+    """Reciprocal-rank fusion across retrieval sources.
+
+    Each source contributes ``weight / (k + position)`` per message; the sums are
+    min-max normalised to [0, 1] so the fused ``rank_score`` is comparable to the
+    semantic cosine the downstream reranker already understands. Replaces the old
+    insertion-order ``dict.setdefault`` union, which computed bm25 then discarded
+    its ordering."""
+
+    k = fusion_rrf_k()
+    fused: dict[int, float] = {}
+    best_record: dict[int, DialogueArchiveRecord] = {}
+    for weight, records in ranked_sources:
+        if weight <= 0:
+            continue
+        for position, record in enumerate(records, start=1):
+            mid = record.message_id
+            fused[mid] = fused.get(mid, 0.0) + weight / (k + position)
+            best_record.setdefault(mid, record)
+    if not fused:
+        return []
+    raw_max = max(fused.values())
+    raw_min = min(fused.values())
+    span = (raw_max - raw_min) or 1.0
+    ordered = sorted(fused.items(), key=lambda item: item[1], reverse=True)
+    out: list[DialogueArchiveRecord] = []
+    for mid, raw in ordered[: max(1, int(limit))]:
+        norm = (raw - raw_min) / span if raw_max > raw_min else 1.0
+        out.append(replace(best_record[mid], rank_score=norm, retrieval_source="hybrid"))
+    return out
+
+
 def search_dialogue_archive(
     root: Path,
     query_text: str,
@@ -1103,75 +1275,34 @@ def search_dialogue_archive(
         return []
     safe_limit = max(1, int(limit))
     query = _safe_str(query_text).strip()
-    records: dict[int, DialogueArchiveRecord] = {}
+    fetch = safe_limit * 3
     with _connection(root) as conn:
         _ensure_schema(conn)
-        if query and _fts_available(conn):
-            fts = _fts_query(query)
-            if fts:
-                params: list[Any] = [fts]
-                scope_sql = _scope_clause(scopes, params)
-                session_sql = _session_clause(session_key, params)
-                group_sql = _group_clause(group_id_hash, params)
-                params.append(safe_limit * 3)
-                try:
-                    rows = conn.execute(
-                        f"""
-                        SELECT {_select_sql("m")}, bm25(dialogue_fts) AS fts_rank
-                        FROM dialogue_fts
-                        JOIN dialogue_messages m ON m.id = dialogue_fts.message_id
-                        WHERE dialogue_fts.text MATCH ?{scope_sql}{session_sql}{group_sql}
-                        ORDER BY fts_rank ASC, m.created_at DESC
-                        LIMIT ?
-                        """,
-                        params,
-                    ).fetchall()
-                    for row in rows:
-                        records[int(row["id"])] = _record_from_row(
-                            row,
-                            rank_score=float(row["fts_rank"] or 0.0),
-                            retrieval_source="fts",
-                        )
-                except sqlite3.OperationalError:
-                    pass
-
-        terms = _tokenize_query(query)
-        params = []
-        scope_sql = _scope_clause(scopes, params)
-        session_sql = _session_clause(session_key, params)
-        group_sql = _group_clause(group_id_hash, params)
-        if terms:
-            like_parts = []
-            for term in terms[:8]:
-                like_parts.append("m.text LIKE ?")
-                params.append(f"%{term}%")
-            text_sql = " AND (" + " OR ".join(like_parts) + ")"
-        else:
-            text_sql = ""
-        params.append(safe_limit * 3)
-        rows = conn.execute(
-            f"""
-            SELECT {_select_sql("m")}
-            FROM dialogue_messages m
-            WHERE 1=1{scope_sql}{session_sql}{group_sql}{text_sql}
-            ORDER BY m.created_at DESC, m.id DESC
-            LIMIT ?
-            """,
-            params,
-        ).fetchall()
-        for row in rows:
-            records.setdefault(int(row["id"]), _record_from_row(row, rank_score=0.0, retrieval_source="like"))
+        fts_records: list[DialogueArchiveRecord] = []
+        if query and fts_retrieval_enabled():
+            fts_records = _search_dialogue_archive_fts_conn(
+                conn, query, scopes=scopes, session_key=session_key,
+                group_id_hash=group_id_hash, limit=fetch,
+            )
+        like_records = _search_dialogue_archive_like_conn(
+            conn, query, scopes=scopes, session_key=session_key,
+            group_id_hash=group_id_hash, limit=fetch,
+        )
+        semantic_records: list[DialogueArchiveRecord] = []
         if semantic_retrieval_enabled() and query:
-            for record in _search_dialogue_archive_semantic_conn(
-                conn,
-                query,
-                scopes=scopes,
-                session_key=session_key,
-                group_id_hash=group_id_hash,
-                limit=safe_limit,
-            ):
-                records.setdefault(record.message_id, record)
-    return list(records.values())[:safe_limit]
+            semantic_records = _search_dialogue_archive_semantic_conn(
+                conn, query, scopes=scopes, session_key=session_key,
+                group_id_hash=group_id_hash, limit=safe_limit,
+            )
+    weights = fusion_weights()
+    return _fuse_archive_records(
+        [
+            (weights["fts"], fts_records),
+            (weights["semantic"], semantic_records),
+            (weights["like"], like_records),
+        ],
+        limit=safe_limit,
+    )
 
 
 def record_recalled_context_log(

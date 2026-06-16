@@ -244,6 +244,7 @@ def test_run_autonomous_maintenance_once_returns_disabled_when_closed() -> None:
 
 
 def test_run_autonomous_maintenance_once_runs_event_and_records_state(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("XINYU_HEAVY_MAINTENANCE_SUBPROCESS", "0")
     calls: list[tuple[str, object]] = []
 
     class _Lock:
@@ -303,6 +304,7 @@ def test_run_autonomous_maintenance_once_runs_event_and_records_state(tmp_path, 
     assert result["notes"] == [
         "autonomous_maintenance_turn",
         "no_visible_reply",
+        "heavy_maintenance:disabled",
         "sidecar_note",
         "cleaned_idle_sessions:2",
     ]
@@ -310,7 +312,8 @@ def test_run_autonomous_maintenance_once_runs_event_and_records_state(tmp_path, 
     assert runtime._autonomous_run_count == 5
     assert runtime._autonomous_last_error == ""
     assert runtime._autonomous_in_progress is False
-    assert calls[0:6] == [
+    assert calls[0] == ("trace", "heavy_maintenance disabled")
+    assert calls[1:7] == [
         ("lock", "enter"),
         ("cleanup", {"auto"}),
         ("get_session", "auto"),
@@ -324,6 +327,7 @@ def test_run_autonomous_maintenance_once_runs_event_and_records_state(tmp_path, 
 
 
 def test_run_autonomous_maintenance_once_interrupts_agent_on_timeout(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("XINYU_HEAVY_MAINTENANCE_SUBPROCESS", "0")
     calls: list[str] = []
 
     class _Lock:
@@ -376,7 +380,15 @@ def test_run_autonomous_maintenance_once_interrupts_agent_on_timeout(tmp_path, m
     with pytest.raises(TimeoutError):
         asyncio.run(xinyu_bridge_autonomous_maintenance.run_autonomous_maintenance_once(runtime))
 
-    assert calls == ["lock_enter", "trace:run started", "state:running", "wait_for:7", "interrupt", "lock_exit"]
+    assert calls == [
+        "trace:heavy_maintenance disabled",
+        "lock_enter",
+        "trace:run started",
+        "state:running",
+        "wait_for:7",
+        "interrupt",
+        "lock_exit",
+    ]
     assert runtime._autonomous_in_progress is False
 
 

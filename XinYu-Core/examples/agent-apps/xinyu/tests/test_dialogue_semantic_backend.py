@@ -46,7 +46,9 @@ def test_semantic_backend_falls_back_to_hash_when_runtime_unavailable(tmp_path: 
     assert index["provider"] == "none"
     assert index["model"] == "local_hash_v1"
     assert matches
-    assert any(match.retrieval_source == "semantic" for match in matches)
+    # Results are now reciprocal-rank-fused across fts/like/semantic sources, so the
+    # surfaced record is labelled "hybrid" and carries a normalised relevance score.
+    assert any(match.retrieval_source == "hybrid" and match.rank_score > 0 for match in matches)
 
     conn = sqlite3.connect(dialogue_archive_path(tmp_path))
     try:

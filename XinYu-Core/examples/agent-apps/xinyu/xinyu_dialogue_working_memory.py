@@ -15,6 +15,11 @@ from xinyu_dialogue_working_memory_store import dialogue_working_memory_session_
 from xinyu_dialogue_working_memory_store import read_dialogue_working_memory_raw
 from xinyu_dialogue_working_memory_store import read_dialogue_working_memory_rows
 from xinyu_dialogue_working_memory_store import write_dialogue_working_memory_rows
+from xinyu_dialogue_compression import (
+    Summarizer,
+    compress_window,
+    compression_enabled,
+)
 from xinyu_visible_text_sanitizer import sanitize_visible_text
 
 
@@ -300,6 +305,16 @@ def remove_matching_assistant_reply(
     return result
 
 
+def _pack_entry(raw: dict[str, str], *, entry_chars: int, remaining: int, include_timestamps: bool) -> dict[str, str]:
+    role = _safe_str(raw.get("role")).strip()
+    item = {"role": role, "content": _truncate(_safe_str(raw.get("content")).strip(), min(entry_chars, remaining))}
+    if include_timestamps:
+        recorded_at = _safe_str(raw.get("recorded_at")).strip()
+        if recorded_at:
+            item["recorded_at"] = recorded_at
+    return item
+
+
 def compact_tail_for_prompt(
     dialogue_tail: list[dict[str, str]],
     *,
@@ -307,6 +322,8 @@ def compact_tail_for_prompt(
     entry_chars: int | None = None,
     total_chars: int | None = None,
     include_timestamps: bool = False,
+    compress: bool | None = None,
+    summarizer: Summarizer | None = None,
 ) -> list[dict[str, str]]:
     safe_entries = prompt_tail_entries() if max_entries is None else max(0, int(max_entries))
     safe_entry_chars = prompt_entry_chars() if entry_chars is None else max(40, int(entry_chars))
@@ -314,22 +331,31 @@ def compact_tail_for_prompt(
     if safe_entries == 0:
         return []
 
+    window = dialogue_tail[-safe_entries:]
+    usable = [
+        raw
+        for raw in window
+        if _safe_str(raw.get("role")).strip() in {"user", "assistant"} and _safe_str(raw.get("content")).strip()
+    ]
+
+    do_compress = compression_enabled() if compress is None else compress
+    summary_item: dict[str, str] | None = None
+    if do_compress:
+        summary_item, usable = compress_window(usable, summarizer=summarizer)
+
     compacted: list[dict[str, str]] = []
     used_chars = 0
-    for raw in dialogue_tail[-safe_entries:]:
-        role = _safe_str(raw.get("role")).strip()
-        content = _safe_str(raw.get("content")).strip()
-        if role not in {"user", "assistant"} or not content:
-            continue
+    if summary_item is not None:
+        if not include_timestamps:
+            summary_item = {k: v for k, v in summary_item.items() if k != "recorded_at"}
+        compacted.append(summary_item)
+        used_chars += len(summary_item["content"]) + len(summary_item["role"]) + 8
+
+    for raw in usable:
         remaining = safe_total_chars - used_chars
         if remaining <= 0:
             break
-        limit = min(safe_entry_chars, remaining)
-        item = {"role": role, "content": _truncate(content, limit)}
-        if include_timestamps:
-            recorded_at = _safe_str(raw.get("recorded_at")).strip()
-            if recorded_at:
-                item["recorded_at"] = recorded_at
+        item = _pack_entry(raw, entry_chars=safe_entry_chars, remaining=remaining, include_timestamps=include_timestamps)
         compacted.append(item)
-        used_chars += len(item["content"]) + len(role) + 8
+        used_chars += len(item["content"]) + len(item["role"]) + 8
     return compacted

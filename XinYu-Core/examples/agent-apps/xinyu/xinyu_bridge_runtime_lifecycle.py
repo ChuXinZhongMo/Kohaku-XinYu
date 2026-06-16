@@ -6,6 +6,51 @@ from typing import Any
 from xinyu_bridge_session import stop_all_sessions
 
 
+def _install_native_coding_backend(runtime: Any) -> None:
+    """Route coding/tool tasks to XinYu's own native coding agent instead of the
+    external codex CLI. Reversible via XINYU_NATIVE_CODING=0 (falls back to the
+    in-process codex backend)."""
+
+    try:
+        from xinyu_native_coding import native_coding_enabled
+        from xinyu_native_coding_backend import NativeCodingExecutionBackend
+    except Exception as exc:
+        print(f"[xinyu_core_bridge] native coding backend import warning: {exc}", flush=True)
+        return
+    if not native_coding_enabled():
+        return
+    if getattr(runtime, "_codex_execution_backend", None) is not None:
+        return
+    runtime._codex_execution_backend = NativeCodingExecutionBackend()
+    print("[xinyu_core_bridge] native coding backend installed (codex CLI retired)", flush=True)
+
+
+async def _backfill_dialogue_fts_index(runtime: Any) -> None:
+    """One-time catch-up of the FTS5 keyword index for messages archived before the
+    table existed. Insert/delete sync handles everything new; this only closes the
+    historical gap. Batched off-thread so it never blocks the event loop."""
+
+    try:
+        from xinyu_dialogue_archive import ensure_dialogue_fts_index
+    except Exception:
+        return
+    root = getattr(runtime, "xinyu_dir", None)
+    if root is None:
+        return
+    try:
+        total = 0
+        for _ in range(200):  # bounded: 200 * 500 rows is far beyond any real archive
+            result = await asyncio.to_thread(ensure_dialogue_fts_index, root, limit=500)
+            indexed = int(result.get("indexed", 0) or 0)
+            total += indexed
+            if indexed < 500:
+                break
+        if total:
+            print(f"[xinyu_core_bridge] dialogue FTS backfill indexed {total} rows", flush=True)
+    except Exception as exc:
+        print(f"[xinyu_core_bridge] dialogue FTS backfill warning: {exc}", flush=True)
+
+
 async def ensure_self_choice_ready(runtime: Any) -> None:
     await runtime.self_choice_store.load_or_recover()
 
@@ -215,6 +260,8 @@ async def start_background_tasks(runtime: Any) -> None:
         return
     for starter_name in RUNTIME_SERVICE_STARTERS:
         _call_lifecycle_function(starter_name, runtime)
+    _install_native_coding_backend(runtime)
+    await _backfill_dialogue_fts_index(runtime)
     await runtime._ensure_self_choice_ready()
     await runtime.self_choice_store.apply_time_decay()
     if not runtime._self_choice_boot_logged:

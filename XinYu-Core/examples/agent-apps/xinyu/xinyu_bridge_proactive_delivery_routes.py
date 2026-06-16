@@ -7,31 +7,33 @@ from typing import Any
 from xinyu_bridge_errors import BridgeRequestError
 from xinyu_bridge_proactive import acknowledge as proactive_ack_bridge
 from xinyu_bridge_proactive import claim_or_preview as proactive_bridge
-from xinyu_bridge_proactive_delivery_routes_ack import acknowledge_proactive as _acknowledge_proactive
-from xinyu_bridge_proactive_delivery_routes_ack import qq_outbox_ack as _qq_outbox_ack
-from xinyu_bridge_proactive_delivery_routes_ack import qq_outbox_ack_fast as _qq_outbox_ack_fast
-from xinyu_bridge_proactive_delivery_routes_claim import (
+# Consolidated 2026-06-15: the former xinyu_bridge_proactive_delivery_routes_*
+# modules were pure re-export shims; import directly from the real modules.
+from xinyu_bridge_proactive_delivery_ack import acknowledge_proactive as _acknowledge_proactive
+from xinyu_bridge_proactive_delivery_ack import qq_outbox_ack as _qq_outbox_ack
+from xinyu_bridge_proactive_delivery_ack import qq_outbox_ack_fast as _qq_outbox_ack_fast
+from xinyu_bridge_proactive_delivery_claim import (
     claim_proactive_for_qq_outbox as _claim_proactive_for_qq_outbox,
 )
-from xinyu_bridge_proactive_delivery_routes_claim import (
+from xinyu_bridge_proactive_delivery_claim import (
     claim_proactive_for_qq_outbox_sync as _claim_proactive_for_qq_outbox_sync,
 )
-from xinyu_bridge_proactive_delivery_routes_claim import qq_outbox_claim as _qq_outbox_claim
-from xinyu_bridge_proactive_delivery_routes_claim import qq_outbox_claim_fast as _qq_outbox_claim_fast
-from xinyu_bridge_proactive_delivery_routes_outbound import (
+from xinyu_bridge_proactive_delivery_claim import qq_outbox_claim as _qq_outbox_claim
+from xinyu_bridge_proactive_delivery_claim import qq_outbox_claim_fast as _qq_outbox_claim_fast
+from xinyu_bridge_proactive_delivery_outbound import (
     proactive_candidate_already_handled as _proactive_candidate_already_handled,
 )
-from xinyu_bridge_proactive_delivery_routes_outbound import (
+from xinyu_bridge_proactive_delivery_outbound import (
     ready_proactive_outbox_candidate as _ready_proactive_outbox_candidate,
 )
-from xinyu_bridge_proactive_delivery_routes_outbound import (
+from xinyu_bridge_proactive_delivery_outbound import (
     record_proactive_outbound_dialogue as _record_proactive_outbound_dialogue,
 )
-from xinyu_bridge_proactive_delivery_routes_payload import ensure_open as _ensure_open
-from xinyu_bridge_proactive_delivery_routes_payload import ensure_payload as _ensure_payload
-from xinyu_bridge_proactive_delivery_routes_payload import result_notes as _result_notes
-from xinyu_bridge_proactive_delivery_routes_payload import timestamp_or_now_iso as _timestamp_or_now_iso_helper
-from xinyu_bridge_proactive_delivery_routes_response import proactive as _proactive
+from xinyu_bridge_proactive_delivery_support import ensure_open as _ensure_open
+from xinyu_bridge_proactive_delivery_support import ensure_payload as _ensure_payload
+from xinyu_bridge_proactive_delivery_support import result_notes as _result_notes
+from xinyu_bridge_proactive_delivery_support import timestamp_or_now_iso as _timestamp_or_now_iso_helper
+from xinyu_bridge_proactive_delivery_response import proactive as _proactive
 from xinyu_bridge_proactive_delivery_route_backend import (
     maybe_execute_proactive_delivery_backend,
     maybe_execute_proactive_delivery_backend_sync,

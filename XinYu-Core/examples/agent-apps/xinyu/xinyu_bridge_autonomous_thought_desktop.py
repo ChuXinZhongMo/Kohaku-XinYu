@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from xinyu_bridge_autonomous_thought_rendering import (
+from xinyu_bridge_autonomous_note_responses import (
     autonomous_outward_is_queued,
     desktop_candidate_request_notes,
     request_allows_desktop_candidate,

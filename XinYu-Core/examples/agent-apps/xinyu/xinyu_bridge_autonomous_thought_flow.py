@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from xinyu_bridge_autonomous_thought_rendering import self_thought_research_summary
+from xinyu_bridge_autonomous_note_responses import self_thought_research_summary
 from xinyu_bridge_values import as_bool
 
 

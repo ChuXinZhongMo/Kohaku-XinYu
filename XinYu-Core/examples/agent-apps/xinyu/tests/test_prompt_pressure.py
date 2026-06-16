@@ -4,12 +4,22 @@ import json
 from types import SimpleNamespace
 from pathlib import Path
 
+import pytest
+
 from xinyu_prompt_pressure import (
     PROMPT_PRESSURE_REPORT_REL,
     PromptSidecar,
     select_prompt_sidecars,
     write_prompt_pressure_report,
 )
+
+
+@pytest.fixture(autouse=True)
+def _force_legacy_admission(monkeypatch: pytest.MonkeyPatch):
+    # These cases assert the legacy mode-based admission semantics. Lean mode is now
+    # the default and short-circuits admission to a fixed whitelist, so pin the
+    # escape hatch off to exercise the legacy path these tests cover.
+    monkeypatch.setenv("XINYU_LEAN_PROMPT", "0")
 
 
 def _visible(

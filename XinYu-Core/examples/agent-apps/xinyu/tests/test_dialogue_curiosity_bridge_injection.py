@@ -5,6 +5,16 @@ import json
 from datetime import datetime, timedelta
 from types import SimpleNamespace
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _force_legacy_prompt(monkeypatch: pytest.MonkeyPatch):
+    # These assert the legacy full-prompt sidecar injection. Lean mode is now the
+    # default and admits only a fixed whitelist, so pin the escape hatch off to
+    # exercise the legacy injection machinery these cases cover.
+    monkeypatch.setenv("XINYU_LEAN_PROMPT", "0")
+
 import xinyu_bridge_turn_finish_sidecars as turn_finish_sidecars
 import xinyu_bridge_slow_live_turn as slow_live_turn
 import xinyu_bridge_turn_pipeline as turn_pipeline

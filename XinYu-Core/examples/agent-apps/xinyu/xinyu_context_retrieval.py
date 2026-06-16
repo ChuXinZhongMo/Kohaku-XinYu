@@ -388,7 +388,10 @@ def _tail_items(
 
 def _archive_item(record: DialogueArchiveRecord, *, query_terms: list[str], current_scope: str, session_hash: str) -> RecalledContextItem:
     score = _lexical_score(query_terms, record.text)
-    if record.retrieval_source == "semantic":
+    # honour the retrieval rank for any relevance-ranked source (semantic cosine or
+    # the hybrid/FTS fusion score, all normalised to [0, 1]); previously the bm25
+    # rank was computed and then ignored here, so keyword hits got no boost.
+    if record.retrieval_source in {"semantic", "fts", "hybrid"} and record.rank_score > 0:
         score += max(1.0, record.rank_score * 4.0)
     if record.scope == OWNER_PRIVATE_SCOPE:
         score += 1.5

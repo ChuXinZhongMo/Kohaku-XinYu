@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Awaitable, Callable
 
+from xinyu_bridge_heavy_maintenance import spawn_heavy_maintenance
+
 
 async def run_autonomous_maintenance_once(
     runtime: Any,
@@ -14,6 +16,11 @@ async def run_autonomous_maintenance_once(
 ) -> dict[str, Any]:
     if runtime._closed or not runtime.autonomous_maintenance_enabled:
         return {"accepted": False, "notes": ["disabled_or_closed"]}
+
+    # Run the deterministic heavy lanes in an isolated process first, off the global
+    # turn lock so live chat is not blocked while they churn.
+    heavy = await spawn_heavy_maintenance(runtime)
+    runtime._trace_autonomous(f"heavy_maintenance {heavy.get('status')}")
 
     async with runtime._global_turn_lock:
         cleanup = await runtime._cleanup_idle_sessions(preserve_keys={runtime.autonomous_maintenance_session_key})
@@ -48,7 +55,7 @@ async def run_autonomous_maintenance_once(
         memory_changed = before_memory != after_memory
         runtime._autonomous_run_count += 1
         runtime._autonomous_last_success_at = now_iso_func()
-        notes = ["autonomous_maintenance_turn", "no_visible_reply"]
+        notes = ["autonomous_maintenance_turn", "no_visible_reply", f"heavy_maintenance:{heavy.get('status')}"]
         notes.extend(sidecar_notes)
         if cleanup["cleaned_sessions"]:
             notes.append(f"cleaned_idle_sessions:{cleanup['cleaned_sessions']}")

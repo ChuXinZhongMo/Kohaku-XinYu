@@ -5,10 +5,16 @@ description: Xinyu early-stage self-forming agent scaffold
 controller:
   model: "${XINYU_LLM_MODEL:mimo-v2.5-pro}"
   provider: "${XINYU_LLM_PROVIDER:ciallo}"
-  temperature: 0.7
+  # Naturalness tuning (2026-06-16): a touch warmer + nucleus sampling + mild
+  # presence/frequency penalties => less templated, less repetitive phrasing.
+  temperature: 0.8
   max_tokens: 4096
   api_key_env: XINYU_API_KEY
   base_url: "${XINYU_BASE_URL:}"
+  extra_body:
+    top_p: 0.95
+    presence_penalty: 0.4
+    frequency_penalty: 0.3
 
 system_prompt_file: prompts/system.md
 
@@ -129,6 +135,14 @@ plugins:
     options:
       enabled: true
       min_interval_seconds: 7200
+  - name: xinyu_skill_synthesis_bridge
+    type: custom
+    module: ./custom/skill_synthesis_bridge_plugin.py
+    class: SkillSynthesisBridgePlugin
+    options:
+      enabled: true
+      min_interval_seconds: 21600
+      min_evidence: 2
   - name: xinyu_source_gate_bridge
     type: custom
     module: ./custom/source_gate_bridge_plugin.py

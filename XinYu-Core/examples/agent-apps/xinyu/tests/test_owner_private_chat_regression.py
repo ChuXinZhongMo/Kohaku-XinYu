@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from xinyu_answer_discipline_visible_guard import evaluate_visible_reply_for_answer_discipline
 from xinyu_bridge_semantic_fast_routes import owner_private_semantic_fast_decision
 from xinyu_prompt_pressure import PromptSidecar, select_prompt_sidecars
@@ -13,6 +15,13 @@ from xinyu_visible_reply_guard import dedupe_visible_reply
 
 
 OWNER_PAYLOAD = {"message_type": "private_text", "metadata": {"is_owner_user": True}}
+
+
+@pytest.fixture(autouse=True)
+def _force_legacy_prompt(monkeypatch: pytest.MonkeyPatch):
+    # Legacy mode-based sidecar admission is asserted here; lean (now default) admits
+    # only a fixed whitelist, so pin the escape hatch off to cover the legacy path.
+    monkeypatch.setenv("XINYU_LEAN_PROMPT", "0")
 
 
 class FakeRuntime:

@@ -9,7 +9,7 @@ from xinyu_bridge_autonomous_thought_payloads import (
     self_exploration_kwargs,
     self_thought_loop_kwargs,
 )
-from xinyu_bridge_autonomous_thought_rendering import (
+from xinyu_bridge_autonomous_note_responses import (
     autonomous_outward_summary,
     bounded_closed_loop_notes,
     proactive_request_summary,

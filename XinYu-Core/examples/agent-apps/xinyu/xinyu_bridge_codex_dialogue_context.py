@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_bridge_values import as_bool, safe_str
+from xinyu_dialogue_compression import SUMMARY_ROLE
 from xinyu_dialogue_working_memory import compact_tail_for_prompt, load_dialogue_tail
 
 
@@ -27,7 +28,10 @@ def format_dialogue_tail(
             continue
         recorded_at = safe_str(item.get("recorded_at")).strip()
         time_suffix = f" ({recorded_at})" if recorded_at else ""
-        lines.append(f"- {role}{time_suffix}: {content}")
+        if role == SUMMARY_ROLE:
+            lines.append(f"- [earlier in session]{time_suffix}: {content}")
+        else:
+            lines.append(f"- {role}{time_suffix}: {content}")
     return "\n".join(lines) if len(lines) > 1 else "current session tail: none"
 
 

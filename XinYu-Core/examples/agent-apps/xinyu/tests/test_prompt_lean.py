@@ -37,13 +37,20 @@ def _live_state() -> SimpleNamespace:
     )
 
 
-def test_flag_defaults_off() -> None:
-    assert lean_prompt_enabled() is False
+def test_flag_defaults_on() -> None:
+    # Lean is now the baseline; unset env means lean stays on.
+    assert lean_prompt_enabled() is True
 
 
 def test_flag_reads_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("XINYU_LEAN_PROMPT", "1")
     assert lean_prompt_enabled() is True
+
+
+def test_flag_escape_hatch_off(monkeypatch: pytest.MonkeyPatch) -> None:
+    for value in ("0", "false", "no", "off"):
+        monkeypatch.setenv("XINYU_LEAN_PROMPT", value)
+        assert lean_prompt_enabled() is False
 
 
 def test_lean_prompt_keeps_identity_continuity_and_drops_meta() -> None:
@@ -65,9 +72,11 @@ def test_lean_prompt_keeps_identity_continuity_and_drops_meta() -> None:
     assert "PRESSURE_LINE" not in prompt
 
 
-def test_lean_prompt_is_dramatically_smaller_than_legacy() -> None:
+def test_lean_prompt_is_dramatically_smaller_than_legacy(monkeypatch: pytest.MonkeyPatch) -> None:
     state = _live_state()
     sidecars = ["recalled context sidecar: a memory"]
+    # Force the legacy path explicitly now that lean is the default.
+    monkeypatch.setenv("XINYU_LEAN_PROMPT", "0")
     legacy = build_live_system_prompt(state, sidecar_lines=sidecars, codex_delegate_contract="")
     lean = build_lean_live_system_prompt(state, sidecar_lines=sidecars, codex_delegate_contract="")
     assert len(lean) < len(legacy)

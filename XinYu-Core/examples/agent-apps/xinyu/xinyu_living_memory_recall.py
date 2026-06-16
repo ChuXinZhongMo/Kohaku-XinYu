@@ -9,6 +9,7 @@ from xinyu_context_retrieval import RecalledContextItem, RecalledContextResult, 
 from xinyu_context_retrieval import render_recalled_context
 from xinyu_context_retrieval import retrieve_recalled_context as _retrieve_recalled_context
 from xinyu_memory_candidate_analysis import build_memory_candidate_recall_boundary
+from xinyu_skill_library import build_skill_recall_block
 from xinyu_neuro_memory_rules import rule_ids_for_flow
 from xinyu_temporal_memory_context import build_temporal_memory_context, render_temporal_memory_context
 
@@ -138,6 +139,7 @@ def run_living_memory_recall_algorithm(
     )
     result = apply_temporal_memory_context(result, user_text=user_text, evaluated_at=evaluated_at)
     result = apply_memory_candidate_boundaries(root, result, user_text=user_text)
+    result = apply_skill_recall(root, result, user_text=user_text)
     buckets = bucket_living_memory_recall(result)
     recall_rule_ids = rule_ids_for_flow("recall")
     notes = [
@@ -237,6 +239,23 @@ def apply_memory_candidate_boundaries(
         result,
         prompt_block=prompt_block,
         notes=tuple([*result.notes, "memory_candidate_boundaries_attached"]),
+    )
+
+
+def apply_skill_recall(
+    root: Path,
+    result: RecalledContextResult,
+    *,
+    user_text: str,
+) -> RecalledContextResult:
+    block = build_skill_recall_block(root, query_text=user_text)
+    if not block:
+        return result
+    prompt_block = (result.prompt_block + "\n\n" + block).strip() if result.prompt_block else block
+    return replace(
+        result,
+        prompt_block=prompt_block,
+        notes=tuple([*result.notes, "skill_recall_attached"]),
     )
 
 
