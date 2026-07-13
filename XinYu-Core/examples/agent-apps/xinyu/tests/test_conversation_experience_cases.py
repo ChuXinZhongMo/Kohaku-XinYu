@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from xinyu_storage_paths import seed_owner_cases_path
+
 import json
 from pathlib import Path
 
@@ -85,7 +87,7 @@ def test_group_scenario_card_rejects_blocked_consent(tmp_path: Path) -> None:
 
 def test_seed_owner_cases_import(tmp_path: Path) -> None:
     root = Path(__file__).resolve().parents[1]
-    result = import_seed_owner_cases(tmp_path, seed_path=root / "data/conversation_experience/seed_owner_cases.jsonl")
+    result = import_seed_owner_cases(tmp_path, seed_path=seed_owner_cases_path(root))
 
     assert result["imported"] >= 20
     assert not result["errors"]

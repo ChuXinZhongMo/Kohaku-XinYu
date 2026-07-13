@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from xinyu_storage_paths import seed_owner_cases_path
+
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -66,7 +68,7 @@ def _assert_notes(case: dict[str, Any], notes: tuple[str, ...]) -> None:
 @pytest.mark.parametrize("case", _load_cases(), ids=lambda case: case["id"])
 def test_conversation_experience_replay_case(tmp_path: Path, case: dict[str, Any]) -> None:
     root = Path(__file__).resolve().parents[1]
-    imported = import_seed_owner_cases(tmp_path, seed_path=root / "data/conversation_experience/seed_owner_cases.jsonl")
+    imported = import_seed_owner_cases(tmp_path, seed_path=seed_owner_cases_path(root))
     assert not imported["errors"]
 
     result = match_conversation_experience_cases(

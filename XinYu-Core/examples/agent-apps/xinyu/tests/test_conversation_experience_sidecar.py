@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from xinyu_storage_paths import seed_owner_cases_path
+
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -22,7 +24,7 @@ def _visible(**kwargs: object) -> SimpleNamespace:
 
 def test_sidecar_renders_compact_hidden_advisory_block(tmp_path: Path) -> None:
     root = Path(__file__).resolve().parents[1]
-    import_seed_owner_cases(tmp_path, seed_path=root / "data/conversation_experience/seed_owner_cases.jsonl")
+    import_seed_owner_cases(tmp_path, seed_path=seed_owner_cases_path(root))
 
     block = build_conversation_experience_prompt_block(
         tmp_path,

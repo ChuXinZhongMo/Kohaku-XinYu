@@ -39,9 +39,9 @@ jobs:
       - name: Run XinYu app test suite
         working-directory: ${{ env.XINYU_APP_DIR }}
         # optional deps (markitdown / torch) are absent -> those tests skip cleanly
-        # Force UTC so timestamp equality assertions are stable across runners.
+        # Force Asia/Shanghai so tests that hardcode +08:00 match CI timestamps.
         env:
-          TZ: UTC
+          TZ: Asia/Shanghai
         run: >
           python -m pytest -q -m "not smoke"
           --cov=.
