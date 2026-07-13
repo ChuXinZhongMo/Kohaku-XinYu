@@ -1,0 +1,20 @@
+# Optional dependencies for the XinYu Private Ecosystem real browser/computer
+# control engines. These are NOT required for the core app, the policy/record
+# layers, or the test suite (the suite degrades gracefully without them).
+#
+# Pinned versions (no @latest runtime drift; supply-chain review required before
+# bumping). Install into the app venv:
+#
+#   .\.venv\Scripts\python.exe -m pip install -r requirements-private-ecosystem.txt
+#   .\.venv\Scripts\python.exe -m playwright install chromium
+#
+# If the Playwright CDN (playwright.azureedge.net) is blocked, skip the chromium
+# download and drive the system Edge instead by setting the browser channel:
+#   XINYU_PRIVATE_BROWSER_CHANNEL=msedge   (Edge ships with Windows 11)
+#
+# Security: Playwright drives the browser over its own internal pipe (no open CDP
+# debugging port). Keep webSecurity/sandbox at defaults; use the isolated
+# profile under runtime/private_ecosystem/browser_profile only.
+
+playwright==1.49.0
+mss==9.0.1

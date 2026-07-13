@@ -20,7 +20,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -202,6 +201,23 @@ class BrowserPolicyDecision:
         return {"ok": self.ok, "risk": self.risk, "reason": self.reason, "requires_approval": self.requires_approval}
 
 
+def _host_allowed(url: str, allowed_urls: Any) -> bool:
+    """Owner allowlist: a URL host must equal an allowlisted host or be a subdomain
+    of one. Allowlist entries may be bare hosts ("github.com") or full URLs
+    ("https://github.com/"). Empty/invalid host → not allowed."""
+    host = (urlparse(_safe_str(url)).hostname or "").lower()
+    if not host:
+        return False
+    for entry in allowed_urls:
+        text = _safe_str(entry).strip().lower()
+        if not text:
+            continue
+        entry_host = (urlparse(text).hostname or text).lower()
+        if entry_host and (host == entry_host or host.endswith("." + entry_host)):
+            return True
+    return False
+
+
 def evaluate_browser_action(
     action_kind: str,
     *,
@@ -223,6 +239,13 @@ def evaluate_browser_action(
         sensitive, reason = is_sensitive_url(url)
         if sensitive:
             return BrowserPolicyDecision(False, HIGH_BLOCKED, f"sensitive_page_blocked:{reason}", requires_approval)
+        # Owner URL allowlist (hard gate). When the owner has set allowed_urls, any
+        # URL-bearing action must hit an allowlisted host — default-deny everything
+        # else. This is what confines her browsing to e.g. github.com only.
+        allowed_urls = grant.get("allowed_urls")
+        if isinstance(allowed_urls, (list, tuple)) and allowed_urls:
+            if not _host_allowed(url, allowed_urls):
+                return BrowserPolicyDecision(False, HIGH_BLOCKED, "url_not_in_allowlist", requires_approval)
 
     if risk == HIGH_BLOCKED:
         return BrowserPolicyDecision(False, risk, "high_risk_browser_action_blocked", requires_approval)
@@ -519,9 +542,9 @@ def _write_state_markdown(root: Path, state: Mapping[str, Any]) -> None:
         f"- actions_blocked: {counters.get('actions_blocked', 0)}",
         f"- artifact_count: {state.get('artifact_count', 0)}",
         f"- screenshot_count: {state.get('screenshot_count', 0)}",
-        f"- uses_owner_browser_profile: false",
-        f"- form_submission: blocked",
-        f"- credential_or_payment_pages: blocked",
+        "- uses_owner_browser_profile: false",
+        "- form_submission: blocked",
+        "- credential_or_payment_pages: blocked",
         "",
         "## Boundaries",
         "",

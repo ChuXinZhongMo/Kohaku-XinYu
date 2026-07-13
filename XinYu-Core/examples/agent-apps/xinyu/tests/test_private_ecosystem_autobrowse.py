@@ -23,7 +23,13 @@ def _enable_browser_plugin(root: Path, *, proactive: bool) -> None:
 
 def _whitelist(root: Path, urls: list[str]) -> None:
     grants_mod.save_grants_patch(
-        root, {"private_browser": {"enabled": True, "read_only": True, "allowed_urls": urls}}
+        root,
+        {
+            "private_browser": {"enabled": True, "read_only": True, "allowed_urls": urls},
+            # Autonomous browsing is rollout-gated: only browser_read_only (or higher)
+            # lets the browse goal be selected, so activate it for these tests.
+            "private_ecosystem": {"enabled": True, "rollout_state": "browser_read_only"},
+        },
     )
 
 
@@ -66,8 +72,35 @@ def test_browse_goal_present_with_whitelist(tmp_path: Path) -> None:
     grants = grants_mod.default_grants(env={})
     grants["private_browser"]["enabled"] = True
     grants["private_browser"]["allowed_urls"] = ["https://example.com/news"]
-    goals = {c.goal_id for c in load_goal_candidates(tmp_path, {"memory_candidate_count": 0}, {}, grants)}
+    goals = {
+        c.goal_id
+        for c in load_goal_candidates(
+            tmp_path, {"memory_candidate_count": 0}, {}, grants, rollout_state="browser_read_only"
+        )
+    }
     assert "explore_browser_readonly" in goals
+
+
+def test_browse_goal_rollout_gated(tmp_path: Path) -> None:
+    # New contract: even with grant + whitelist, observe_only must NOT browse;
+    # the browse goal only appears once rollout reaches browser_read_only.
+    grants = grants_mod.default_grants(env={})
+    grants["private_browser"]["enabled"] = True
+    grants["private_browser"]["allowed_urls"] = ["https://github.com/"]
+    observe = {
+        c.goal_id
+        for c in load_goal_candidates(
+            tmp_path, {"memory_candidate_count": 0}, {}, grants, rollout_state="observe_only"
+        )
+    }
+    assert "explore_browser_readonly" not in observe
+    active = {
+        c.goal_id
+        for c in load_goal_candidates(
+            tmp_path, {"memory_candidate_count": 0}, {}, grants, rollout_state="browser_read_only"
+        )
+    }
+    assert "explore_browser_readonly" in active
 
 
 def test_browse_goal_disabled_when_grant_off(tmp_path: Path) -> None:

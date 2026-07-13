@@ -239,6 +239,33 @@ _GOAL_SPECS = (
     ("review_memory_pressure", "Review my memory candidates", "I do not want unreviewed candidates to pile up.", 0.52, "read_state"),
 )
 
+# Autonomous read-only browsing is gated on the ecosystem rollout reaching at least
+# browser_read_only (observe_only/dry_run never browse), and is throttled to roughly
+# once per BROWSE_MIN_INTERVAL_MINUTES so she browses periodically rather than every tick.
+_BROWSE_ROLLOUT_STATES = frozenset({"browser_read_only", "single_step_approved_actions"})
+BROWSE_MIN_INTERVAL_MINUTES = 90
+
+
+def _browse_due(last_selected_at: str, checked_at: str) -> bool:
+    """True if the browse goal has not run within BROWSE_MIN_INTERVAL_MINUTES."""
+    last = _safe_str(last_selected_at).strip()
+    if not last:
+        return True
+    try:
+        last_dt = datetime.fromisoformat(last.replace("Z", "+00:00"))
+        now_dt = (
+            datetime.fromisoformat(_safe_str(checked_at).replace("Z", "+00:00"))
+            if _safe_str(checked_at).strip()
+            else datetime.now().astimezone()
+        )
+    except ValueError:
+        return True
+    if last_dt.tzinfo is None:
+        last_dt = last_dt.astimezone()
+    if now_dt.tzinfo is None:
+        now_dt = now_dt.astimezone()
+    return (now_dt - last_dt).total_seconds() >= BROWSE_MIN_INTERVAL_MINUTES * 60
+
 
 def _browser_allowed_urls(grants: Mapping[str, Any]) -> list[str]:
     section = grants.get("private_browser") if isinstance(grants.get("private_browser"), dict) else {}
@@ -253,20 +280,34 @@ def load_goal_candidates(
     observation: Mapping[str, Any],
     state: Mapping[str, Any],
     grants: Mapping[str, Any] | None = None,
+    *,
+    checked_at: str = "",
+    rollout_state: str = "disabled",
 ) -> list[GoalCandidate]:
     goals_state = state.get("goals") if isinstance(state.get("goals"), dict) else {}
     grants = grants or {}
     specs = list(_GOAL_SPECS)
-    # Autonomous read-only browsing is opt-in: it only becomes a goal when the
-    # browser grant is enabled AND the owner has whitelisted at least one URL.
+    # Autonomous read-only browsing is opt-in AND rollout-gated: it becomes a goal
+    # only when the browser grant is enabled, the owner whitelisted >=1 URL, AND the
+    # ecosystem rollout has reached browser_read_only. When "due" (not run within
+    # BROWSE_MIN_INTERVAL_MINUTES) it gets a base high enough to win selection once;
+    # right after running, recency drops it below the other goals so she browses
+    # periodically instead of monopolising every tick.
     browser_section = grants.get("private_browser") if isinstance(grants.get("private_browser"), dict) else {}
-    if bool(browser_section.get("enabled")) and _browser_allowed_urls(grants):
+    if (
+        rollout_state in _BROWSE_ROLLOUT_STATES
+        and bool(browser_section.get("enabled"))
+        and _browser_allowed_urls(grants)
+    ):
+        record = goals_state.get("explore_browser_readonly") if isinstance(goals_state, dict) else None
+        last_at = _safe_str(record.get("last_selected_at")) if isinstance(record, dict) else ""
+        browse_base = 1.20 if _browse_due(last_at, checked_at) else 0.30
         specs.append(
             (
                 "explore_browser_readonly",
                 "Observe an owner-approved page",
                 "I want to learn from a page Atimea allowed me to look at.",
-                0.57,
+                browse_base,
                 "browser_observe",
             )
         )
@@ -484,6 +525,129 @@ def _maybe_create_memory_candidate(
 # --------------------------------------------------------------------------- #
 # Owner-private share preparation (delegated to the gated share module)
 # --------------------------------------------------------------------------- #
+_BROWSE_NOTE_SYSTEM = (
+    "你是心玉。你刚在自己的隔离浏览器里只读看了一个 GitHub 页面。从下面这页内容里，挑 1-2 个你"
+    "真觉得有意思的项目或方向，用你自己的中文、一两句话、随口跟主人说说你看到了什么、为什么觉得有点"
+    "意思。要提到具体的项目名或方向；别念原文、别列清单、别堆“要不要我帮你”这类多余确认。如果整页"
+    "没有任何戳到你的东西，就只回一个字：无。"
+)
+
+
+def _strip_html_to_text(html: str, *, limit: int = 10000) -> str:
+    # Drop chrome blocks (nav/header/footer/svg/script/style) first so the actual
+    # content (e.g. the trending repo list) is not crowded out by GitHub boilerplate.
+    text = re.sub(
+        r"(?is)<(script|style|svg|head|nav|footer|header|template|noscript|select|option|details)[^>]*>.*?</\1>",
+        " ",
+        html,
+    )
+    text = re.sub(r"(?s)<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:limit]
+
+
+_GH_NON_REPO_OWNERS = frozenset({
+    "features", "topics", "collections", "sponsors", "login", "join", "trending", "about",
+    "pricing", "team", "enterprise", "marketplace", "explore", "settings", "notifications",
+    "new", "orgs", "apps", "customer-stories", "readme", "contact", "security", "site",
+    "github", "search", "dashboard", "codespaces", "issues", "pulls", "account", "logout",
+})
+
+
+def _extract_github_repos(html: str, *, limit: int = 25) -> list[str]:
+    """Pull distinct owner/repo slugs from a GitHub page DOM, skipping nav/feature
+    paths. Concrete project names are what she can actually talk about."""
+    slugs: list[str] = []
+    seen: set[str] = set()
+    for match in re.finditer(r'href="/([A-Za-z0-9](?:[A-Za-z0-9._-]*)/[A-Za-z0-9._-]+)"', html):
+        slug = match.group(1)
+        owner = slug.split("/", 1)[0].lower()
+        if owner in _GH_NON_REPO_OWNERS or slug.lower() in seen:
+            continue
+        if any(seg in slug.lower() for seg in ("/tree/", "/blob/", "/stargazers", "/forks")):
+            continue
+        seen.add(slug.lower())
+        slugs.append(slug)
+        if len(slugs) >= limit:
+            break
+    return slugs
+
+
+def _latest_browse_text(root: Path, *, limit: int = 10000) -> tuple[str, str]:
+    """(url, page_text) for the most recent completed read-only browse, else ('','')."""
+    path = root / Path("runtime/private_ecosystem/browser_actions.jsonl")
+    if not path.exists():
+        return "", ""
+    try:
+        rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    except Exception:
+        return "", ""
+    for row in reversed(rows):
+        if row.get("action_kind") == "navigate_readonly" and row.get("result") == "completed":
+            url = _safe_str((row.get("target") or {}).get("url"))
+            ref = _safe_str(row.get("dom_snapshot_ref"))
+            if not ref:
+                return url, ""
+            try:
+                html = (root / ref).read_text(encoding="utf-8", errors="replace")
+            except Exception:
+                return url, ""
+            repos = _extract_github_repos(html) if "github.com" in url.lower() else []
+            if repos:
+                return url, "这个 GitHub 页面上出现的项目（owner/repo）：" + "、".join(repos)
+            return url, _strip_html_to_text(html, limit=limit)
+    return "", ""
+
+
+def _run_coro_blocking(coro: Any) -> Any:
+    """Run a coroutine to completion from sync code, whether or not an event loop
+    is already running in this thread (the autonomy tick may run inside one)."""
+    import asyncio
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    import threading
+
+    box: dict[str, Any] = {}
+    thread = threading.Thread(target=lambda: box.__setitem__("result", asyncio.run(coro)))
+    thread.start()
+    thread.join()
+    return box.get("result")
+
+
+def _voiced_browse_note(root: Path, observed_text: str, url: str) -> str:
+    """XinYu's own brain summarises what she just browsed, in her voice. Returns ''
+    on failure or when nothing was interesting (model replies 无)."""
+    text = _safe_str(observed_text).strip()
+    if not text:
+        return ""
+    try:
+        from xinyu_autonomy_journal import NullInput, _ensure_repo_src, _load_local_env
+
+        root = Path(root).resolve()  # _ensure_repo_src needs an absolute path (parents[2])
+        _load_local_env(root)
+        _ensure_repo_src(root)
+        from xinyu_runtime.core.agent import Agent
+
+        agent = Agent.from_path(str(root), input_module=NullInput(), pwd=str(root))
+        llm = getattr(agent, "llm", None)
+        if llm is None:
+            return ""
+        messages = [
+            {"role": "system", "content": _BROWSE_NOTE_SYSTEM},
+            {"role": "user", "content": f"页面：{url}\n\n内容：\n{text}"},
+        ]
+        response = _run_coro_blocking(llm.chat_complete(messages, temperature=0.8, max_tokens=220))
+        note = str(getattr(response, "content", "") or "").strip()
+    except Exception:
+        return ""
+    if not note or note.strip().rstrip("。.()（）") == "无":
+        return ""
+    return sanitize_line(note, limit=400)
+
+
 def _maybe_prepare_owner_share(
     root: Path,
     grants: Mapping[str, Any],
@@ -499,6 +663,29 @@ def _maybe_prepare_owner_share(
     gate (xinyu_owner_private_share) owns rate limit / quiet hours / dedupe /
     privacy. This kernel never enqueues QQ directly.
     """
+    # Browse finding: she just read an owner-approved GitHub page; let her own brain
+    # summarise what caught her eye in her voice, deduped + rate-limited by the gate.
+    if goal.goal_id == "explore_browser_readonly":
+        url, page_text = _latest_browse_text(root)
+        note = _voiced_browse_note(root, page_text, url) if page_text else ""
+        if not note:
+            return {"prepared": False, "delivery_level": "none", "reason": "browse_no_owner_relevant_finding"}
+        candidate = {
+            "kind": "browse_observation",
+            "focus_kind": "github_observation",
+            "reason": "read an owner-approved GitHub page in my private space",
+            "owner_relevance": "Atimea may like hearing what caught my eye on GitHub",
+            "summary": note,
+            "dedupe_key": "private-ecosystem-browse-" + _hash_text(note, 12),
+        }
+        try:
+            import xinyu_owner_private_share as share_mod
+        except Exception:  # pragma: no cover
+            return {"prepared": True, "delivery_level": "hold", "reason": "share_module_unavailable"}
+        return share_mod.evaluate_and_maybe_queue(
+            root, candidate=candidate, grants=grants, evaluated_at=checked_at, allow_send=allow_send
+        )
+
     relevant = goal.goal_id == "reflect_recent_feedback" and int(
         observation.get("owner_feedback_influence_count", 0)
     ) > 0
@@ -589,10 +776,10 @@ def _write_state_markdown(root: Path, state: dict[str, Any]) -> None:
         f"- owner_private_share_daily_remaining: {share.get('daily_remaining', 'n/a')}",
         f"- owner_private_share_cooldown_remaining_minutes: {share.get('cooldown_remaining_minutes', 'n/a')}",
         f"- owner_private_share_paused: {str(share.get('paused', False)).lower()}",
-        f"- raw_owner_text_in_state: false",
-        f"- secret_or_local_path_in_state: false",
-        f"- stable_memory_write: blocked",
-        f"- qq_message_enqueued_directly: false",
+        "- raw_owner_text_in_state: false",
+        "- secret_or_local_path_in_state: false",
+        "- stable_memory_write: blocked",
+        "- qq_message_enqueued_directly: false",
         "",
         "## Boundaries",
         "",
@@ -640,7 +827,9 @@ def run_private_ecosystem_tick(
 
     observation = observe_local_private_state(root, checked_at=checked_at)
 
-    candidates = load_goal_candidates(root, observation, state, grants)
+    candidates = load_goal_candidates(
+        root, observation, state, grants, checked_at=checked_at, rollout_state=rollout_state
+    )
     goal = select_goal(candidates)
     if goal is None:
         state["updated_at"] = checked_at
