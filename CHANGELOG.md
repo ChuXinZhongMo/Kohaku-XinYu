@@ -2,35 +2,12 @@
 
 All notable public-source changes should be recorded here.
 
-## Unreleased - Engineering Maturity Track
-
-Status: in progress (started 2026-07-13)
-
-- Added engineering maturity plan and 30-day checklist under `docs/plans/`.
-- Added Phase 2 architecture inventory for bridge/god-file debt.
-- Added GitHub issue templates, PR template, CODEOWNERS, and Dependabot.
-- Added `.editorconfig` and `.pre-commit-config.yaml`.
-- Hardened CI with named blocking vs informational jobs, concurrency cancel,
-  coverage artifact upload, and critical ruff gate on core **and** app.
-- Documented branch policy (`main` canonical; `master` cutover checklist).
-- Refreshed root README/CONTRIBUTING setup paths for fresh developers.
-- Auto-fixed a batch of safe ruff issues under `XinYu-Core/src`.
-- Cleaned app critical ruff debt (885 → 0 for `F,E9,F63,F7,F82`).
-- Consolidated thin bridge store modules into `xinyu_bridge_stores.py`.
-- Split `xinyu_qq_gateway` helpers and `xinyu_status` into facade + modules.
-- Phase 3: `FRESH-INSTALL`, `RELEASE-CHECKLIST`, `GOOD-FIRST-ISSUES`,
-  `QUICK-SMOKE-SET`, `ENV-EXAMPLE-AUDIT`.
-- Phase 4 stubs: `security.yml` (pip-audit + npm audit, informational),
-  OpenSSF self-assessment map, `scripts/Release-DryRun.ps1`.
-- Phase 4 supply-chain stubs: informational `security.yml` (pip-audit + npm
-  audit), OpenSSF self-assessment map, and `scripts/Release-DryRun.ps1`.
-
 ## v0.1.0 - Public Source Baseline
 
-Status: release candidate
+Status: **released** (2026-07-13)
 
-This release candidate packages XinYu as a local, privacy-bound, long-running
-personal AI runtime workspace.
+First final public tag on the cut-over `main` line (includes work formerly on
+`master`). Preceded by `v0.1.0-rc.2`.
 
 ### Highlights
 
@@ -39,30 +16,41 @@ personal AI runtime workspace.
 - Electron/Vite desktop shell for local operator visibility.
 - Memory, learning, proactive behavior, and review boundaries.
 - Unified `XinYu.ps1` operator entry point.
-- Public documentation for setup, operations, open-source policy, security, and
-  contribution expectations.
-- Sanitized worklogs, audits, reports, tests, and smoke runners for release
-  review.
+- Engineering maturity track: progressive CI gates, issue/PR templates,
+  Dependabot, pre-commit, branch policy, OpenSSF self-assessment stub.
+- Architecture debt payment: bridge store consolidation, gateway/status splits.
+- Product surfaces landed through rc.2: kernel/experience adapters, TTS emotion
+  mapping, persona/life-reply updates, private ecosystem stubs, desktop shell
+  upgrades.
 
-### Validation Baseline
+### Validation (blocking CI on release tip)
 
-Latest checked local baseline, 2026-05-21:
+Re-check GitHub Actions on the exact tagged commit:
 
-- Python tests: `786 passed`
-- runtime readiness smoke: `ok`
-- QQ gateway smoke: `ok`
-- desktop typecheck: passed
-- desktop build: passed
+- Python tests (blocking): pass
+- Python lint critical (blocking): pass
+- Desktop typecheck (blocking): pass
+
+Informational jobs (full ruff / smoke / npm audit) may still fail and are not
+release blockers.
 
 ### Publication Boundary
 
-The release candidate intentionally excludes private runtime state, local
-memory stores, credentials, QQ payloads, owner-supplied material bodies,
-generated dependency folders, and local machine artifacts.
+Intentionally excludes private runtime state, local memory stores, credentials,
+QQ payloads, owner-supplied material bodies, generated dependency folders, and
+local machine artifacts.
 
-### Known Gaps Before A GitHub Release
+### Branch / process
 
-- Publish a signed or annotated `v0.1.0` tag.
-- Create a GitHub release using these notes.
-- Re-run the validation baseline on the exact commit being tagged.
-- Add issue templates after the first public feedback loop.
+- Default branch: `main` (protected; required blocking checks).
+- Backup tags: `backup/pre-main-cutover-20260713-main`,
+  `backup/pre-main-cutover-20260713-master`.
+- Dependabot: pywebview 6.2.1 merged; major Actions/npm bumps deferred.
+
+## Unreleased
+
+- Deferred Dependabot majors (Actions v6/v7, TypeScript 7, ESLint 10,
+  electron-vite 5).
+- Full ruff debt paydown; curated quick-smoke blocking job.
+- Archive or delete remote `master` after one stable cycle.
+
