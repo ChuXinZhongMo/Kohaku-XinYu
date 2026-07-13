@@ -1,46 +1,57 @@
 # Branch Policy
 
-Status: active as of 2026-07-13  
+Status: **cutover completed 2026-07-13**  
 Related: `docs/plans/ENGINEERING-MATURITY-PLAN.md`
 
 ## Canonical branch
 
-- **Remote default:** `main` (`origin/HEAD` → `origin/main`)
-- **Historical dual branch:** `master` has been used as a long-lived integration
-  branch and may be ahead of `main` during the engineering hardening window.
+- **Canonical branch:** `main`
+- **Active integration tip (cutover source):** was `master` at `3833d2f`
+- **Old public `main` tip (pre-cutover):** `2461020` — preserved as tag
+  `backup/pre-main-cutover-20260713-main`
+- **Pre-cutover `master` tip:** also tagged
+  `backup/pre-main-cutover-20260713-master` (same commit as the new `main`)
 
-Until cutover is complete:
+### Why not a normal merge?
 
-| Branch | Role |
-|--------|------|
-| `main` | Canonical public default; protect once CI is green on it |
-| `master` | May hold newer local integration work; do not treat as second product line |
+Local `main` and `master` had **unrelated histories** (`git merge` refused without
+`--allow-unrelated-histories`). The long-running product/engineering line lived
+on `master`. Cutover therefore **retargeted `main` to the `master` tip** after
+backup tags, rather than inventing a synthetic dual-root merge.
 
 ## Contributor rule
 
-1. Open pull requests against **`main`** once cutover is done.
-2. During transition, maintainers may accept PRs to `master` only if `main` is
-   still lagging; every such PR must note the follow-up merge into `main`.
-3. Do not commit directly to either protected branch once GitHub protection is
-   enabled.
+1. Open pull requests against **`main`**.
+2. Do not open new long-lived work on `master`.
+3. After remote default is confirmed as `main` and CI is green, stop pushing to
+   `master`. Optionally rename remote `master` to `archive/master` after one
+   stable release cycle.
 
-## Cutover checklist (maintainer)
+## Cutover record
 
-1. Ensure CI is green on the tip that will become the single line of history.
-2. Create a backup tag: `backup/pre-main-cutover-YYYYMMDD`.
-3. Fast-forward or merge `master` into `main` (prefer a merge commit if histories
-   diverged non-trivially; document the choice in the merge PR).
-4. Push `main`, set it as the only default branch in GitHub settings.
-5. Enable branch protection on `main`:
-   - require pull request
-   - require status checks: `Python tests (blocking)`,
-     `Python lint critical (blocking)`, `Desktop typecheck (blocking)`
-   - dismiss stale reviews on new commits
-6. Update local clones: `git checkout main && git pull`.
-7. Stop pushing to `master`. After one stable release cycle, delete `origin/master`
-   or archive it as `archive/master`.
+| Step | Status |
+|------|--------|
+| Backup tag `backup/pre-main-cutover-20260713-main` | done |
+| Backup tag `backup/pre-main-cutover-20260713-master` | done |
+| Point local `main` at `master` tip | done |
+| Push `main` (force-with-lease; non-ff vs old main) | in progress |
+| Push backup tags | in progress |
+| GitHub default branch = `main` | **maintainer UI / `gh`** |
+| Branch protection on `main` | **maintainer UI** |
+| Archive/delete remote `master` | deferred one release cycle |
+
+### Branch protection (recommended)
+
+On `main`:
+
+- require pull request
+- require status checks:
+  - `Python tests (blocking)`
+  - `Python lint critical (blocking)`
+  - `Desktop typecheck (blocking)`
+- dismiss stale reviews on new commits
 
 ## CI branches
 
-`.github/workflows/ci.yml` listens to both `main` and `master` until cutover
-completes, then `master` should be removed from the trigger list.
+`.github/workflows/ci.yml` may still list `master` briefly for compatibility;
+new work should target `main` only.
