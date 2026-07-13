@@ -5,7 +5,8 @@ Supports OpenAI API and compatible services like OpenRouter, Together AI, etc.
 Uses AsyncOpenAI for all API calls (streaming + non-streaming).
 """
 
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 from openai import AsyncOpenAI
 
@@ -27,6 +28,15 @@ logger = get_logger(__name__)
 # Default API endpoints
 OPENAI_BASE_URL = "https://api.openai.com/v1"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+# Some OpenAI-compatible aggregators (Cloudflare-fronted resellers) reject the
+# SDK's built-in "OpenAI/Python" User-Agent with a 403 "Your request was blocked".
+# Default to a browser User-Agent so these endpoints work; a caller-supplied
+# User-Agent in ``extra_headers`` still takes precedence.
+_DEFAULT_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+)
 
 
 class OpenAIProvider(BaseLLMProvider):
@@ -101,12 +111,15 @@ class OpenAIProvider(BaseLLMProvider):
         # which is fine for ``"anthropic.com" in ...`` matching.
         self.base_url: str = base_url or ""
 
+        client_headers = dict(extra_headers or {})
+        client_headers.setdefault("User-Agent", _DEFAULT_USER_AGENT)
+
         self._client = AsyncOpenAI(
             api_key=api_key,
             base_url=base_url,
             timeout=timeout,
             max_retries=max_retries,
-            default_headers=extra_headers or {},
+            default_headers=client_headers,
         )
 
         # Log whether auto-caching will be engaged for this provider. One
@@ -297,6 +310,11 @@ class OpenAIProvider(BaseLLMProvider):
         create_kwargs: dict[str, Any] = {
             "model": kwargs.get("model", self.config.model),
             "messages": self._prepare_messages(messages),
+            # Declare non-streaming explicitly. Some OpenAI-compatible aggregators
+            # default to SSE when ``stream`` is absent; omitting it makes them return
+            # an event-stream body that the non-streaming SDK path mis-reads as a raw
+            # string (-> "'str' object has no attribute 'choices'").
+            "stream": False,
         }
 
         temp = kwargs.get("temperature", self.config.temperature)

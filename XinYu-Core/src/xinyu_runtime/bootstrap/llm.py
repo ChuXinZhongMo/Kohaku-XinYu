@@ -6,6 +6,7 @@ Creates the correct LLM provider based on:
   2. Inline controller config (backward compat)
 """
 
+import os
 from dataclasses import MISSING, fields
 from typing import Any
 
@@ -18,6 +19,26 @@ from xinyu_runtime.llm.profiles import LLMProfile, get_api_key, resolve_controll
 from xinyu_runtime.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+# Env-configurable model-level fallback: when the primary LLM (e.g. grok via a flaky
+# aggregator) returns a recoverable error (429/timeout/quota), try this secondary
+# provider before hitting TinyKernel. Set XINYU_FALLBACK_* in xinyu.local.env.
+_FALLBACK_BASE_URL_ENV = "XINYU_FALLBACK_BASE_URL"
+_FALLBACK_API_KEY_ENV = "XINYU_FALLBACK_API_KEY"
+_FALLBACK_MODEL_ENV = "XINYU_FALLBACK_MODEL"
+
+
+def _build_fallback_provider() -> OpenAIProvider | None:
+    """Build an optional secondary LLM from env. Returns None if not configured."""
+    base_url = os.environ.get(_FALLBACK_BASE_URL_ENV, "").strip()
+    api_key = os.environ.get(_FALLBACK_API_KEY_ENV, "").strip()
+    model = os.environ.get(_FALLBACK_MODEL_ENV, "").strip()
+    if not (base_url and api_key and model):
+        return None
+    try:
+        return OpenAIProvider(api_key=api_key, base_url=base_url, model=model, temperature=0.7)
+    except Exception:
+        return None
 
 _AGENT_CONFIG_FIELDS = {field.name: field for field in fields(AgentConfig)}
 
@@ -112,7 +133,7 @@ def _create_from_profile(profile: LLMProfile) -> LLMProvider:
         )
         provider._profile_max_context = profile.max_context
         _apply_backend_native_identity(provider, profile)
-        return wrap_llm_with_visible_failover(provider)
+        return wrap_llm_with_visible_failover(provider, fallback_provider=_build_fallback_provider())
 
     api_key = get_api_key(profile.provider) if profile.provider else ""
     if not api_key and profile.api_key_env:
@@ -134,7 +155,7 @@ def _create_from_profile(profile: LLMProfile) -> LLMProvider:
     )
     provider._profile_max_context = profile.max_context
     _apply_backend_native_identity(provider, profile)
-    return wrap_llm_with_visible_failover(provider)
+    return wrap_llm_with_visible_failover(provider, fallback_provider=_build_fallback_provider())
 
 
 def _apply_backend_native_identity(provider: LLMProvider, profile: LLMProfile) -> None:
@@ -169,7 +190,7 @@ def create_llm_from_profile_name(name: str) -> LLMProvider:
     profile = resolve_controller_llm({}, llm_override=name)
     if not profile:
         raise ValueError(f"Model profile not found: {name}")
-    return wrap_llm_with_visible_failover(_create_from_profile(profile))
+    return wrap_llm_with_visible_failover(_create_from_profile(profile), fallback_provider=_build_fallback_provider())
 
 
 def _create_from_inline(config: AgentConfig) -> LLMProvider:
@@ -192,7 +213,7 @@ def _create_from_inline(config: AgentConfig) -> LLMProvider:
             "Using Codex OAuth provider (ChatGPT subscription)",
             model=config.model,
         )
-        return wrap_llm_with_visible_failover(provider)
+        return wrap_llm_with_visible_failover(provider, fallback_provider=_build_fallback_provider())
 
     # Standard API key auth (OpenAI, OpenRouter, etc.)
     api_key = config.get_api_key()
@@ -208,4 +229,4 @@ def _create_from_inline(config: AgentConfig) -> LLMProvider:
         temperature=config.temperature,
         max_tokens=config.max_tokens,
         extra_body=config.extra_body or None,
-    ))
+    ), fallback_provider=_build_fallback_provider())

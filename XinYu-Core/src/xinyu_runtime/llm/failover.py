@@ -14,10 +14,11 @@ import os
 import time
 import urllib.error
 import urllib.request
+from collections.abc import AsyncIterator, Callable, Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Any, AsyncIterator, Callable, Iterator
+from typing import Any
 
 from xinyu_runtime.llm.base import ChatResponse, LLMConfig, NativeToolCall, ToolSchema
 from xinyu_runtime.utils.logging import get_logger
@@ -58,11 +59,15 @@ _RECOVERABLE_MESSAGE_PARTS = (
 )
 
 
-def wrap_llm_with_visible_failover(provider: Any) -> Any:
-    """Wrap an LLM provider with TinyKernel failover support."""
+def wrap_llm_with_visible_failover(provider: Any, *, fallback_provider: Any | None = None) -> Any:
+    """Wrap an LLM provider with TinyKernel failover support. An optional
+    ``fallback_provider`` (a second LLM, e.g. MiMo) is tried on recoverable primary
+    errors before the TinyKernel path."""
     if isinstance(provider, VisibleFailoverLLMProvider):
+        if fallback_provider is not None and provider._fallback_provider is None:
+            provider._fallback_provider = fallback_provider
         return provider
-    return VisibleFailoverLLMProvider(provider)
+    return VisibleFailoverLLMProvider(provider, fallback_provider=fallback_provider)
 
 
 @contextmanager
@@ -70,7 +75,7 @@ def provider_failover_context(provider: Any, context: dict[str, Any] | None) -> 
     """Temporarily attach per-turn failover context to a provider."""
     previous = getattr(provider, "_xinyu_llm_failover_context", None)
     if context:
-        setattr(provider, "_xinyu_llm_failover_context", context)
+        provider._xinyu_llm_failover_context = context
     else:
         try:
             delattr(provider, "_xinyu_llm_failover_context")
@@ -85,7 +90,7 @@ def provider_failover_context(provider: Any, context: dict[str, Any] | None) -> 
             except AttributeError:
                 pass
         else:
-            setattr(provider, "_xinyu_llm_failover_context", previous)
+            provider._xinyu_llm_failover_context = previous
 
 
 def failover_context_from_events(events: list[Any]) -> dict[str, Any] | None:
@@ -416,10 +421,21 @@ def _record_failover_trace(
 class VisibleFailoverLLMProvider:
     """LLM provider wrapper that falls back to TinyKernel on API failures."""
 
-    def __init__(self, primary: Any, failover: TinyKernelVisibleFailover | None = None):
+    def __init__(
+        self,
+        primary: Any,
+        failover: TinyKernelVisibleFailover | None = None,
+        *,
+        fallback_provider: Any | None = None,
+    ):
         self.primary = primary
         self._failover = failover or TinyKernelVisibleFailover()
+        # Optional secondary LLM (e.g. MiMo) tried on ANY recoverable primary error
+        # (429/timeout/quota) before the TinyKernel visible failover — so a flaky
+        # primary endpoint never leaves her silent.
+        self._fallback_provider = fallback_provider
         self._fallback_active_last = False
+        self._fallback_model_active_last = False
         self.config = getattr(primary, "config", LLMConfig(model=getattr(primary, "model", "")))
 
     def __getattr__(self, name: str) -> Any:
@@ -431,7 +447,7 @@ class VisibleFailoverLLMProvider:
 
     @provider_name.setter
     def provider_name(self, value: str) -> None:
-        setattr(self.primary, "provider_name", value)
+        self.primary.provider_name = value
 
     @property
     def provider_native_tools(self) -> frozenset[str]:
@@ -439,7 +455,7 @@ class VisibleFailoverLLMProvider:
 
     @provider_native_tools.setter
     def provider_native_tools(self, value: Any) -> None:
-        setattr(self.primary, "provider_native_tools", frozenset(value or ()))
+        self.primary.provider_native_tools = frozenset(value or ())
 
     @property
     def prompt_cache_key(self) -> str | None:
@@ -447,7 +463,7 @@ class VisibleFailoverLLMProvider:
 
     @prompt_cache_key.setter
     def prompt_cache_key(self, value: str | None) -> None:
-        setattr(self.primary, "prompt_cache_key", value)
+        self.primary.prompt_cache_key = value
 
     @property
     def last_tool_calls(self) -> list[NativeToolCall]:
@@ -473,7 +489,7 @@ class VisibleFailoverLLMProvider:
             return translator(tool)
         return None
 
-    async def __aenter__(self) -> "VisibleFailoverLLMProvider":
+    async def __aenter__(self) -> VisibleFailoverLLMProvider:
         enter = getattr(self.primary, "__aenter__", None)
         if callable(enter):
             await enter()
@@ -503,8 +519,9 @@ class VisibleFailoverLLMProvider:
         **kwargs: Any,
     ) -> AsyncIterator[str]:
         self._fallback_active_last = False
+        self._fallback_model_active_last = False
         context = self._active_failover_context(tools=tools, provider_native_tools=provider_native_tools)
-        if context is None:
+        if context is None and self._fallback_provider is None:
             async for chunk in self.primary.chat(
                 messages,
                 stream=stream,
@@ -527,20 +544,46 @@ class VisibleFailoverLLMProvider:
                 if chunk:
                     yielded = True
                 yield chunk
+            return
         except Exception as exc:
             if yielded or not is_recoverable_llm_error(exc):
                 raise
-            reply = await self._failover.complete(context, primary_error=exc)
-            self._fallback_active_last = True
-            logger.warning(
-                "tinykernel_visible_failover_used",
-                primary_error=type(exc).__name__,
-                scope=context.get("scope"),
-            )
-            yield reply
+            # 1) Model failover (e.g. grok -> MiMo) — applies to any recoverable error.
+            if self._fallback_provider is not None:
+                try:
+                    got = False
+                    async for chunk in self._fallback_provider.chat(
+                        messages,
+                        stream=stream,
+                        tools=tools,
+                        provider_native_tools=provider_native_tools,
+                        **kwargs,
+                    ):
+                        if chunk:
+                            got = True
+                        yield chunk
+                    if got:
+                        self._fallback_model_active_last = True
+                        logger.warning("llm_model_failover_used", primary_error=type(exc).__name__)
+                        return
+                except Exception as exc2:
+                    exc = exc2
+            # 2) TinyKernel visible failover — only when a turn explicitly opted in.
+            if context is not None:
+                reply = await self._failover.complete(context, primary_error=exc)
+                self._fallback_active_last = True
+                logger.warning(
+                    "tinykernel_visible_failover_used",
+                    primary_error=type(exc).__name__,
+                    scope=context.get("scope"),
+                )
+                yield reply
+                return
+            raise
 
     async def chat_complete(self, messages: list[Any], **kwargs: Any) -> ChatResponse:
         self._fallback_active_last = False
+        self._fallback_model_active_last = False
         context = self._active_failover_context(
             tools=kwargs.get("tools"),
             provider_native_tools=kwargs.get("provider_native_tools"),
@@ -548,7 +591,19 @@ class VisibleFailoverLLMProvider:
         try:
             return await self.primary.chat_complete(messages, **kwargs)
         except Exception as exc:
-            if context is None or not is_recoverable_llm_error(exc):
+            if not is_recoverable_llm_error(exc):
+                raise
+            # 1) Model failover (e.g. grok -> MiMo) on any recoverable error.
+            if self._fallback_provider is not None:
+                try:
+                    response = await self._fallback_provider.chat_complete(messages, **kwargs)
+                    self._fallback_model_active_last = True
+                    logger.warning("llm_model_failover_used", primary_error=type(exc).__name__)
+                    return response
+                except Exception as exc2:
+                    exc = exc2
+            # 2) TinyKernel visible failover — only when a turn explicitly opted in.
+            if context is None:
                 raise
             reply = await self._failover.complete(context, primary_error=exc)
             self._fallback_active_last = True
