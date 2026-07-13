@@ -132,17 +132,14 @@ function Stop-GatewayProcessFamily {
         [string]$ScriptPattern
     )
     $ids = New-Object System.Collections.Generic.List[int]
-    $listenerInfo = Get-CimInstance Win32_Process -Filter "ProcessId=$ListenerPid" -ErrorAction SilentlyContinue
-    if ($listenerInfo) {
-        $parentId = [int]$listenerInfo.ParentProcessId
-        if ($parentId -gt 0) {
-            $parentInfo = Get-CimInstance Win32_Process -Filter "ProcessId=$parentId" -ErrorAction SilentlyContinue
-            if ($parentInfo -and [string]$parentInfo.CommandLine -match $ScriptPattern) {
-                $ids.Add($parentId)
-            }
+    foreach ($proc in (Get-CimInstance Win32_Process -Filter "Name='python.exe'" -ErrorAction SilentlyContinue)) {
+        if ([string]$proc.CommandLine -match $ScriptPattern) {
+            $ids.Add([int]$proc.ProcessId)
         }
     }
-    $ids.Add($ListenerPid)
+    if ($ids.Count -eq 0) {
+        $ids.Add($ListenerPid)
+    }
     foreach ($id in ($ids | Select-Object -Unique)) {
         Stop-Process -Id $id -Force -ErrorAction SilentlyContinue
     }
@@ -182,25 +179,25 @@ if ($effectiveBridgeToken) {
     $args += @("--bridge-token", $effectiveBridgeToken)
 }
 
-$process = Start-Process `
+Start-Process `
     -FilePath $venvPython `
     -ArgumentList $args `
     -WorkingDirectory $xinyuDir `
     -RedirectStandardOutput $stdoutLog `
     -RedirectStandardError $stderrLog `
-    -WindowStyle Hidden `
-    -PassThru
+    -WindowStyle Hidden | Out-Null
 
 Start-Sleep -Seconds 2
 
 $listener = Get-NetTCPConnection -LocalAddress $HostAddress -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($listener) {
-    Write-Host "XinYu QQ gateway started. launcher PID: $($process.Id), listener PID: $($listener.OwningProcess)"
+    Write-Host "XinYu QQ gateway started. listener PID: $($listener.OwningProcess)"
     Write-Host "OneBot reverse WebSocket: ws://$HostAddress`:$Port/ws"
     Write-Host "Logs: $stdoutLog"
-} else {
-    Write-Host "XinYu QQ gateway process started but port check failed. PID: $($process.Id)"
-    Write-Host "Check logs: $stdoutLog"
-    Write-Host "Errors: $stderrLog"
-    throw "XinYu QQ gateway failed to listen on $HostAddress`:$Port after startup."
+    exit 0
 }
+
+Write-Host "XinYu QQ gateway process started but port check failed."
+Write-Host "Check logs: $stdoutLog"
+Write-Host "Errors: $stderrLog"
+throw "XinYu QQ gateway failed to listen on $HostAddress`:$Port after startup."

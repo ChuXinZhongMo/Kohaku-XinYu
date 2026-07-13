@@ -12,8 +12,6 @@ from xinyu_memory_health_report import build_memory_health_report
 from xinyu_owner_feedback_effects import build_owner_feedback_effect_report
 from xinyu_stage12_long_term_evaluation import build_stage12_long_term_evaluation
 from xinyu_stage13_self_narrative_store import REPORT_REL
-from xinyu_stage13_self_narrative_store import STATE_REL
-from xinyu_stage13_self_narrative_store import TRACE_REL
 from xinyu_stage13_self_narrative_store import append_stage13_self_narrative_trace_event
 from xinyu_stage13_self_narrative_store import write_stage13_self_narrative_report_text
 from xinyu_stage13_self_narrative_store import write_stage13_self_narrative_state_text
@@ -170,6 +168,41 @@ def _narrative_status(stage12_ready: bool) -> str:
     return "active_available_for_self_narrative" if stage12_ready else "waiting_for_stage12"
 
 
+def _load_kernel_self_story(root: Path) -> dict[str, Any]:
+    """Load kernel engineering self-story summary (K-011), not owner memory."""
+    state_path = root / "memory" / "kernel" / "self_story_state.json"
+    if not state_path.exists():
+        return {
+            "available": False,
+            "summary": "",
+            "cycle_count": 0,
+            "structural_moment_count": 0,
+            "path": "memory/kernel/self_story.md",
+            "source_kind": "kernel_engineering_narrative_not_owner_memory",
+        }
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {
+            "available": False,
+            "summary": "",
+            "cycle_count": 0,
+            "structural_moment_count": 0,
+            "path": "memory/kernel/self_story.md",
+            "source_kind": "kernel_engineering_narrative_not_owner_memory",
+            "load_error": True,
+        }
+    summary = _one_line(state.get("summary"), limit=300, default="")
+    return {
+        "available": bool(summary),
+        "summary": summary,
+        "cycle_count": _int_value(state.get("cycle_count")),
+        "structural_moment_count": _int_value(state.get("structural_moment_count")),
+        "path": _one_line(state.get("path"), limit=120, default="memory/kernel/self_story.md"),
+        "source_kind": "kernel_engineering_narrative_not_owner_memory",
+    }
+
+
 def build_stage13_self_narrative(
     root: Path | str,
     *,
@@ -211,6 +244,7 @@ def build_stage13_self_narrative(
     behavior = _behavior_explanation(chain)
     approved_memory = _approved_memory_or_strategy(stage8_governance, owner_feedback_effect_report)
     current_limits = _current_limits(stage8_governance, historical_recall_debt, chain)
+    kernel_self_story = _load_kernel_self_story(root)
 
     needed_success = _int_value(stage8_governance.get("learning_trial_validation_needed_success_count"))
     memory_governance_state = {
@@ -230,6 +264,7 @@ def build_stage13_self_narrative(
         "visible_reply_text_retained": False,
         "dream_or_body_or_fake_sensor_claim": False,
         "unapproved_stable_memory_as_fact": False,
+        "kernel_self_story_as_approved_memory": False,
         "historical_recall_debt_hidden": False,
         "stable_memory_write": "blocked",
         "qq_message_enqueued": False,
@@ -248,7 +283,8 @@ def build_stage13_self_narrative(
         "behavior_explanation": behavior,
         "memory_governance_state": memory_governance_state,
         "historical_recall_debt": historical_recall_debt,
-        "narrative_source": "verifiable_status_fields_only",
+        "kernel_self_story": kernel_self_story,
+        "narrative_source": "verifiable_status_fields_and_kernel_self_story_summary",
         "next_step": (
             "stage13_self_narrative_available_from_verifiable_evidence"
             if available
@@ -275,6 +311,7 @@ def build_stage13_self_narrative(
             "owner_feedback_effect": "memory/context/owner_feedback_effect_state.md",
             "stage8_memory_governance": "memory/context/stage8_memory_governance_state.md",
             "stage8_learning_trial_validation": "memory/context/stage8_learning_trial_validation_state.md",
+            "kernel_self_story": "memory/kernel/self_story.md",
         },
         "boundaries": boundaries,
     }
@@ -287,6 +324,7 @@ def render_stage13_self_narrative(report: dict[str, Any]) -> str:
     approved = model.get("approved_memory_or_strategy_influence") if isinstance(model.get("approved_memory_or_strategy_influence"), dict) else {}
     governance = model.get("memory_governance_state") if isinstance(model.get("memory_governance_state"), dict) else {}
     debt = model.get("historical_recall_debt") if isinstance(model.get("historical_recall_debt"), dict) else {}
+    kernel_story = model.get("kernel_self_story") if isinstance(model.get("kernel_self_story"), dict) else {}
     lines = [
         "# XinYu Stage 13 Self Narrative",
         "",
@@ -359,6 +397,14 @@ def render_stage13_self_narrative(report: dict[str, Any]) -> str:
             f"- status: {_one_line(debt.get('status'))}",
             f"- issue_count: {debt.get('issue_count', 0)}",
             "",
+            "## Kernel Self Story (Engineering Narrative)",
+            f"- available: {_bool_text(kernel_story.get('available', False))}",
+            f"- source_kind: {_one_line(kernel_story.get('source_kind'), limit=120)}",
+            f"- cycle_count: {kernel_story.get('cycle_count', 0)}",
+            f"- structural_moment_count: {kernel_story.get('structural_moment_count', 0)}",
+            f"- path: {_one_line(kernel_story.get('path'), limit=120)}",
+            f"- summary: {_one_line(kernel_story.get('summary'), limit=300) if kernel_story.get('summary') else 'none'}",
+            "",
             "## Boundaries",
         ]
     )
@@ -394,6 +440,7 @@ def write_stage13_self_narrative_state(
     behavior = model.get("behavior_explanation") if isinstance(model.get("behavior_explanation"), dict) else {}
     governance = model.get("memory_governance_state") if isinstance(model.get("memory_governance_state"), dict) else {}
     debt = model.get("historical_recall_debt") if isinstance(model.get("historical_recall_debt"), dict) else {}
+    kernel_story = model.get("kernel_self_story") if isinstance(model.get("kernel_self_story"), dict) else {}
     target_report = report_path or (root / REPORT_REL)
     text = f"""---
 title: Stage 13 Self Narrative State
@@ -429,6 +476,10 @@ tags: [autonomy, self-narrative, stage13, audit]
 - stage13_memory_promoted_to_stable_fact: {_bool_text(governance.get('memory_promoted_to_stable_fact', False))}
 - stage13_historical_recall_debt_status: {debt.get('status', 'missing')}
 - stage13_historical_recall_debt_issue_count: {debt.get('issue_count', 0)}
+- stage13_kernel_self_story_available: {_bool_text(kernel_story.get('available', False))}
+- stage13_kernel_self_story_cycle_count: {kernel_story.get('cycle_count', 0)}
+- stage13_kernel_self_story_structural_moment_count: {kernel_story.get('structural_moment_count', 0)}
+- stage13_kernel_self_story_summary: {_one_line(kernel_story.get('summary'), limit=200) if kernel_story.get('summary') else 'none'}
 - stage13_next_step: {model.get('next_step', 'missing')}
 - stage13_contract: {model.get('stage13_contract', 'missing')}
 
@@ -437,6 +488,7 @@ tags: [autonomy, self-narrative, stage13, audit]
 - visible_reply_text_retained: {_bool_text(boundaries.get('visible_reply_text_retained', False))}
 - dream_or_body_or_fake_sensor_claim: {_bool_text(boundaries.get('dream_or_body_or_fake_sensor_claim', False))}
 - unapproved_stable_memory_as_fact: {_bool_text(boundaries.get('unapproved_stable_memory_as_fact', False))}
+- kernel_self_story_as_approved_memory: {_bool_text(boundaries.get('kernel_self_story_as_approved_memory', False))}
 - historical_recall_debt_hidden: {_bool_text(boundaries.get('historical_recall_debt_hidden', False))}
 - stable_memory_write: {boundaries.get('stable_memory_write', 'blocked')}
 - qq_message_enqueued: {_bool_text(boundaries.get('qq_message_enqueued', False))}

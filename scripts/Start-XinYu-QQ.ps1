@@ -28,6 +28,7 @@ if (-not $NapCatDir) {
 $CoreStart = Join-Path $CoreDir "start_xinyu_core_bridge.ps1"
 $GatewayStart = Join-Path $CoreDir "start_xinyu_qq_gateway.ps1"
 $NapCatBat = Join-Path $NapCatDir "napcat.bat"
+$TinyKernelStart = Join-Path $Root "scripts\Start-XinYu-TinyKernel.ps1"
 
 function Test-HttpOk {
     param(
@@ -192,7 +193,22 @@ if (-not (Test-Path -LiteralPath $NapCatBat)) {
     throw "NapCat start script not found: $NapCatBat"
 }
 
-Write-Host "`n[1/3] XinYu core bridge"
+Write-Host "`n[0/4] XinYu TinyKernel shadow"
+if (Test-ListeningPort 8877) {
+    Write-Host "[ok] TinyKernel already running: http://127.0.0.1:8877"
+} elseif (Test-Path -LiteralPath $TinyKernelStart) {
+    & $TinyKernelStart
+    Start-Sleep -Seconds 2
+    if (Test-ListeningPort 8877) {
+        Write-Host "[ok] TinyKernel started: http://127.0.0.1:8877"
+    } else {
+        Write-Host "[warn] TinyKernel did not start on port 8877 — shadow log will be unavailable"
+    }
+} else {
+    Write-Host "[skip] TinyKernel start script not found: $TinyKernelStart"
+}
+
+Write-Host "`n[1/4] XinYu core bridge"
 $coreHealth = Get-CoreHealth
 $coreAlreadyRunning = $null -ne $coreHealth
 $coreSourceVersion = Get-CoreSourceVersion
@@ -236,7 +252,7 @@ Require-Until -TimeoutSeconds 10 -Label "XinYu no-memory probe" -FailureMessage 
     Test-HttpOk "http://127.0.0.1:8765/probe?text=startup" -Headers (Get-BridgeHeaders)
 }
 
-Write-Host "`n[2/3] XinYu native QQ gateway"
+Write-Host "`n[2/4] XinYu native QQ gateway"
 if (Test-ListeningPort 6199) {
     $gatewayCommandLine = Get-ListeningProcessCommandLine 6199
     if ($gatewayCommandLine -match "xinyu_qq_gateway\.py") {
@@ -266,14 +282,15 @@ Require-Until -TimeoutSeconds 45 -Label "XinYu QQ gateway OneBot server 6199" -F
     Test-ListeningPort 6199
 }
 
-Write-Host "`n[3/3] NapCat QQ"
+Write-Host "`n[3/4] NapCat QQ"
 if (Test-HttpOk "http://127.0.0.1:6099/webui/") {
     Write-Host "[ok] NapCat WebUI already running: http://127.0.0.1:6099/webui/"
 } else {
-    $cmdArgs = if ($NapCatConsoleWindowStyle -eq "Hidden") { @("/c", "napcat.bat") } else { @("/k", "napcat.bat") }
+    $napCatBatFull = "`"$NapCatBat`""
+    $cmdVerb = if ($NapCatConsoleWindowStyle -eq "Hidden") { "/c" } else { "/k" }
     Start-Process `
         -FilePath "C:\Windows\System32\cmd.exe" `
-        -ArgumentList $cmdArgs `
+        -ArgumentList "$cmdVerb $napCatBatFull" `
         -WorkingDirectory $NapCatDir `
         -WindowStyle $NapCatConsoleWindowStyle
     Write-Host "[start] NapCat visible window requested"
@@ -289,7 +306,9 @@ Require-Until -TimeoutSeconds 60 -Label "NapCat -> XinYu QQ gateway WebSocket" -
     return $null -ne $connection
 }
 
+Write-Host "`n[4/4] Verify"
 Write-Host "`n=== URLs ==="
+Write-Host "TinyKernel:    http://127.0.0.1:8877"
 Write-Host "NapCat:        http://127.0.0.1:6099/webui/"
 Write-Host "XinYu Core:    http://127.0.0.1:8765/health"
 Write-Host "XinYu QQ WS:   ws://127.0.0.1:6199/ws"

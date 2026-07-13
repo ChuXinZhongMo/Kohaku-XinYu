@@ -16,6 +16,8 @@ if str(CUSTOM_DIR) not in sys.path:
 from memory_consistency_gate_engine import run_memory_consistency_gate  # noqa: E402
 from memory_event_schema import dump_jsonl, load_jsonl, sha256_text  # noqa: E402
 
+from xinyu_group_memory_pipeline import structured_event_for_group  # noqa: E402
+
 
 URL_RE = re.compile(r"https?://[^\s<>()]+|www\.[^\s<>()]+", re.I)
 VOICE_CORRECTION_MARKERS = (
@@ -182,7 +184,13 @@ def _raw_event(
     }
 
 
-def _structured_event(raw: dict[str, Any], payload: dict[str, Any], *, event_kind: str) -> dict[str, Any]:
+def _structured_event(
+    raw: dict[str, Any],
+    payload: dict[str, Any],
+    *,
+    event_kind: str,
+    root: Path | None = None,
+) -> dict[str, Any]:
     source_channel = _safe_str(raw.get("source_channel"))
     actor_scope = _safe_str(raw.get("actor_scope"))
     if event_kind == "action_experience":
@@ -207,11 +215,17 @@ def _structured_event(raw: dict[str, Any], payload: dict[str, Any], *, event_kin
         salience = 64
         routing_extra = []
     elif source_channel in {"qq_group", "priority_learning_group"} or actor_scope == "group_member":
-        allowed = ["context/group", "knowledge/source_candidates"]
-        blocked = ["relationships/owner", "stable_knowledge_direct_write"]
-        turn_mode = "observe_only" if source_channel == "priority_learning_group" else "group_context_candidate"
-        salience = 58
-        routing_extra = []
+        group_cfg = structured_event_for_group(
+            root,
+            source_channel=source_channel,
+            actor_scope=actor_scope,
+            priority_learning=source_channel == "priority_learning_group",
+        )
+        allowed = group_cfg["allowed"]
+        blocked = group_cfg["blocked"]
+        turn_mode = group_cfg["turn_mode"]
+        salience = group_cfg["salience"]
+        routing_extra = group_cfg["routing_extra"]
     else:
         allowed = ["context/external_contact", "knowledge/source_candidates"]
         blocked = ["relationships/owner"]
@@ -457,7 +471,102 @@ def _record(
         actor_scope=actor_scope,
         privacy_scope=privacy_scope,
     )
-    structured = _structured_event(raw, payload, event_kind=event_kind)
+    structured = _structured_event(raw, payload, event_kind=event_kind, root=root)
+
+    # === Lightweight Experience Processor integration (guarded, non-breaking) ===
+    # New events now receive importance_score and belief_update_proposals.
+    # The processor output influences "salience" (existing field) and can carry
+    # proposals for future Belief / World Model layers.
+    # See experience/processor.py and experience/models.py
+    try:
+        import sys
+        from pathlib import Path as _Path
+        _exp_dir = _Path(__file__).resolve().parent / "experience"
+        if str(_exp_dir) not in sys.path:
+            sys.path.insert(0, str(_exp_dir.parent))  # allow "from experience import ..."
+        from experience.processor import ExperienceProcessor as _ExperienceProcessor  # type: ignore
+        _exp_input = {**raw, "turn_mode": _safe_str(payload.get("turn_mode") or _payload_metadata(payload).get("turn_mode", ""))}
+        _exp_res = _ExperienceProcessor().process(_exp_input)
+        # Boost salience using experience judgment (never lower)
+        _cur_sal = int(structured.get("salience", 30) or 30)
+        structured["salience"] = max(_cur_sal, _exp_res.importance_score)
+        if _exp_res.belief_update_proposals:
+            structured["experience_proposals"] = [p.model_dump() for p in _exp_res.belief_update_proposals]
+        if _exp_res.notes:
+            structured["experience_notes"] = _exp_res.notes
+    except Exception:
+        # Experience processing is best-effort. Never break the core event log.
+        pass
+
+    # === K-009: Full cognitive cycle AFTER real Experience ===
+    try:
+        import sys
+        from pathlib import Path as _Path
+        _exp_dir = _Path(__file__).resolve().parent / "experience"
+        if str(_exp_dir) not in sys.path:
+            sys.path.insert(0, str(_exp_dir.parent))
+        from kernel.runtime_self import get_or_create_runtime_self
+        from kernel.cognitive_cycle import run_full_cognitive_cycle
+
+        _imp = int(structured.get("salience", 30) or 30)
+        if _imp > 40:
+            _kernel_self = get_or_create_runtime_self(root)
+            _cycle_res = run_full_cognitive_cycle(
+                _kernel_self,
+                {**raw, "turn_mode": _safe_str(payload.get("turn_mode") or _payload_metadata(payload).get("turn_mode", ""))},
+                outcome_reality=raw.get("raw_text", "")[:300],
+                source_event_id=structured.get("structured_id") or "unknown",
+                event_root=root,
+            )
+            structured["cognitive_cycle_closed"] = _cycle_res.get("cycle_closed", False)
+            structured["cognitive_reorg_mode"] = _cycle_res.get("reorg_mode")
+            structured["cognitive_structural_impact"] = _cycle_res.get("structural_impact", False)
+            if _cycle_res.get("structural_impact"):
+                structured["reorg_impact"] = True
+                structured["reorg_applied_count"] = _cycle_res.get("reorg_applied_count", 0)
+                structured["reorg_pending_count"] = _cycle_res.get("reorg_pending_count", 0)
+                structured["reorg_working_memory_after"] = (_cycle_res.get("self_snapshot") or {}).get("working_memory_size", 0)
+            try:
+                from xinyu_kernel_goal_bridge import sync_kernel_goal_signals
+
+                sync_kernel_goal_signals(root, cycle_result=_cycle_res)
+            except Exception:
+                pass
+            _wm_stage = ((_cycle_res.get("stages") or {}).get("prediction") or {}).get("world_model_result") or {}
+            if _wm_stage.get("updated"):
+                structured["world_model_updated_post_experience"] = True
+                structured["world_model_review_status"] = _wm_stage.get("review_status", "candidate")
+                structured["world_model_impact"] = str(_wm_stage.get("world_context", ""))[:200]
+    except Exception:
+        pass  # best-effort, never break the event sourcing pipeline
+
+    # === Self Model update integration (guarded, non-breaking, K-002) ===
+    # Self model changes from high-importance experiences are recorded separately
+    # and can enrich structured events.
+    try:
+        import sys
+        from pathlib import Path as _Path
+        _kernel_dir = _Path(__file__).resolve().parent / "kernel"
+        if str(_kernel_dir) not in sys.path:
+            sys.path.insert(0, str(_kernel_dir.parent))
+        from kernel.self_change_recorder import record_self_model_change as _record_self_change
+        from kernel.self import Self as _KernelSelf
+        # Only if there were recent self model proposals (lightweight check via metadata or notes)
+        if any("self" in str(n).lower() or "boundary" in str(n).lower() for n in structured.get("experience_notes", [])):
+            # In practice the adapter would have called this; here we ensure event enrichment
+            _dummy_self = _KernelSelf(self_id="xinyu_runtime_self")  # placeholder - real flow uses persistent self
+            _self_evt = _record_self_change(
+                _dummy_self,
+                "runtime_observed",
+                {"event_kind": event_kind, "structured_id": structured.get("structured_id")},
+                root,
+            )
+            if _self_evt.get("core_statements"):
+                structured["self_model_snapshot"] = _self_evt.get("core_statements")
+    except Exception:
+        # Self model recording is best-effort.
+        pass
+
     claims = _claims_for_text(raw, payload, event_kind=event_kind)
     summary = _summary_for_claims(raw, claims, event_kind=event_kind)
     event_dir = _event_dir(root)

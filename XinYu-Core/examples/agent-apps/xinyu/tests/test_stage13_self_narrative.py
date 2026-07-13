@@ -78,6 +78,34 @@ def _build(tmp_path: Path, *, ready: bool, decision_chain: dict | None = None, *
     )
 
 
+def test_stage13_merges_kernel_self_story_summary(tmp_path: Path) -> None:
+    kernel_dir = tmp_path / "memory" / "kernel"
+    kernel_dir.mkdir(parents=True)
+    (kernel_dir / "self_story_state.json").write_text(
+        json.dumps(
+            {
+                "self_id": "xinyu_runtime_self",
+                "cycle_count": 7,
+                "structural_moment_count": 2,
+                "summary": "Current orientation: stay honest and direct.",
+                "path": "memory/kernel/self_story.md",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    report = _build(tmp_path, ready=True)
+    story = report["model"]["kernel_self_story"]
+    rendered = render_stage13_self_narrative(report)
+
+    assert story["available"] is True
+    assert story["cycle_count"] == 7
+    assert story["source_kind"] == "kernel_engineering_narrative_not_owner_memory"
+    assert report["boundaries"]["kernel_self_story_as_approved_memory"] is False
+    assert "Kernel Self Story" in rendered
+    assert "stay honest and direct" in rendered
+
+
 def test_stage13_available_when_stage12_ready(tmp_path: Path) -> None:
     report = _build(tmp_path, ready=True)
 
@@ -87,7 +115,7 @@ def test_stage13_available_when_stage12_ready(tmp_path: Path) -> None:
     # Narrative is built only from verifiable evidence fields.
     assert report["model"]["feedback_influence_count"] == 2
     assert report["model"]["behavior_explanation"]["behavior_mode"] == "visible_reply"
-    assert report["model"]["narrative_source"] == "verifiable_status_fields_only"
+    assert report["model"]["narrative_source"] == "verifiable_status_fields_and_kernel_self_story_summary"
     # Historical recall debt is surfaced, never hidden.
     assert report["model"]["historical_recall_debt"]["status"] == "debt_present"
     assert report["model"]["historical_recall_debt"]["issue_count"] == 2

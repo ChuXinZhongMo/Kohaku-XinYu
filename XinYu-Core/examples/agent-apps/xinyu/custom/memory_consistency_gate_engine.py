@@ -15,7 +15,8 @@ from memory_event_schema import (
     SUMMARY_REQUIRED,
     is_dream_event,
     is_group_or_non_owner,
-    is_owner_relationship_layer,
+    is_owner_relationship_candidate_layer,
+    is_owner_relationship_stable_layer,
     load_jsonl,
     missing_fields,
     sha256_text,
@@ -25,6 +26,20 @@ from memory_event_schema import (
 
 def _event_dir(root: Path) -> Path:
     return root / "memory/events"
+
+
+def _group_candidate_layers_allowed(root: Path) -> bool:
+    try:
+        import sys
+
+        xinyu_root = Path(__file__).resolve().parents[1]
+        if str(xinyu_root) not in sys.path:
+            sys.path.insert(0, str(xinyu_root))
+        from xinyu_group_memory_pipeline import group_full_memory_pipeline_enabled
+
+        return group_full_memory_pipeline_enabled(root)
+    except Exception:
+        return False
 
 
 def _read_sidecars(root: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
@@ -169,6 +184,8 @@ def _validate_claims(
     claims: list[dict[str, Any]],
     raw_index: dict[str, dict[str, Any]],
     failures: list[str],
+    *,
+    root: Path,
 ) -> dict[str, dict[str, Any]]:
     index: dict[str, dict[str, Any]] = {}
     for row in claims:
@@ -204,8 +221,11 @@ def _validate_claims(
 
         if claim_type == "fact" and any(is_dream_event(event) for event in evidence_events):
             failures.append(f"claim:{claim_id} dream evidence cannot create factual memory")
-        if any(is_group_or_non_owner(event) for event in evidence_events) and is_owner_relationship_layer(target_layer):
-            failures.append(f"claim:{claim_id} group/non-owner evidence cannot target owner relationship memory")
+        if any(is_group_or_non_owner(event) for event in evidence_events):
+            if is_owner_relationship_stable_layer(target_layer):
+                failures.append(f"claim:{claim_id} group/non-owner evidence cannot target stable owner relationship memory")
+            elif is_owner_relationship_candidate_layer(target_layer) and not _group_candidate_layers_allowed(root):
+                failures.append(f"claim:{claim_id} group/non-owner evidence cannot target owner relationship candidates")
         if claim_type == "source_candidate" and status == "stable":
             failures.append(f"claim:{claim_id} source_candidate cannot be stable without learning gates")
         if claim_type == "dream_residue" and status == "stable":
@@ -282,7 +302,7 @@ def run_memory_consistency_gate(
 
     raw_index = _validate_raw_events(raw_events, failures)
     _validate_structured_events(structured_events, raw_index, failures)
-    claim_index = _validate_claims(claims, raw_index, failures)
+    claim_index = _validate_claims(claims, raw_index, failures, root=root)
     _validate_summaries(summaries, raw_index, claim_index, failures)
 
     passed = not failures

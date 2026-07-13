@@ -19,6 +19,11 @@ from xinyu_dialogue_archive import (
     store_memory_candidate,
     store_temporal_trace_from_candidate,
 )
+from xinyu_group_memory_pipeline import (
+    group_full_memory_pipeline_enabled,
+    group_owner_relationship_candidates_allowed,
+    is_owner_in_group_payload,
+)
 from xinyu_memory_immune_gate import BLOCK
 from xinyu_memory_immune_gate import evaluate_memory_immune_gate
 from xinyu_memory_candidate_analysis import candidate_claim_metadata
@@ -381,15 +386,19 @@ def build_candidate_specs(
     visible_turn: Any | None = None,
     post_reply_observation: dict[str, Any] | None = None,
     quality_flags: list[str] | dict[str, Any] | None = None,
+    root: Path | None = None,
 ) -> list[CandidateSpec]:
     scope = resolve_dialogue_scope(payload)
     owner_private = scope.scope == OWNER_PRIVATE_SCOPE
     group_scope = scope.scope == GROUP_SCOPE
+    owner_in_group = group_scope and is_owner_in_group_payload(payload) and group_full_memory_pipeline_enabled(root)
+    owner_memory_scope = owner_private or owner_in_group
     combined = f"{user_text}\n{assistant_reply}"
     specs: list[CandidateSpec] = []
     post_reply_success_count = _post_reply_growth_success_count(post_reply_observation, quality_flags)
+    scope_label = "owner-private" if owner_private else ("owner-in-group" if owner_in_group else "scoped")
 
-    if owner_private and post_reply_success_count >= 2 and _contains_any(user_text, OWNER_POSITIVE_FEEDBACK_MARKERS):
+    if owner_memory_scope and post_reply_success_count >= 2 and _contains_any(user_text, OWNER_POSITIVE_FEEDBACK_MARKERS):
         marker_count = len(_matched(user_text, OWNER_POSITIVE_FEEDBACK_MARKERS))
         specs.append(
             CandidateSpec(
@@ -408,41 +417,41 @@ def build_candidate_specs(
             )
         )
 
-    if owner_private and _contains_any(user_text, VOICE_CORRECTION_MARKERS):
+    if owner_memory_scope and _contains_any(user_text, VOICE_CORRECTION_MARKERS):
         markers = ", ".join(_matched(user_text, VOICE_CORRECTION_MARKERS)) or "voice_pressure"
         specs.append(
             CandidateSpec(
                 candidate_type="voice_correction",
                 target_gate="voice_calibration_review",
                 target_memory_layer="memory/self/voice_calibration_log.md",
-                reason=f"owner-private voice/style correction markers: {markers}",
+                reason=f"{scope_label} voice/style correction markers: {markers}",
                 confidence_score=72,
                 text=_candidate_text(user_text, assistant_reply, prefix="voice correction candidate; stable voice rewrite blocked"),
             )
         )
 
     preference_hit = _contains_any(user_text, OWNER_PREFERENCE_MARKERS)
-    if owner_private and preference_hit and not _contains_any(user_text, VOICE_CORRECTION_MARKERS):
+    if owner_memory_scope and preference_hit and not _contains_any(user_text, VOICE_CORRECTION_MARKERS):
         markers = ", ".join(_matched(user_text, OWNER_PREFERENCE_MARKERS)) or "owner_preference"
         specs.append(
             CandidateSpec(
                 candidate_type="owner_preference",
                 target_gate="owner_memory_review",
                 target_memory_layer="memory/people/owner.md",
-                reason=f"possible owner preference; review for repetition and stability: {markers}",
+                reason=f"possible owner preference ({scope_label}); review for repetition and stability: {markers}",
                 confidence_score=58,
                 text=_candidate_text(user_text, assistant_reply, prefix="owner preference candidate; temporary mood must not become stable"),
             )
         )
 
-    if owner_private and _contains_any(combined, RELATIONSHIP_MARKERS):
+    if owner_memory_scope and _contains_any(combined, RELATIONSHIP_MARKERS):
         markers = ", ".join(_matched(combined, RELATIONSHIP_MARKERS)) or "relationship_signal"
         specs.append(
             CandidateSpec(
                 candidate_type="relationship_signal",
                 target_gate="relationship_emotion_review",
                 target_memory_layer="memory/relationships/index.md",
-                reason=f"owner-private relationship or emotional residue markers: {markers}",
+                reason=f"{scope_label} relationship or emotional residue markers: {markers}",
                 confidence_score=54,
                 text=_candidate_text(user_text, assistant_reply, prefix="relationship signal candidate; not a fixed owner label"),
             )
@@ -453,8 +462,8 @@ def build_candidate_specs(
         markers = ", ".join(_matched(combined, PROJECT_MARKERS)) or _visible_turn_kind(visible_turn) or "project_continuity"
         layer = "memory/context/recent_context.md"
         reason = f"project/runtime continuity signal: {markers}"
-        if group_scope:
-            reason += "; group-scoped and not owner relationship memory"
+        if group_scope and not owner_in_group:
+            reason += "; group-scoped non-owner turn; owner relationship memory blocked"
         specs.append(
             CandidateSpec(
                 candidate_type="project_fact",
@@ -508,6 +517,7 @@ def extract_memory_candidates(
         visible_turn=visible_turn,
         post_reply_observation=post_reply_observation,
         quality_flags=enriched_quality_flags,
+        root=root,
     )
     message_ids = [int(item) for item in (source_message_ids or []) if isinstance(item, int)]
     scope = resolve_dialogue_scope(payload)
@@ -591,7 +601,10 @@ def extract_memory_candidates(
     if traces_inserted:
         notes.append("temporal_trace_queued")
     if scope.scope == GROUP_SCOPE:
-        notes.append("group_scope_owner_relationship_candidates_blocked")
+        if group_owner_relationship_candidates_allowed(root, payload):
+            notes.append("group_full_pipeline_owner_candidates_enabled")
+        else:
+            notes.append("group_scope_owner_relationship_candidates_blocked")
     return {
         "candidate_count": inserted,
         "candidate_ids": candidate_ids,

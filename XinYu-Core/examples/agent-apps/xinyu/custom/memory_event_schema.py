@@ -77,14 +77,24 @@ CLAIM_STATUSES = {
 GROUP_SOURCE_CHANNELS = {"qq_group", "priority_learning_group", "group"}
 NON_OWNER_ACTOR_SCOPES = {"non_owner", "group_member", "external_contact"}
 DREAM_SOURCE_CHANNELS = {"dream", "dream_output"}
-OWNER_RELATIONSHIP_LAYERS = {
+OWNER_RELATIONSHIP_STABLE_LAYERS = {
     "relationships/owner",
     "relationship/owner",
     "owner_relationship",
     "memory/relationships/owner_patterns.md",
+}
+
+OWNER_RELATIONSHIP_CANDIDATE_LAYERS = {
+    "relationships/owner_candidate",
+    "reflection",
+    "self/voice_review",
+    "memory/reflection/growth_log.md",
+    "memory/self/voice_calibration_log.md",
     "memory/relationships/index.md",
     "memory/people/owner.md",
 }
+
+OWNER_RELATIONSHIP_LAYERS = OWNER_RELATIONSHIP_STABLE_LAYERS | OWNER_RELATIONSHIP_CANDIDATE_LAYERS
 
 
 def sha256_text(text: str) -> str:
@@ -144,8 +154,19 @@ def is_dream_event(raw_event: dict[str, Any] | None) -> bool:
     return str(raw_event.get("source_channel", "")).strip() in DREAM_SOURCE_CHANNELS
 
 
-def is_owner_relationship_layer(layer: str) -> bool:
+def is_owner_relationship_stable_layer(layer: str) -> bool:
     normalized = layer.strip()
-    if normalized in OWNER_RELATIONSHIP_LAYERS:
+    if normalized in OWNER_RELATIONSHIP_STABLE_LAYERS:
         return True
-    return normalized.startswith("relationships/owner") or normalized.startswith("owner/")
+    return normalized.startswith("relationships/owner/") and not normalized.startswith("relationships/owner_candidate")
+
+
+def is_owner_relationship_candidate_layer(layer: str) -> bool:
+    normalized = layer.strip()
+    if normalized in OWNER_RELATIONSHIP_CANDIDATE_LAYERS:
+        return True
+    return normalized.startswith("memory/reflection/") or normalized.startswith("memory/self/voice_")
+
+
+def is_owner_relationship_layer(layer: str) -> bool:
+    return is_owner_relationship_stable_layer(layer) or is_owner_relationship_candidate_layer(layer)

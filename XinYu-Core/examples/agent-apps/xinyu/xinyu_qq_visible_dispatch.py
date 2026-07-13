@@ -28,6 +28,35 @@ def visible_reply(gateway: Any, text: str) -> str:
     return reply
 
 
+async def send_reply_bubbles(
+    gateway: Any,
+    websocket: Any,
+    target: ReplyTarget,
+    bubbles: list[str],
+) -> dict[str, Any] | None:
+    if not bubbles:
+        return None
+    responses: list[dict[str, Any] | None] = []
+    wait_seconds = max(3.0, float(getattr(gateway.config, "onebot_action_retry_delay_seconds", 1.5)) * 2)
+    for index, bubble in enumerate(bubbles):
+        if index > 0:
+            delay = max(0.0, float(getattr(gateway.config, "reply_bubble_delay_seconds", 0.6)))
+            if delay:
+                await asyncio.sleep(delay)
+        active_ws = await gateway._resolve_action_websocket(websocket, wait_seconds=wait_seconds)
+        if active_ws is None:
+            responses.append(
+                {
+                    "status": "failed",
+                    "retcode": -1,
+                    "message": "napcat websocket unavailable",
+                }
+            )
+            continue
+        responses.append(await gateway.send_reply(active_ws, target, bubble))
+    return combined_reply_action_response(gateway, responses)
+
+
 async def send_visible_reply(
     gateway: Any,
     websocket: Any,
@@ -36,16 +65,7 @@ async def send_visible_reply(
     core_response: dict[str, Any],
 ) -> dict[str, Any] | None:
     bubbles = gateway._visible_reply_bubbles(prepared, reply, core_response)
-    if not bubbles:
-        return None
-    responses: list[dict[str, Any] | None] = []
-    for index, bubble in enumerate(bubbles):
-        if index > 0:
-            delay = max(0.0, gateway.config.reply_bubble_delay_seconds)
-            if delay:
-                await asyncio.sleep(delay)
-        responses.append(await gateway.send_reply(websocket, prepared.target, bubble))
-    return combined_reply_action_response(gateway, responses)
+    return await send_reply_bubbles(gateway, websocket, prepared.target, bubbles)
 
 
 def record_direct_visible_send_shadow(
@@ -128,7 +148,9 @@ def combined_reply_action_response(gateway: Any, responses: list[dict[str, Any] 
             message_ids.append(adapter_message_id)
         elif adapter_error:
             errors.append(adapter_error)
-    if message_ids:
+    total_count = len(responses)
+    sent_count = len(message_ids)
+    if sent_count == total_count:
         if not delivery_kinds:
             combined_kind = "text"
         else:
@@ -142,9 +164,28 @@ def combined_reply_action_response(gateway: Any, responses: list[dict[str, Any] 
                 "message_id": ",".join(message_ids),
                 "reply_bubble_message_ids": message_ids,
                 "reply_bubble_delivery_kinds": delivery_kinds,
-                "reply_bubble_count": len(responses),
+                "reply_bubble_count": total_count,
                 "delivery_kind": combined_kind,
             },
             "message": "; ".join(errors),
+        }
+    if sent_count > 0:
+        partial_error = f"partial_reply_delivery:{sent_count}/{total_count}"
+        if errors:
+            partial_error = f"{partial_error}; " + "; ".join(errors)
+        print(f"[xinyu_qq_gateway] QQ reply partial delivery: {partial_error}", flush=True)
+        return {
+            "status": "failed",
+            "retcode": -1,
+            "xinyu_partial_delivery": True,
+            "message": partial_error,
+            "data": {
+                "message_id": ",".join(message_ids),
+                "reply_bubble_message_ids": message_ids,
+                "reply_bubble_delivery_kinds": delivery_kinds,
+                "reply_bubble_sent_count": sent_count,
+                "reply_bubble_count": total_count,
+                "partial_delivery": True,
+            },
         }
     return responses[-1]

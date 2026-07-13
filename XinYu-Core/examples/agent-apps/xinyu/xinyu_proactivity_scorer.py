@@ -21,6 +21,7 @@ from xinyu_proactive_contract import (
     PROACTIVE_URGENT_SOURCE_TYPES,
     should_surface_runtime_error,
 )
+from xinyu_proactive_kernel_gate import merge_kernel_gate_into_context, read_proactive_kernel_gate
 
 
 TRACE_REL = Path("memory/context/proactive_decision_trace.jsonl")
@@ -307,6 +308,9 @@ def score_proactive_candidate(
     novelty_score = _clamp(base["novelty_score"] + _hint_bonus(candidate.novelty_hint, ("new", "latest", "fresh")))
     inner_pressure = _clamp(base["inner_pressure"] + int(candidate.emotional_weight / 10))
 
+    kernel_gate = gate_context.get("kernel_gate") if isinstance(gate_context.get("kernel_gate"), dict) else {}
+    kernel_score_penalty = _safe_int(kernel_gate.get("score_penalty"), 0)
+
     interruption_cost = _interruption_cost(gate_context, source_type)
     repetition_penalty = 35 if candidate_signature(candidate) in previous_signatures else 0
     uncertainty_penalty = max(0, int((100 - _clamp(candidate.confidence)) / 2))
@@ -328,6 +332,7 @@ def score_proactive_candidate(
         - uncertainty_penalty
         - flavor_penalty
         - stale_penalty
+        - kernel_score_penalty
     )
     positive_reasons = _score_reasons(
         {
@@ -345,6 +350,7 @@ def score_proactive_candidate(
             "uncertainty_penalty": uncertainty_penalty,
             "flavor_penalty": flavor_penalty,
             "stale_penalty": stale_penalty,
+            "kernel_score_penalty": kernel_score_penalty,
         }
     )
     if hard_blocks:
@@ -376,7 +382,7 @@ def decide_proactive_candidate(
     gate_context: dict[str, Any] | None = None,
 ) -> ProactiveDecision:
     source_type = _known_source_type(candidate.source_type)
-    recommendation = _threshold_recommendation(source_type, score.total_score)
+    recommendation = _threshold_recommendation(source_type, score.total_score, gate_context=gate_context or {})
     hard_blocks = list(score.hard_blocks)
 
     if "owner_visible_text_internal_marker" in hard_blocks:
@@ -845,7 +851,22 @@ def _build_gate_context(root: Path, *, checked_at: str, overrides: dict[str, Any
         "style_repair_realtime_pressure": style_repair_realtime_pressure,
     }
     merged.update(overrides)
+    if "kernel_gate" not in merged:
+        merged = merge_kernel_gate_into_context(merged, read_proactive_kernel_gate(root))
     return merged
+
+
+def build_proactive_gate_context(
+    root: Path,
+    *,
+    checked_at: str | None = None,
+    overrides: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return _build_gate_context(
+        root,
+        checked_at=_timestamp_or_now_iso(checked_at),
+        overrides=overrides or {},
+    )
 
 
 def _style_repair_realtime_pressure_status(root: Path) -> str:
@@ -903,6 +924,9 @@ def _hard_blocks(candidate: ProactiveCandidate, *, gate_context: dict[str, Any],
         blocks.append("qq_send_disabled_for_owner_long_idle_v0")
     if _stale_penalty(candidate, checked_at=checked_at) >= 80:
         blocks.append("candidate_expired_drop")
+    kernel_gate = gate_context.get("kernel_gate") if isinstance(gate_context.get("kernel_gate"), dict) else {}
+    if kernel_gate.get("hold_non_urgent") and candidate.source_type not in URGENT_TYPES:
+        blocks.append("kernel_review_pressure_hold")
     return blocks
 
 
@@ -925,11 +949,23 @@ def _interruption_cost(gate_context: dict[str, Any], source_type: str) -> int:
         cost += 22
     if source_type in URGENT_TYPES:
         cost = max(0, cost - 18)
+    kernel_gate = gate_context.get("kernel_gate") if isinstance(gate_context.get("kernel_gate"), dict) else {}
+    cost += _safe_int(kernel_gate.get("interruption_bonus"), 0)
     return _clamp(cost)
 
 
-def _threshold_recommendation(source_type: str, total_score: int) -> str:
+def _threshold_recommendation(
+    source_type: str,
+    total_score: int,
+    *,
+    gate_context: dict[str, Any] | None = None,
+) -> str:
     inbox_threshold, send_threshold = THRESHOLDS.get(source_type, (60, 85))
+    kernel_gate = (gate_context or {}).get("kernel_gate")
+    if isinstance(kernel_gate, dict):
+        inbox_threshold += _safe_int(kernel_gate.get("inbox_threshold_boost"), 0)
+        if send_threshold is not None:
+            send_threshold += _safe_int(kernel_gate.get("send_threshold_boost"), 0)
     if send_threshold is not None and total_score >= send_threshold:
         return "send_now"
     if total_score >= inbox_threshold:

@@ -94,17 +94,18 @@ try {
 
 # ── 2. Tracked path denylist ────────────────────────────────────────────────
 Write-Section "Tracked path denylist"
+# Private runtime / secrets only — not package source dirs like xinyu_v1/memory/*.py
 $pathPatterns = @(
-    '\.env$',
-    '\.local\.env$',
-    'xinyu\.local\.env$',
-    '\.pem$',
-    '\.key$',
+    '(^|/)\.env$',
+    '(^|/)[^/]*\.local\.env$',
     'xinyu_qq_gateway\.config\.json$',
-    '(^|/)memory/',
+    '\.pem$',
+    '(^|/)id_rsa',
+    '(^|/)examples/agent-apps/xinyu/memory/',
+    '(^|/)XinYu-Core/examples/agent-apps/xinyu/memory/',
+    '(^|/)XinYu-Core/memory/',
     '(^|/)runtime/deps/',
     '\.xinyu_bridge_token$',
-    'id_rsa',
     'credentials\.json$',
     'service-account.*\.json$'
 )

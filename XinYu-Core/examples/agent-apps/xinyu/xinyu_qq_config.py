@@ -200,6 +200,9 @@ class GatewayConfig:
     behavior_shadow_log_url: str = "http://127.0.0.1:8877/behavior_shadow_log"
     behavior_shadow_include_text: bool = False
     behavior_shadow_timeout_seconds: float = 1.0
+    onebot_action_timeout_seconds: float = 45.0
+    onebot_action_max_retries: int = 2
+    onebot_action_retry_delay_seconds: float = 1.5
     napcat_restart_bat: str = ""
 
     @classmethod
@@ -355,6 +358,45 @@ class GatewayConfig:
                             raw.get("behavior_shadow_timeout_seconds"),
                         ),
                         1.0,
+                    ),
+                ),
+            ),
+            onebot_action_timeout_seconds=max(
+                10.0,
+                min(
+                    120.0,
+                    as_float(
+                        os.environ.get(
+                            "XINYU_ONEBOT_ACTION_TIMEOUT_SECONDS",
+                            raw.get("onebot_action_timeout_seconds"),
+                        ),
+                        45.0,
+                    ),
+                ),
+            ),
+            onebot_action_max_retries=max(
+                0,
+                min(
+                    5,
+                    as_int(
+                        os.environ.get(
+                            "XINYU_ONEBOT_ACTION_MAX_RETRIES",
+                            raw.get("onebot_action_max_retries"),
+                        ),
+                        2,
+                    ),
+                ),
+            ),
+            onebot_action_retry_delay_seconds=max(
+                0.2,
+                min(
+                    10.0,
+                    as_float(
+                        os.environ.get(
+                            "XINYU_ONEBOT_ACTION_RETRY_DELAY_SECONDS",
+                            raw.get("onebot_action_retry_delay_seconds"),
+                        ),
+                        1.5,
                     ),
                 ),
             ),

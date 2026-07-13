@@ -45,6 +45,7 @@ class InitiativeSpineSnapshot:
     status: str
     emergence_level: str
     internal_pressure: str
+    kernel_lane: str
     self_thought_lane: str
     emotion_lane: str
     impulse_lane: str
@@ -120,6 +121,7 @@ def build_initiative_spine_snapshot(
     root = root.resolve()
     checked_at = _timestamp_or_now_iso(checked_at)
     state = _read_source_state(root)
+    kernel_fields = _kernel_lane_fields(root)
     self_fields = _fields(state["self_thought"])
     emotion_fields = _fields(state["emotion_council"])
     impulse_fields = _fields(state["impulse_soup"])
@@ -139,6 +141,13 @@ def build_initiative_spine_snapshot(
         action_permission=action_permission,
         proactive_lane=proactive_lane,
         feedback_lane=feedback_lane,
+        kernel_fields=kernel_fields,
+    )
+    kernel_lane = _clip(
+        f"pending={kernel_fields.get('pending_review_count', '0')}/"
+        f"impact={kernel_fields.get('structural_impact_recent', 'false')}/"
+        f"slow={kernel_fields.get('slow_signal_count', '0')}",
+        220,
     )
     status = "active" if emergence_level != "quiet" else "quiet"
     next_step = _next_step(
@@ -159,6 +168,7 @@ def build_initiative_spine_snapshot(
         f"status: {status}",
         f"emergence_level: {emergence_level}",
         f"internal_pressure: {internal_pressure}",
+        f"kernel_lane: {kernel_lane}",
         f"self_thought_lane: {self_lane}",
         f"emotion_lane: {emotion_lane}",
         f"impulse_lane: {impulse_lane}",
@@ -183,6 +193,7 @@ def build_initiative_spine_snapshot(
         status=status,
         emergence_level=emergence_level,
         internal_pressure=internal_pressure,
+        kernel_lane=kernel_lane,
         self_thought_lane=self_lane,
         emotion_lane=emotion_lane,
         impulse_lane=impulse_lane,
@@ -218,6 +229,7 @@ def write_initiative_spine_state(root: Path, snapshot: InitiativeSpineSnapshot) 
         f"- status: {snapshot.status}",
         f"- emergence_level: {snapshot.emergence_level}",
         f"- internal_pressure: {snapshot.internal_pressure}",
+        f"- kernel_lane: {snapshot.kernel_lane}",
         f"- self_thought_lane: {snapshot.self_thought_lane}",
         f"- emotion_lane: {snapshot.emotion_lane}",
         f"- impulse_lane: {snapshot.impulse_lane}",
@@ -356,7 +368,43 @@ def _internal_pressure(
     return _clip("; ".join(parts) if parts else "none", 320)
 
 
-def _emergence_level(*, internal_pressure: str, action_permission: str, proactive_lane: str, feedback_lane: str) -> str:
+def _kernel_lane_fields(root: Path) -> dict[str, str]:
+    try:
+        from xinyu_kernel_goal_bridge import read_kernel_pressure_signals
+
+        signals = read_kernel_pressure_signals(root)
+        return {
+            "pending_review_count": str(int(signals.get("pending_review_count") or 0)),
+            "structural_impact_recent": "true" if signals.get("structural_impact_recent") else "false",
+            "slow_signal_count": str(int(signals.get("slow_signal_count") or 0)),
+            "kernel_pressure": "true" if signals.get("kernel_pressure") else "false",
+        }
+    except Exception:
+        return {
+            "pending_review_count": "0",
+            "structural_impact_recent": "false",
+            "slow_signal_count": "0",
+            "kernel_pressure": "false",
+        }
+
+
+def _emergence_level(
+    *,
+    internal_pressure: str,
+    action_permission: str,
+    proactive_lane: str,
+    feedback_lane: str,
+    kernel_fields: dict[str, str] | None = None,
+) -> str:
+    kernel_fields = kernel_fields or {}
+    pending = int(kernel_fields.get("pending_review_count") or 0)
+    slow = int(kernel_fields.get("slow_signal_count") or 0)
+    if kernel_fields.get("structural_impact_recent") == "true":
+        return "kernel_structural_pressure"
+    if pending >= 3:
+        return "kernel_review_pressure"
+    if kernel_fields.get("kernel_pressure") == "true" or slow >= 3:
+        return "kernel_slow_signal_pressure"
     if internal_pressure == "none":
         return "quiet"
     if action_permission == "proactive_request_gate_active":
@@ -380,6 +428,8 @@ def _next_step(
     decision_fields: dict[str, str],
     learning_fields: dict[str, str],
 ) -> str:
+    if emergence_level.startswith("kernel_"):
+        return "keep initiative private while kernel review/slow-signal pressure is active; surface candidates to owner inbox only"
     if action_permission == "proactive_request_gate_active":
         question = request_fields.get("concrete_question") or "prepared proactive request"
         return _clip(f"hold one grounded proactive thread; visible question={question}", 260)
