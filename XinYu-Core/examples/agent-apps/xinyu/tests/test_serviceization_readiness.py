@@ -8,7 +8,6 @@ from xinyu_serviceization_readiness import (
     SERVICE_PILOT_PREFLIGHT_REQUIRED_GATES,
     SERVICE_PILOT_PREFLIGHT_SATISFIED_GATES,
     SERVICE_SPLIT_SATISFIED_GATES,
-    SERVICE_TRANSPORT_PREFLIGHT_REQUIRED_GATES,
     SERVICE_TRANSPORT_PREFLIGHT_SATISFIED_GATES,
     assess_service_pilot_preflight,
     assess_service_split_readiness,

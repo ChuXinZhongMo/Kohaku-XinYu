@@ -96,6 +96,30 @@ def run_memory_self_review_sidecar(
         return {"notes": [f"memory_self_review_error:{type(exc).__name__}"]}
 
 
+def run_kernel_post_turn_sidecar(
+    runtime: Any,
+    *,
+    payload: dict[str, Any],
+    text: str,
+    reply: str,
+    turn_id: str,
+    event_sidecar: dict[str, Any] | None,
+    run_kernel_post_turn_cycle_func: Callable[..., dict[str, Any]],
+) -> dict[str, Any]:
+    try:
+        return run_kernel_post_turn_cycle_func(
+            runtime,
+            payload=payload,
+            text=text,
+            reply=reply,
+            turn_id=turn_id,
+            event_sidecar=event_sidecar,
+        )
+    except Exception as exc:
+        print(f"[xinyu_core_bridge] kernel post-turn cycle failed: {exc}", flush=True)
+        return {"notes": [f"kernel_post_turn_error:{type(exc).__name__}"]}
+
+
 def record_interaction_journal_sidecar(
     runtime: Any,
     *,

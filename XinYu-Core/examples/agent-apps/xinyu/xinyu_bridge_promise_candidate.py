@@ -9,7 +9,7 @@ from xinyu_bridge_promise_markers import (
     PROMISE_FOLLOWUP_REPLY_MARKERS,
     PROMISE_FOLLOWUP_USER_MARKERS,
 )
-from xinyu_bridge_promise_owner_identity_store import (
+from xinyu_bridge_stores import (
     read_promise_owner_config_text,
     read_promise_owner_ids_env,
 )

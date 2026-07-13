@@ -7,7 +7,7 @@ from typing import Any, Callable
 from xinyu_bridge_payload_policy import owner_private_payload_matches
 from xinyu_bridge_promise_candidate import candidate as _candidate
 from xinyu_bridge_promise_candidate import owner_private_user_id as _owner_private_user_id
-from xinyu_bridge_promise_followup_state_store import write_promise_followup_state_text
+from xinyu_bridge_stores import write_promise_followup_state_text
 from xinyu_bridge_promise_markers import (
     PROMISE_FOLLOWUP_DONE_MARKERS,
     PROMISE_FOLLOWUP_REPLY_MARKERS,

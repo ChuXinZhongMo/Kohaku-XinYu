@@ -8,9 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_perception_event_layer import build_perception_event_layer_report
-from xinyu_perception_importance_store import REPORT_REL
 from xinyu_perception_importance_store import STATE_REL
-from xinyu_perception_importance_store import TRACE_REL
 from xinyu_perception_importance_store import append_perception_importance_trace_event
 from xinyu_perception_importance_store import read_perception_importance_state_text
 from xinyu_perception_importance_store import write_perception_importance_report_text

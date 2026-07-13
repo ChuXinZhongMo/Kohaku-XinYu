@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from xinyu_bridge_desktop_surface_contract import (
-    DESKTOP_EVENT_STREAM_LIFECYCLE_BOUNDARY,
     DESKTOP_EVENT_STREAM_RUNTIME_ATTR,
     DesktopEventStreamReadiness,
     desktop_event_stream_readiness,

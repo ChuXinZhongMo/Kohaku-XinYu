@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 import xinyu_bridge_desktop_proactive_routes
-import xinyu_core_bridge
 from xinyu_core_bridge import XinYuBridgeRuntime
 from xinyu_initiative_orchestrator import (
     record_initiative_feedback,

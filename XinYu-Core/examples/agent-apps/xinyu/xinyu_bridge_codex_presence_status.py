@@ -4,7 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from xinyu_bridge_codex_presence_store import read_codex_presence_json
+from xinyu_bridge_stores import read_codex_presence_json
 from xinyu_bridge_state_text import seconds_since_iso
 from xinyu_bridge_values import safe_str
 

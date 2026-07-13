@@ -8,6 +8,15 @@ from xinyu_bridge_values import as_bool, safe_str
 from xinyu_dialogue_compression import SUMMARY_ROLE
 from xinyu_dialogue_working_memory import compact_tail_for_prompt, load_dialogue_tail
 
+# K-007+: optional kernel context (non-breaking)
+try:
+    from kernel.bridge_integration import augment_text_with_kernel_context, get_kernel_context
+    from kernel import get_kernel_self_model
+except Exception:
+    def get_kernel_self_model(*a, **k): return {}
+    def get_kernel_context(*a, **k): return {}
+    def augment_text_with_kernel_context(text, *a, **k): return text
+
 
 def format_dialogue_tail(
     dialogue_tail: list[dict[str, str]],
@@ -71,6 +80,18 @@ def augment_codex_payload_with_dialogue_context(
             f"Current owner Codex task: {raw_task}",
         ]
     )
+
+    # K-010: augment with full persistent runtime Self when available
+    try:
+        from kernel.bridge_access import resolve_runtime_self
+
+        kernel_self = resolve_runtime_self(xinyu_dir)
+        if kernel_self.get_self_model().get("core_statements") or kernel_self.get_working_memory():
+            augmented = augment_text_with_kernel_context(augmented, kernel_self)
+            payload["kernel_context_included"] = True
+    except Exception:
+        pass
+
     payload["text"] = augmented
     payload["codex_context_included"] = True
     metadata = payload.get("metadata")

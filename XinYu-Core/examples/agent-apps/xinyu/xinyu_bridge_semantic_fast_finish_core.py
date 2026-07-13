@@ -26,7 +26,6 @@ async def finish_owner_private_semantic_fast_turn_impl(
     renderer_name: str,
     safe_str_func: Callable[..., str],
     timestamp_func: Callable[..., str],
-    command_id_func: Callable[[dict[str, Any]], str],
     clock_func: Callable[[], float],
     visible_reply_func: Callable[..., tuple[str, Any, Any] | None],
     update_tail_func: Callable[..., Any],
@@ -78,7 +77,6 @@ async def finish_owner_private_semantic_fast_turn_impl(
         renderer_name=renderer_name,
         safe_str_func=safe_str_func,
         timestamp_func=timestamp_func,
-        command_id_func=command_id_func,
     )
 
 

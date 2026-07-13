@@ -8,7 +8,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_voice_style_observations_store import OBSERVATIONS_REL
 from xinyu_voice_style_observations_store import write_voice_style_observations_text
 
 PUBLIC_REFERENCE_SOURCES: tuple[dict[str, str], ...] = (

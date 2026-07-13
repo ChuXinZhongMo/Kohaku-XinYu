@@ -5,13 +5,16 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from xinyu_bridge_memory_snapshot import memory_snapshot
 from xinyu_bridge_v1_payloads import (
     build_canary_notes,
     build_canary_response,
-    command_id,
     owner_canary_payload,
     safe_str,
+    timestamp_or_now_iso,
 )
+from xinyu_runtime_presence import record_turn_finished
+from xinyu_sent_reply_index import visible_text_hash
 
 
 def canary_payload_allowed_impl(
@@ -50,12 +53,7 @@ async def handle_canary_turn_impl(
     event_sidecar: dict[str, Any],
     canary_payload_allowed_func: Callable[[Any, dict[str, Any], str], tuple[bool, list[str]]],
     ensure_app_func: Callable[[Any], Any],
-    memory_snapshot_func: Callable[[Any], dict[str, Any]],
-    record_turn_finished_func: Callable[..., Any],
-    visible_text_hash_func: Callable[[str], str],
-    timestamp_func: Callable[[Any], str],
     safe_str_func: Callable[[Any], str] = safe_str,
-    command_id_func: Callable[[dict[str, Any]], str] = command_id,
 ) -> dict[str, Any] | None:
     allowed, canary_reasons = canary_payload_allowed_func(runtime, payload, text)
     if not allowed:
@@ -103,10 +101,10 @@ async def handle_canary_turn_impl(
         guard_flags=guard_flags,
         safe_str_func=safe_str_func,
     )
-    after_memory = memory_snapshot_func(runtime.memory_root)
+    after_memory = memory_snapshot(runtime.memory_root)
     memory_changed = before_memory != after_memory or bool(getattr(v1_reply, "memory_changed", False))
     total_elapsed_ms = int((time.perf_counter() - turn_started_at) * 1000)
-    record_turn_finished_func(
+    record_turn_finished(
         runtime.xinyu_dir,
         turn_id=turn_id,
         reply=reply,
@@ -115,14 +113,14 @@ async def handle_canary_turn_impl(
         notes=notes,
         memory_changed=memory_changed,
     )
-    reply_hash = visible_text_hash_func(reply)
+    reply_hash = visible_text_hash(reply)
     await runtime._desktop_publish_chat_finished(
         payload,
         text=text,
         reply=reply,
         session_key=session_key,
         turn_id=turn_id,
-        started_at=timestamp_func(turn_started_wall),
+        started_at=timestamp_or_now_iso(turn_started_wall),
         elapsed_ms=total_elapsed_ms,
         status="ok",
         notes=notes,
@@ -144,5 +142,4 @@ async def handle_canary_turn_impl(
         trace_id=trace_id,
         elapsed_ms=elapsed_ms,
         notes=notes,
-        command_id_func=command_id_func,
     )

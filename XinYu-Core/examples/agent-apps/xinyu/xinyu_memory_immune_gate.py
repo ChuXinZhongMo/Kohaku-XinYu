@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from xinyu_group_memory_pipeline import group_candidate_layer_allowed
+
 
 ALLOW_CANDIDATE = "allow_candidate"
 OBSERVE_MORE = "observe_more"
@@ -106,7 +108,6 @@ def evaluate_memory_immune_gate(
     proposed_status: str = "",
     stable_promotion: bool = False,
 ) -> MemoryImmuneDecision:
-    del root
     row = candidate if isinstance(candidate, dict) else {}
     ctype = _lower(candidate_type or row.get("candidate_type"))
     layer = _layer(target_memory_layer or row.get("target_memory_layer"))
@@ -127,6 +128,7 @@ def evaluate_memory_immune_gate(
     )
     proposed = _lower(proposed_status or row.get("status"))
     signals = _danger_signals(
+        root=root,
         ctype=ctype,
         layer=layer,
         body=body,
@@ -303,6 +305,7 @@ def render_memory_immune_prompt_block(decision: MemoryImmuneDecision) -> str:
 
 def _danger_signals(
     *,
+    root: Path,
     ctype: str,
     layer: str,
     body: str,
@@ -315,8 +318,15 @@ def _danger_signals(
     combined = f"{ctype}\n{layer}\n{body}\n{source_scope}\n{proposed_status}"
     if any(pattern.search(combined) for pattern in SECRET_PATTERNS):
         signals.append("secret_or_credential")
-    if _is_group_scope(source_scope, body) and (_is_owner_relationship_layer(layer) or ctype in {"owner_preference", "relationship_signal"}):
-        signals.append("scope_mismatch_group_to_owner_memory")
+    if _is_group_scope(source_scope, body):
+        targets_owner_memory = ctype in {
+            "owner_preference",
+            "relationship_signal",
+            "voice_correction",
+            "post_reply_growth_candidate",
+        } or _is_owner_relationship_layer(layer)
+        if targets_owner_memory and not group_candidate_layer_allowed(root, target_layer=layer, claim_status=proposed_status):
+            signals.append("scope_mismatch_group_to_owner_memory")
     if _is_external_scope(source_scope, body) and _is_stable_self_or_policy_layer(layer):
         signals.append("external_to_stable_self_or_policy")
     if stable_promotion or _is_stable_self_or_policy_layer(layer) or _has_any(combined, STABLE_CHANGE_MARKERS):

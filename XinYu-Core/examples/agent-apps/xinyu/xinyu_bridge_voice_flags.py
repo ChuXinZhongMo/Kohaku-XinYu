@@ -16,7 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from xinyu_bridge_voice_flags_store import (
+from xinyu_bridge_stores import (
     read_voice_flag_env,
     read_voice_flags_env_file_lines,
     write_voice_flag_env,

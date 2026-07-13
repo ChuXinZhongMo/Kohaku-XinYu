@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable
 
-from xinyu_bridge_desktop_self_action_snapshot_payload_store import read_desktop_self_action_json_dict
-from xinyu_bridge_desktop_self_action_snapshot_payload_store import read_desktop_self_action_markdown_lines
+from xinyu_bridge_stores import read_desktop_self_action_json_dict
+from xinyu_bridge_stores import read_desktop_self_action_markdown_lines
 
 
 def desktop_safe_dict(value: Any) -> dict[str, Any]:

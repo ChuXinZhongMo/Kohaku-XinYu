@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Any
 
 from stores.impulse_soup_state import (
-    IMPULSE_SOUP_STATE_REL as STATE_JSON_REL,
     read_impulse_soup_state,
     write_impulse_soup_state,
 )

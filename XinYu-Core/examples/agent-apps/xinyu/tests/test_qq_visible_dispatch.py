@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -29,6 +28,9 @@ class FakeGateway:
         core_response: dict[str, object],
     ) -> list[str]:
         return [part.strip() for part in reply.split("|") if part.strip()]
+
+    async def _resolve_action_websocket(self, websocket, *, wait_seconds: float = 0.0):
+        return websocket if websocket is not None else self
 
     async def send_reply(self, websocket, target: ReplyTarget, text: str) -> dict[str, object]:
         self.sent.append(text)
@@ -80,6 +82,24 @@ async def test_send_visible_reply_combines_bubble_message_ids(tmp_path: Path) ->
     assert result is not None
     assert result["data"]["message_id"] == "msg-1,msg-2"
     assert result["data"]["reply_bubble_message_ids"] == ["msg-1", "msg-2"]
+
+
+def test_combined_reply_action_response_fails_on_partial_delivery(tmp_path: Path) -> None:
+    gateway = FakeGateway(tmp_path)
+
+    result = combined_reply_action_response(
+        gateway,
+        [
+            {"status": "ok", "retcode": 0, "data": {"message_id": "msg-1"}},
+            {"status": "failed", "message": "onebot_action_timeout"},
+        ],
+    )
+
+    assert result is not None
+    assert result["status"] == "failed"
+    assert result.get("xinyu_partial_delivery") is True
+    assert result["data"]["reply_bubble_sent_count"] == 1
+    assert result["data"]["reply_bubble_count"] == 2
 
 
 def test_combined_reply_action_response_returns_last_when_all_fail(tmp_path: Path) -> None:

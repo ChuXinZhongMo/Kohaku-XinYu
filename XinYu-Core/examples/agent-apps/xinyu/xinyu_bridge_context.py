@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from xinyu_bridge_prompt_context_signature_store import prompt_context_file_signature
+from xinyu_bridge_stores import prompt_context_file_signature
 from xinyu_storage_paths import knowledge_ref
 
 

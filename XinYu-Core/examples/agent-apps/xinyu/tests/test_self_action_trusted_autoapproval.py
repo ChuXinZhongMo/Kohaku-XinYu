@@ -12,7 +12,6 @@ from xinyu_self_action_gateway import (
 from xinyu_self_action_trusted_autoapproval import (
     NEVER_AUTO_APPROVE_ACTION_KINDS,
     POLICY_REL,
-    TrustedAutoApprovalPolicy,
     load_policy,
     prune_ledger,
     scope_is_auto_approvable,

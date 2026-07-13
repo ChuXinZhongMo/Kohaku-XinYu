@@ -23,6 +23,7 @@ def build_slow_turn_finish_sidecars_result(
         "candidate_result": memory.candidate_result,
         "memory_self_review": memory.memory_self_review,
         "interaction_journal": memory.interaction_journal,
+        "kernel_post_turn": memory.kernel_post_turn,
         "proactive_owner_reply_marked": delivery.proactive_owner_reply_marked,
         "promised_followup": delivery.promised_followup,
         "sticker_reply": delivery.sticker_reply,

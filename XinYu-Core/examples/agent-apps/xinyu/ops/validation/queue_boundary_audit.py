@@ -9,12 +9,12 @@ try:
     from ._boundary_audit_core import BASE_SKIP_PARTS, BoundaryAuditConfig, build_boundary_audit
     from ._boundary_audit_core import render_markdown as _render_markdown
     from ._validation_paths import ensure_validation_paths
-    from .validate_queue_boundary_manifest import DEFAULT_MANIFEST, load_manifest, validate_manifest
+    from .validate_queue_boundary_manifest import load_manifest, validate_manifest
 except ImportError:  # pragma: no cover - direct script execution
     from _boundary_audit_core import BASE_SKIP_PARTS, BoundaryAuditConfig, build_boundary_audit
     from _boundary_audit_core import render_markdown as _render_markdown
     from _validation_paths import ensure_validation_paths
-    from validate_queue_boundary_manifest import DEFAULT_MANIFEST, load_manifest, validate_manifest
+    from validate_queue_boundary_manifest import load_manifest, validate_manifest
 
 
 APP_ROOT = ensure_validation_paths()

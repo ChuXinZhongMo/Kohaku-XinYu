@@ -7,7 +7,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_turn_residue_store import STATE_REL
 from xinyu_turn_residue_store import read_turn_residue_state
 from xinyu_turn_residue_store import write_turn_residue_state
 

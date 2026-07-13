@@ -29,14 +29,24 @@ BRIDGE_SOURCE_DIGEST = source_file_digest(BRIDGE_SOURCE_PATH)
 BRIDGE_RUNTIME_SOURCE_DIGEST = source_files_digest(runtime_source_paths(BRIDGE_SOURCE_PATH.parent))
 
 __all__ = (
+    "Any",
     "BRIDGE_RUNTIME_SOURCE_DIGEST",
     "BRIDGE_SOURCE_DIGEST",
     "BRIDGE_SOURCE_PATH",
     "BRIDGE_VERSION",
     "BridgeAppDependencies",
+    "Path",
     "XinYuBridgeHTTPServer",
     "XinYuBridgeRequestHandler",
     "XinYuBridgeRuntime",
+    "_CORE_COMPAT_EXPORTS",
+    "__dir__",
+    "__getattr__",
+    "_build_parser",
+    "_load_local_env",
+    "_runtime_load_runtime",
+    "_start_loop_thread",
+    "annotations",
     "build_desktop_service",
     "configure_bridge_stdio",
     "enforce_bridge_token_guard",
@@ -45,9 +55,11 @@ __all__ = (
     "run_bridge_app",
     "run_chat_payload",
     "runtime_source_paths",
+    "sanitize_visible_state_files",
     "source_file_digest",
     "source_files_digest",
-    *_CORE_COMPAT_EXPORTS,
+    "xinyu_bridge_runtime_aliases",
+    "xinyu_bridge_runtime_state",
 )
 
 
@@ -78,7 +90,7 @@ class XinYuBridgeRuntime:
         render_timeout_seconds: int = 60,
         session_idle_ttl_seconds: int = 86400,
         max_sessions: int = 8,
-        proactive_min_interval_seconds: int = 21600,
+        proactive_min_interval_seconds: int = 300,
         autonomous_maintenance_enabled: bool = True,
         autonomous_maintenance_initial_delay_seconds: int = 60,
         autonomous_maintenance_interval_seconds: int = 1800,

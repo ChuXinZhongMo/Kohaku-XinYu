@@ -37,6 +37,7 @@ async def run_slow_turn_finish_sidecars(
     wait_to_think_task: str,
     model_codex_delegate_note: str,
     deps: TurnFinishServiceDeps,
+    event_sidecar: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     post_reply = run_post_reply_finish_sidecars(
         runtime,
@@ -76,6 +77,8 @@ async def run_slow_turn_finish_sidecars(
         extract_memory_candidates_func=deps.extract_memory_candidates,
         run_memory_self_review_func=deps.run_memory_self_review,
         record_interaction_journal_func=deps.record_interaction_journal,
+        run_kernel_post_turn_func=deps.run_kernel_post_turn,
+        event_sidecar=event_sidecar,
     )
     delivery = await run_delivery_action_coherence_segments(
         runtime,

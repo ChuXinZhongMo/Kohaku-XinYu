@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from xinyu_bridge_autonomous_state_store import append_autonomous_trace_text
+from xinyu_bridge_stores import append_autonomous_trace_text
 
 
 def trace_autonomous(runtime: Any, line: str, *, now_iso_func: Callable[[], str]) -> None:

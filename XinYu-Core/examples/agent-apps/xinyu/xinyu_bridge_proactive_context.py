@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import hashlib
-import re
-from datetime import datetime
 from typing import Any
 
 from xinyu_bridge_payload_policy import owner_private_payload_matches
@@ -13,7 +10,7 @@ from xinyu_bridge_proactive_context_feedback import (
     owner_reply_preview as _owner_reply_preview_impl,
     refresh_initiative_spine_after_proactive_feedback_impl as _refresh_initiative_spine_after_proactive_feedback_impl,
 )
-from xinyu_bridge_proactive_context_state_store import write_proactive_request_state_text
+from xinyu_bridge_stores import write_proactive_request_state_text
 from xinyu_bridge_proactive_context_tail import (
     append_assistant_to_dialogue_tail_impl as _append_assistant_to_dialogue_tail_impl,
     owner_private_payload_impl as _owner_private_payload_impl,
@@ -26,7 +23,6 @@ from xinyu_bridge_values import safe_str
 from xinyu_dialogue_working_memory import load_dialogue_tail, save_dialogue_tail
 from xinyu_initiative_spine import run_initiative_spine
 from xinyu_proactive_lifecycle_trace import append_proactive_lifecycle_event
-from xinyu_text_variants import readable_markers
 
 
 def owner_private_payload(runtime: Any, *, source: str, message_id: str = "") -> dict[str, Any]:

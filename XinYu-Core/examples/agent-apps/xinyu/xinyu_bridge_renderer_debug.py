@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_bridge_renderer_debug_store import write_live_system_prompt_dump
+from xinyu_bridge_stores import write_live_system_prompt_dump
 
 
 DEBUG_PROMPT_DUMP_ENV = "XINYU_DEBUG_PROMPT_DUMP"

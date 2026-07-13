@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 from xinyu_stage9_self_state_model import (
-    STATE_REL,
     build_stage9_self_state_model,
     render_stage9_self_state_model,
     write_stage9_self_state_model_report,

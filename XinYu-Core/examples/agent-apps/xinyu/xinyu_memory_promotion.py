@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_dialogue_archive import list_memory_candidates, update_memory_candidate_status
-from xinyu_memory_promotion_store import PROMOTION_DRY_RUN_REL
 from xinyu_memory_promotion_store import promotion_dry_run_path
 from xinyu_memory_promotion_store import promotion_path_exists
 from xinyu_memory_promotion_store import promotion_target_path

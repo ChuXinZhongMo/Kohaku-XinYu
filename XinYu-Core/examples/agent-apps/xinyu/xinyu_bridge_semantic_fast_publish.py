@@ -3,6 +3,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from xinyu_runtime_presence import record_turn_finished
+from xinyu_sent_reply_index import visible_text_hash
+
 
 async def publish_semantic_fast_success_turn(
     runtime: Any,
@@ -16,12 +19,10 @@ async def publish_semantic_fast_success_turn(
     total_elapsed_ms: int,
     notes: list[str],
     memory_changed: bool,
-    record_finished_func: Callable[..., Any],
     record_route_stage_func: Callable[..., Any],
-    visible_text_hash_func: Callable[[str], str],
     timestamp_func: Callable[..., str],
 ) -> str:
-    record_finished_func(
+    record_turn_finished(
         runtime.xinyu_dir,
         turn_id=turn_id,
         reply=reply,
@@ -41,7 +42,7 @@ async def publish_semantic_fast_success_turn(
         notes=notes[:8],
     )
 
-    reply_hash = visible_text_hash_func(reply)
+    reply_hash = visible_text_hash(reply)
     await runtime._desktop_publish_chat_finished(
         payload,
         text=text,

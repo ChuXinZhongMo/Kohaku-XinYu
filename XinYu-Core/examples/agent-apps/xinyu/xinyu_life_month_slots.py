@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from xinyu_life_month_slots_store import CURRENT_LIFE_MONTH_CONTEXT_REL
 from xinyu_life_month_slots_store import LIFE_MONTH_SLOTS_REL
 from xinyu_life_month_slots_store import current_life_month_context_path
 from xinyu_life_month_slots_store import life_month_slots_path

@@ -74,6 +74,30 @@ def bind_run_memory_self_review(facade_globals: FacadeGlobals) -> Callable[..., 
     return _run_memory_self_review
 
 
+def bind_run_kernel_post_turn(facade_globals: FacadeGlobals) -> Callable[..., dict[str, Any]]:
+    def _run_kernel_post_turn(
+        runtime: Any,
+        *,
+        payload: dict[str, Any],
+        text: str,
+        reply: str,
+        turn_id: str,
+        event_sidecar: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        facade = facade_globals()
+        return facade["_runtime_run_kernel_post_turn"](
+            runtime,
+            payload=payload,
+            text=text,
+            reply=reply,
+            turn_id=turn_id,
+            event_sidecar=event_sidecar,
+            run_kernel_post_turn_cycle_func=facade["run_kernel_post_turn_cycle"],
+        )
+
+    return _run_kernel_post_turn
+
+
 def bind_record_interaction_journal(facade_globals: FacadeGlobals) -> Callable[..., dict[str, Any]]:
     def _record_interaction_journal(
         runtime: Any,

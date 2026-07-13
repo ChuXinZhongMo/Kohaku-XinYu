@@ -34,6 +34,28 @@ def test_persona_runtime_injects_contract_before_current_state(tmp_path: Path) -
     assert "stable personality rewrite from a single intense turn" in block
 
 
+def test_persona_runtime_injects_kernel_continuity_orientation(tmp_path: Path) -> None:
+    kernel_dir = tmp_path / "memory" / "kernel"
+    kernel_dir.mkdir(parents=True)
+    import json
+
+    (kernel_dir / "self_story_state.json").write_text(
+        json.dumps({"summary": "Stay honest and direct with owner."}),
+        encoding="utf-8",
+    )
+    state = build_persona_runtime_state(
+        tmp_path,
+        payload={"metadata": {"is_owner_user": True}},
+        user_text="continue",
+    )
+    block = state.to_prompt_block()
+
+    assert state.continuity_orientation == "Stay honest and direct with owner."
+    assert "## Continuity Orientation" in block
+    assert "Stay honest and direct with owner." in block
+    assert "kernel" not in block.lower()
+
+
 def test_persona_contract_keeps_technical_work_out_of_emotional_performance() -> None:
     block = build_persona_runtime_contract_block()
 

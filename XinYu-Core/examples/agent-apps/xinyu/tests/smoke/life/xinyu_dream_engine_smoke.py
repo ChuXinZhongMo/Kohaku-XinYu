@@ -6,9 +6,8 @@ ROOT = ensure_project_root_on_path()
 
 import json
 import py_compile
-from pathlib import Path
 
-from xinyu_dream_engine import LOW_TEMP_PLAN_GBNF, build_dream_engine_result, parse_low_temp_plan
+from xinyu_dream_engine import LOW_TEMP_PLAN_GBNF, build_dream_engine_result
 
 
 def _input_window() -> dict:

@@ -105,14 +105,13 @@ def build_canary_response(
     trace_id: str,
     elapsed_ms: int,
     notes: list[str],
-    command_id_func=command_id,
 ) -> dict[str, Any]:
     return {
         "accepted": True,
         "reply": reply,
         "memory_changed": memory_changed,
         "turn_id": turn_id,
-        "command_id": command_id_func(payload),
+        "command_id": command_id(payload),
         "session_id": session_key,
         "reply_hash": reply_hash,
         "archive_message_ids": [],

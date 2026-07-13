@@ -31,6 +31,7 @@ _FINISH_SIDECAR_KEYS = (
     "model_codex_task",
     "wait_to_think_task",
     "model_codex_delegate_note",
+    "event_sidecar",
 )
 
 _SUCCESS_PUBLISH_KEYS = (

@@ -237,6 +237,15 @@ _REFERENTLESS_NUDGE_RE = re.compile(r"^这个(还要|还接|还看|还弄)")
 # message must be just <short topic> + tic with no sentence-internal punctuation,
 # so a natural sentence that merely ends in 还要吗 is not caught.
 _TEMPLATED_CHECKIN_RE = re.compile(r"^[^，,。!！?？;；、\n]{0,16}(还看|还要|还接|还弄)(吗|嘛)?\s*[?？]?$")
+# A check-in tic that ENDS the message even when it has internal punctuation or a
+# glued-on context echo: the proactive context-grounding sometimes manufactures
+# "<recent owner text>还看吗" ("我好累，不想动还看吗", "唉还要吗", "刚才那个还弄吗"),
+# which slips past _TEMPLATED_CHECKIN_RE (that one allows no comma). The owner banned
+# this whole family (模板静音). Kept exception: a clean "你还X吗" question
+# ("那份报告我改完了，你还要吗") where 你 immediately precedes the tic is a real
+# concrete question and still stands.
+_CHECKIN_TAIL_RE = re.compile(r"(还看|还要|还接|还弄)(吗|嘛)?\s*[?？]?$")
+_CONCRETE_CHECKIN_TAIL_RE = re.compile(r"你(还看|还要|还接|还弄)(吗|嘛)?\s*[?？]?$")
 
 
 def _is_referentless_nudge(message: str) -> bool:
@@ -256,7 +265,9 @@ def _is_mechanical_checkin_nudge(message: str) -> bool:
     text = _safe_str(message).strip()
     if _is_referentless_nudge(text):
         return True
-    return bool(_TEMPLATED_CHECKIN_RE.match(text))
+    if _TEMPLATED_CHECKIN_RE.match(text):
+        return True
+    return bool(_CHECKIN_TAIL_RE.search(text)) and not bool(_CONCRETE_CHECKIN_TAIL_RE.search(text))
 
 
 def compose_proactive_visible_message(

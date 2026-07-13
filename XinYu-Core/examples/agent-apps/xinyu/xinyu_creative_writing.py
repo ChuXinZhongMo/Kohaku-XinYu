@@ -3048,7 +3048,7 @@ def _novel_arc_for_chapter(number: int, *, focus: str, turn: str) -> dict[str, A
         "events": [
             {
                 "scene": f"他们抵达与“{beat['title']}”有关的新地点，周围的秩序看起来完整得近乎反常。",
-                "action": f"林知遥先记录环境，方岑检查接口，阿眠用值夜簿确认这里是否保存过未完成的梦。",
+                "action": "林知遥先记录环境，方岑检查接口，阿眠用值夜簿确认这里是否保存过未完成的梦。",
                 "pressure": "三种记录方式给出三种互相矛盾的结果。",
                 "detail": f"唯一相同的是样本编号 {chapter_label}，它在三件物品上同时亮起。",
                 "line": "如果记录互相冲突，就先相信仍然会疼的那一份。",
@@ -3233,7 +3233,6 @@ def _popular_event_followup(
     line: str,
     turn: str,
 ) -> str:
-    subject = _group_label(pov)
     detail_text = detail or "刚才那个细节"
     detail_sentence = _sentence(detail_text)
     memory_line = _sentence_fragment(line)
@@ -3420,25 +3419,25 @@ def _residual_preservation_paragraph(*, number: int, pov: str) -> str:
     if _is_multi_pov(pov):
         if _is_two_pov(pov):
             return (
-                f"所以他们把残片分开保存。任何单独一份都不能解释今晚发生过什么，"
+                "所以他们把残片分开保存。任何单独一份都不能解释今晚发生过什么，"
                 "但只要两份同时存在，星桥就没法轻易把它改写成一场无害的误会。"
             )
         return (
-            f"所以他们把所有残片分开保存。任何单独一份都不能解释今晚发生过什么，"
+            "所以他们把所有残片分开保存。任何单独一份都不能解释今晚发生过什么，"
             "但只要三份同时存在，星桥就无法把它改写成一场无害的误会。"
         )
     if "方岑" in pov:
         return (
-            f"所以方岑只保存残缺记录。任何完整备份都可能把今晚修成无害故障，"
+            "所以方岑只保存残缺记录。任何完整备份都可能把今晚修成无害故障，"
             "而他现在宁愿带着缺口继续走。"
         )
     if "阿眠" in pov:
         return (
-            f"所以阿眠只保存未归档记录。任何正式馆藏号都可能把今晚变成可借可还的安全文本，"
+            "所以阿眠只保存未归档记录。任何正式馆藏号都可能把今晚变成可借可还的安全文本，"
             "而她现在宁愿让它保持未完成。"
         )
     return (
-        f"所以林知遥只保存本地样本。任何上传流程都可能把今晚修成无害噪声，"
+        "所以林知遥只保存本地样本。任何上传流程都可能把今晚修成无害噪声，"
         "而她现在宁愿让那段声音继续发烫。"
     )
 
@@ -4078,11 +4077,6 @@ def _publication_chapter_text(*, chapter_number: int, writing_date: str) -> str:
 def _write_publication_state(root: Path, result: dict[str, Any]) -> None:
     updated_at = str(result.get("checked_at") or _now_iso())
     publication_log_path = str(PUBLICATION_LOG_REL).replace("\\", "/")
-    reference_permission_path = str(REFERENCE_PERMISSIONS_REL).replace("\\", "/")
-    source_map_path = str(SOURCE_MAP_REL).replace("\\", "/")
-    genre_benchmark_path = str(GENRE_BENCHMARK_REL).replace("\\", "/")
-    pacing_rules_path = str(PACING_RULES_REL).replace("\\", "/")
-    opening_rewrite_brief_path = str(OPENING_REWRITE_BRIEF_REL).replace("\\", "/")
     text = f"""---
 title: Novel Publication State
 memory_type: creative_writing_publication_state

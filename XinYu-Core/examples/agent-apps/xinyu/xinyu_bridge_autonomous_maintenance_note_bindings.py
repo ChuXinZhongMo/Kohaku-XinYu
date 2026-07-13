@@ -15,6 +15,7 @@ _DEPS_FORWARDERS = (
     "append_review_inbox_note",
     "append_goldmark_dehydrate_note",
     "append_goal_ecology_note",
+    "append_action_followup_audit_note",
     "append_self_action_gateway_note",
     "append_self_action_patch_executor_note",
     "append_self_thought_loop_note",

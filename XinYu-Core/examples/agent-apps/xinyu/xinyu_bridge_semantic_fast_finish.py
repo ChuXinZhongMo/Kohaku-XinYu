@@ -3,7 +3,6 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from xinyu_bridge_memory_snapshot import memory_snapshot as _memory_snapshot
 from xinyu_bridge_reply_text import normalize_bridge_reply
 from xinyu_bridge_semantic_fast_finish_core import finish_owner_private_semantic_fast_turn_impl as _finish_impl
 from xinyu_bridge_semantic_fast_finish_core import prepare_semantic_fast_visible_reply as _prepare_visible_reply_impl
@@ -15,8 +14,6 @@ from xinyu_bridge_semantic_fast_publish import publish_semantic_fast_success_tur
 from xinyu_bridge_semantic_fast_response import build_semantic_fast_response
 from xinyu_bridge_semantic_fast_tail import update_semantic_fast_session_tail
 from xinyu_post_reply_self_observation import observe_post_reply_self_observation
-from xinyu_runtime_presence import record_turn_finished
-from xinyu_sent_reply_index import visible_text_hash
 from xinyu_turn_route_trace import record_turn_route_stage
 from xinyu_visible_reply_guard import dedupe_visible_reply
 
@@ -40,7 +37,6 @@ async def finish_owner_private_semantic_fast_turn(
     renderer_name: str,
     safe_str_func: Any,
     timestamp_func: Any,
-    command_id_func: Any,
 ) -> dict[str, Any] | None:
     finish_kwargs = dict(locals())
     finish_kwargs.pop("runtime")
@@ -99,7 +95,7 @@ def _append_post_reply_observation_notes(
 
 
 def _semantic_fast_memory_changed(runtime: Any, before_memory: dict[str, Any] | None, notes: list[str]) -> bool:
-    return _memory_changed_impl(runtime, before_memory, notes, memory_snapshot_func=_memory_snapshot)
+    return _memory_changed_impl(runtime, before_memory, notes)
 
 
 async def _publish_semantic_fast_finish_result(
@@ -108,9 +104,7 @@ async def _publish_semantic_fast_finish_result(
 ) -> dict[str, Any]:
     kwargs["publish_success_func"] = publish_semantic_fast_success_turn
     kwargs["response_func"] = _semantic_fast_response
-    kwargs["record_finished_func"] = record_turn_finished
     kwargs["record_route_stage_func"] = record_turn_route_stage
-    kwargs["visible_text_hash_func"] = visible_text_hash
     return await _publish_result_impl(*args, **kwargs)
 
 

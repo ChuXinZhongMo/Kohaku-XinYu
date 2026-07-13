@@ -63,6 +63,10 @@ NOTE_APPENDERS: dict[str, NoteAppendSpec] = {
         _action_sidecars.append_goal_ecology_note,
         (("run_self_chosen_goal_ecology_func", "_run_self_chosen_goal_ecology"),),
     ),
+    "action_followup_audit": NoteAppendSpec(
+        _action_sidecars.append_action_followup_audit_note,
+        (("run_audit_and_queue_followups_func", "_run_audit_and_queue_followups"),),
+    ),
     "self_action_gateway": NoteAppendSpec(
         _action_sidecars.append_self_action_gateway_note,
         (("run_self_action_gateway_func", "_run_self_action_gateway"),),

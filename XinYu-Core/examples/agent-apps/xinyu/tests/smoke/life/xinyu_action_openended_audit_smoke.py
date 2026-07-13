@@ -194,8 +194,8 @@ def main() -> int:
             failures.append("audit should count action-origin reflection items")
         if int(result.get("low_salience_leaked_count") or 0) <= 0:
             failures.append("audit should detect low salience leakage")
-        if "recommended_next_safe_challenge_candidates" in result:
-            failures.append("audit v1 must not emit next safe challenge candidates")
+        if "followup_proposals" in result:
+            failures.append("run_audit must stay read-only; followups belong to run_audit_and_queue_followups")
 
         warnings = "\n".join(str(item) for item in result.get("warnings", []))
         for marker in (

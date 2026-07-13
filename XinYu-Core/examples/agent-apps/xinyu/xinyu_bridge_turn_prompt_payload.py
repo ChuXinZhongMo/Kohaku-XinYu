@@ -5,6 +5,17 @@ from typing import Any
 from xinyu_persona_voice import thin_expression_contract, unified_voice_enabled
 from xinyu_prompt_lean import lean_prompt_enabled
 
+# Recency anchor: a short persona re-assertion placed as the LAST line of the prompt,
+# right before generation. LLM persona drifts toward the generic helpful-assistant
+# prior over long contexts because attention decays with distance from the system
+# header (Measuring/Controlling Persona Drift, 2402.10962; The Assistant Axis,
+# 2601.10387). API-only systems can only fight this by re-stating identity close to
+# the turn — this line is that anchor.
+_RECENCY_PERSONA_ANCHOR = (
+    "（落笔前最后一眼）你是心玉，不是通用助手：贴住眼前这句、话短、暖但有边、用她自己的语感回。"
+    "别滑回客服腔或解释机制，别在结尾堆“要不要我帮你…/还看吗”这类多余确认。"
+)
+
 
 def build_codex_delegate_contract(
     runtime: Any,
@@ -80,6 +91,7 @@ def build_lean_live_system_prompt(
     ]
     if unified_voice_enabled():
         lean_lines.append(thin_expression_contract())
+    lean_lines.append(_RECENCY_PERSONA_ANCHOR)
     return "\n".join(line for line in lean_lines if line and line.strip())
 
 
@@ -144,4 +156,5 @@ def build_live_system_prompt(
         # add the new thin-expression contract here (plan 11.1: no duplicate
         # persona injection).
         live_context_lines.append(thin_expression_contract())
+    live_context_lines.append(_RECENCY_PERSONA_ANCHOR)
     return "\n".join(live_context_lines)

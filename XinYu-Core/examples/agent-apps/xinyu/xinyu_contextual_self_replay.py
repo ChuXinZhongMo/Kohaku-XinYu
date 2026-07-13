@@ -6,10 +6,10 @@ import json
 import os
 import re
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Iterable, Iterator, Sequence
+from typing import Any, Iterator, Sequence
 
 from xinyu_contextual_recall import (
     append_contextual_recall_trace,
@@ -18,7 +18,6 @@ from xinyu_contextual_recall import (
 )
 from xinyu_contextual_self_loop import (
     build_contextual_self_loop_snapshot,
-    classify_context_scene,
     append_contextual_self_loop_trace,
     write_contextual_self_loop_state,
 )

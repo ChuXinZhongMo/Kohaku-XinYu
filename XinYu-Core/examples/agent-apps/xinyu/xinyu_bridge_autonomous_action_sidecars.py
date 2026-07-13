@@ -55,6 +55,30 @@ def append_self_action_gateway_note(
         runtime._trace_autonomous(f"self_action_gateway_error={exc!r}")
 
 
+def append_action_followup_audit_note(
+    runtime: Any,
+    notes: list[str],
+    *,
+    checked_at: str,
+    run_audit_and_queue_followups_func: Callable[..., dict[str, Any]],
+) -> None:
+    try:
+        result = run_audit_and_queue_followups_func(runtime.xinyu_dir)
+        queued = int((result.get("followup_queue") or {}).get("queued_count") or 0)
+        pending = int((result.get("followup_queue") or {}).get("pending_count") or 0)
+        health = safe_str(result.get("health_status"), "unknown")
+        repl = result.get("replicator_pressure") if isinstance(result.get("replicator_pressure"), dict) else {}
+        repl_level = safe_str(repl.get("level"), "quiet")
+        repl_followup = int(result.get("replicator_followup_count") or 0)
+        note = f"action_followup_audit:{health}/queued={queued}/pending={pending}/replicator={repl_level}"
+        if repl_level == "alert" and repl_followup > 0:
+            note += f"/repl_followup={repl_followup}"
+        notes.append(note)
+    except Exception as exc:
+        notes.append(f"action_followup_audit_error:{type(exc).__name__}")
+        runtime._trace_autonomous(f"action_followup_audit_error={exc!r}")
+
+
 def append_self_action_patch_executor_note(
     runtime: Any,
     notes: list[str],

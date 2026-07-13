@@ -5,7 +5,6 @@ from _bootstrap import ensure_project_root_on_path
 ROOT = ensure_project_root_on_path()
 
 import sys
-from pathlib import Path
 
 from ops.diagnostics.diagnose_runtime_injection import NullInput, _ensure_repo_src, _load_local_env
 from xinyu_core_bridge import XinYuBridgeRuntime

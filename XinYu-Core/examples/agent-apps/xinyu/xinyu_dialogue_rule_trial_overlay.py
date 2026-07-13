@@ -13,7 +13,6 @@ from xinyu_dialogue_rule_eval import (
     evaluate_text,
     parse_owner_rule_cards,
 )
-from xinyu_dialogue_rule_trial_overlay_store import OVERLAY_REL
 from xinyu_dialogue_rule_trial_overlay_store import dialogue_rule_trial_overlay_exists
 from xinyu_dialogue_rule_trial_overlay_store import dialogue_rule_trial_overlay_path
 from xinyu_dialogue_rule_trial_overlay_store import read_dialogue_rule_trial_overlay_state

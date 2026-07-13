@@ -12,8 +12,6 @@ from xinyu_dialogue_archive import (
     update_memory_candidate_status,
 )
 from xinyu_memory_candidate_analysis import candidate_claim_metadata_from_row, candidate_review_context
-from xinyu_memory_candidate_maintenance_store import STATE_REL
-from xinyu_memory_candidate_maintenance_store import TRACE_REL
 from xinyu_memory_candidate_maintenance_store import append_memory_candidate_maintenance_trace
 from xinyu_memory_candidate_maintenance_store import write_memory_candidate_maintenance_state
 

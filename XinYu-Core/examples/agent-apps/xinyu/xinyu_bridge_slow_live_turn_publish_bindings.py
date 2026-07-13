@@ -21,7 +21,6 @@ async def publish_slow_live_failed_turn_runtime(
         recalled_context_event=values["recalled_context_event"],
         recalled_context=values["recalled_context"],
         clock_func=deps["time"].perf_counter,
-        record_finished_func=deps["record_turn_finished"],
         timestamp_func=deps["timestamp_or_now_iso"],
         safe_str_func=deps["_safe_str"],
     )
@@ -49,8 +48,6 @@ async def publish_slow_live_success_turn_runtime(
         reply_bubble_force_units=values["reply_bubble_force_units"],
         trace_route_stage=values["trace_route_stage"],
         clock_func=deps["time"].perf_counter,
-        record_finished_func=deps["record_turn_finished"],
-        visible_text_hash_func=deps["visible_text_hash"],
         timestamp_func=deps["timestamp_or_now_iso"],
         safe_str_func=deps["_safe_str"],
     )

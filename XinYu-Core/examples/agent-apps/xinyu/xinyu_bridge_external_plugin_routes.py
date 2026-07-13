@@ -9,16 +9,12 @@ from xinyu_bridge_external_plugin_native import (
 )
 from xinyu_bridge_external_plugin_route_bindings import (
     admin_route_deps as _build_admin_route_deps,
-    ensure_open as _ensure_open,
-    ensure_payload as _ensure_payload,
     external_plugin_call_deps as _build_external_plugin_call_deps,
     external_plugin_context as _build_external_plugin_context,
-    external_plugin_summary as _external_plugin_summary,
     facade_deps as _build_facade_deps,
     private_native_call_deps as _build_private_native_call_deps,
     private_native_execute_deps as _build_private_native_execute_deps,
     self_thought_external_plugin_deps as _build_self_thought_external_plugin_deps,
-    sessions as _sessions,
 )
 from xinyu_bridge_external_plugin_route_admin import (
     external_plugin_config_impl,

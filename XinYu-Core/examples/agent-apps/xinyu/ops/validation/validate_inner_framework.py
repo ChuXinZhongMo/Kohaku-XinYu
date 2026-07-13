@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 
 try:
     from ._validation_paths import ensure_validation_paths

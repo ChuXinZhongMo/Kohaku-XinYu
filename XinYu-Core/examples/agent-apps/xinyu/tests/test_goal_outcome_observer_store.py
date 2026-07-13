@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 
 from xinyu_goal_outcome_observer_store import append_goal_outcome_trace
 from xinyu_goal_outcome_observer_store import read_goal_outcome_json

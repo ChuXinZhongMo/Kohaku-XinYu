@@ -41,7 +41,6 @@ from xinyu_bridge_local_report_services import (
     memory_governance_reports_service_config_from_env,
 )
 from xinyu_bridge_renderer import BridgeRenderer
-from xinyu_bridge_session import AgentSession
 from xinyu_bridge_runtime_state_payloads import (
     build_runtime_environment_state,
     build_runtime_interval_state,
@@ -75,7 +74,7 @@ class RuntimeInitConfig:
     render_timeout_seconds: int = 60
     session_idle_ttl_seconds: int = 86400
     max_sessions: int = 8
-    proactive_min_interval_seconds: int = 21600
+    proactive_min_interval_seconds: int = 300
     autonomous_maintenance_enabled: bool = True
     autonomous_maintenance_initial_delay_seconds: int = 60
     autonomous_maintenance_interval_seconds: int = 1800

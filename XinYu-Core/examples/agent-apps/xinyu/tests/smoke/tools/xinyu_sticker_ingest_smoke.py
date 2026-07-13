@@ -8,7 +8,6 @@ import base64
 import json
 import shutil
 from contextlib import contextmanager
-from pathlib import Path
 
 from xinyu_sticker_ingest import import_sticker_from_payload
 MINIMAL_PNG = base64.b64decode(

@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_qq_outbox import enqueue_qq_outbox_message
-from xinyu_v1_canary_readiness_store import OWNER_CONFIG_REL
 from xinyu_v1_canary_readiness_store import STATE_REL
 from xinyu_v1_canary_readiness_store import TRACE_REL
 from xinyu_v1_canary_readiness_store import append_v1_canary_trace_event

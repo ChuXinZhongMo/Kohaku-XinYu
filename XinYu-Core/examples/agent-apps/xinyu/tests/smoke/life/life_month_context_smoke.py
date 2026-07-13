@@ -6,7 +6,6 @@ ROOT = ensure_project_root_on_path()
 
 import sys
 from datetime import datetime
-from pathlib import Path
 
 from xinyu_bridge_renderer import BridgeRenderer
 from xinyu_life_month_slots import (

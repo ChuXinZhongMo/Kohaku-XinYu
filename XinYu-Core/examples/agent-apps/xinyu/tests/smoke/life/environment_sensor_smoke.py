@@ -5,7 +5,6 @@ from _bootstrap import ensure_project_root_on_path
 ROOT = ensure_project_root_on_path()
 
 import sys
-from pathlib import Path
 
 from xinyu_environment_sensor import EnvironmentMetrics, map_physical_sensation, sample_environment
 

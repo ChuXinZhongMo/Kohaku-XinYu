@@ -9,6 +9,7 @@ from typing import Any
 
 from xinyu_proactivity_scorer import (
     ProactiveDecision,
+    build_proactive_gate_context,
     candidate_signature,
     collect_proactive_candidates,
     decide_proactive_candidate,
@@ -70,6 +71,7 @@ def run_initiative_orchestrator(
     requested_delivery = _one_line(delivery_level or "desktop_inbox", limit=80)
     feedback = _load_feedback_index(root)
     context_gate = _load_context_gate(root, observed_at=checked_at)
+    proactive_gate_context = build_proactive_gate_context(root, checked_at=checked_at)
     previous_signatures = _load_recent_signatures(root / EVENTS_REL)
     candidates = collect_proactive_candidates(root, checked_at=checked_at)
     if not candidates:
@@ -122,10 +124,18 @@ def run_initiative_orchestrator(
         score = score_proactive_candidate(
             candidate,
             checked_at=checked_at,
+            gate_context=proactive_gate_context,
             previous_signatures=previous_signatures,
         )
         score = _apply_feedback_bias(candidate, score, feedback=feedback)
-        decisions.append(decide_proactive_candidate(candidate, score, checked_at=checked_at))
+        decisions.append(
+            decide_proactive_candidate(
+                candidate,
+                score,
+                checked_at=checked_at,
+                gate_context=proactive_gate_context,
+            )
+        )
     decisions.sort(key=_decision_sort_key, reverse=True)
     selected = decisions[0]
     gate = _gate_decision(selected, feedback=feedback, requested_delivery=requested_delivery)

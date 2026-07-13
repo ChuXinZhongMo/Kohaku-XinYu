@@ -4,7 +4,6 @@ from _bootstrap import ensure_project_root_on_path
 
 ROOT = ensure_project_root_on_path()
 
-from pathlib import Path
 
 from xinyu_core_bridge import XinYuBridgeRuntime
 from xinyu_turn_classifier import classify_visible_turn

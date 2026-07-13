@@ -18,9 +18,6 @@ from xinyu_qq_outbox import enqueue_qq_outbox_message
 from xinyu_storage_paths import knowledge_file_path, knowledge_ref
 from xinyu_visible_persona_voice import compose_review_inbox_card, compose_review_inbox_command_reply
 from stores.review_state import (
-    BOUNDARY_ID as REVIEW_STATE_BOUNDARY,
-    CURSOR_REL,
-    DECISIONS_REL,
     read_review_cursor,
     read_review_decisions,
     review_lock_path,

@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from collections import Counter, deque
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -15,8 +14,6 @@ from xinyu_proactive_response_diagnostics import build_proactive_response_diagno
 from xinyu_short_term_continuity_canary import build_short_term_continuity_canary_report
 from xinyu_stage11_multisensory_extension import build_stage11_multisensory_extension
 from xinyu_stage12_long_term_evaluation_store import REPORT_REL
-from xinyu_stage12_long_term_evaluation_store import STATE_REL
-from xinyu_stage12_long_term_evaluation_store import TRACE_REL
 from xinyu_stage12_long_term_evaluation_store import append_stage12_long_term_evaluation_trace_event
 from xinyu_stage12_long_term_evaluation_store import write_stage12_long_term_evaluation_report_text
 from xinyu_stage12_long_term_evaluation_store import write_stage12_long_term_evaluation_state_text

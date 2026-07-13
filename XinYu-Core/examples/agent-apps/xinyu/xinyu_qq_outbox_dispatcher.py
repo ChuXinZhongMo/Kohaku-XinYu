@@ -5,6 +5,7 @@ import time
 from typing import Any
 
 from xinyu_qq_outbox_client import GATEWAY_NAME
+from xinyu_qq_visible_dispatch import send_reply_bubbles
 
 
 def _safe_str(value: Any, default: str = "") -> str:
@@ -134,14 +135,7 @@ async def poll_qq_outbox(gateway: Any, websocket: Any, connection_id: str, *, ga
                     delivery_kind=message_type or "text",
                 )
                 bubbles = gateway._outbox_visible_reply_bubbles(target, message, claim)
-                responses: list[dict[str, Any] | None] = []
-                for index, bubble in enumerate(bubbles):
-                    if index > 0:
-                        delay = max(0.0, gateway.config.reply_bubble_delay_seconds)
-                        if delay:
-                            await asyncio.sleep(delay)
-                    responses.append(await gateway.send_reply(websocket, target, bubble))
-                action_response = gateway._combined_reply_action_response(responses)
+                action_response = await send_reply_bubbles(gateway, websocket, target, bubbles)
             ok, adapter_message_id, adapter_error = gateway._onebot_action_result(action_response)
             if ok and adapter_message_id and not (file_path or message_type == "file"):
                 await gateway._ack_sent_outbox_delivery(

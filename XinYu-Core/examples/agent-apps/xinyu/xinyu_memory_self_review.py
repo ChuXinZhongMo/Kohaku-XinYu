@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_dialogue_archive import list_memory_candidates, update_memory_candidate_status
+from xinyu_group_memory_pipeline import group_candidate_layer_allowed, group_full_memory_pipeline_enabled
 from xinyu_memory_candidate_analysis import candidate_review_context
 
 
@@ -168,14 +169,18 @@ def review_memory_candidate(row: dict[str, Any], *, context_rows: list[dict[str,
         )
 
     if _is_group_scoped(row) and (ctype in {"owner_preference", "relationship_signal"} or _is_owner_relationship_layer(layer)):
-        return _decision(
-            row,
-            status=BLOCKED_SCOPE_MISMATCH,
-            action="block_candidate",
-            risk="scope_mismatch",
-            rationale="group-scoped material cannot become owner or relationship memory",
-            memory_review=memory_review,
-        )
+        if not (
+            group_full_memory_pipeline_enabled(None)
+            and group_candidate_layer_allowed(None, target_layer=layer)
+        ):
+            return _decision(
+                row,
+                status=BLOCKED_SCOPE_MISMATCH,
+                action="block_candidate",
+                risk="scope_mismatch",
+                rationale="group-scoped material cannot become owner or relationship memory",
+                memory_review=memory_review,
+            )
 
     if int(memory_review.get("conflict_count", 0) or 0) > 0:
         return _decision(

@@ -3,18 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 import v1_canary_gate
-from xinyu_bridge_memory_snapshot import memory_snapshot as _memory_snapshot
 from xinyu_bridge_v1_payloads import V1_CANARY_ACK_TEXTS, V1_CANARY_GREETING_TEXTS
 from xinyu_bridge_v1_payloads import V1_OWNER_SIMPLE_CANARY_ENV
-from xinyu_bridge_v1_payloads import command_id as _command_id
 from xinyu_bridge_v1_payloads import safe_str as _safe_str
-from xinyu_bridge_v1_payloads import timestamp_or_now_iso as _timestamp_or_now_iso
 from xinyu_bridge_v1_provider import ensure_app as _ensure_app_impl
 from xinyu_bridge_v1_provider import health as _health_impl
 from xinyu_bridge_v1_route_adapter import canary_payload_allowed_impl, handle_canary_turn_impl
 from xinyu_bridge_v1_route_adapter import record_shadow_readiness_impl, run_shadow_impl
-from xinyu_runtime_presence import record_turn_finished
-from xinyu_sent_reply_index import visible_text_hash
 from xinyu_v1_canary_readiness import record_v1_shadow_observation
 
 
@@ -98,12 +93,7 @@ async def handle_canary_turn(
         event_sidecar=event_sidecar,
         canary_payload_allowed_func=canary_payload_allowed,
         ensure_app_func=ensure_app,
-        memory_snapshot_func=_memory_snapshot,
-        record_turn_finished_func=record_turn_finished,
-        visible_text_hash_func=visible_text_hash,
-        timestamp_func=_timestamp_or_now_iso,
         safe_str_func=_safe_str,
-        command_id_func=_command_id,
     )
 
 

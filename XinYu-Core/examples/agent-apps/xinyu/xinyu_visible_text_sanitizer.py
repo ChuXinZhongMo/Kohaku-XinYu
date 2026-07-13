@@ -62,6 +62,8 @@ INTERNAL_PROMPT_LEAK_MARKERS = (
     "shadow_gate",
 )
 
+_INTERNAL_AFFECTIVE_TOKEN_RE = re.compile(r"\[(?:FACE|EMOTION|MOOD)_[A-Z0-9_]+\]", re.IGNORECASE)
+
 INTERNAL_PROMPT_LEAK_PATTERNS = (
     re.compile(r"(?is)<\s*think\s*>.*?<\s*/\s*think\s*>"),
     re.compile(r"(?i)</?\s*think\s*/?\s*>"),
@@ -96,12 +98,21 @@ def visible_text_has_internal_prompt_leak(value: Any) -> bool:
     return any(marker in lowered for marker in INTERNAL_PROMPT_LEAK_MARKERS)
 
 
+def strip_internal_affective_tokens(text: str) -> str:
+    if not text:
+        return ""
+    cleaned = _INTERNAL_AFFECTIVE_TOKEN_RE.sub("", text)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    return cleaned.strip()
+
+
 def sanitize_visible_text(value: Any) -> str:
     text = "" if value is None else str(value)
     if not text:
         return ""
     text = _sanitize_internal_prompt_leaks(text)
     text = _sanitize_tool_artifacts(text)
+    text = strip_internal_affective_tokens(text)
     return naturalize_internal_visible_text(text)
 
 

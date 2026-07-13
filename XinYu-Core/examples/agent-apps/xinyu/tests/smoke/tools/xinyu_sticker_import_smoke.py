@@ -7,7 +7,6 @@ ROOT = ensure_project_root_on_path()
 import json
 import shutil
 from contextlib import contextmanager
-from pathlib import Path
 
 import xinyu_sticker_import as sticker_import
 from xinyu_sticker_import import (

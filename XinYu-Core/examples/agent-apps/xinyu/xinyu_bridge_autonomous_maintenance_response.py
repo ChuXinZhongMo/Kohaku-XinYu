@@ -3,12 +3,12 @@ from __future__ import annotations
 from typing import Any, Awaitable, Callable
 
 from xinyu_bridge_heavy_maintenance import spawn_heavy_maintenance
+from xinyu_bridge_memory_snapshot import memory_snapshot
 
 
 async def run_autonomous_maintenance_once(
     runtime: Any,
     *,
-    memory_snapshot_func: Callable[..., Any],
     normalize_reply_func: Callable[[str], str],
     wait_for_func: Callable[..., Awaitable[Any]],
     time_func: Callable[[], float],
@@ -25,7 +25,7 @@ async def run_autonomous_maintenance_once(
     async with runtime._global_turn_lock:
         cleanup = await runtime._cleanup_idle_sessions(preserve_keys={runtime.autonomous_maintenance_session_key})
         session = await runtime._get_session(runtime.autonomous_maintenance_session_key)
-        before_memory = memory_snapshot_func(runtime.memory_root)
+        before_memory = memory_snapshot(runtime.memory_root)
         session.chunks.clear()
         event = runtime._create_autonomous_maintenance_event()
         runtime._autonomous_in_progress = True
@@ -51,7 +51,7 @@ async def run_autonomous_maintenance_once(
         session.last_used_at = time_func()
         reply_preview = normalize_reply_func("".join(session.chunks))[:200]
         sidecar_notes = runtime._run_autonomous_self_thought_sidecars(checked_at=now_iso_func())
-        after_memory = memory_snapshot_func(runtime.memory_root)
+        after_memory = memory_snapshot(runtime.memory_root)
         memory_changed = before_memory != after_memory
         runtime._autonomous_run_count += 1
         runtime._autonomous_last_success_at = now_iso_func()

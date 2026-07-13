@@ -2,10 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from xinyu_bridge_action_route_runtime_followups import (
-    handle_action_digest_followup_turn_runtime,
-    handle_recent_action_followup_turn_runtime,
-)
 
 
 async def settle_action_experience_runtime(
@@ -61,11 +57,6 @@ async def handle_action_layer_turn_runtime(
         execute_action_request_func=deps["_runtime_execute_action_request"],
         settle_action_experience_func=deps["settle_action_experience"],
         compose_action_reply_func=deps["compose_action_reply"],
-        memory_snapshot_func=deps["_memory_snapshot"],
-        record_turn_finished_func=deps["record_turn_finished"],
-        visible_text_hash_func=deps["visible_text_hash"],
-        timestamp_or_now_iso_func=deps["_timestamp_or_now_iso"],
-        command_id_func=deps["_command_id"],
         safe_str_func=deps["_safe_str"],
         to_thread_func=deps["asyncio"].to_thread,
         codex_response_to_outcome_func=deps["codex_response_to_outcome"],

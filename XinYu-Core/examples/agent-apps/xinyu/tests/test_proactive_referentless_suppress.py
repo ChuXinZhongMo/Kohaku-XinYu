@@ -46,6 +46,21 @@ def test_templated_topic_checkin_is_mechanical() -> None:
     assert _is_mechanical_checkin_nudge("要不要我先把人格状态卡接到 Desktop？") is False
 
 
+def test_checkin_tail_with_glued_context_echo_is_mechanical() -> None:
+    # Real owner_long_idle leaks: the proactive context-grounding glued 还看吗/还要吗/
+    # 还弄吗 onto a recent-text echo, producing comma-containing tics that slipped past
+    # the no-comma _TEMPLATED_CHECKIN_RE and were actually delivered to the owner.
+    assert _is_mechanical_checkin_nudge("我好累，不想动还看吗") is True
+    assert _is_mechanical_checkin_nudge("唉还要吗") is True
+    assert _is_mechanical_checkin_nudge("刚才那个还弄吗") is True
+    assert _is_mechanical_checkin_nudge("你得有还看吗") is True
+    # the clean "你还X吗" concrete question still survives
+    assert _is_mechanical_checkin_nudge("那份报告我改完了，你还要吗") is False
+    # and the idle nudge no longer gets rewritten into a glued tic from context
+    grounded = compose_proactive_visible_message("在忙吗？", recent_context="主人: 我好累，不想动")
+    assert "还看吗" not in grounded and "还要吗" not in grounded
+
+
 def test_templated_checkin_falls_back_to_concrete_question() -> None:
     out = compose_proactive_visible_message("要不要我把刚才的生活事件链路接到主动直发？")
     assert out

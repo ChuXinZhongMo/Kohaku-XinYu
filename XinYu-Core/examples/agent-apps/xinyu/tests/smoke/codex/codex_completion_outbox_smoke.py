@@ -5,7 +5,6 @@ from _bootstrap import ensure_project_root_on_path
 ROOT = ensure_project_root_on_path()
 
 import shutil
-from pathlib import Path
 
 from xinyu_codex_delegate import CodexDelegateResult
 from xinyu_core_bridge import XinYuBridgeRuntime

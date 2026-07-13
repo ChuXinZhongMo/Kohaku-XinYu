@@ -15,7 +15,7 @@ from typing import Any
 from xinyu_bridge_external_action_route_backend import maybe_execute_external_action_backend
 from xinyu_bridge_values import safe_str as _safe_str
 from xinyu_bridge_private_desktop_backend import _backend_status, _live_backend, _start_backend, _stop_backend
-from xinyu_bridge_private_desktop_frame import _FRAME_ID_RE, _frame_ref, _read_frame_data_url, _resolve_frame
+from xinyu_bridge_private_desktop_frame import _frame_ref, _read_frame_data_url, _resolve_frame
 from xinyu_bridge_private_desktop_payload import (
     _ensure_payload,
     _observe_action,
@@ -25,8 +25,6 @@ from xinyu_bridge_private_desktop_payload import (
 )
 from xinyu_bridge_private_desktop_status import _lifecycle_payload, _live_state_payload, _observe_payload
 from xinyu_private_desktop_control import (
-    FRAMES_REL,
-    LATEST_FRAME_REL,
     build_desktop_snapshot,
     boundaries_dict,
     run_desktop_action,

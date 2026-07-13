@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 
-from xinyu_bridge_cli_env_store import read_bridge_cli_env
+from xinyu_bridge_stores import read_bridge_cli_env
 from xinyu_bridge_values import as_bool, as_int
 
 

@@ -62,3 +62,16 @@ def desktop_turn_base(
         "groupHash": runtime._desktop_hash(payload.get("group_id")),
         "messageHash": runtime._desktop_hash(payload.get("message_id")),
     }
+
+__all__ = (
+    "Any",
+    "Callable",
+    "annotations",
+    "desktop_creative_writing_state",
+    "desktop_initiative_metrics_summary",
+    "desktop_latest_memory_route",
+    "desktop_memory_route_payload",
+    "desktop_metric_int",
+    "desktop_recall_item",
+    "desktop_turn_base",
+)

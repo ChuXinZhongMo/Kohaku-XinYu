@@ -96,10 +96,5 @@ async def _handle_action_followup_turn(
         cleanup=cleanup,
         event_sidecar=event_sidecar,
         **{compose_key: compose_func},
-        memory_snapshot_func=deps["_memory_snapshot"],
-        record_turn_finished_func=deps["record_turn_finished"],
-        visible_text_hash_func=deps["visible_text_hash"],
-        timestamp_or_now_iso_func=deps["_timestamp_or_now_iso"],
-        command_id_func=deps["_command_id"],
         safe_str_func=deps["_safe_str"],
     )

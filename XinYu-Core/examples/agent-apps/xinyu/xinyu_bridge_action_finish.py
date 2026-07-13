@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 import time
-from typing import Any, Callable
+from typing import Any
+
+from xinyu_bridge_action_support import command_id, timestamp_or_now_iso
+from xinyu_bridge_memory_snapshot import memory_snapshot
+from xinyu_runtime_presence import record_turn_finished
+from xinyu_sent_reply_index import visible_text_hash
 
 
 async def finish_action_turn(
@@ -17,18 +22,13 @@ async def finish_action_turn(
     reply: str,
     notes: list[str],
     record_status: str,
-    memory_snapshot_func: Callable[[Any], dict[str, Any]],
-    record_turn_finished_func: Callable[..., Any],
-    visible_text_hash_func: Callable[[str], str],
-    timestamp_or_now_iso_func: Callable[[Any], str],
-    command_id_func: Callable[[dict[str, Any]], str],
     publish_status: str = "ok",
     extra_response: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    after_memory = memory_snapshot_func(runtime.memory_root)
+    after_memory = memory_snapshot(runtime.memory_root)
     memory_changed = before_memory != after_memory
     elapsed_ms = int((time.perf_counter() - turn_started_at) * 1000)
-    record_turn_finished_func(
+    record_turn_finished(
         runtime.xinyu_dir,
         turn_id=turn_id,
         reply=reply,
@@ -37,14 +37,14 @@ async def finish_action_turn(
         notes=notes,
         memory_changed=memory_changed,
     )
-    reply_hash = visible_text_hash_func(reply)
+    reply_hash = visible_text_hash(reply)
     await runtime._desktop_publish_chat_finished(
         payload,
         text=text,
         reply=reply,
         session_key=session_key,
         turn_id=turn_id,
-        started_at=timestamp_or_now_iso_func(turn_started_wall),
+        started_at=timestamp_or_now_iso(turn_started_wall),
         elapsed_ms=elapsed_ms,
         status=publish_status,
         notes=notes,
@@ -60,7 +60,7 @@ async def finish_action_turn(
         "reply": reply,
         "memory_changed": memory_changed,
         "turn_id": turn_id,
-        "command_id": command_id_func(payload),
+        "command_id": command_id(payload),
         "session_id": session_key,
         "reply_hash": reply_hash,
         "archive_message_ids": [],

@@ -40,7 +40,7 @@ def test_runtime_context_includes_slow_state_for_low_energy_scene(tmp_path: Path
     assert "[runtime/scene_frame]" in context
     assert "[runtime/slow_state_modulator]" in context
     assert "- reply_policy: low_burden_short" in context
-    assert "- initiative_policy: suppress_optional_proactive" in context
+    assert "- initiative_policy: cautious_brief_expression" in context
 
 
 def test_memory_candidate_extractor_records_immune_gate_notes(tmp_path: Path) -> None:

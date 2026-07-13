@@ -7,7 +7,6 @@ ROOT = ensure_project_root_on_path()
 import re
 import sys
 from datetime import date
-from pathlib import Path
 
 from xinyu_bridge_renderer import BridgeRenderer
 from xinyu_memory_weights import calculate_memory_weights

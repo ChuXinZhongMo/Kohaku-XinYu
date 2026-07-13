@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
+from typing import Any
 
 from xinyu_bridge_external_action_backend import (
     EXTERNAL_ACTION_BACKEND_DISABLED_MODE,

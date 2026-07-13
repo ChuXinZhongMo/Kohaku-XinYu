@@ -15,7 +15,8 @@ from xinyu_self_chosen_goal_ecology_store import read_self_chosen_goal_text
 from xinyu_self_chosen_goal_ecology_store import write_self_chosen_goal_state_json
 from xinyu_self_chosen_goal_ecology_store import write_self_chosen_goal_state_markdown
 from xinyu_self_choice_store import public_affect_band_from_state
-from xinyu_autonomy_policy import load_policy as load_autonomy_policy
+from xinyu_autonomy_expansion_grant import effective_autonomy_policy
+from xinyu_kernel_goal_bridge import kernel_goal_candidate_specs, read_kernel_pressure_signals, sync_kernel_goal_signals
 
 
 ECOLOGY_VERSION = 1
@@ -136,7 +137,8 @@ def build_self_chosen_goal_decision(
     root = Path(root)
     checked_at = checked_at or _now_iso()
     state = _load_state(root)
-    policy = load_autonomy_policy(root)
+    sync_kernel_goal_signals(root)
+    policy = effective_autonomy_policy(root)
     candidates = _build_candidates(root, state=state, checked_at=checked_at, policy=policy)
     ranked = sorted(candidates, key=lambda item: (item.final_score, item.goal_id), reverse=True)
     selected = ranked[0] if ranked else _fallback_candidate()
@@ -291,6 +293,22 @@ def _build_candidates(
     ]
     if policy is not None and getattr(policy, "productive_goals_enabled", False):
         candidates.extend(_productive_goal_candidates(goals=goals, checked_at=checked_at, context=context))
+    kernel_signals = read_kernel_pressure_signals(root)
+    for spec in kernel_goal_candidate_specs(kernel_signals):
+        candidates.append(
+            _score_candidate(
+                spec["goal_id"],
+                spec["label"],
+                spec["motive"],
+                float(spec["base_score"]),
+                tuple(spec["evidence_paths"]),
+                spec["next_safe_action"],
+                spec["boundary"],
+                goals=goals,
+                checked_at=checked_at,
+                context=context,
+            )
+        )
     return candidates
 
 

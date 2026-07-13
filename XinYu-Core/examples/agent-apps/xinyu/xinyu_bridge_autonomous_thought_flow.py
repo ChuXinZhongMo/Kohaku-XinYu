@@ -14,6 +14,7 @@ _BASE_THOUGHT_SIDECAR_METHODS = (
     "_append_review_inbox_note",
     "_append_goldmark_dehydrate_note",
     "_append_goal_ecology_note",
+    "_append_action_followup_audit_note",
     "_append_private_ecosystem_note",
     "_append_self_action_gateway_note",
     "_append_self_action_patch_executor_note",

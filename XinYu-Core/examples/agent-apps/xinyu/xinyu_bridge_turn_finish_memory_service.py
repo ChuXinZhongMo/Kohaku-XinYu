@@ -8,6 +8,7 @@ class MemoryFinishResult(NamedTuple):
     candidate_result: dict[str, Any]
     memory_self_review: dict[str, Any]
     interaction_journal: dict[str, Any]
+    kernel_post_turn: dict[str, Any]
 
 
 def _record_recalled_context_log(
@@ -47,6 +48,8 @@ def run_memory_archive_finish_sidecars(
     extract_memory_candidates_func: Callable[..., dict[str, Any]],
     run_memory_self_review_func: Callable[..., dict[str, Any]],
     record_interaction_journal_func: Callable[..., dict[str, Any]],
+    run_kernel_post_turn_func: Callable[..., dict[str, Any]],
+    event_sidecar: dict[str, Any] | None = None,
 ) -> MemoryFinishResult:
     archive_result = archive_dialogue_turn_func(
         runtime,
@@ -84,9 +87,18 @@ def run_memory_archive_finish_sidecars(
         turn_id=turn_id,
         turn_started_at=turn_started_at,
     )
+    kernel_post_turn = run_kernel_post_turn_func(
+        runtime,
+        payload=payload,
+        text=text,
+        reply=reply,
+        turn_id=turn_id,
+        event_sidecar=event_sidecar,
+    )
     return MemoryFinishResult(
         archive_result=archive_result,
         candidate_result=candidate_result,
         memory_self_review=memory_self_review,
         interaction_journal=interaction_journal,
+        kernel_post_turn=kernel_post_turn,
     )

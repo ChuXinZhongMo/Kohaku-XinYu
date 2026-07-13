@@ -8,9 +8,6 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_autonomy_loop_report import build_autonomy_loop_report
-from xinyu_decision_chain_latest_store import REPORT_REL
-from xinyu_decision_chain_latest_store import STATE_REL
-from xinyu_decision_chain_latest_store import TRACE_REL
 from xinyu_decision_chain_latest_store import append_decision_chain_latest_trace_event
 from xinyu_decision_chain_latest_store import decision_chain_latest_state_path
 from xinyu_decision_chain_latest_store import write_decision_chain_latest_report_text

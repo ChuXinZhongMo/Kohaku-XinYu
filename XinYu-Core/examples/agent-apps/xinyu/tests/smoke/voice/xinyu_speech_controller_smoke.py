@@ -4,7 +4,6 @@ from _bootstrap import ensure_project_root_on_path
 
 ROOT = ensure_project_root_on_path()
 
-from pathlib import Path
 
 from xinyu_speech_controller import XinyuSpeechController
 

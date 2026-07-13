@@ -37,6 +37,10 @@ def append_goal_ecology_note(deps: Any, runtime: Any, notes: list[str], *, check
     append_note_without_result("goal_ecology", deps, runtime, notes, checked_at=checked_at)
 
 
+def append_action_followup_audit_note(deps: Any, runtime: Any, notes: list[str], *, checked_at: str) -> None:
+    append_note_without_result("action_followup_audit", deps, runtime, notes, checked_at=checked_at)
+
+
 def append_self_action_gateway_note(deps: Any, runtime: Any, notes: list[str], *, checked_at: str) -> None:
     append_note_without_result("self_action_gateway", deps, runtime, notes, checked_at=checked_at)
 

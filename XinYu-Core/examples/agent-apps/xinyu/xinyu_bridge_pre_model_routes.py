@@ -46,6 +46,12 @@ async def run_pre_model_routes(
     event_sidecar: dict[str, Any] = {"notes": ["event_sourcing_not_run"]}
     v1_shadow: dict[str, Any] = {"notes": []}
     try:
+        from xinyu_bridge_kernel_turn import inject_kernel_pre_turn_context
+
+        inject_kernel_pre_turn_context(runtime, payload)
+    except Exception:
+        pass
+    try:
         event_sidecar = await to_thread_func(event_recorder_func, runtime.xinyu_dir, payload, text=text)
     except Exception as exc:
         print(f"[xinyu_core_bridge] event sourcing sidecar failed: {exc}", flush=True)

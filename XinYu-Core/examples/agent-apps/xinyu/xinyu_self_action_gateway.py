@@ -18,8 +18,6 @@ from xinyu_self_action_gateway_store import read_self_action_gateway_text
 from xinyu_self_action_gateway_store import write_self_action_gateway_json
 from xinyu_self_action_gateway_store import write_self_action_gateway_text
 from stores.self_action_queue import (
-    APPROVAL_QUEUE_REL,
-    BOUNDARY_ID as SELF_ACTION_QUEUE_BOUNDARY,
     append_approval_queue_event,
     read_approval_queue_rows,
 )
@@ -31,10 +29,10 @@ from xinyu_self_action_trusted_autoapproval import (
     scope_is_auto_approvable,
     scope_is_codex_auto_runnable,
 )
+from xinyu_autonomy_expansion_grant import effective_autonomy_policy
 from xinyu_autonomy_policy import (
     PRODUCTIVE_GOAL_IDS,
     SCRATCH_DIR_REL,
-    load_policy as load_autonomy_policy,
     reliability_budget_bonus,
 )
 
@@ -112,7 +110,7 @@ def run_self_action_gateway(
     checked_at = _timestamp_or_now_iso(checked_at)
     goal_state = _read_json(root / GOAL_ECOLOGY_STATE_REL, default={})
     selected_goal_id = _safe_token(goal_state.get("last_selected_goal_id")) if isinstance(goal_state, dict) else ""
-    autonomy_policy = load_autonomy_policy(root)
+    autonomy_policy = effective_autonomy_policy(root)
     candidates = build_action_candidates(
         root, selected_goal_id=selected_goal_id, checked_at=checked_at, autonomy_policy=autonomy_policy
     )
@@ -765,7 +763,7 @@ def _apply_trusted_auto_approval(
     budget = trusted_autoapproval_remaining_budget(ledger, policy)
     # #4: autonomy grows with demonstrated reliability — a goal that keeps succeeding
     # earns a larger (capped) auto-approval window.
-    autonomy_policy = load_autonomy_policy(root)
+    autonomy_policy = effective_autonomy_policy(root)
     bonus = _reliability_budget_bonus(root, queued, autonomy_policy)
     if bonus:
         budget += bonus

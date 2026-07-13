@@ -23,3 +23,19 @@ def install_runtime_dialogue_aliases(runtime_cls: type[Any]) -> type[Any]:
     install_semantic_fast_aliases(runtime_cls)
     install_promise_followup_aliases(runtime_cls)
     return runtime_cls
+
+__all__ = (
+    "Any",
+    "PROMISE_FOLLOWUP_DONE_MARKERS",
+    "PROMISE_FOLLOWUP_REPLY_MARKERS",
+    "PROMISE_FOLLOWUP_STATE_REL",
+    "PROMISE_FOLLOWUP_USER_MARKERS",
+    "V1_CANARY_ACK_TEXTS",
+    "V1_CANARY_GREETING_TEXTS",
+    "V1_OWNER_SIMPLE_CANARY_ENV",
+    "annotations",
+    "install_promise_followup_aliases",
+    "install_runtime_dialogue_aliases",
+    "install_semantic_fast_aliases",
+    "install_v1_aliases",
+)

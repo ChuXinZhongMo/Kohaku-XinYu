@@ -31,11 +31,6 @@ async def handle_action_followup_turn(
     spec: ActionFollowupSpec,
     finish_action_turn_func: Callable[..., Any],
     extend_common_finish_notes_func: Callable[..., None],
-    memory_snapshot_func: Callable[[Any], dict[str, Any]],
-    record_turn_finished_func: Callable[..., Any],
-    visible_text_hash_func: Callable[[str], str],
-    timestamp_or_now_iso_func: Callable[[Any], str],
-    command_id_func: Callable[[dict[str, Any]], str],
     safe_str_func: Callable[..., str],
 ) -> dict[str, Any] | None:
     if not runtime._owner_private_payload_matches(payload):
@@ -80,9 +75,4 @@ async def handle_action_followup_turn(
         result_key=spec.result_key,
         result_payload=spec.result_payload_func(followup, row, safe_str_func),
         finish_action_turn_func=finish_action_turn_func,
-        memory_snapshot_func=memory_snapshot_func,
-        record_turn_finished_func=record_turn_finished_func,
-        visible_text_hash_func=visible_text_hash_func,
-        timestamp_or_now_iso_func=timestamp_or_now_iso_func,
-        command_id_func=command_id_func,
     )

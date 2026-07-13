@@ -7,14 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_persona_health_report_store import DIMENSIONS_REL
 from xinyu_persona_health_report_store import EVAL_CASES_REL
-from xinyu_persona_health_report_store import EVOLUTION_REL
 from xinyu_persona_health_report_store import GROWTH_LOG_REL
-from xinyu_persona_health_report_store import PROFILE_REL
-from xinyu_persona_health_report_store import REFLECTION_LOG_REL
-from xinyu_persona_health_report_store import REPORT_REL
-from xinyu_persona_health_report_store import SELF_REVIEW_REL
 from xinyu_persona_health_report_store import TRIAL_FEEDBACK_REL
 from xinyu_persona_health_report_store import read_persona_health_source_text
 from xinyu_persona_health_report_store import read_persona_health_text

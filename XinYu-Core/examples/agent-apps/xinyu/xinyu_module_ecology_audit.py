@@ -9,8 +9,6 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from xinyu_module_ecology_audit_store import SKIP_SCAN_DIRS
-from xinyu_module_ecology_audit_store import SKIP_SCAN_PREFIXES
 from xinyu_module_ecology_audit_store import collect_module_ecology_paths
 from xinyu_module_ecology_audit_store import read_module_ecology_git_status_text
 from xinyu_module_ecology_audit_store import read_module_ecology_reference_sources

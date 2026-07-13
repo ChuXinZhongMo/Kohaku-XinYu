@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 from xinyu_bridge_observation_payload import ObservationPayload, _timestamp_or_now_iso
-from xinyu_bridge_observation_reports_store import (
+from xinyu_bridge_stores import (
     observation_report_exists,
     read_observation_report_text,
     read_observation_report_text_safe,

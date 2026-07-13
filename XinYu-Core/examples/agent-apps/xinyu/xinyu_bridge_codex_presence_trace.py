@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_bridge_codex_presence_store import append_codex_background_trace
+from xinyu_bridge_stores import append_codex_background_trace
 
 CODEX_BACKGROUND_TRACE_RELATIVE_PATH = Path("knowledge/codex_delegate_background_trace.log")
 CODEX_BACKGROUND_TRACE_TEXT_LIMIT = 120

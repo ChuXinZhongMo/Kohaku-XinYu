@@ -7,8 +7,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_short_term_continuity_store import STATE_REL
-from xinyu_short_term_continuity_store import TRACE_REL
 from xinyu_short_term_continuity_store import append_short_term_continuity_trace
 from xinyu_short_term_continuity_store import write_short_term_continuity_state
 from xinyu_visible_text_sanitizer import sanitize_visible_text

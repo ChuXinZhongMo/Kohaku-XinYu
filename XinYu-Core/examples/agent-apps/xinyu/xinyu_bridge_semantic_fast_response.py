@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from xinyu_bridge_semantic_fast_payloads import command_id
+
 
 def build_semantic_fast_response(
     payload: dict[str, Any],
@@ -18,14 +20,13 @@ def build_semantic_fast_response(
     renderer_name: str,
     notes: list[str],
     safe_str_func: Callable[..., str],
-    command_id_func: Callable[[dict[str, Any]], str],
 ) -> dict[str, Any]:
     return {
         "accepted": True,
         "reply": reply,
         "memory_changed": memory_changed,
         "turn_id": turn_id,
-        "command_id": command_id_func(payload),
+        "command_id": command_id(payload),
         "session_id": session_key,
         "reply_hash": reply_hash,
         "archive_message_ids": [],

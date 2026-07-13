@@ -7,7 +7,6 @@ ROOT = ensure_project_root_on_path()
 import argparse
 import asyncio
 import sys
-from pathlib import Path
 
 from behavior_regression_smoke import Scenario, _run_scenario
 from memory_mutation_smoke import _ensure_repo_src, _load_local_env

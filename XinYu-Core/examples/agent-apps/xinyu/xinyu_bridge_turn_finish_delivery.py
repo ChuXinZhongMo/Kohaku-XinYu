@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Awaitable, Callable
 
+from xinyu_bridge_memory_snapshot import memory_snapshot
+
 
 def schedule_promised_followup_sidecar(
     runtime: Any,
@@ -101,7 +103,6 @@ def finish_turn_coherence_sidecar(
     promised_followup: dict[str, Any],
     sticker_reply: dict[str, Any],
     finish_turn_coherence_func: Callable[..., dict[str, Any]],
-    memory_snapshot_func: Callable[..., dict[str, Any]],
 ) -> dict[str, Any]:
     try:
         return finish_turn_coherence_func(
@@ -111,7 +112,7 @@ def finish_turn_coherence_sidecar(
             user_text=text,
             reply=reply,
             action_result=action_result,
-            memory_changed=before_memory != memory_snapshot_func(runtime.memory_root),
+            memory_changed=before_memory != memory_snapshot(runtime.memory_root),
             final_guard_flags=final_guard_flags,
             component_notes={
                 "private_thought_outcome": private_thought_outcome,

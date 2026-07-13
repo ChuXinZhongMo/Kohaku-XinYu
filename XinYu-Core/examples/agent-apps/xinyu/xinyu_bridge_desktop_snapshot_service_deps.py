@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from xinyu_bridge_desktop_service_status_store import desktop_service_path_exists
+from xinyu_bridge_stores import desktop_service_path_exists
 from xinyu_bridge_desktop_snapshot_service import desktop_snapshot as _runtime_desktop_snapshot
 
 

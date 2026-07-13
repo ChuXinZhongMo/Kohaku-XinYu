@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import sqlite3
 import time
@@ -9,8 +10,6 @@ from pathlib import Path
 from typing import Any
 
 from stores.persona_runtime_overlay import (
-    BOUNDARY_ID as PERSONA_RUNTIME_OVERLAY_BOUNDARY,
-    OVERLAY_REL,
     read_goldmark_overlay as store_read_goldmark_overlay,
     write_goldmark_overlay,
 )

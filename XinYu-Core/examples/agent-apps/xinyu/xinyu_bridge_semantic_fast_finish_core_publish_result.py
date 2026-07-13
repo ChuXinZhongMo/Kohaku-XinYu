@@ -22,12 +22,9 @@ async def publish_semantic_fast_finish_result(
     renderer_name: str,
     safe_str_func: Callable[..., str],
     timestamp_func: Callable[..., str],
-    command_id_func: Callable[[dict[str, Any]], str],
     publish_success_func: Callable[..., Any],
     response_func: Callable[..., dict[str, Any]],
-    record_finished_func: Callable[..., Any],
     record_route_stage_func: Callable[..., Any],
-    visible_text_hash_func: Callable[[str], str],
 ) -> dict[str, Any]:
     reply_hash = await publish_success_func(
         runtime,
@@ -40,9 +37,7 @@ async def publish_semantic_fast_finish_result(
         total_elapsed_ms=total_elapsed_ms,
         notes=notes,
         memory_changed=memory_changed,
-        record_finished_func=record_finished_func,
         record_route_stage_func=record_route_stage_func,
-        visible_text_hash_func=visible_text_hash_func,
         timestamp_func=timestamp_func,
     )
     return response_func(
@@ -58,7 +53,6 @@ async def publish_semantic_fast_finish_result(
         renderer_name=renderer_name,
         notes=notes,
         safe_str_func=safe_str_func,
-        command_id_func=command_id_func,
     )
 
 

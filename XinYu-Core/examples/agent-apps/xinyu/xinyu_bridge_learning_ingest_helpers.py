@@ -22,3 +22,25 @@ from xinyu_bridge_learning_ingest_response import (
     build_learning_ingest_response,
     learning_ingest_notes,
 )
+
+__all__ = (
+    "ATTACHMENT_DIRS_ENV",
+    "IMAGE_SUFFIXES",
+    "LEGACY_ATTACHMENT_DIRS_ENV",
+    "LearningIngestRequest",
+    "_as_bool",
+    "_as_int",
+    "_attachment_kind",
+    "_env_roots",
+    "_generic_attachment_label",
+    "_has_traversal",
+    "_learning_ingest_reply",
+    "_payload_metadata",
+    "_safe_str",
+    "annotations",
+    "build_learning_ingest_response",
+    "learning_ingest_notes",
+    "parse_learning_ingest_request",
+    "payload_path",
+    "resolve_learning_ingest_path",
+)

@@ -101,7 +101,7 @@ def main() -> int:
 
     if args.show_state:
         path = xinyu_dir / "memory/context/automation_state.md"
-        print(f"\n--- memory/context/automation_state.md ---")
+        print("\n--- memory/context/automation_state.md ---")
         print(path.read_text(encoding="utf-8"))
     return 0
 

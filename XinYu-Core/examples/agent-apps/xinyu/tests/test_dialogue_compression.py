@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pytest
 
 from xinyu_dialogue_compression import (
     SUMMARY_ROLE,

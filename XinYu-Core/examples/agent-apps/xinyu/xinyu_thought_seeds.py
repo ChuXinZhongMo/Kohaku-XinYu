@@ -15,7 +15,6 @@ from xinyu_thought_seeds_store import MIND_LOOP_STATE_REL
 from xinyu_thought_seeds_store import PERSONALITY_EVOLUTION_REL
 from xinyu_thought_seeds_store import PERSONA_SURFACE_REL
 from xinyu_thought_seeds_store import RECENT_CONTEXT_REL
-from xinyu_thought_seeds_store import STATE_REL
 from xinyu_thought_seeds_store import UNFINISHED_EXPERIENCES_REL
 from xinyu_thought_seeds_store import read_thought_seed_text
 from xinyu_thought_seeds_store import read_thought_seeds_state

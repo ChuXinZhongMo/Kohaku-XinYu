@@ -340,7 +340,7 @@ def run_audit(root: Path, *, low_salience_threshold: float = LOW_SALIENCE_THRESH
         salience_by_id=salience_by_id,
     )
     health = _health_status(warnings)
-    return {
+    result = {
         "health_status": health,
         "recent_action_count": len(recent_rows),
         "residue_count": len(residue_rows),
@@ -351,6 +351,13 @@ def run_audit(root: Path, *, low_salience_threshold: float = LOW_SALIENCE_THRESH
         "top_repeated_visible_phrases": repeated_phrases,
         "warnings": warnings,
     }
+    try:
+        from xinyu_replicator_pressure_audit import assess_replicator_pressure
+
+        result["replicator_pressure"] = assess_replicator_pressure(root, audit_result=result)
+    except Exception:
+        pass
+    return result
 
 
 def main(argv: list[str] | None = None) -> int:

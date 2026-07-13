@@ -6,15 +6,8 @@ from typing import Any
 from xinyu_bridge_codex_presence_reply import codex_busy_reply as _codex_busy_reply
 from xinyu_bridge_codex_presence_status import (
     codex_delegate_running,
-    codex_foreground_result_status,
     codex_presence_status_from_result,
 )
-from xinyu_bridge_codex_presence_trace import (
-    append_codex_delegate_background_trace,
-    codex_delegate_background_error_trace_line,
-    codex_delegate_background_success_trace_line,
-)
-from xinyu_bridge_state_text import seconds_since_iso
 from xinyu_bridge_values import safe_str
 from xinyu_runtime_presence import record_codex_presence
 

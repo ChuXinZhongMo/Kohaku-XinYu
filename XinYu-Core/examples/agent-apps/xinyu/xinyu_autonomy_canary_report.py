@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from xinyu_autonomy_expansion_grant import expansion_canary_fields
 from xinyu_autonomy_canary_report_store import INTENTION_STATE_REL
 from xinyu_autonomy_canary_report_store import INTENTION_TRACE_REL
 from xinyu_autonomy_canary_report_store import RELATION_STATE_REL
@@ -82,8 +83,10 @@ def build_report(root: Path, *, trace_limit: int = 5) -> dict[str, Any]:
     intention_state = _parse_md_fields(read_autonomy_canary_text(root / INTENTION_STATE_REL))
     traces = read_autonomy_canary_recent_traces(root / INTENTION_TRACE_REL, limit=trace_limit)
     warnings = _warnings(intention_state, traces)
+    expansion = expansion_canary_fields(root)
     return {
         "root": str(root),
+        "autonomy_expansion": expansion,
         "canary_prompts": CANARY_PROMPTS,
         "relation_state": _selected_fields(
             relation_state,

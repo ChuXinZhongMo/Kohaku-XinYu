@@ -67,6 +67,8 @@ CORE_COMPAT_EXPORTS = (
     "xinyu_bridge_context",
     "xinyu_bridge_desktop_proactive_routes",
     "xinyu_bridge_desktop_recent_routes",
+    "get_kernel_self_model",  # K-002: safe access to Self Model from runtime/bridge
+
     "xinyu_bridge_renderer",
     "xinyu_bridge_runtime_dialogue_aliases",
 )

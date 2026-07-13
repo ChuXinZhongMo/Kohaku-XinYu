@@ -80,3 +80,23 @@ async def external_plugin_call_impl(
         args=args,
         deps=deps,
     )
+
+__all__ = (
+    "Any",
+    "BridgeRequestError",
+    "Callable",
+    "ExternalPluginCallDeps",
+    "HTTPStatus",
+    "TRANSPORT_HTTP",
+    "TRANSPORT_MCP",
+    "TRANSPORT_NATIVE_BRIDGE",
+    "TRANSPORT_WEBSOCKET",
+    "annotations",
+    "apply_plugin_config_defaults",
+    "dataclass",
+    "dispatch_external_plugin_call",
+    "external_plugin_call_impl",
+    "normalize_external_plugin_payload",
+    "prepared_boundary_blocked_response",
+    "runtime_boundary_blocked_response",
+)

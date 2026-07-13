@@ -3,13 +3,12 @@ from __future__ import annotations
 import argparse
 import json
 import re
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from xinyu_voice_style_observations import PUBLIC_CORPUS_FINDINGS, PUBLIC_EXAMPLES
-from xinyu_voice_style_sampler_store import SAMPLE_REPORT_REL
 from xinyu_voice_style_sampler_store import write_voice_style_sample_report_text
 
 BANNED_SAMPLE_PATTERNS: tuple[str, ...] = (
@@ -103,13 +102,13 @@ def analyse_style_samples(samples: list[dict[str, Any]]) -> dict[str, Any]:
 def proactive_scene_templates(scene: str, topic: str) -> tuple[str, ...]:
     topic = normalize_proactive_topic(topic)
     if scene == "接上文/考古":
-        return (f"刚才那个还弄吗", f"{topic}还接吗", f"{topic}接着？")
+        return ("刚才那个还弄吗", f"{topic}还接吗", f"{topic}接着？")
     if scene == "确认/追问":
         return (f"{topic}还要吗", "这个还要吗", f"{topic}还看吗")
     if scene == "继续/收束":
-        return (f"{topic}我接着？", f"那我接着？", f"{topic}继续吗")
+        return (f"{topic}我接着？", "那我接着？", f"{topic}继续吗")
     if scene == "附和/同感":
-        return (f"{topic}我也觉得怪", f"这块我也有点在意", f"{topic}我也卡着")
+        return (f"{topic}我也觉得怪", "这块我也有点在意", f"{topic}我也卡着")
     if scene == "不打扰":
         return ("那我先不吵你", "我先收着", "那我先放一会儿")
     return (f"{topic}还接吗", "刚才那个还弄吗", "我继续吗")

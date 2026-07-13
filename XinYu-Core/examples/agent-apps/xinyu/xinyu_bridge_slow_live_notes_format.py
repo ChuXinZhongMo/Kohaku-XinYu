@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
 
 from xinyu_bridge_slow_live_notes_normalization import (
     extend_sidecar_notes,

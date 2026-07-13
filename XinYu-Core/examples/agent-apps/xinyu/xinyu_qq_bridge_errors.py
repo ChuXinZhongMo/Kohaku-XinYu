@@ -45,6 +45,29 @@ def is_bridge_connection_unavailable_error(error: str) -> bool:
     return is_retryable_core_chat_connection_error(error)
 
 
+def is_retryable_onebot_action_error(error: str) -> bool:
+    lowered = error.lower()
+    if not lowered:
+        return False
+    if "onebot_action_timeout" in lowered:
+        return True
+    if "napcat connection closed" in lowered:
+        return True
+    return any(
+        marker in lowered
+        for marker in (
+            "timeout",
+            "timed out",
+            "connectionclosed",
+            "connection closed",
+            "connectionclosederror",
+            "no close frame",
+            "sendmsg",
+            "nodeikernelmsgservice",
+        )
+    )
+
+
 def owner_private_chat_fallback_reply(
     *,
     route: str,

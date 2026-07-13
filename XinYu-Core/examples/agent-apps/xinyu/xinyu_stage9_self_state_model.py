@@ -7,10 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_stage9_self_state_model_store import REPORT_REL
 from xinyu_stage9_self_state_model_store import SOURCE_RELS
-from xinyu_stage9_self_state_model_store import STATE_REL
-from xinyu_stage9_self_state_model_store import TRACE_REL
 from xinyu_stage9_self_state_model_store import append_stage9_trace_event
 from xinyu_stage9_self_state_model_store import read_stage9_source_text
 from xinyu_stage9_self_state_model_store import stage9_report_path

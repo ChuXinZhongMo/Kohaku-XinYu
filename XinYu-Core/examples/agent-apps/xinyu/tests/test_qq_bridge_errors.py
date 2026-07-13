@@ -4,6 +4,7 @@ from xinyu_qq_bridge_errors import (
     BRIDGE_TIMEOUT_OWNER_REPLY,
     is_bridge_request_timeout_error,
     is_retryable_core_chat_connection_error,
+    is_retryable_onebot_action_error,
     owner_private_chat_fallback_reply,
 )
 
@@ -20,6 +21,16 @@ def test_retryable_core_chat_connection_error_requires_connection_marker() -> No
     )
     assert is_retryable_core_chat_connection_error("RemoteDisconnected: remote end closed")
     assert not is_retryable_core_chat_connection_error("core bridge HTTP 500: boom")
+
+
+def test_retryable_onebot_action_error_matches_timeout_and_disconnect() -> None:
+    assert is_retryable_onebot_action_error("onebot_action_timeout")
+    assert is_retryable_onebot_action_error(
+        "Timeout: NTEvent serviceAndMethod:NodeIKernelMsgService/sendMsg"
+    )
+    assert is_retryable_onebot_action_error("NapCat connection closed before action response")
+    assert is_retryable_onebot_action_error("ConnectionClosedError: no close frame received or sent")
+    assert not is_retryable_onebot_action_error("permission denied")
 
 
 def test_owner_private_chat_fallback_reply_is_owner_private_only() -> None:

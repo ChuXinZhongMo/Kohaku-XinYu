@@ -18,7 +18,6 @@ from xinyu_runtime.core.events import EventType, TriggerEvent  # noqa: E402
 from xinyu_runtime.llm.base import ChatResponse, LLMConfig, ToolSchema  # noqa: E402
 from xinyu_runtime.llm.failover import (  # noqa: E402
     TinyKernelVisibleFailover,
-    VisibleFailoverLLMProvider,
     wrap_llm_with_visible_failover,
 )
 from xinyu_runtime.parsing import TextEvent  # noqa: E402

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from xinyu_bridge_memory_snapshot import memory_snapshot
 from xinyu_reply_source import final_text_source_for_renderer, note_for_final_text_source
 
 
@@ -83,11 +84,9 @@ def semantic_fast_memory_changed(
     runtime: Any,
     before_memory: dict[str, Any] | None,
     notes: list[str],
-    *,
-    memory_snapshot_func: Callable[..., dict[str, Any]],
 ) -> bool:
     if before_memory is None:
         notes.append("semantic_fast_memory_snapshot_skipped")
         return False
-    after_memory = memory_snapshot_func(runtime.memory_root)
+    after_memory = memory_snapshot(runtime.memory_root)
     return before_memory != after_memory

@@ -271,7 +271,7 @@ def build_skill_recall_block(root: Any, *, query_text: str = "", limit: int = 3)
                 f"  title: {_clip(skill.get('title'), 80)}",
                 f"  when: {_clip(skill.get('situation'), 160)}",
                 f"  routine: {_clip(skill.get('routine'), 220)}",
-                f"  use_policy: situational_hint_not_stable_identity",
+                "  use_policy: situational_hint_not_stable_identity",
             ]
         )
     return "\n".join(lines).strip()

@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
-import pytest
 
 import xinyu_native_coding as nc
 from xinyu_codex_delegate import CodexDelegateResult

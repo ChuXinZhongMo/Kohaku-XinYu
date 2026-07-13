@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from xinyu_memory_weights_store import STATE_REL
 from xinyu_memory_weights_store import memory_weight_spec_path
 from xinyu_memory_weights_store import read_memory_weight_state
 from xinyu_memory_weights_store import read_memory_weight_text

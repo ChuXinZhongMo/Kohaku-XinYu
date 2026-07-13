@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 
 from xinyu_self_action_gateway_store import append_self_action_gateway_trace
 from xinyu_self_action_gateway_store import read_self_action_gateway_json

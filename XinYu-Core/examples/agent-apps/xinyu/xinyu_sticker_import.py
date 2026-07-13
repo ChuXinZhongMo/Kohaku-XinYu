@@ -852,7 +852,6 @@ def _detect_manifest_moves(base: Path, data: dict[str, Any]) -> dict[str, dict[s
         if len(matches) != 1:
             continue
         current_rel = _rel(matches[0], base)
-        old_mood = canonical_mood(item.get("mood"), "")
         current_mood = canonical_mood(current_rel.split("/", 1)[0], "")
         if old_file != current_rel and current_mood:
             moved[current_rel] = item

@@ -67,7 +67,6 @@ def case_envelope(
     case = getattr(decision, "case", None)
     source_tier = _safe_str(getattr(case, "source_tier", "unknown")) or "unknown"
     privacy_scope = _safe_str(getattr(case, "privacy_scope", "unknown")) or "unknown"
-    channel_scope = _safe_str(getattr(case, "channel_scope", privacy_scope)) or privacy_scope
     case_id = _safe_str(getattr(case, "case_id", "case"))
     score = _as_float(getattr(decision, "score", 0.0))
     useful_adjustment = _safe_str(getattr(case, "useful_adjustment", ""))

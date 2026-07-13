@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import unquote, urlparse
 
-from xinyu_bridge_learning_ingest_scope_store import (
+from xinyu_bridge_stores import (
     read_learning_ingest_scope_env,
     resolve_learning_ingest_scope_root,
 )

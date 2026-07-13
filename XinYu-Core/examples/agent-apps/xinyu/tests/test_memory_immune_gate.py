@@ -17,7 +17,8 @@ from xinyu_memory_immune_gate import evaluate_memory_immune_gate  # noqa: E402
 from xinyu_memory_immune_gate import render_memory_immune_prompt_block  # noqa: E402
 
 
-def test_memory_immune_blocks_group_relationship_to_owner_memory(tmp_path: Path) -> None:
+def test_memory_immune_blocks_group_relationship_to_owner_memory(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("XINYU_GROUP_FULL_MEMORY_PIPELINE", "0")
     decision = evaluate_memory_immune_gate(
         tmp_path,
         payload={"message_type": "group", "group_id": "g1"},

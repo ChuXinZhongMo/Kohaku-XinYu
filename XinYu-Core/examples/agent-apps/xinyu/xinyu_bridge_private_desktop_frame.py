@@ -7,7 +7,7 @@ from http import HTTPStatus
 from pathlib import Path
 
 from xinyu_bridge_errors import BridgeRequestError
-from xinyu_bridge_private_desktop_frame_store import read_private_desktop_frame_bytes
+from xinyu_bridge_stores import read_private_desktop_frame_bytes
 from xinyu_private_desktop_control import FRAMES_REL, LATEST_FRAME_REL
 
 _FRAME_ID_RE = re.compile(r"^[A-Za-z0-9_-]+\.png$")

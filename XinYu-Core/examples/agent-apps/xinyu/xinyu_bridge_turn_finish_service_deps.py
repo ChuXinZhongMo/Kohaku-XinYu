@@ -21,3 +21,4 @@ class TurnFinishServiceDeps(NamedTuple):
     turn_action_result: Callable[..., str]
     finish_turn_coherence: Callable[..., dict[str, Any]]
     memory_snapshot: Callable[..., dict[str, Any]]
+    run_kernel_post_turn: Callable[..., dict[str, Any]]

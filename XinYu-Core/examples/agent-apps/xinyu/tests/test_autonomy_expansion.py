@@ -8,7 +8,6 @@ import pytest
 import xinyu_self_action_patch_executor
 from xinyu_autonomy_policy import (
     POLICY_REL as AUTONOMY_POLICY_REL,
-    load_policy as load_autonomy_policy,
     reliability_budget_bonus,
 )
 from xinyu_self_action_gateway import run_self_action_gateway

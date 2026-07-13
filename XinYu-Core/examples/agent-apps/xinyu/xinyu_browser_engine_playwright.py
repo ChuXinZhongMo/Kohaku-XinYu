@@ -40,6 +40,7 @@ class PlaywrightBrowserEngine:
         headless: bool = True,
         timeout_ms: int = _DEFAULT_TIMEOUT_MS,
         channel: str | None = None,
+        proxy: str | None = None,
     ) -> None:
         self._root = Path(root).resolve()
         self._headless = headless
@@ -47,6 +48,10 @@ class PlaywrightBrowserEngine:
         # channel="msedge"/"chrome" uses an installed system browser instead of
         # a downloaded Chromium (useful when the Playwright CDN is blocked).
         self._channel = (channel if channel is not None else os.environ.get("XINYU_PRIVATE_BROWSER_CHANNEL", "")).strip()
+        # Optional upstream proxy (e.g. v2rayN/sing-box socks5://127.0.0.1:10808).
+        # GitHub and most external sites are unreachable here without it; the
+        # owner's system proxy is not inherited by Playwright's own Chromium.
+        self._proxy = (proxy if proxy is not None else os.environ.get("XINYU_PRIVATE_BROWSER_PROXY", "")).strip()
         self._pw = None
         self._context = None
         self._page = None
@@ -112,6 +117,8 @@ class PlaywrightBrowserEngine:
         }
         if channel:
             launch_kwargs["channel"] = channel
+        if self._proxy:
+            launch_kwargs["proxy"] = {"server": self._proxy}
         self._channel = channel
         self._context = self._pw.chromium.launch_persistent_context(**launch_kwargs)
         self._context.set_default_timeout(self._timeout_ms)

@@ -19,8 +19,11 @@ from xinyu_bridge_desktop_event_tts import maybe_enqueue_tts
 SafeStrFunc = Callable[..., str]
 
 
-__all__ = [
+__all__ = (
+    "Callable",
     "SafeStrFunc",
+    "_nonempty_safe_strings",
+    "annotations",
     "chat_finished_payload",
     "chat_finished_severity",
     "chat_started_payload",
@@ -32,4 +35,4 @@ __all__ = [
     "memory_recall_top_sources",
     "publish_event",
     "publish_event_threadsafe",
-]
+)

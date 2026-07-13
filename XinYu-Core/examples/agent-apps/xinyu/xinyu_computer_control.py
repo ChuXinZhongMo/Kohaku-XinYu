@@ -22,7 +22,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping, Protocol
@@ -449,8 +449,8 @@ def _write_state_markdown(root: Path, state: Mapping[str, Any]) -> None:
         f"- proposed_count: {counters.get('proposed', 0)}",
         f"- blocked_count: {counters.get('blocked', 0)}",
         f"- screenshot_count: {state.get('screenshot_count', 0)}",
-        f"- multi_step_arbitrary_control: disabled",
-        f"- execution_requires_approval: true",
+        "- multi_step_arbitrary_control: disabled",
+        "- execution_requires_approval: true",
         "",
         "## Boundaries",
         "",

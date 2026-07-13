@@ -6,7 +6,7 @@ from typing import Any
 
 from xinyu_bridge_semantic_fast_decision import owner_private_semantic_fast_decision_impl
 from xinyu_bridge_semantic_fast_finish import finish_owner_private_semantic_fast_turn
-from xinyu_bridge_semantic_fast_payloads import command_id, provider_failover_context, safe_str, timestamp_or_now_iso
+from xinyu_bridge_semantic_fast_payloads import provider_failover_context, safe_str, timestamp_or_now_iso
 from xinyu_bridge_semantic_fast_rendering import render_owner_private_semantic_fast_reply
 from xinyu_bridge_semantic_fast_text import owner_private_empty_state_notice
 from xinyu_turn_route_trace import record_turn_route_stage
@@ -33,7 +33,6 @@ async def handle_owner_private_semantic_fast_turn_impl(
     provider_failover_context_func: Callable[..., Any] = provider_failover_context,
     safe_str_func: Callable[..., str] = safe_str,
     timestamp_func: Callable[..., str] = timestamp_or_now_iso,
-    command_id_func: Callable[[dict[str, Any]], str] = command_id,
 ) -> dict[str, Any] | None:
     started = time.perf_counter()
     if decision is None:
@@ -91,5 +90,4 @@ async def handle_owner_private_semantic_fast_turn_impl(
         renderer_name=renderer_name,
         safe_str_func=safe_str_func,
         timestamp_func=timestamp_func,
-        command_id_func=command_id_func,
     )

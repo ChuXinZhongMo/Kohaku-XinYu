@@ -9,9 +9,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from xinyu_live_loop_report_store import GATEWAY_ACK_SPOOL_REL
-from xinyu_live_loop_report_store import QQ_INBOUND_TRACE_REL
-from xinyu_live_loop_report_store import VISIBLE_SEND_SHADOW_TRACE_REL
 from xinyu_live_loop_report_store import live_loop_gateway_ack_spool_path
 from xinyu_live_loop_report_store import live_loop_qq_inbound_trace_path
 from xinyu_live_loop_report_store import live_loop_visible_send_shadow_trace_path

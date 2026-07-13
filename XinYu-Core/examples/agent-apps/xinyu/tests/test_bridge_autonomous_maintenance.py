@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 import xinyu_bridge_autonomous_maintenance
+import xinyu_bridge_autonomous_maintenance_response
 
 
 def test_create_autonomous_maintenance_event_loads_runtime_and_builds_timer_event() -> None:
@@ -271,7 +272,7 @@ def test_run_autonomous_maintenance_once_runs_event_and_records_state(tmp_path, 
         return session
 
     snapshots = iter(["before", "after"])
-    monkeypatch.setattr(xinyu_bridge_autonomous_maintenance, "memory_snapshot", lambda root: next(snapshots))
+    monkeypatch.setattr(xinyu_bridge_autonomous_maintenance_response, "memory_snapshot", lambda root: next(snapshots))
     monkeypatch.setattr(xinyu_bridge_autonomous_maintenance.time, "time", lambda: 123.0)
     session = SimpleNamespace(agent=_Agent(), chunks=["stale"], last_used_at=0.0, key="auto")
     runtime = SimpleNamespace(
@@ -350,7 +351,7 @@ def test_run_autonomous_maintenance_once_interrupts_agent_on_timeout(tmp_path, m
         raise TimeoutError()
 
     monkeypatch.setattr(xinyu_bridge_autonomous_maintenance.asyncio, "wait_for", fake_wait_for)
-    monkeypatch.setattr(xinyu_bridge_autonomous_maintenance, "memory_snapshot", lambda root: "before")
+    monkeypatch.setattr(xinyu_bridge_autonomous_maintenance_response, "memory_snapshot", lambda root: "before")
     runtime = SimpleNamespace(
         _closed=False,
         autonomous_maintenance_enabled=True,

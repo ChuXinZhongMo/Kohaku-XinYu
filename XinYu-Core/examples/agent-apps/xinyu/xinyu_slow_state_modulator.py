@@ -6,7 +6,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from stores.slow_state_modulator_state import SLOW_STATE_REL as STATE_REL
 from stores.slow_state_modulator_state import read_slow_state_payload
 from stores.slow_state_modulator_state import write_slow_state_payload
 from xinyu_turn_residue import TurnResidue, read_turn_residue
@@ -15,7 +14,7 @@ from xinyu_turn_residue import TurnResidue, read_turn_residue
 FATIGUE_HALF_LIFE_HOURS = 2.5
 RELATION_HALF_LIFE_HOURS = 8.0
 CORRECTION_HALF_LIFE_HOURS = 4.0
-INITIATIVE_HALF_LIFE_HOURS = 6.0
+INITIATIVE_HALF_LIFE_HOURS = 2.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -197,7 +196,7 @@ def _make_state(
         policies.append("relationship_guarded_warmth")
     if correction >= 55:
         policies.append("show_correction_by_action")
-    if initiative >= 55:
+    if initiative >= 75:
         policies.append("hold_optional_proactive")
 
     reply_policy = "steady_compact"
@@ -209,8 +208,10 @@ def _make_state(
         reply_policy = "warm_boundary_aware"
 
     initiative_policy = "normal_gated"
-    if initiative >= 60 or fatigue >= 65:
+    if fatigue >= 80:
         initiative_policy = "suppress_optional_proactive"
+    elif initiative >= 60 or fatigue >= 65:
+        initiative_policy = "cautious_brief_expression"
     elif relation >= 55 or correction >= 55:
         initiative_policy = "hold_until_owner_context_settles"
 

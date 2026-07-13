@@ -9,9 +9,6 @@ from typing import Any
 
 from xinyu_action_feedback_coverage import build_action_feedback_coverage_report
 from xinyu_bridge_values import as_int, compact_text, safe_str
-from xinyu_owner_feedback_effects_store import REPORT_REL
-from xinyu_owner_feedback_effects_store import STATE_REL
-from xinyu_owner_feedback_effects_store import TRACE_REL
 from xinyu_owner_feedback_effects_store import append_owner_feedback_effect_trace_event
 from xinyu_owner_feedback_effects_store import owner_feedback_effect_state_path
 from xinyu_owner_feedback_effects_store import read_owner_feedback_effect_state_text

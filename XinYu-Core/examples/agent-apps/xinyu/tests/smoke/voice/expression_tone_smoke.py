@@ -6,7 +6,6 @@ ROOT = ensure_project_root_on_path()
 
 import re
 import sys
-from pathlib import Path
 
 
 CHECKED_FILES = [
@@ -73,7 +72,7 @@ REQUIRED_OUTPUT_SNIPPETS = [
 REQUIRED_SYSTEM_SNIPPETS = [
     "The latest user message wins.",
     "Never output XML-like pseudo tools",
-    "Do not leave empty future promises.",
+    "Do not leave empty future promises",
     "self/personality_profile.md",
 ]
 

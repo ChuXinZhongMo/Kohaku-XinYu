@@ -19,6 +19,9 @@ def install_autonomous_maintenance_aliases(runtime_cls: type[Any]) -> None:
     runtime_cls._append_review_inbox_note = xinyu_bridge_autonomous_maintenance.append_review_inbox_note
     runtime_cls._append_goldmark_dehydrate_note = xinyu_bridge_autonomous_maintenance.append_goldmark_dehydrate_note
     runtime_cls._append_goal_ecology_note = xinyu_bridge_autonomous_maintenance.append_goal_ecology_note
+    runtime_cls._append_action_followup_audit_note = (
+        xinyu_bridge_autonomous_maintenance.append_action_followup_audit_note
+    )
     runtime_cls._append_self_action_gateway_note = xinyu_bridge_autonomous_maintenance.append_self_action_gateway_note
     runtime_cls._append_self_action_patch_executor_note = (
         xinyu_bridge_autonomous_maintenance.append_self_action_patch_executor_note

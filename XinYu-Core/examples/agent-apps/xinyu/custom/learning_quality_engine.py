@@ -8,14 +8,7 @@ from urllib.parse import urlparse
 
 from xinyu_text_variants import looks_like_legacy_mojibake
 from xinyu_storage_paths import knowledge_file_path
-
-
-def read_text(path: Path) -> str:
-    return path.read_text(encoding="utf-8-sig")
-
-
-def write_text(path: Path, text: str) -> None:
-    path.write_text(text, encoding="utf-8")
+from xinyu_state_io import read_text, write_text
 
 
 def append_lines_to_section(text: str, heading: str, lines: list[str]) -> str:
@@ -29,15 +22,6 @@ def append_lines_to_section(text: str, heading: str, lines: list[str]) -> str:
     addition = ("\n" if body else "") + "\n".join(lines)
     replacement = match.group(1) + body + addition + "\n\n"
     return text[: match.start()] + replacement + text[match.end():]
-
-
-def extract_value(text: str, field: str, default: str = "unknown") -> str:
-    pattern = re.compile(rf"^- {re.escape(field)}:\s*(.+)$", re.M)
-    match = pattern.search(text)
-    return match.group(1).strip() if match else default
-
-
-from xinyu_state_io import extract_value as extract_value, read_text as read_text, write_text as write_text
 
 
 def _knowledge(root: Path, filename: str) -> Path:

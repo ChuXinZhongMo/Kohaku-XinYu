@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable
 
-from xinyu_bridge_desktop_proactive_state_store import append_desktop_proactive_history_jsonl
+from xinyu_bridge_stores import append_desktop_proactive_history_jsonl
 from xinyu_bridge_desktop_surface_snapshot_state_backend import desktop_surface_snapshot_state_backend_for_runtime
 from xinyu_bridge_desktop_surface_state_store import desktop_surface_state_store_for_runtime
 from xinyu_bridge_desktop_proactive_inbox_history import (
@@ -16,7 +16,6 @@ from xinyu_bridge_desktop_proactive_inbox_payload import build_desktop_proactive
 from xinyu_bridge_desktop_proactive_inbox_state import (
     DESKTOP_PROACTIVE_FINAL_STATUSES,
     DESKTOP_PROACTIVE_INBOX_MAX,
-    DESKTOP_PROACTIVE_INBOX_STATUSES,
 )
 from xinyu_bridge_values import safe_str as _safe_str
 

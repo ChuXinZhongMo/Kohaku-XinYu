@@ -69,7 +69,7 @@ def test_slow_state_style_error_holds_proactive_and_changes_by_action(tmp_path: 
 
     assert state.correction_pressure >= 70
     assert state.reply_policy == "short_present_tense_no_postmortem"
-    assert state.initiative_policy == "suppress_optional_proactive"
+    assert state.initiative_policy == "cautious_brief_expression"
     assert state.recall_policy == "prefer_recent_corrections_and_current_turn"
 
 

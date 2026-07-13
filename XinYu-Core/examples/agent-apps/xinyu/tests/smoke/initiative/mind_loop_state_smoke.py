@@ -5,7 +5,6 @@ from _bootstrap import ensure_project_root_on_path
 ROOT = ensure_project_root_on_path()
 
 import asyncio
-from pathlib import Path
 
 from xinyu_autonomy_journal import render_persona_thoughts, thought_quality_flags
 

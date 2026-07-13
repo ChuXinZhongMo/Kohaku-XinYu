@@ -9,6 +9,8 @@ from xinyu_bridge_slow_live_publish_payloads import (
     build_success_turn_publish_kwargs,
 )
 from xinyu_bridge_slow_live_result import build_slow_live_success_result
+from xinyu_runtime_presence import record_turn_finished
+from xinyu_sent_reply_index import visible_text_hash
 
 
 async def publish_slow_live_failed_turn(
@@ -26,7 +28,6 @@ async def publish_slow_live_failed_turn(
     recalled_context_event: dict[str, Any],
     recalled_context: Any,
     clock_func: Callable[[], float],
-    record_finished_func: Callable[..., Any],
     timestamp_func: Callable[..., str],
     safe_str_func: Callable[..., str],
 ) -> int:
@@ -36,7 +37,7 @@ async def publish_slow_live_failed_turn(
         except Exception:
             pass
     elapsed_ms = int((clock_func() - turn_started_at) * 1000)
-    record_finished_func(
+    record_turn_finished(
         runtime.xinyu_dir,
         turn_id=turn_id,
         reply="",
@@ -81,8 +82,6 @@ async def publish_slow_live_success_turn(
     reply_bubble_force_units: list[int],
     trace_route_stage: Callable[..., Any],
     clock_func: Callable[[], float],
-    record_finished_func: Callable[..., Any],
-    visible_text_hash_func: Callable[[str], str],
     timestamp_func: Callable[..., str],
     safe_str_func: Callable[..., str],
 ) -> dict[str, Any]:
@@ -91,7 +90,7 @@ async def publish_slow_live_success_turn(
         notes.append(f"cleaned_extra_sessions:{post_cleanup['cleaned_sessions']}")
     memory_changed = before_memory != after_memory
     elapsed_ms = int((clock_func() - turn_started_at) * 1000)
-    record_finished_func(
+    record_turn_finished(
         runtime.xinyu_dir,
         turn_id=turn_id,
         reply=reply,
@@ -109,7 +108,7 @@ async def publish_slow_live_success_turn(
     )
     archive_message_ids = archive_message_ids_from_result(archive_result)
     assistant_message_id = safe_str_func(archive_message_ids[-1] if archive_message_ids else "")
-    reply_hash = visible_text_hash_func(reply)
+    reply_hash = visible_text_hash(reply)
     publish_kwargs = build_success_turn_publish_kwargs(
         text=text,
         reply=reply,

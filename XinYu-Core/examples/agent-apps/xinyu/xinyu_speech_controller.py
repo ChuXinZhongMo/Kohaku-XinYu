@@ -17,6 +17,7 @@ from xinyu_owner_context_bridge import (
     repair_incomplete_three_fix_reply,
     repair_owner_reference_miss,
 )
+from xinyu_visible_text_sanitizer import strip_internal_affective_tokens
 
 
 STYLE_PRESSURE_MARKERS = (
@@ -1523,6 +1524,10 @@ class XinyuSpeechController:
         if self._should_block_owner_address_query_miss(user_text, text, payload=payload or {}):
             text = ""
             flags.append("owner_address_query_blocked")
+        stripped_tokens = strip_internal_affective_tokens(text)
+        if stripped_tokens != text:
+            text = stripped_tokens
+            flags.append("internal_affective_token_stripped")
         return text, flags
 
     def _naturalize_pseudo_tool_reply(self, user_text: str, reply: str) -> str:

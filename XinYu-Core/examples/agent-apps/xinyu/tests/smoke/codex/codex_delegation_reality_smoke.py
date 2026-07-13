@@ -4,7 +4,6 @@ from _bootstrap import ensure_project_root_on_path
 
 ROOT = ensure_project_root_on_path()
 
-from pathlib import Path
 
 
 def main() -> int:
@@ -27,12 +26,8 @@ def main() -> int:
         ),
         "prompts/system.md": (
             "{{ codex_delegation_policy }}",
-            "The native QQ gateway does not infer or auto-launch Codex from ordinary chat",
-            "Owner-private `/codex <task>` may route to core `/codex/execute`",
-            "hidden model handoff below is also an explicit bridge delegation path",
-            "Do not tell the owner they must manually send `/codex`",
-            "Codex completion callbacks may return through QQ Outbox",
-            "explicit local/API delegation to `/codex/execute`",
+            "context/codex_delegation_policy.md",
+            "[[XINYU_CODEX_DELEGATE]]",
         ),
         "memory/context/codex_delegation_policy.md": (
             "direct_qq_to_codex_execution: blocked_no_raw_cli_from_gateway",

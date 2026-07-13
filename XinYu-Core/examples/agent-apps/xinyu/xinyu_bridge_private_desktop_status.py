@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable
 
-from xinyu_bridge_private_desktop_status_store import (
+from xinyu_bridge_stores import (
     private_desktop_status_path_exists,
     private_desktop_status_path_mtime,
 )

@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
+import xinyu_bridge_slow_live_publish_service as slow_live_service
 import xinyu_bridge_slow_live_turn as slow_live
 from xinyu_bridge_errors import BridgeRequestError
 from xinyu_bridge_slow_live_turn import apply_slow_live_current_reference_repair
@@ -60,7 +61,7 @@ def test_publish_slow_live_failed_turn_records_timeout_and_interrupts(tmp_path, 
         calls.append(("record", {"root": root, **kwargs}))
 
     monkeypatch.setattr(slow_live.time, "perf_counter", lambda: 11.5)
-    monkeypatch.setattr(slow_live, "record_turn_finished", record_finished)
+    monkeypatch.setattr(slow_live_service, "record_turn_finished", record_finished)
     runtime = SimpleNamespace(
         xinyu_dir=tmp_path,
         _desktop_publish_chat_finished=publish_finished,
@@ -129,7 +130,7 @@ def test_publish_slow_live_failed_turn_records_error_without_interrupt(tmp_path,
         calls.append(("publish", {"payload": payload, **kwargs}))
 
     monkeypatch.setattr(slow_live.time, "perf_counter", lambda: 11.0)
-    monkeypatch.setattr(slow_live, "record_turn_finished", lambda root, **kwargs: calls.append(("record", kwargs)))
+    monkeypatch.setattr(slow_live_service, "record_turn_finished", lambda root, **kwargs: calls.append(("record", kwargs)))
     runtime = SimpleNamespace(
         xinyu_dir=tmp_path,
         _desktop_publish_chat_finished=publish_finished,
@@ -176,8 +177,8 @@ def test_publish_slow_live_success_turn_records_publishes_and_returns_response(t
         calls.append(("record", {"root": root, **kwargs}))
 
     monkeypatch.setattr(slow_live.time, "perf_counter", lambda: 12.0)
-    monkeypatch.setattr(slow_live, "record_turn_finished", record_finished)
-    monkeypatch.setattr(slow_live, "visible_text_hash", lambda reply: f"hash:{reply}")
+    monkeypatch.setattr(slow_live_service, "record_turn_finished", record_finished)
+    monkeypatch.setattr(slow_live_service, "visible_text_hash", lambda reply: f"hash:{reply}")
     runtime = SimpleNamespace(
         xinyu_dir=tmp_path,
         _cleanup_idle_sessions=cleanup,

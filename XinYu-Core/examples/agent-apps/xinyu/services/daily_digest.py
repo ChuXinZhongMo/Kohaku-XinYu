@@ -7,11 +7,6 @@ from pathlib import Path
 from typing import Any
 
 from stores.daily_digest_state import (
-    BOUNDARY_ID as DAILY_DIGEST_STORE_BOUNDARY,
-    DIGEST_REL,
-    SOURCE_STATE_REL,
-    STATE_REL,
-    TRACE_REL,
     append_daily_digest_trace,
     read_daily_digest,
     read_daily_digest_source_state,

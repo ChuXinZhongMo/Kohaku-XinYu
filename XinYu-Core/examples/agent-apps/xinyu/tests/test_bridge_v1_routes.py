@@ -4,6 +4,8 @@ import asyncio
 from pathlib import Path
 from types import SimpleNamespace
 
+import xinyu_bridge_v1_canary
+import xinyu_bridge_v1_payloads
 import xinyu_bridge_v1_routes
 
 
@@ -116,16 +118,16 @@ def test_handle_canary_turn_uses_facade_dependencies(monkeypatch, tmp_path: Path
 
     monkeypatch.setattr(xinyu_bridge_v1_routes, "canary_payload_allowed", lambda *args: (True, ["facade_allowed"]))
     monkeypatch.setattr(xinyu_bridge_v1_routes, "ensure_app", lambda bound_runtime: app)
-    monkeypatch.setattr(xinyu_bridge_v1_routes, "_memory_snapshot", lambda root: {"after": True})
-    monkeypatch.setattr(xinyu_bridge_v1_routes, "visible_text_hash", lambda reply: f"hash:{reply}")
-    monkeypatch.setattr(xinyu_bridge_v1_routes, "_timestamp_or_now_iso", lambda value: "facade-time")
-    monkeypatch.setattr(xinyu_bridge_v1_routes, "_command_id", lambda payload: "facade-command")
+    monkeypatch.setattr(xinyu_bridge_v1_canary, "memory_snapshot", lambda root: {"after": True})
+    monkeypatch.setattr(xinyu_bridge_v1_canary, "visible_text_hash", lambda reply: f"hash:{reply}")
+    monkeypatch.setattr(xinyu_bridge_v1_canary, "timestamp_or_now_iso", lambda value: "facade-time")
+    monkeypatch.setattr(xinyu_bridge_v1_payloads, "command_id", lambda payload: "facade-command")
 
     def fake_record_turn_finished(*args: object, **kwargs: object) -> None:
         finished["args"] = args
         finished["kwargs"] = kwargs
 
-    monkeypatch.setattr(xinyu_bridge_v1_routes, "record_turn_finished", fake_record_turn_finished)
+    monkeypatch.setattr(xinyu_bridge_v1_canary, "record_turn_finished", fake_record_turn_finished)
 
     result = asyncio.run(
         xinyu_bridge_v1_routes.handle_canary_turn(

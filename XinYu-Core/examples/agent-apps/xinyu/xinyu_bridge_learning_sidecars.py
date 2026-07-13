@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_bridge_learning_sidecars_store import append_codex_learning_followup_trace
+from xinyu_bridge_stores import append_codex_learning_followup_trace
 from xinyu_bridge_values import safe_str
 
 

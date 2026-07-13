@@ -126,7 +126,6 @@ def bind_finish_turn_coherence(facade_globals: FacadeGlobals) -> Callable[..., d
             promised_followup=promised_followup,
             sticker_reply=sticker_reply,
             finish_turn_coherence_func=facade["finish_turn_coherence"],
-            memory_snapshot_func=facade["_memory_snapshot"],
         )
 
     return _finish_turn_coherence
