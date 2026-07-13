@@ -11,6 +11,8 @@ LIBRARY_DATASETS_REL = Path("assets/library/datasets")
 WORKSPACE_CASES_CONVERSATION_REL = Path("cases/conversation")
 WORKSPACE_LIBRARY_DATASETS_REL = Path("library/datasets")
 LEGACY_CASES_CONVERSATION_REL = Path("data/conversation_experience")
+# Tracked public fixtures (not private runtime data/). Preferred in CI checkouts.
+TEST_FIXTURE_CASES_CONVERSATION_REL = Path("tests/fixtures/conversation_experience")
 LEGACY_EXTERNAL_DATASETS_REL = Path("data/external")
 MEMORY_KNOWLEDGE_REL = Path("memory/knowledge")
 
@@ -84,10 +86,23 @@ def conversation_case_source_path(root: Path | str, filename: str) -> Path:
     canonical = workspace_root(root) / CASES_CONVERSATION_REL / filename
     local_workspace = base / WORKSPACE_CASES_CONVERSATION_REL / filename
     workspace = workspace_root(root) / WORKSPACE_CASES_CONVERSATION_REL / filename
+    local_test_fixtures = base / TEST_FIXTURE_CASES_CONVERSATION_REL / filename
+    app_test_fixtures = app_root(root) / TEST_FIXTURE_CASES_CONVERSATION_REL / filename
     local_legacy = base / LEGACY_CASES_CONVERSATION_REL / filename
     legacy = app_root(root) / LEGACY_CASES_CONVERSATION_REL / filename
     return _first_existing(
-        _dedupe_paths((local_canonical, canonical, local_workspace, workspace, local_legacy, legacy)),
+        _dedupe_paths(
+            (
+                local_canonical,
+                canonical,
+                local_workspace,
+                workspace,
+                local_test_fixtures,
+                app_test_fixtures,
+                local_legacy,
+                legacy,
+            )
+        ),
         default=local_canonical,
     )
 
