@@ -11,65 +11,131 @@ defaults:
 
 env:
   XINYU_APP_DIR: XinYu-Core/examples/agent-apps/xinyu
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  # ── Blocking: unit/integration tests that do not need a live QQ/NapCat env ──
   python-tests:
-    name: Python tests
+    name: "Python tests (blocking)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: XinYu-Core/pyproject.toml
       - name: Install runtime + dev deps
         run: |
           python -m pip install --upgrade pip
           pip install -e "./XinYu-Core[dev]"
-          pip install pytest-cov
       - name: Run XinYu app test suite
         working-directory: ${{ env.XINYU_APP_DIR }}
         # optional deps (markitdown / torch) are absent -> those tests skip cleanly
-        run: python -m pytest -q -m "not smoke" --cov=. --cov-report=term-missing:skip-covered
+        run: >
+          python -m pytest -q -m "not smoke"
+          --cov=.
+          --cov-report=term-missing:skip-covered
+          --cov-report=xml:coverage.xml
+      - name: Upload coverage XML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: ${{ env.XINYU_APP_DIR }}/coverage.xml
+          if-no-files-found: ignore
 
-  python-lint:
-    name: Python lint (ruff, non-blocking)
+  # ── Blocking: critical correctness lint on the packaged core ────────────────
+  # App tree still has pre-existing F8xx debt; expand this job after cleanups.
+  # Progressive plan: docs/plans/ENGINEERING-MATURITY-PLAN.md
+  python-lint-critical:
+    name: "Python lint critical (blocking)"
     runs-on: ubuntu-latest
-    continue-on-error: true # expanded ruleset has pre-existing debt; informational for now
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install "ruff>=0.9.0"
-      - run: ruff check XinYu-Core/src ${{ env.XINYU_APP_DIR }}
+      - name: Install ruff
+        run: pip install "ruff>=0.9.0"
+      - name: Ruff critical rules on XinYu-Core/src
+        run: ruff check XinYu-Core/src --select F,E9,F63,F7,F82
+
+  # ── Informational: full expanded ruff on core (debt paydown signal) ────────
+  python-lint-core-full:
+    name: "Python lint core full (informational)"
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install "ruff>=0.9.0"
+      - name: Ruff full config on XinYu-Core/src
+        run: ruff check XinYu-Core/src
+
+  # ── Informational: critical + full ruff on app ─────────────────────────────
+  python-lint-app:
+    name: "Python lint app (informational)"
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install "ruff>=0.9.0"
+      - name: Ruff critical rules on xinyu app
+        run: >
+          ruff check "${{ env.XINYU_APP_DIR }}"
+          --select F,E9,F63,F7,F82
+          --exclude "**/learning/**,**/runtime/**,**/.venv/**,**/ops/archive/**"
+      - name: Ruff full config on xinyu app
+        run: >
+          ruff check "${{ env.XINYU_APP_DIR }}"
+          --exclude "**/learning/**,**/runtime/**,**/.venv/**,**/ops/archive/**"
 
   python-smoke:
-    name: Python smoke scripts (non-blocking)
+    name: "Python smoke (informational)"
     runs-on: ubuntu-latest
-    continue-on-error: true # integration smokes may need a live env; informational
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: |
+          cache: pip
+          cache-dependency-path: XinYu-Core/pyproject.toml
+      - name: Install runtime + dev deps
+        run: |
           python -m pip install --upgrade pip
           pip install -e "./XinYu-Core[dev]"
       - name: Run smoke harness
         working-directory: ${{ env.XINYU_APP_DIR }}
         run: python -m pytest -q -m smoke
 
+  # ── Blocking: desktop typecheck + lint ─────────────────────────────────────
   desktop-typecheck:
-    name: Desktop typecheck + lint
+    name: "Desktop typecheck (blocking)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
+          cache-dependency-path: XinYu_Desktop/package-lock.json
       - name: Install + typecheck + lint
         working-directory: XinYu_Desktop
         run: |
-          npm install
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
           npm run typecheck
           npm run lint --if-present

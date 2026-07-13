@@ -1,0 +1,40 @@
+# Local opt-in hooks. Install once:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Run on demand:
+#   pre-commit run --all-files
+#
+# CI may adopt the same hooks later; until then this is a contributor aid.
+
+default_language_version:
+  python: python3
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '(\.md|\.svg)$'
+      - id: end-of-file-fixer
+        exclude: '(\.svg)$'
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]
+      - id: check-yaml
+        args: ["--unsafe"]
+      - id: check-json
+      - id: check-toml
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+        exclude: '\.(ps1|psm1|psd1|cmd|bat)$'
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10
+    hooks:
+      # Auto-fix safe issues on staged files only (local commits).
+      - id: ruff
+        args: ["--fix"]
+        files: '^(XinYu-Core/src/|XinYu-Core/examples/agent-apps/xinyu/)'
+      - id: ruff-format
+        files: '^(XinYu-Core/src/|XinYu-Core/examples/agent-apps/xinyu/)'

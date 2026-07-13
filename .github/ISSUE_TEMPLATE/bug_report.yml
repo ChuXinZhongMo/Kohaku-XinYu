@@ -1,0 +1,84 @@
+name: Bug report
+description: Something in the public source tree, tests, desktop shell, or operator tools is wrong.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep private runtime state out of this issue: no tokens, `.env` contents, QQ payloads, local memory dumps, or owner-supplied material bodies.
+        See `SECURITY.md` and `OPEN_SOURCE_POLICY.md`.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One or two sentences describing the failure.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps on a clean-ish checkout. Prefer public fixtures.
+      placeholder: |
+        1. pip install -e "./XinYu-Core[dev]"
+        2. cd XinYu-Core/examples/agent-apps/xinyu
+        3. python -m pytest tests/path/to/test.py -q
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - XinYu-Core runtime
+        - xinyu agent app
+        - QQ / NapCat gateway (sanitized)
+        - Desktop shell
+        - XinYu.ps1 / operator scripts
+        - Tests / CI
+        - Docs
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Tag, branch, or full commit SHA.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python, Node (if relevant). No machine secrets.
+      placeholder: |
+        OS: Windows 11
+        Python: 3.12.x
+        Node: 20.x (desktop only)
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs / output
+      description: Paste only redacted logs. Strip tokens, paths with private names, and message bodies.
+      render: text
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: I have removed secrets, private QQ content, and local memory from this report.
+          required: true

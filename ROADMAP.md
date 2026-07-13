@@ -15,14 +15,32 @@ Status: release candidate
 - Keep the Python test suite, runtime readiness smoke, QQ gateway smoke,
   desktop typecheck, and desktop build as the release-readiness baseline.
 
+## Engineering Maturity Track
+
+Status: active (started 2026-07-13)
+
+Raising repository engineering from early-public baseline (~45/100 self-score)
+toward top-tier open-source practice (~70 mid-term, ~85 long-term).
+
+- Full plan: `docs/plans/ENGINEERING-MATURITY-PLAN.md`
+- 30-day checklist: `docs/plans/ENGINEERING-30-DAY-CHECKLIST.md`
+- Branch policy: `docs/system/BRANCH-POLICY.md`
+
+Near-term engineering outcomes:
+
+- GitHub issue/PR templates, Dependabot, CODEOWNERS, pre-commit
+- Progressive CI gates (blocking tests + core lint + desktop typecheck)
+- Bridge/store consolidation and god-file splits without product freezes
+- Fresh-install path and a tagged public release with validation evidence
+
 ## v0.2 - Open-Source Usability
 
-Status: planned
+Status: in progress (engineering track overlaps)
 
 - Add cleaner quick-start paths for a fresh local checkout.
 - Separate machine-specific setup from reusable project configuration.
 - Add issue templates for bug reports, gateway failures, and documentation
-  requests.
+  requests. *(templates landed under `.github/ISSUE_TEMPLATE/`)*
 - Improve English documentation around the memory, proactive, and QQ gateway
   boundaries.
 - Publish a small set of reproducible non-private demo scenarios.

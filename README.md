@@ -102,22 +102,42 @@ See:
 
 ## Setup
 
-Python runtime:
+### Fresh developer install (tests / contribution)
 
-```powershell
-cd D:\XinYu\XinYu-Core\examples\agent-apps\xinyu
-.\.venv\Scripts\python.exe -m pytest tests -q
-.\.venv\Scripts\python.exe smoke_run.py --group quick --timeout-seconds 180 --json
+```bash
+python -m pip install -U pip
+pip install -e "./XinYu-Core[dev]"
+
+# from repo root (Git Bash / WSL / Linux / macOS)
+make test
+make check
+
+# optional local hooks
+pip install pre-commit && pre-commit install
 ```
 
 Desktop shell:
 
-```powershell
-cd D:\XinYu\XinYu_Desktop
+```bash
+cd XinYu_Desktop
 npm install
 npm run typecheck
 npm run build
 ```
+
+### Windows operator path (local runtime already provisioned)
+
+```powershell
+cd XinYu-Core\examples\agent-apps\xinyu
+.\.venv\Scripts\python.exe -m pytest tests -q
+.\.venv\Scripts\python.exe smoke_run.py --group quick --timeout-seconds 180 --json
+```
+
+Engineering maturity plan (how we close the gap to top-tier OSS practice):
+
+- `docs/plans/ENGINEERING-MATURITY-PLAN.md`
+- `docs/plans/ENGINEERING-30-DAY-CHECKLIST.md`
+- `docs/system/BRANCH-POLICY.md`
 
 ## Daily Entry Points
 

@@ -1,0 +1,48 @@
+name: Feature request
+description: Propose a change to the public runtime, operator tools, tests, or docs.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Prefer scoped requests that fit `ROADMAP.md`. Large product pivots should start as discussion, not a drive-by PR.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is hard or impossible today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: Concrete behavior change. Note privacy implications if any.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Primary surface
+      options:
+        - Core runtime
+        - xinyu agent app
+        - Gateway
+        - Desktop
+        - Operator tooling
+        - Tests / engineering
+        - Docs
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This does not require publishing private runtime state or credentials.
+          required: true

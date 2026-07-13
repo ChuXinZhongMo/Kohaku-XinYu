@@ -1,0 +1,23 @@
+# Default maintainer ownership for public XinYu surfaces.
+# Paths use repo-root relative names. GitHub applies the last matching pattern.
+
+* @ChuXinZhongMo
+
+# Core runtime package
+/XinYu-Core/src/ @ChuXinZhongMo
+/XinYu-Core/pyproject.toml @ChuXinZhongMo
+
+# Active agent app + gateway/operator critical paths
+/XinYu-Core/examples/agent-apps/xinyu/ @ChuXinZhongMo
+
+# Desktop shell
+/XinYu_Desktop/ @ChuXinZhongMo
+
+# Repo policy, security, and release surface
+/LICENSE @ChuXinZhongMo
+/NOTICE @ChuXinZhongMo
+/SECURITY.md @ChuXinZhongMo
+/OPEN_SOURCE_POLICY.md @ChuXinZhongMo
+/CHANGELOG.md @ChuXinZhongMo
+/ROADMAP.md @ChuXinZhongMo
+/.github/ @ChuXinZhongMo

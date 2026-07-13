@@ -2,6 +2,20 @@
 
 All notable public-source changes should be recorded here.
 
+## Unreleased - Engineering Maturity Track
+
+Status: in progress (started 2026-07-13)
+
+- Added engineering maturity plan and 30-day checklist under `docs/plans/`.
+- Added Phase 2 architecture inventory for bridge/god-file debt.
+- Added GitHub issue templates, PR template, CODEOWNERS, and Dependabot.
+- Added `.editorconfig` and `.pre-commit-config.yaml`.
+- Hardened CI with named blocking vs informational jobs, concurrency cancel,
+  coverage artifact upload, and critical ruff gate on `XinYu-Core/src`.
+- Documented branch policy (`main` canonical; `master` cutover checklist).
+- Refreshed root README/CONTRIBUTING setup paths for fresh developers.
+- Auto-fixed a batch of safe ruff issues under `XinYu-Core/src`.
+
 ## v0.1.0 - Public Source Baseline
 
 Status: release candidate

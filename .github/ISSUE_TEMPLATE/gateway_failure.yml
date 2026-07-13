@@ -1,0 +1,66 @@
+name: Gateway failure (QQ / NapCat)
+description: Local messaging loop, NapCat bridge, or gateway normalization failed. Sanitized reports only.
+title: "gateway: "
+labels: ["bug", "gateway"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never paste raw QQ payloads, friend lists, cookies, tokens, or private chat text.**
+        Describe structure and error codes only. Prefer gateway smoke output with redaction.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Native QQ gateway (`xinyu_qq_gateway`)
+        - NapCat process / install
+        - Bridge chat turn / delivery
+        - Outbox / send path
+        - Startup / restart recovery
+        - Smoke / Verify-XinYu-QQ
+        - Unknown
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What broke
+    validations:
+      required: true
+  - type: textarea
+    id: timeline
+    attributes:
+      label: Timeline
+      description: When it started, whether restart fixed it, whether only one surface failed.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction (sanitized)
+      placeholder: |
+        1. .\XinYu.ps1 status
+        2. .\Verify-XinYu-QQ.cmd  (or smoke group)
+        3. Observe failure mode X
+    validations:
+      required: true
+  - type: textarea
+    id: signals
+    attributes:
+      label: Public signals
+      description: Exit codes, exception types, status fields, smoke JSON keys (values redacted).
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy check
+      options:
+        - label: No raw QQ payloads, tokens, or private message bodies are included.
+          required: true

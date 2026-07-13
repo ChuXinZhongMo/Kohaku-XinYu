@@ -1,0 +1,35 @@
+name: Documentation
+description: Fix or improve public docs, setup, runbooks, or contribution guides.
+title: "docs: "
+labels: ["documentation"]
+body:
+  - type: dropdown
+    id: doc_type
+    attributes:
+      label: Doc area
+      options:
+        - README / quickstart
+        - CONTRIBUTING
+        - Architecture / system docs
+        - Operator runbook (XinYu.ps1)
+        - Gateway / privacy boundary
+        - Roadmap / changelog
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Suggested improvement
+      description: Optional rewrite sketch or links to better wording.
+  - type: input
+    id: paths
+    attributes:
+      label: Relevant paths
+      placeholder: README.md, docs/system/XINYU-SYSTEM.md, ...

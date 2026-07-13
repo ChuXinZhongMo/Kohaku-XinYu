@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security / private runtime exposure
+    url: https://github.com/ChuXinZhongMo/Kohaku-XinYu/security/advisories/new
+    about: Do not file public issues for secrets, QQ payloads, local memory, or credentials. Use SECURITY.md / private advisory.
+  - name: Project roadmap
+    url: https://github.com/ChuXinZhongMo/Kohaku-XinYu/blob/main/ROADMAP.md
+    about: See planned work before opening a large feature request.
