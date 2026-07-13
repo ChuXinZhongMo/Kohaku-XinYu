@@ -82,28 +82,27 @@ def cases_conversation_dir(root: Path | str) -> Path:
 
 def conversation_case_source_path(root: Path | str, filename: str) -> Path:
     base = Path(root).resolve()
-    local_canonical = base / CASES_CONVERSATION_REL / filename
-    canonical = workspace_root(root) / CASES_CONVERSATION_REL / filename
-    local_workspace = base / WORKSPACE_CASES_CONVERSATION_REL / filename
-    workspace = workspace_root(root) / WORKSPACE_CASES_CONVERSATION_REL / filename
-    local_test_fixtures = base / TEST_FIXTURE_CASES_CONVERSATION_REL / filename
-    app_test_fixtures = app_root(root) / TEST_FIXTURE_CASES_CONVERSATION_REL / filename
-    local_legacy = base / LEGACY_CASES_CONVERSATION_REL / filename
-    legacy = app_root(root) / LEGACY_CASES_CONVERSATION_REL / filename
+    ws = workspace_root(root)
+    app = app_root(root)
+
+    # Order matches historical contract tests:
+    # workspace case packs > app assets > app test fixtures > app legacy data/.
+    # Also prefer *base*-local paths first for isolated tmp_path roots.
+    candidates = (
+        base / WORKSPACE_CASES_CONVERSATION_REL / filename,
+        ws / WORKSPACE_CASES_CONVERSATION_REL / filename,
+        base / CASES_CONVERSATION_REL / filename,
+        ws / CASES_CONVERSATION_REL / filename,
+        # Prefer base-local legacy data/ over app-wide test fixtures so
+        # isolated tmp_path roots that plant data/conversation_experience win.
+        base / LEGACY_CASES_CONVERSATION_REL / filename,
+        base / TEST_FIXTURE_CASES_CONVERSATION_REL / filename,
+        app / TEST_FIXTURE_CASES_CONVERSATION_REL / filename,
+        app / LEGACY_CASES_CONVERSATION_REL / filename,
+    )
     return _first_existing(
-        _dedupe_paths(
-            (
-                local_canonical,
-                canonical,
-                local_workspace,
-                workspace,
-                local_test_fixtures,
-                app_test_fixtures,
-                local_legacy,
-                legacy,
-            )
-        ),
-        default=local_canonical,
+        _dedupe_paths(candidates),
+        default=base / CASES_CONVERSATION_REL / filename,
     )
 
 
