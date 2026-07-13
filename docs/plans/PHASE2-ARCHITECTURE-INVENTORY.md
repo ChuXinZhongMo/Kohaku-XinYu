@@ -112,6 +112,7 @@ XinYu-Core/examples/agent-apps/xinyu/
 | 2026-07-13 | Gateway prepare policy: empty/sticker/package/codex scope checks → `xinyu_qq_prepare_policy.py`. Presence text scrub/normalize → `xinyu_runtime_presence_text.py` (~3k LOC removed from presence god-file). |
 | 2026-07-13 | Prepare_message channel/owner-private gates reuse prepare policy; presence atomic IO → `xinyu_runtime_presence_io.py`. OpenSSF: Actions SHA pin + coverage summary + SBOM operator doc. |
 | 2026-07-13 | Presence markdown card → `xinyu_runtime_presence_markdown.py`; prepare_message package/codex routes reuse prepare_policy; NapCat operator doc + optional tag SBOM workflow. |
+| 2026-07-13 | Ops: `scripts/Test-XinYu-StackHealth.ps1` + `XinYu.ps1 health`; usage observation checklist; prepare_policy learning-ingest gate. |
 
 ## 7. Stop-ship / do-not
 

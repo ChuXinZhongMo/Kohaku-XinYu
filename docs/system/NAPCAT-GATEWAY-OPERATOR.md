@@ -45,6 +45,16 @@ Keep this URL aligned with `start_xinyu_qq_gateway.ps1` default port **6199**.
 
 ## Operator checklist
 
+Preferred one-shot:
+
+```powershell
+.\XinYu.ps1 start qq
+.\XinYu.ps1 health
+# or: .\scripts\Test-XinYu-StackHealth.ps1 -Strict
+```
+
+Manual:
+
 1. Start **core bridge** (`8765` health 200).
 2. Start **QQ gateway** (`6199` Listen).
 3. Start **NapCat Shell** for the bot account so it opens the reverse WS client.
