@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120" role="img" aria-labelledby="title desc">
+  <title id="title">XinYu 当前项目架构图</title>
+  <desc id="desc">XinYu 仓库当前架构，展示 QQ/NapCat、桌面端、Python Core、状态记忆边界、TinyKernel、Local-Scope、Autonomy、runtime deps、docs/assets/artifacts 与验证工具之间的关系。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+    <marker id="arrow-soft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b"/>
+    </marker>
+    <filter id="shadow" x="-8%" y="-8%" width="116%" height="116%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+    <style>
+      svg {
+        background: #f5f7fb;
+        color: #172033;
+        font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+        letter-spacing: 0;
+      }
+      .title {
+        font-size: 34px;
+        font-weight: 800;
+        fill: #0f172a;
+      }
+      .subtitle {
+        font-size: 15px;
+        fill: #475569;
+      }
+      .cluster {
+        fill: #ffffff;
+        stroke: #cbd5e1;
+        stroke-width: 1.6;
+        rx: 14;
+        filter: url(#shadow);
+      }
+      .cluster-title {
+        font-size: 18px;
+        font-weight: 800;
+        fill: #172033;
+      }
+      .cluster-note {
+        font-size: 12px;
+        fill: #64748b;
+      }
+      .box {
+        stroke-width: 1.7;
+        rx: 10;
+        filter: url(#shadow);
+      }
+      .box-title {
+        font-size: 16px;
+        font-weight: 800;
+        fill: #0f172a;
+      }
+      .box-text {
+        font-size: 12px;
+        fill: #334155;
+      }
+      .small-title {
+        font-size: 14px;
+        font-weight: 800;
+        fill: #0f172a;
+      }
+      .small-text {
+        font-size: 11px;
+        fill: #334155;
+      }
+      .label {
+        font-size: 12px;
+        font-weight: 700;
+        fill: #334155;
+      }
+      .hint {
+        font-size: 11px;
+        fill: #64748b;
+      }
+      .arrow {
+        fill: none;
+        stroke: #334155;
+        stroke-width: 2.2;
+        marker-end: url(#arrow);
+      }
+      .arrow-soft {
+        fill: none;
+        stroke: #64748b;
+        stroke-width: 1.8;
+        marker-end: url(#arrow-soft);
+      }
+      .arrow-dashed {
+        fill: none;
+        stroke: #64748b;
+        stroke-width: 1.8;
+        stroke-dasharray: 7 6;
+        marker-end: url(#arrow-soft);
+      }
+      .boundary {
+        fill: #fff1f2;
+        stroke: #e11d48;
+        stroke-width: 1.5;
+        stroke-dasharray: 7 6;
+        rx: 10;
+      }
+      .legend {
+        font-size: 12px;
+        fill: #475569;
+      }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1600" height="1120" fill="#f5f7fb"/>
+  <text x="56" y="58" class="title">XinYu 当前项目架构图</text>
+  <text x="58" y="88" class="subtitle">基于 README、docs/system/XINYU-SYSTEM.md、Core app ARCHITECTURE.md、桌面端与 QQ/Core 桥接入口整理</text>
+
+  <rect x="40" y="120" width="1520" height="900" rx="18" fill="#f8fafc" stroke="#d8e0ea" stroke-width="2"/>
+  <text x="64" y="151" class="cluster-title">D:\XinYu workspace</text>
+  <text x="64" y="171" class="cluster-note">一个本地长运行个人 AI runtime 工作区，源码、状态、依赖、材料和报告分区存放</text>
+
+  <rect x="70" y="190" width="260" height="760" class="cluster"/>
+  <text x="94" y="224" class="cluster-title">入口与操作面</text>
+  <text x="94" y="244" class="cluster-note">人、QQ、桌面和根控制器</text>
+
+  <rect x="360" y="190" width="720" height="760" class="cluster"/>
+  <text x="384" y="224" class="cluster-title">核心运行路径</text>
+  <text x="384" y="244" class="cluster-note">XinYu-Core/examples/agent-apps/xinyu 与可复用 xinyu_runtime</text>
+
+  <rect x="1110" y="190" width="420" height="760" class="cluster"/>
+  <text x="1134" y="224" class="cluster-title">边界、状态与材料</text>
+  <text x="1134" y="244" class="cluster-note">稳定记忆、运行轨迹、本地材料、文档与依赖</text>
+
+  <rect x="96" y="284" width="208" height="96" class="box" fill="#fff7ed" stroke="#f97316"/>
+  <text x="116" y="314" class="box-title">Owner / QQ</text>
+  <text x="116" y="338" class="box-text">私聊、群聊、图片、语音转写</text>
+  <text x="116" y="358" class="box-text">触发实时对话与授权请求</text>
+
+  <rect x="96" y="426" width="208" height="118" class="box" fill="#eef2ff" stroke="#4f46e5"/>
+  <text x="116" y="456" class="box-title">XinYu.ps1</text>
+  <text x="116" y="480" class="box-text">tree / status / start / stop</text>
+  <text x="116" y="500" class="box-text">test / smoke / verify / clean</text>
+  <text x="116" y="520" class="box-text">统一本地 operator 入口</text>
+
+  <rect x="96" y="590" width="208" height="132" class="box" fill="#ecfeff" stroke="#0891b2"/>
+  <text x="116" y="620" class="box-title">XinYu_Desktop</text>
+  <text x="116" y="644" class="box-text">Electron + Vite + React</text>
+  <text x="116" y="664" class="box-text">状态呈现、主动候选、审批</text>
+  <text x="116" y="684" class="box-text">HTTP 8765 / WS 8766</text>
+  <text x="116" y="704" class="box-text">不直接保存核心身份记忆</text>
+
+  <rect x="388" y="284" width="210" height="96" class="box" fill="#faf5ff" stroke="#9333ea"/>
+  <text x="408" y="314" class="box-title">NapCat / OneBot</text>
+  <text x="408" y="338" class="box-text">runtime/deps/NapCatQQ</text>
+  <text x="408" y="358" class="box-text">OneBot WS 默认 6199/ws</text>
+
+  <rect x="636" y="268" width="250" height="128" class="box" fill="#f0fdf4" stroke="#16a34a"/>
+  <text x="656" y="298" class="box-title">Native QQ Gateway</text>
+  <text x="656" y="322" class="box-text">xinyu_qq_gateway.py</text>
+  <text x="656" y="342" class="box-text">transport、normalize、trust policy</text>
+  <text x="656" y="362" class="box-text">claim / ack / visible dispatch</text>
+  <text x="656" y="382" class="box-text">QQ gateway 本身不拥有记忆</text>
+
+  <rect x="922" y="276" width="126" height="112" class="box" fill="#fefce8" stroke="#ca8a04"/>
+  <text x="941" y="304" class="small-title">模型与工具</text>
+  <text x="941" y="328" class="small-text">llm providers</text>
+  <text x="941" y="346" class="small-text">Codex delegation</text>
+  <text x="941" y="364" class="small-text">external plugins</text>
+
+  <rect x="575" y="462" width="330" height="144" class="box" fill="#eff6ff" stroke="#2563eb"/>
+  <text x="600" y="494" class="box-title">Core Bridge API</text>
+  <text x="600" y="518" class="box-text">xinyu_core_bridge.py</text>
+  <text x="600" y="538" class="box-text">/chat /health /probe /turn/*</text>
+  <text x="600" y="558" class="box-text">/desktop/* /proactive /qq/outbox/*</text>
+  <text x="600" y="578" class="box-text">默认 HTTP 127.0.0.1:8765</text>
+
+  <rect x="420" y="662" width="580" height="148" class="box" fill="#f8fafc" stroke="#334155"/>
+  <text x="446" y="694" class="box-title">Active XinYu app runtime</text>
+  <text x="446" y="718" class="box-text">会话、预路由、慢路径生成、renderer、sidecars、主动循环、学习与维护链</text>
+  <text x="446" y="738" class="box-text">custom/ services/ prompts/ memory-seeds/ ops/ tests/ runtime/ state/ stores</text>
+  <text x="446" y="758" class="box-text">稳定写入前经过候选、review、gate、trace，避免把运行观察直接写入稳定记忆</text>
+  <text x="446" y="778" class="box-text">活跃 app 路径：XinYu-Core/examples/agent-apps/xinyu</text>
+
+  <rect x="420" y="848" width="268" height="76" class="box" fill="#f0f9ff" stroke="#0284c7"/>
+  <text x="440" y="878" class="small-title">xinyu_runtime package</text>
+  <text x="440" y="902" class="small-text">core agent、session、serving、skills、prompt、llm、tools、plugins</text>
+
+  <rect x="724" y="848" width="300" height="76" class="box" fill="#fef2f2" stroke="#dc2626"/>
+  <text x="744" y="878" class="small-title">ops / validation / smoke</text>
+  <text x="744" y="902" class="small-text">pytest、smoke_run、readiness、boundary audits、reports</text>
+
+  <rect x="1146" y="276" width="346" height="138" class="box" fill="#f1f5f9" stroke="#475569"/>
+  <text x="1168" y="306" class="box-title">memory / runtime / state</text>
+  <text x="1168" y="330" class="box-text">记忆层、上下文、route trace、event log</text>
+  <text x="1168" y="350" class="box-text">proactive state、review inbox、outbox</text>
+  <text x="1168" y="370" class="box-text">运行状态先落候选或轨迹</text>
+  <text x="1168" y="390" class="box-text">稳定记忆写入受 gate 保护</text>
+
+  <rect x="1146" y="456" width="346" height="112" class="boundary"/>
+  <text x="1168" y="486" class="box-title">XinYu-Local-Scope</text>
+  <text x="1168" y="510" class="box-text">Requests / Inbox / Outbox / Workspace</text>
+  <text x="1168" y="530" class="box-text">SourceMaterials / learning / TestTargets</text>
+  <text x="1168" y="550" class="box-text">授权的本地材料与请求 staging 区</text>
+
+  <rect x="1146" y="604" width="346" height="96" class="boundary"/>
+  <text x="1168" y="634" class="box-title">XinYu-Autonomy</text>
+  <text x="1168" y="658" class="box-text">dreams / journal / thoughts</text>
+  <text x="1168" y="678" class="box-text">owner-visible autonomy notes</text>
+
+  <rect x="1146" y="736" width="346" height="100" class="box" fill="#f7fee7" stroke="#65a30d"/>
+  <text x="1168" y="766" class="box-title">docs / assets / worklog / artifacts</text>
+  <text x="1168" y="790" class="box-text">系统说明、路线图、报告、运行手册</text>
+  <text x="1168" y="810" class="box-text">素材库、参考库、OCR fixture、保护快照</text>
+
+  <rect x="1146" y="872" width="346" height="52" class="box" fill="#fff1f2" stroke="#be123c"/>
+  <text x="1168" y="903" class="small-title">runtime/deps</text>
+  <text x="1282" y="903" class="small-text">Python312、OCR、vision、NapCat、其他本机依赖</text>
+
+  <rect x="388" y="970" width="342" height="84" class="box" fill="#fdf2f8" stroke="#db2777"/>
+  <text x="408" y="1000" class="box-title">XinYu-TinyKernel</text>
+  <text x="408" y="1024" class="box-text">本地小决策核实验，server/app.py 默认 8877</text>
+  <text x="408" y="1044" class="box-text">显式导出、清洗、SFT、eval、adapter；不直接执行工具</text>
+
+  <rect x="774" y="970" width="306" height="84" class="box" fill="#ecfdf5" stroke="#059669"/>
+  <text x="794" y="1000" class="box-title">Source publication boundary</text>
+  <text x="794" y="1024" class="box-text">公开源码不包含私密 runtime state、QQ payload、凭据、owner 材料正文</text>
+  <text x="794" y="1044" class="box-text">由 .gitignore、SECURITY、OPEN_SOURCE_POLICY 共同约束</text>
+
+  <path d="M304 332 L388 332" class="arrow"/>
+  <text x="320" y="320" class="label">QQ 事件</text>
+
+  <path d="M598 332 L636 332" class="arrow"/>
+  <text x="603" y="318" class="label">OneBot WS</text>
+
+  <path d="M762 396 C762 430 740 438 740 462" class="arrow"/>
+  <text x="776" y="435" class="label">/chat 等</text>
+
+  <path d="M676 462 C640 430 625 404 650 390" class="arrow-dashed"/>
+  <text x="540" y="430" class="hint">/qq/outbox claim + ack</text>
+
+  <path d="M905 518 C934 480 954 432 968 388" class="arrow-soft"/>
+  <text x="924" y="470" class="hint">LLM、Codex、插件</text>
+
+  <path d="M740 606 L710 662" class="arrow"/>
+  <text x="734" y="640" class="label">运行时调度</text>
+
+  <path d="M304 654 C420 654 456 534 575 534" class="arrow"/>
+  <text x="342" y="622" class="label">桌面命令 / 状态读取</text>
+
+  <path d="M575 570 C438 590 378 640 304 684" class="arrow-dashed"/>
+  <text x="352" y="690" class="hint">WS 事件与快照</text>
+
+  <path d="M304 485 C388 454 472 438 575 508" class="arrow-dashed"/>
+  <text x="344" y="468" class="hint">start / stop / status</text>
+
+  <path d="M304 508 C360 654 338 914 420 886" class="arrow-dashed"/>
+  <text x="312" y="834" class="hint">test / smoke</text>
+
+  <path d="M1000 720 C1060 672 1094 562 1146 346" class="arrow"/>
+  <text x="1024" y="622" class="label">候选、轨迹、受控写入</text>
+
+  <path d="M1146 380 C1072 482 1044 620 1000 720" class="arrow-dashed"/>
+  <text x="1010" y="506" class="hint">记忆召回与上下文注入</text>
+
+  <path d="M1000 745 C1084 720 1110 560 1146 516" class="arrow-dashed"/>
+  <text x="1038" y="706" class="hint">材料 staging</text>
+
+  <path d="M980 760 C1106 772 1116 784 1146 786" class="arrow-dashed"/>
+  <text x="1016" y="790" class="hint">报告 / 文档 / 快照</text>
+
+  <path d="M724 886 C710 884 702 884 688 886" class="arrow-soft"/>
+  <text x="666" y="840" class="hint">复用包支撑 app</text>
+
+  <path d="M874 848 C900 805 900 750 905 606" class="arrow-dashed"/>
+  <text x="884" y="820" class="hint">验证运行链路</text>
+
+  <path d="M730 1008 C892 972 1050 868 1146 346" class="arrow-dashed"/>
+  <text x="824" y="966" class="hint">只经显式 export 读取项目材料</text>
+
+  <path d="M760 396 C760 850 532 880 560 970" class="arrow-dashed"/>
+  <text x="568" y="942" class="hint">behavior shadow / inner-system 数据</text>
+
+  <path d="M1146 898 C1080 898 1050 890 1024 886" class="arrow-soft"/>
+  <text x="1038" y="914" class="hint">本机依赖供脚本启动</text>
+
+  <rect x="68" y="1068" width="1464" height="34" rx="8" fill="#ffffff" stroke="#d8e0ea"/>
+  <circle cx="90" cy="1085" r="5" fill="#334155"/>
+  <text x="104" y="1089" class="legend">实线：主要请求、回复或调用路径</text>
+  <line x1="312" y1="1085" x2="350" y2="1085" stroke="#64748b" stroke-width="2" stroke-dasharray="7 6"/>
+  <text x="362" y="1089" class="legend">虚线：控制、状态、导出、验证或受控写入</text>
+  <rect x="666" y="1078" width="22" height="14" rx="3" fill="#fff1f2" stroke="#e11d48" stroke-dasharray="5 4"/>
+  <text x="698" y="1089" class="legend">红色虚线边框：私密、本机或 owner-visible 边界</text>
+  <text x="1036" y="1089" class="legend">生成时间上下文：2026-06-03，本图描述当前仓库结构，不包含私密运行内容</text>
+</svg>
