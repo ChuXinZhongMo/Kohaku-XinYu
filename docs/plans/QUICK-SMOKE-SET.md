@@ -1,8 +1,8 @@
 # Quick smoke set (CI-blocking candidate)
 
-Date: 2026-07-13  
+Date: 2026-07-13 (updated)  
 Scope: `XinYu-Core/examples/agent-apps/xinyu`  
-Status: inventory + recommended blocking subset (not yet wired as a hard CI gate)
+Status: **blocking CI job live** — `Python smoke offline (blocking)` in `.github/workflows/ci.yml`; also a required check on `main`
 
 ## How smokes work today
 
@@ -12,7 +12,8 @@ Status: inventory + recommended blocking subset (not yet wired as a hard CI gate
 | Default group | `QUICK_SMOKES` in `smoke_run.py` | ~39 steps: one large `py_compile` batch + many `tests/smoke/**/*_smoke.py` scripts |
 | Pytest marker | `pytest.ini` → `markers.smoke` | Standalone `*_smoke.py` scripts collected via `tests/test_smoke_scripts.py` |
 | Default pytest | `addopts = -m "not smoke"` | Unit/bridge tests only; smokes **excluded** |
-| CI | `.github/workflows/ci.yml` job `python-smoke` | `pytest -q -m smoke`, **`continue-on-error: true`** (informational only) |
+| CI blocking | `.github/workflows/ci.yml` job `python-smoke-offline` | Curated hermetic scripts (fail PR); required on `main` |
+| CI informational | `.github/workflows/ci.yml` job `python-smoke` | `pytest -q -m smoke`, **`continue-on-error: true`** |
 
 There are on the order of **~180** `tests/smoke/**/*_smoke.py` scripts. Almost all are `main()`-style subprocess programs, not pure pytest unit tests. Many are fine offline (tempdirs + in-process stubs). A large tail still assumes local memory trees, optional bridge tokens, live HTTP to a running bridge, QQ/NapCat, LLM/TTS, or owner machine state.
 
@@ -108,9 +109,41 @@ Before promoting any additional smoke into the blocking set, verify it does **no
 - Network egress to LLM vendors or GitHub (unless fully stubbed)
 - Writable production `memory/` or `runtime/` trees (prefer tempdir + `--restore-after`)
 
-## Suggested next engineering steps (out of scope for this doc)
+## Current blocking list (CI job, 2026-07-13)
 
-1. Tag offline scripts with a second marker or a dedicated `CI_QUICK_SMOKES` list in `smoke_run.py`.
-2. Add a blocking CI job that only runs that list (fail the PR).
-3. Keep current `python-smoke` informational until green rate is measured.
+Verified green offline on the release line and wired in `python-smoke-offline`:
+
+| Script |
+|---|
+| `tests/smoke/runtime/runtime_security_smoke.py` |
+| `tests/smoke/memory/memory_braid_smoke.py` |
+| `tests/smoke/bridge/bridge_renderer_guard_flags_smoke.py` |
+| `tests/smoke/bridge/bridge_auth_smoke.py` |
+| `tests/smoke/bridge/bridge_values_smoke.py` |
+| `tests/smoke/bridge/bridge_session_cleanup_smoke.py` |
+| `tests/smoke/codex/self_code_approval_smoke.py` |
+| `tests/smoke/voice/xinyu_speech_controller_smoke.py` |
+| `tests/smoke/voice/persona_realism_eval_smoke.py` |
+| `tests/smoke/life/environment_sensor_smoke.py` |
+| `tests/smoke/life/life_kernel_smoke.py` |
+| `tests/smoke/life/life_kernel_entropy_smoke.py` |
+| `tests/smoke/life/life_kernel_self_choice_bias_smoke.py` |
+| `tests/smoke/life/xinyu_self_choice_store_smoke.py` |
+| `tests/smoke/life/xinyu_dream_engine_smoke.py` |
+
+### Known red (do not promote yet)
+
+| Script | Why red |
+|---|---|
+| `mojibake_guard_smoke.py` | Intentional/legacy U+FFFD and mojibake fragments still in tree |
+| `runtime_presence_smoke.py` | Marker drift vs current bridge API |
+| `codex_delegation_reality_smoke.py` | Missing policy path markers after refactor |
+| `self_code_watchdog_smoke.py` | Watchdog alias/marker drift |
+| `qq/integration/xinyu_qq_gateway_smoke.py` | `_trace_qq_inbound` signature drift (`delivery_kind`) |
+
+## Suggested next engineering steps
+
+1. Clean marker-drift smokes above, then promote one at a time into the CI list.
+2. Optional: `CI_QUICK_SMOKES` list in `smoke_run.py` so local operators share the same set.
+3. Keep `pytest -m smoke` informational until the corpus is partitioned.
 4. Periodically re-audit `QUICK_SMOKES` for dead paths after bridge consolidations.
