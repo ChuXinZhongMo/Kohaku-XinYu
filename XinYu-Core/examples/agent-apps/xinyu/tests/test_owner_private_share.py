@@ -188,6 +188,24 @@ def test_share_redacts_secrets_and_paths(tmp_path: Path) -> None:
     assert "123456789012" not in raw
 
 
+def test_share_allows_browse_observation_kind(tmp_path: Path) -> None:
+    """Private-browser read-only observations must not die on share_kind_not_allowed."""
+    _owner_config(tmp_path)
+    result = evaluate_and_maybe_queue(
+        tmp_path,
+        candidate=_candidate(
+            kind="browse_observation",
+            summary="GitHub trending had a neat Rust toolkit.",
+            dedupe_key="browse-1",
+        ),
+        grants=_grants(),
+        evaluated_at="2026-06-02T10:00:00+08:00",
+    )
+    assert "share_kind_not_allowed" not in result["blocks"]
+    assert result["queued"] is True
+    assert result["delivery_level"] == "send_owner_private"
+
+
 def test_privacy_filter_unit() -> None:
     clean, flags, hard = privacy_filter("token=abcdef123456 path /home/me/x id 999999999999")
     assert "<secret>" in clean

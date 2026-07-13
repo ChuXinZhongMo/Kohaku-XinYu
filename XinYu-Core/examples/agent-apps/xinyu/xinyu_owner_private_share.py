@@ -43,6 +43,8 @@ ALLOWED_KINDS = frozenset(
         "self_reflection",
         "needs_owner_attention",
         "blocked_need",
+        # Autonomous private-browser read-only observations (GitHub allowlist).
+        "browse_observation",
     }
 )
 

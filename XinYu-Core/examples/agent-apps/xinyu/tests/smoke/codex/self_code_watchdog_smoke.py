@@ -74,13 +74,15 @@ def main() -> int:
         if marker not in start_script:
             failures.append(f"start script missing watchdog marker: {marker}")
 
-    core_text = _read(root / "xinyu_core_bridge.py")
-    codex_runtime_text = _read(root / "xinyu_bridge_codex_runtime.py")
-    if "_prepare_self_code_watchdog_payload" not in core_text:
-        failures.append("core bridge missing watchdog private method alias")
+    # Alias install lives on the runtime codex aliases module (thin core facade).
+    aliases_text = _read(root / "xinyu_bridge_runtime_codex_aliases.py")
+    if "_prepare_self_code_watchdog_payload" not in aliases_text:
+        failures.append("runtime codex aliases missing watchdog private method alias")
+    # Payload/manifest strings live in wait_payloads after codex cluster split.
+    wait_payloads_text = _read(root / "xinyu_bridge_codex_wait_payloads.py")
     for marker in ("self_code_watchdog_manifest_path", "-SelfCodeSnapshotPath"):
-        if marker not in codex_runtime_text:
-            failures.append(f"codex runtime missing watchdog marker: {marker}")
+        if marker not in wait_payloads_text:
+            failures.append(f"codex wait payloads missing watchdog marker: {marker}")
 
     if failures:
         print("self_code_watchdog_smoke failed")

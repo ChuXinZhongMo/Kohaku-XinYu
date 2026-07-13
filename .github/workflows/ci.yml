@@ -131,16 +131,18 @@ jobs:
           set -euo pipefail
           # Curated hermetic set only (see docs/plans/QUICK-SMOKE-SET.md).
           # Intentionally excluded until cleaned:
-          #   mojibake_guard, runtime_presence, codex_delegation_reality,
-          #   self_code_watchdog, qq gateway integration (API drift).
+          #   mojibake_guard (legacy U+FFFD / mojibake fragments still in tree).
           scripts=(
             tests/smoke/runtime/runtime_security_smoke.py
+            tests/smoke/runtime/runtime_presence_smoke.py
             tests/smoke/memory/memory_braid_smoke.py
             tests/smoke/bridge/bridge_renderer_guard_flags_smoke.py
             tests/smoke/bridge/bridge_auth_smoke.py
             tests/smoke/bridge/bridge_values_smoke.py
             tests/smoke/bridge/bridge_session_cleanup_smoke.py
             tests/smoke/codex/self_code_approval_smoke.py
+            tests/smoke/codex/codex_delegation_reality_smoke.py
+            tests/smoke/codex/self_code_watchdog_smoke.py
             tests/smoke/voice/xinyu_speech_controller_smoke.py
             tests/smoke/voice/persona_realism_eval_smoke.py
             tests/smoke/life/environment_sensor_smoke.py
@@ -149,6 +151,7 @@ jobs:
             tests/smoke/life/life_kernel_self_choice_bias_smoke.py
             tests/smoke/life/xinyu_self_choice_store_smoke.py
             tests/smoke/life/xinyu_dream_engine_smoke.py
+            tests/smoke/qq/integration/xinyu_qq_gateway_smoke.py
           )
           for script in "${scripts[@]}"; do
             echo "::group::${script}"

@@ -153,19 +153,23 @@ def main() -> int:
             failures.append("prompt block exceeded limit with malformed codex json")
 
     source_root = ROOT
-    core_text = _read(source_root / "xinyu_core_bridge.py")
+    # Presence APIs live in xinyu_runtime_presence after bridge thinning;
+    # sidecar wiring is in xinyu_bridge_turn_sidecar_context (not the core facade).
+    presence_text = _read(source_root / "xinyu_runtime_presence.py")
+    sidecar_text = _read(source_root / "xinyu_bridge_turn_sidecar_context.py")
     context_text = _read(source_root / "xinyu_runtime_context.py")
-    required_core_markers = (
+    required_presence_markers = (
         "record_bridge_heartbeat(",
         "record_turn_started(",
         "build_runtime_presence_prompt_block",
-        "runtime presence sidecar:",
         "record_turn_finished(",
         "record_codex_presence(",
     )
-    for marker in required_core_markers:
-        if marker not in core_text:
-            failures.append(f"xinyu_core_bridge.py missing runtime presence marker: {marker}")
+    for marker in required_presence_markers:
+        if marker not in presence_text:
+            failures.append(f"xinyu_runtime_presence.py missing marker: {marker}")
+    if "runtime presence sidecar:" not in sidecar_text:
+        failures.append("xinyu_bridge_turn_sidecar_context.py missing runtime presence sidecar marker")
     if "memory/context/runtime_self_presence.md" not in context_text:
         failures.append("renderer context does not include runtime_self_presence.md")
 
