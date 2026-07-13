@@ -118,14 +118,16 @@ reconstructing local private state.
 Blocking checks (must pass):
 
 - Python tests (`not smoke`)
-- Python **critical** lint on `XinYu-Core/src` (`ruff` select `F,E9,F63,F7,F82`)
+- Python **critical** lint on `XinYu-Core/src` **and** the xinyu app
+  (`ruff` select `F,E9,F63,F7,F82`; app excludes learning/runtime/venv/archive)
 - Desktop typecheck
 
 Informational (may fail while debt is paid down):
 
 - Full expanded ruff on `XinYu-Core/src`
-- Critical + full ruff on the xinyu app tree
-- Full smoke marker suite (often needs a live local env)
+- Full expanded ruff on the xinyu app tree
+- Full smoke marker suite (often needs a live local env; see
+  `docs/plans/QUICK-SMOKE-SET.md`)
 
 Local equivalent of the CI pre-push gate:
 

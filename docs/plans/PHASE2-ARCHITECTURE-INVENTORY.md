@@ -100,9 +100,19 @@ XinYu-Core/examples/agent-apps/xinyu/
 4. **Stop-the-bleeding rule** — new store modules require a one-line rationale
    in the PR linking to this inventory.
 
-## 6. Stop-ship / do-not
+## 6. Progress log
+
+| Date | Change |
+|------|--------|
+| 2026-07-13 | Thin bridge stores: 21 modules folded into `xinyu_bridge_stores.py`; remaining thick: `desktop_surface_state_store`, `proactive_delivery_state_store` |
+| 2026-07-13 | Gateway split: `xinyu_qq_owner_private_intent.py`, `xinyu_qq_sticker_context.py`, `xinyu_qq_payload_builders.py`; facade ~3465 LOC |
+| 2026-07-13 | Status split: `xinyu_status_models.py`, `xinyu_status_collect.py`, `xinyu_status_render.py`; facade ~72 LOC |
+| 2026-07-13 | App critical ruff (`F,E9,...`) 885 → 0; CI blocks on app critical |
+
+## 7. Stop-ship / do-not
 
 - No new 2k-line modules without an explicit exception.
 - No “fix + refactor + feature” mega-PRs.
 - No deleting shims without an import map.
 - No weakening privacy boundary for cleaner packages.
+- Do not blind-`ruff --fix` F401 on bridge injection facades without `__all__`.

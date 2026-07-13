@@ -50,8 +50,8 @@ jobs:
           path: ${{ env.XINYU_APP_DIR }}/coverage.xml
           if-no-files-found: ignore
 
-  # ── Blocking: critical correctness lint on the packaged core ────────────────
-  # App tree still has pre-existing F8xx debt; expand this job after cleanups.
+  # ── Blocking: critical correctness lint on core + app ───────────────────────
+  # Full expanded ruff remains informational (style debt). Critical = F/E9 class.
   # Progressive plan: docs/plans/ENGINEERING-MATURITY-PLAN.md
   python-lint-critical:
     name: "Python lint critical (blocking)"
@@ -65,8 +65,13 @@ jobs:
         run: pip install "ruff>=0.9.0"
       - name: Ruff critical rules on XinYu-Core/src
         run: ruff check XinYu-Core/src --select F,E9,F63,F7,F82
+      - name: Ruff critical rules on xinyu app
+        run: >
+          ruff check "${{ env.XINYU_APP_DIR }}"
+          --select F,E9,F63,F7,F82
+          --exclude "**/learning/**,**/runtime/**,**/.venv/**,**/ops/archive/**"
 
-  # ── Informational: full expanded ruff on core (debt paydown signal) ────────
+  # ── Informational: full expanded ruff on core ──────────────────────────────
   python-lint-core-full:
     name: "Python lint core full (informational)"
     runs-on: ubuntu-latest
@@ -81,9 +86,9 @@ jobs:
       - name: Ruff full config on XinYu-Core/src
         run: ruff check XinYu-Core/src
 
-  # ── Informational: critical + full ruff on app ─────────────────────────────
-  python-lint-app:
-    name: "Python lint app (informational)"
+  # ── Informational: full expanded ruff on app ───────────────────────────────
+  python-lint-app-full:
+    name: "Python lint app full (informational)"
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -93,11 +98,6 @@ jobs:
           python-version: "3.12"
       - name: Install ruff
         run: pip install "ruff>=0.9.0"
-      - name: Ruff critical rules on xinyu app
-        run: >
-          ruff check "${{ env.XINYU_APP_DIR }}"
-          --select F,E9,F63,F7,F82
-          --exclude "**/learning/**,**/runtime/**,**/.venv/**,**/ops/archive/**"
       - name: Ruff full config on xinyu app
         run: >
           ruff check "${{ env.XINYU_APP_DIR }}"

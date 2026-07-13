@@ -63,32 +63,32 @@ Target score: **~60 / 100**
 
 ## Day 8–14 — First debt payment
 
-- [ ] Bridge/store cluster #1 consolidated (follow existing pilot playbook)
-- [ ] Shim count recorded before/after
-- [ ] God-file split PR #1 opened (prefer `xinyu_qq_gateway.py` or `xinyu_status.py`)
-- [ ] All split PRs: behavior-preserving + tests green
-- [ ] Architecture note touch-up if import paths changed
+- [x] Bridge/store cluster #1 consolidated (thin stores → `xinyu_bridge_stores.py`; 21 thin done, 2 thick remain)
+- [x] Shim count recorded before/after (see PHASE2 inventory / agent report)
+- [x] God-file split: `xinyu_qq_gateway.py` helpers extracted; `xinyu_status.py` facade + collect/render/models
+- [x] Targeted store/status suites exercised (full suite still owner-run before tag)
+- [ ] Architecture note touch-up if import paths changed (optional follow-up)
 
 ---
 
 ## Day 15–21 — Contributor path
 
-- [ ] Fresh-install draft in `docs/` or root README section
-- [ ] `*.env.example` audit (only examples tracked)
-- [ ] Curated quick smoke list identified for future blocking job
-- [ ] At least 3 `good first issue` tickets written
-- [ ] Dependabot first batch reviewed (merge safe patches)
+- [x] Fresh-install draft in `docs/` or root README section (`docs/system/FRESH-INSTALL.md` + root README pointer)
+- [x] `*.env.example` audit (only examples tracked) — `docs/plans/ENV-EXAMPLE-AUDIT.md`
+- [x] Curated quick smoke list identified for future blocking job — `docs/plans/QUICK-SMOKE-SET.md`
+- [x] At least 3 `good first issue` tickets written (`docs/plans/GOOD-FIRST-ISSUES.md` backlog; file on GitHub next)
+- [ ] Dependabot first batch reviewed (merge safe patches after push)
 
 ---
 
 ## Day 22–30 — Release prep
 
 - [ ] Re-run validation baseline on intended commit
-- [ ] CHANGELOG ready for tag
-- [ ] Release dry-run: `git archive` / clean checkout privacy check
+- [x] CHANGELOG engineering track section present (Unreleased)
+- [x] Release dry-run procedure: `docs/plans/RELEASE-CHECKLIST.md` + `scripts/Release-DryRun.ps1`
 - [ ] Decide: tag `v0.1.0` now or `v0.1.0-rc.2` then final
 - [ ] main/master cutover dry-run completed or scheduled with date
-- [ ] Scorecard updated in maturity plan changelog
+- [x] Scorecard notes updated in maturity plan changelog
 
 ---
 

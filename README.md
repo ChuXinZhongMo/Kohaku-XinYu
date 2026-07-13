@@ -102,6 +102,9 @@ See:
 
 ## Setup
 
+Full stranger-clone path (Python **3.12**, Node **20**, privacy boundary, CI gates
+vs operator deps): **`docs/system/FRESH-INSTALL.md`**.
+
 ### Fresh developer install (tests / contribution)
 
 ```bash
@@ -133,11 +136,17 @@ cd XinYu-Core\examples\agent-apps\xinyu
 .\.venv\Scripts\python.exe smoke_run.py --group quick --timeout-seconds 180 --json
 ```
 
+Operator entry (`XinYu.ps1`) needs a provisioned machine for start/stop/verify;
+see `docs/system/FRESH-INSTALL.md` (Windows operator path section).
+
 Engineering maturity plan (how we close the gap to top-tier OSS practice):
 
 - `docs/plans/ENGINEERING-MATURITY-PLAN.md`
 - `docs/plans/ENGINEERING-30-DAY-CHECKLIST.md`
+- `docs/plans/RELEASE-CHECKLIST.md`
+- `docs/plans/GOOD-FIRST-ISSUES.md`
 - `docs/system/BRANCH-POLICY.md`
+- `docs/system/FRESH-INSTALL.md`
 
 ## Daily Entry Points
 

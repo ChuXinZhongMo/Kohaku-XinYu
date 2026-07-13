@@ -23,10 +23,11 @@ test-cov: ## Run tests with coverage
 smoke: ## Run the integration smoke scripts (slow; may need a live env)
 	cd $(APP) && $(PY) -m pytest -q -m smoke
 
-lint-critical: ## Ruff critical rules on core (matches CI blocking lint)
+lint-critical: ## Ruff critical rules on core + app (matches CI blocking lint)
 	ruff check XinYu-Core/src --select F,E9,F63,F7,F82
+	ruff check $(APP) --select F,E9,F63,F7,F82 --exclude "**/learning/**,**/runtime/**,**/.venv/**,**/ops/archive/**"
 
-lint-app-critical: ## Ruff critical rules on app (informational until cleaned)
+lint-app-critical: ## Alias: critical rules on app only
 	ruff check $(APP) --select F,E9,F63,F7,F82 --exclude "**/learning/**,**/runtime/**,**/.venv/**,**/ops/archive/**"
 
 lint: ## Alias: critical lint (pre-push)

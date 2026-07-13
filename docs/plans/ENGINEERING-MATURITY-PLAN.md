@@ -253,12 +253,22 @@ re-export from old paths until one release cycle passes.
 7. Consider SPDX-friendly dual presentation if license remains custom
    (keep KohakuTerrarium terms; improve discoverability)
 
+### Early Phase 4 stubs (landed)
+
+| Item | Path | Notes |
+|------|------|-------|
+| Informational security CI | `.github/workflows/security.yml` | `pip-audit` + `npm audit`; `continue-on-error: true` |
+| OpenSSF Passing map | `docs/plans/OPENSSF-SELF-ASSESSMENT.md` | Living stub; not a formal badge submission |
+| Privacy release dry-run | `scripts/Release-DryRun.ps1` | Read-only; optional `-Archive` / `-Strict` |
+
 ### Exit criteria
 
 - [ ] Release checklist automated or semi-automated
 - [ ] Security reporting path exercised once (tabletop)
-- [ ] OpenSSF Best Practices self-assessment started
+- [x] OpenSSF Best Practices self-assessment started (`docs/plans/OPENSSF-SELF-ASSESSMENT.md`)
 - [ ] Documented maintainer succession notes
+- [x] Non-blocking dependency audit workflow present
+- [x] Release privacy dry-run script present
 
 ---
 
@@ -353,3 +363,8 @@ If this plan is followed, XinYu should be able to say:
 | 2026-07-13 | CI progressive gates: blocking tests + critical ruff + desktop; full ruff/smoke informational |
 | 2026-07-13 | `ruff check --fix` on `XinYu-Core/src` auto-fixed 135 issues (219 residual under full ruleset) |
 | 2026-07-13 | Phase 2 inventory draft: `docs/plans/PHASE2-ARCHITECTURE-INVENTORY.md` |
+| 2026-07-13 | Phase 4 stubs: informational `security.yml` (pip-audit + npm audit), OpenSSF self-assessment map, `scripts/Release-DryRun.ps1` |
+| 2026-07-13 | App critical ruff cleaned 885→0; CI blocking critical lint now covers core **and** app |
+| 2026-07-13 | Thin bridge stores consolidated into `xinyu_bridge_stores.py` (21 thin modules; 2 thick remain) |
+| 2026-07-13 | God-file splits: `xinyu_qq_gateway.py` ~4279→3465 + helper modules; `xinyu_status.py` → models/collect/render facade |
+| 2026-07-13 | Phase 3 docs: FRESH-INSTALL, RELEASE-CHECKLIST, GOOD-FIRST-ISSUES, QUICK-SMOKE-SET, ENV-EXAMPLE-AUDIT |

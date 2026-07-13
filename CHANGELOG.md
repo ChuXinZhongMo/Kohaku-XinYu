@@ -11,10 +11,19 @@ Status: in progress (started 2026-07-13)
 - Added GitHub issue templates, PR template, CODEOWNERS, and Dependabot.
 - Added `.editorconfig` and `.pre-commit-config.yaml`.
 - Hardened CI with named blocking vs informational jobs, concurrency cancel,
-  coverage artifact upload, and critical ruff gate on `XinYu-Core/src`.
+  coverage artifact upload, and critical ruff gate on core **and** app.
 - Documented branch policy (`main` canonical; `master` cutover checklist).
 - Refreshed root README/CONTRIBUTING setup paths for fresh developers.
 - Auto-fixed a batch of safe ruff issues under `XinYu-Core/src`.
+- Cleaned app critical ruff debt (885 → 0 for `F,E9,F63,F7,F82`).
+- Consolidated thin bridge store modules into `xinyu_bridge_stores.py`.
+- Split `xinyu_qq_gateway` helpers and `xinyu_status` into facade + modules.
+- Phase 3: `FRESH-INSTALL`, `RELEASE-CHECKLIST`, `GOOD-FIRST-ISSUES`,
+  `QUICK-SMOKE-SET`, `ENV-EXAMPLE-AUDIT`.
+- Phase 4 stubs: `security.yml` (pip-audit + npm audit, informational),
+  OpenSSF self-assessment map, `scripts/Release-DryRun.ps1`.
+- Phase 4 supply-chain stubs: informational `security.yml` (pip-audit + npm
+  audit), OpenSSF self-assessment map, and `scripts/Release-DryRun.ps1`.
 
 ## v0.1.0 - Public Source Baseline
 
