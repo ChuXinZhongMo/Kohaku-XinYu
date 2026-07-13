@@ -16,9 +16,9 @@ def main() -> int:
     if not policy_path.exists():
         policy_path = root / "memory-seeds/context/codex_delegation_policy.md"
     policy = policy_path.read_text(encoding="utf-8-sig")
-    core = (root / "xinyu_core_bridge.py").read_text(encoding="utf-8-sig")
     renderer = (root / "xinyu_bridge_renderer.py").read_text(encoding="utf-8-sig")
     runtime_context = (root / "xinyu_runtime_context.py").read_text(encoding="utf-8-sig")
+    # Thin core facade no longer hardcodes memory paths after bridge modularization.
 
     required_markers = {
         "config.yaml": (
@@ -43,9 +43,6 @@ def main() -> int:
             "timeout_policy: Codex execution is bounded",
             "Timeout is not treated as closing the task",
         ),
-        "xinyu_core_bridge.py": (
-            "memory/context/codex_delegation_policy.md",
-        ),
         "xinyu_bridge_renderer.py": (
             "build_renderer_memory_context",
         ),
@@ -57,7 +54,6 @@ def main() -> int:
         "config.yaml": config,
         "prompts/system.md": system,
         "memory/context/codex_delegation_policy.md": policy,
-        "xinyu_core_bridge.py": core,
         "xinyu_bridge_renderer.py": renderer,
         "xinyu_runtime_context.py": runtime_context,
     }

@@ -129,6 +129,7 @@ def main() -> int:
         assert overridden_config.blocked_group_ids == frozenset({"9"})
 
     class ImageActionGateway(NativeQQGateway):
+        allows_null_websocket_send = True
         def __init__(self):
             super().__init__(config)
             self.actions = []
@@ -188,6 +189,7 @@ def main() -> int:
         )
 
     class MediaResolveGateway(NativeQQGateway):
+        allows_null_websocket_send = True
         def __init__(self, image_path: Path):
             super().__init__(config)
             self.image_path = image_path
@@ -218,31 +220,37 @@ def main() -> int:
         assert resolved_payload["metadata"]["file_resolution_attempts"] == ["get_image"]
         assert media_gateway.actions[0] == ("get_image", {"file": "image-token"})
 
-    with _smoke_dir(".qq_gateway_gif_context_smoke_runtime") as tmp:
+    # Optional: animated GIF/WebP sampling needs Pillow. CI offline runners
+    # may not install it; skip this block rather than fail the whole gateway smoke.
+    try:
+        from PIL import Image, features  # type: ignore
+    except ImportError:
+        Image = None  # type: ignore[assignment]
+        features = None  # type: ignore[assignment]
+    if Image is not None and features is not None:
         import warnings
 
-        from PIL import Image, features
-
-        gif_path = tmp / "animated.gif"
-        frame_one = Image.new("RGB", (12, 12), (255, 0, 0))
-        frame_two = Image.new("RGB", (12, 12), (0, 0, 255))
-        frame_one.save(gif_path, save_all=True, append_images=[frame_two], duration=80, loop=0)
-        data_uri, gif_error, gif_notes = _image_data_uri(gif_path, {"file_name": "animated.gif"})
-        assert gif_error == ""
-        assert data_uri.startswith("data:image/png;base64,")
-        assert "gif_frames_sampled:2" in gif_notes
-        assert "gif_total_frames:2" in gif_notes
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            webp_anim_supported = features.check("webp_anim")
-        if webp_anim_supported:
-            webp_path = tmp / "animated.webp"
-            frame_one.save(webp_path, save_all=True, append_images=[frame_two], duration=80, loop=0)
-            webp_uri, webp_error, webp_notes = _image_data_uri(webp_path, {"file_name": "animated.webp"})
-            assert webp_error == ""
-            assert webp_uri.startswith("data:image/png;base64,")
-            assert "animated_frames_sampled:2" in webp_notes
-            assert "animated_total_frames:2" in webp_notes
+        with _smoke_dir(".qq_gateway_gif_context_smoke_runtime") as tmp:
+            gif_path = tmp / "animated.gif"
+            frame_one = Image.new("RGB", (12, 12), (255, 0, 0))
+            frame_two = Image.new("RGB", (12, 12), (0, 0, 255))
+            frame_one.save(gif_path, save_all=True, append_images=[frame_two], duration=80, loop=0)
+            data_uri, gif_error, gif_notes = _image_data_uri(gif_path, {"file_name": "animated.gif"})
+            assert gif_error == ""
+            assert data_uri.startswith("data:image/png;base64,")
+            assert "gif_frames_sampled:2" in gif_notes
+            assert "gif_total_frames:2" in gif_notes
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                webp_anim_supported = features.check("webp_anim")
+            if webp_anim_supported:
+                webp_path = tmp / "animated.webp"
+                frame_one.save(webp_path, save_all=True, append_images=[frame_two], duration=80, loop=0)
+                webp_uri, webp_error, webp_notes = _image_data_uri(webp_path, {"file_name": "animated.webp"})
+                assert webp_error == ""
+                assert webp_uri.startswith("data:image/png;base64,")
+                assert "animated_frames_sampled:2" in webp_notes
+                assert "animated_total_frames:2" in webp_notes
 
     private_event = {
         "post_type": "message",
@@ -289,6 +297,7 @@ def main() -> int:
             }
 
     class SemanticFastGateway(NativeQQGateway):
+        allows_null_websocket_send = True
         def __init__(self):
             super().__init__(config)
             self.client = SemanticFastCoreClient()
@@ -300,7 +309,7 @@ def main() -> int:
             self.replies.append((target, text))
             return {"status": "ok", "retcode": 0, "data": {"message_id": 3101}}
 
-        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error=""):
+        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error="", delivery_kind="", adapter_message_id="", adapter_error="", voice_fallback_reason=""):
             del event, arrival_seq, prepared, session_queue_key, queue_depth, error
             self.trace_stages.append((stage, drop_reason))
 
@@ -489,6 +498,7 @@ def main() -> int:
             return {"accepted": True}
 
     class OrderedStickerGateway(NativeQQGateway):
+        allows_null_websocket_send = True
         def __init__(self):
             super().__init__(config)
             self.client = OrderedStickerClient()
@@ -501,7 +511,7 @@ def main() -> int:
         def _trace_qq_rich_context(self, event, prepared, *, stage):
             return None
 
-        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error=""):
+        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error="", delivery_kind="", adapter_message_id="", adapter_error="", voice_fallback_reason=""):
             return None
 
         def _trace_sticker_import(self, event, *, target, payload, stage, response=None, elapsed_ms=None, error=""):
@@ -513,12 +523,18 @@ def main() -> int:
         async def _ack_sent_visible_reply(self, prepared, *, reply, core_response, action_response):
             return None
 
+    async def _await_gateway_background(gateway):
+        # Sticker import runs via asyncio.create_task; drain before assertions.
+        tasks = list(getattr(gateway, "_event_tasks", set()) or [])
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+
     async def _dispatch_order_smoke():
         ordered_gateway = OrderedStickerGateway()
         prepared = ordered_gateway.prepare_message(image_sticker_url_event)
         assert prepared is not None
         await ordered_gateway._dispatch_prepared_message(None, prepared, event=image_sticker_url_event)
-        await asyncio.sleep(0.05)
+        await _await_gateway_background(ordered_gateway)
         call_names = [name for name, _payload in ordered_gateway.client.calls]
         assert call_names[:2] == ["sticker_import", "chat"]
         assert ordered_gateway.replies == ["chat reply"]
@@ -578,6 +594,7 @@ def main() -> int:
             return response
 
     class ReplyBubbleGateway(NativeQQGateway):
+        allows_null_websocket_send = True
         def __init__(self, reply, *, target=None, source="onebot_message_event", response_extra=None):
             super().__init__(
                 GatewayConfig(
@@ -614,7 +631,7 @@ def main() -> int:
             self.replies.append(text)
             return {"status": "ok", "retcode": 0, "data": {"message_id": 4000 + len(self.replies)}}
 
-        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error=""):
+        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error="", delivery_kind="", adapter_message_id="", adapter_error="", voice_fallback_reason=""):
             return None
 
     async def _reply_bubble_smoke():
@@ -702,6 +719,7 @@ def main() -> int:
             )
 
     class TimeoutFallbackGateway(NativeQQGateway):
+        allows_null_websocket_send = True
         def __init__(self):
             super().__init__(
                 GatewayConfig(
@@ -720,7 +738,7 @@ def main() -> int:
             self.replies.append(text)
             return {"status": "ok", "retcode": 0, "data": {"message_id": 4400 + len(self.replies)}}
 
-        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error=""):
+        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error="", delivery_kind="", adapter_message_id="", adapter_error="", voice_fallback_reason=""):
             self.traces.append({"stage": stage, "drop_reason": drop_reason, "error": error})
 
     async def _bridge_timeout_fallback_smoke():
@@ -765,6 +783,7 @@ def main() -> int:
             return {"accepted": True, "reply": "\u6211\u5728\u3002", "route": "chat"}
 
     class RetryAfterConnectionResetGateway(NativeQQGateway):
+        allows_null_websocket_send = True
         def __init__(self):
             super().__init__(
                 GatewayConfig(
@@ -786,7 +805,7 @@ def main() -> int:
             self.replies.append(text)
             return {"status": "ok", "retcode": 0, "data": {"message_id": 4500 + len(self.replies)}}
 
-        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error=""):
+        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error="", delivery_kind="", adapter_message_id="", adapter_error="", voice_fallback_reason=""):
             self.traces.append({"stage": stage, "drop_reason": drop_reason, "error": error})
 
     async def _bridge_connection_reset_retry_smoke():
@@ -826,6 +845,7 @@ def main() -> int:
             raise BridgeError("core bridge connection failed: [WinError 10061] actively refused")
 
     class RetryThenUnavailableGateway(NativeQQGateway):
+        allows_null_websocket_send = True
         def __init__(self):
             super().__init__(
                 GatewayConfig(
@@ -847,7 +867,7 @@ def main() -> int:
             self.replies.append(text)
             return {"status": "ok", "retcode": 0, "data": {"message_id": 4600 + len(self.replies)}}
 
-        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error=""):
+        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error="", delivery_kind="", adapter_message_id="", adapter_error="", voice_fallback_reason=""):
             self.traces.append({"stage": stage, "drop_reason": drop_reason, "error": error})
 
     async def _bridge_unavailable_fallback_smoke():
@@ -882,6 +902,7 @@ def main() -> int:
     asyncio.run(_bridge_unavailable_fallback_smoke())
 
     class OrderedInboundGateway(NativeQQGateway):
+        allows_null_websocket_send = True
         def __init__(self):
             super().__init__(
                 GatewayConfig(
@@ -893,7 +914,7 @@ def main() -> int:
             )
             self.dispatched = []
 
-        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error=""):
+        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error="", delivery_kind="", adapter_message_id="", adapter_error="", voice_fallback_reason=""):
             return None
 
         def _trace_qq_rich_context(self, event, prepared, *, stage):
@@ -1018,6 +1039,7 @@ def main() -> int:
     assert gated_coalesced.payload["metadata"]["qq_segmented_fragment_count"] == 2
 
     class IntentGateGateway(NativeQQGateway):
+        allows_null_websocket_send = True
         def __init__(self):
             super().__init__(
                 GatewayConfig(
@@ -1030,7 +1052,7 @@ def main() -> int:
             self.dispatched = []
             self.traces = []
 
-        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error=""):
+        def _trace_qq_inbound(self, event, *, stage, arrival_seq=0, prepared=None, session_queue_key="", queue_depth=None, drop_reason="", error="", delivery_kind="", adapter_message_id="", adapter_error="", voice_fallback_reason=""):
             metadata = {}
             if prepared is not None and isinstance(prepared.payload, dict):
                 raw_metadata = prepared.payload.get("metadata")
@@ -1231,6 +1253,7 @@ def main() -> int:
     assert raw_cq_prepared.payload["file_name"] == "NIPS-2017.pdf"
 
     class ReplyFileGateway(NativeQQGateway):
+        allows_null_websocket_send = True
         def __init__(self, reply_data):
             super().__init__(config)
             self.reply_data = reply_data
@@ -1342,6 +1365,7 @@ def main() -> int:
         )
 
         class TrustCommandGateway(NativeQQGateway):
+            allows_null_websocket_send = True
             def __init__(self):
                 super().__init__(GatewayConfig.from_file(trust_config_path), config_path=trust_config_path)
                 self.actions = []
@@ -1390,6 +1414,7 @@ def main() -> int:
         )
 
         class GroupTrustCommandGateway(NativeQQGateway):
+            allows_null_websocket_send = True
             def __init__(self):
                 super().__init__(GatewayConfig.from_file(group_trust_config_path), config_path=group_trust_config_path)
                 self.actions = []
@@ -1432,6 +1457,7 @@ def main() -> int:
         assert persisted_group_trust["trusted_user_ids"] == ["45"]
 
     class ForwardGateway(NativeQQGateway):
+        allows_null_websocket_send = True
         def __init__(self):
             super().__init__(config)
             self.actions = []

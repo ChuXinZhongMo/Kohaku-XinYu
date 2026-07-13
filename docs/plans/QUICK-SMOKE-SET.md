@@ -109,19 +109,22 @@ Before promoting any additional smoke into the blocking set, verify it does **no
 - Network egress to LLM vendors or GitHub (unless fully stubbed)
 - Writable production `memory/` or `runtime/` trees (prefer tempdir + `--restore-after`)
 
-## Current blocking list (CI job, 2026-07-13)
+## Current blocking list (CI job, 2026-07-13+)
 
-Verified green offline on the release line and wired in `python-smoke-offline`:
+Verified green offline and wired in `python-smoke-offline`:
 
 | Script |
 |---|
 | `tests/smoke/runtime/runtime_security_smoke.py` |
+| `tests/smoke/runtime/runtime_presence_smoke.py` |
 | `tests/smoke/memory/memory_braid_smoke.py` |
 | `tests/smoke/bridge/bridge_renderer_guard_flags_smoke.py` |
 | `tests/smoke/bridge/bridge_auth_smoke.py` |
 | `tests/smoke/bridge/bridge_values_smoke.py` |
 | `tests/smoke/bridge/bridge_session_cleanup_smoke.py` |
 | `tests/smoke/codex/self_code_approval_smoke.py` |
+| `tests/smoke/codex/codex_delegation_reality_smoke.py` |
+| `tests/smoke/codex/self_code_watchdog_smoke.py` |
 | `tests/smoke/voice/xinyu_speech_controller_smoke.py` |
 | `tests/smoke/voice/persona_realism_eval_smoke.py` |
 | `tests/smoke/life/environment_sensor_smoke.py` |
@@ -130,16 +133,13 @@ Verified green offline on the release line and wired in `python-smoke-offline`:
 | `tests/smoke/life/life_kernel_self_choice_bias_smoke.py` |
 | `tests/smoke/life/xinyu_self_choice_store_smoke.py` |
 | `tests/smoke/life/xinyu_dream_engine_smoke.py` |
+| `tests/smoke/qq/integration/xinyu_qq_gateway_smoke.py` |
 
 ### Known red (do not promote yet)
 
 | Script | Why red |
 |---|---|
 | `mojibake_guard_smoke.py` | Intentional/legacy U+FFFD and mojibake fragments still in tree |
-| `runtime_presence_smoke.py` | Marker drift vs current bridge API |
-| `codex_delegation_reality_smoke.py` | Missing policy path markers after refactor |
-| `self_code_watchdog_smoke.py` | Watchdog alias/marker drift |
-| `qq/integration/xinyu_qq_gateway_smoke.py` | `_trace_qq_inbound` signature drift (`delivery_kind`) |
 
 ## Suggested next engineering steps
 
