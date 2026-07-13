@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from xinyu_bridge_desktop_service_status_store import desktop_service_path_exists
+from xinyu_bridge_stores import desktop_service_path_exists
 
 
 def test_desktop_service_status_store_checks_path_existence(tmp_path) -> None:

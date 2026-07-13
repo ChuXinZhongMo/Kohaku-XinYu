@@ -5,11 +5,11 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from xinyu_bridge_learning_codex_reports_store import codex_report_is_file
-from xinyu_bridge_learning_codex_reports_store import codex_report_mtime
-from xinyu_bridge_learning_codex_reports_store import read_codex_report_text
-from xinyu_bridge_learning_codex_reports_store import read_codex_report_text_for_update
-from xinyu_bridge_learning_codex_reports_store import write_codex_report_text
+from xinyu_bridge_stores import codex_report_is_file
+from xinyu_bridge_stores import codex_report_mtime
+from xinyu_bridge_stores import read_codex_report_text
+from xinyu_bridge_stores import read_codex_report_text_for_update
+from xinyu_bridge_stores import write_codex_report_text
 from xinyu_learning_library import (
     claim_from_text,
     ensure_source_materials_file,

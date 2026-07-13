@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from xinyu_bridge_prompt_context_signature_store import prompt_context_file_signature
+from xinyu_bridge_stores import prompt_context_file_signature
 
 
 def test_prompt_context_signature_store_reads_file_metadata(tmp_path) -> None:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from xinyu_bridge_autonomous_state_store import append_autonomous_trace_text
-from xinyu_bridge_autonomous_state_store import write_autonomous_state_text
+from xinyu_bridge_stores import append_autonomous_trace_text
+from xinyu_bridge_stores import write_autonomous_state_text
 
 
 def test_write_autonomous_state_text_uses_state_service_atomic_text_writer(tmp_path) -> None:

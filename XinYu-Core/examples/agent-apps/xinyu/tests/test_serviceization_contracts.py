@@ -741,10 +741,10 @@ def test_report_modules_have_service_owners_without_moving_stores() -> None:
     assert learning.process_split_ready is False
     assert "xinyu_bridge_observation_reports.py" in learning.contract_modules
     assert "tests/test_bridge_observation_reports_store.py" in learning.validation_tests
-    assert "xinyu_bridge_observation_reports_store.py" in persistence.contract_modules
+    assert "xinyu_bridge_stores.py" in persistence.contract_modules
     assert "xinyu_bridge_learning_codex_reports.py" in learning.contract_modules
     assert "tests/test_bridge_learning_codex_reports.py" in learning.validation_tests
-    assert "xinyu_bridge_learning_codex_reports_store.py" in persistence.contract_modules
+    assert "tests/test_bridge_learning_codex_reports_store.py" in persistence.validation_tests
 
 
 def test_diagnostic_reports_remain_local_without_moving_stores() -> None:

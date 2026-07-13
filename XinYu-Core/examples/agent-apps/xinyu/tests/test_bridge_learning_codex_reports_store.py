@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from xinyu_bridge_learning_codex_reports_store import codex_report_is_file
-from xinyu_bridge_learning_codex_reports_store import codex_report_mtime
-from xinyu_bridge_learning_codex_reports_store import read_codex_report_text
-from xinyu_bridge_learning_codex_reports_store import read_codex_report_text_for_update
-from xinyu_bridge_learning_codex_reports_store import write_codex_report_text
+from xinyu_bridge_stores import codex_report_is_file
+from xinyu_bridge_stores import codex_report_mtime
+from xinyu_bridge_stores import read_codex_report_text
+from xinyu_bridge_stores import read_codex_report_text_for_update
+from xinyu_bridge_stores import write_codex_report_text
 
 
 def test_codex_report_store_text_roundtrip_and_stat(tmp_path: Path) -> None:

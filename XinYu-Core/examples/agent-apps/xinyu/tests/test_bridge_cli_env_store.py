@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from xinyu_bridge_cli import build_bridge_parser
-from xinyu_bridge_cli_env_store import read_bridge_cli_env
+from xinyu_bridge_stores import read_bridge_cli_env
 
 
 def test_bridge_cli_env_store_reads_defaults(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 
-from xinyu_bridge_desktop_proactive_state_store import append_desktop_proactive_history_jsonl
-from xinyu_bridge_desktop_proactive_state_store import write_desktop_proactive_request_state_text
+from xinyu_bridge_stores import append_desktop_proactive_history_jsonl
+from xinyu_bridge_stores import write_desktop_proactive_request_state_text
 
 
 def test_append_desktop_proactive_history_jsonl_uses_state_service_jsonl_writer(tmp_path) -> None:

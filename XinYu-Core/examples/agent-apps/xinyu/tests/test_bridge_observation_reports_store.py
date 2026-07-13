@@ -5,7 +5,7 @@ from xinyu_bridge_observation_reports import (
     _ensure_observation_file,
     _update_real_life_events,
 )
-from xinyu_bridge_observation_reports_store import (
+from xinyu_bridge_stores import (
     observation_report_exists,
     read_observation_report_text,
     read_observation_report_text_safe,

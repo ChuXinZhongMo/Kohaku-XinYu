@@ -5,7 +5,7 @@ import os
 import pytest
 
 from xinyu_bridge_bootstrap import load_local_env
-from xinyu_bridge_bootstrap_store import (
+from xinyu_bridge_stores import (
     bootstrap_env_file_exists,
     bootstrap_env_has_key,
     read_bootstrap_env_file_lines,

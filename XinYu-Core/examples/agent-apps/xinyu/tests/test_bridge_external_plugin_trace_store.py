@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from xinyu_bridge_external_plugin_trace_store import append_external_plugin_trace
+from xinyu_bridge_stores import append_external_plugin_trace
 
 
 def test_append_external_plugin_trace_uses_state_service_jsonl_writer(tmp_path) -> None:

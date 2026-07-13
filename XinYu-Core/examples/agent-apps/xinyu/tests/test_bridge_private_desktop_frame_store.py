@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from xinyu_bridge_private_desktop_frame import _read_frame_data_url
-from xinyu_bridge_private_desktop_frame_store import read_private_desktop_frame_bytes
+from xinyu_bridge_stores import read_private_desktop_frame_bytes
 
 
 def test_private_desktop_frame_store_reads_bytes(tmp_path) -> None:

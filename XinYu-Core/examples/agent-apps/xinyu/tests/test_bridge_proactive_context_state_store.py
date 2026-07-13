@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from xinyu_bridge_proactive_context_state_store import write_proactive_request_state_text
+from xinyu_bridge_stores import write_proactive_request_state_text
 
 
 def test_write_proactive_request_state_text_preserves_final_newline_option(tmp_path) -> None:

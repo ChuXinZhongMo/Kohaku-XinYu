@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from xinyu_bridge_learning_sidecars_store import append_codex_learning_followup_trace
+from xinyu_bridge_stores import append_codex_learning_followup_trace
 
 
 def test_codex_learning_followup_trace_appends(tmp_path: Path) -> None:

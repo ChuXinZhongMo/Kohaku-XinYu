@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from xinyu_bridge_codex_presence_store import append_codex_background_trace
-from xinyu_bridge_codex_presence_store import read_codex_presence_json
+from xinyu_bridge_stores import append_codex_background_trace
+from xinyu_bridge_stores import read_codex_presence_json
 
 
 def test_codex_presence_store_reads_json_dict(tmp_path: Path) -> None:

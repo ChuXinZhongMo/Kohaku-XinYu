@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 
-from xinyu_bridge_state_text_store import read_text_safe
+from xinyu_bridge_stores import read_text_safe
 from xinyu_bridge_values import safe_str
 
 

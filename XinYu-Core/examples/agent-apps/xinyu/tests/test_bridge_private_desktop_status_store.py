@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 
 from xinyu_bridge_private_desktop_status import _live_state_payload
-from xinyu_bridge_private_desktop_status_store import (
+from xinyu_bridge_stores import (
     private_desktop_status_path_exists,
     private_desktop_status_path_mtime,
 )

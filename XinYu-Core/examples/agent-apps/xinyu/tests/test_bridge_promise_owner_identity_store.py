@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from xinyu_bridge_promise_candidate import owner_private_user_id
-from xinyu_bridge_promise_owner_identity_store import (
+from xinyu_bridge_stores import (
     read_promise_owner_config_text,
     read_promise_owner_ids_env,
 )

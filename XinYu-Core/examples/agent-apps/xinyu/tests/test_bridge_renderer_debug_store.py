@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from xinyu_bridge_renderer_debug_store import write_live_system_prompt_dump
+from xinyu_bridge_stores import write_live_system_prompt_dump
 
 
 def test_write_live_system_prompt_dump_uses_state_service_atomic_text_writer(tmp_path: Path) -> None:

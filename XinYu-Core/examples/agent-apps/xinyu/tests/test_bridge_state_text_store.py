@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from xinyu_bridge_state_text_store import read_text_safe
+from xinyu_bridge_stores import read_text_safe
 
 
 def test_state_text_store_reads_utf8_sig_and_default(tmp_path) -> None:

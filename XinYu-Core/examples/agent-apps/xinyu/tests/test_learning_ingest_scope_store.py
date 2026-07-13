@@ -7,7 +7,7 @@ from xinyu_bridge_learning_ingest_request import (
     LEGACY_ATTACHMENT_DIRS_ENV,
     resolve_learning_ingest_path,
 )
-from xinyu_bridge_learning_ingest_scope_store import (
+from xinyu_bridge_stores import (
     read_learning_ingest_scope_env,
     resolve_learning_ingest_scope_root,
 )

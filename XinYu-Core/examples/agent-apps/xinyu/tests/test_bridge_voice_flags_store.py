@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from xinyu_bridge_voice_flags_store import (
+from xinyu_bridge_stores import (
     read_voice_flag_env,
     read_voice_flags_env_file_lines,
     write_voice_flag_env,
