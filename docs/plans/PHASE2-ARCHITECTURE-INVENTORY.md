@@ -110,6 +110,7 @@ XinYu-Core/examples/agent-apps/xinyu/
 | 2026-07-13 | App critical ruff (`F,E9,...`) 885 → 0; CI blocks on app critical |
 | 2026-07-13 | Gateway pure helpers: `message_ids_from_action_response` → `xinyu_qq_gateway_utils`; sticker question heuristic → `xinyu_qq_sticker_context`; group/file-learning policy → `xinyu_qq_group_policy.py` (+ unit tests). Thick store facades already thin re-exports (`desktop_surface` / `proactive_delivery` live under `stores/`). |
 | 2026-07-13 | Gateway prepare policy: empty/sticker/package/codex scope checks → `xinyu_qq_prepare_policy.py`. Presence text scrub/normalize → `xinyu_runtime_presence_text.py` (~3k LOC removed from presence god-file). |
+| 2026-07-13 | Prepare_message channel/owner-private gates reuse prepare policy; presence atomic IO → `xinyu_runtime_presence_io.py`. OpenSSF: Actions SHA pin + coverage summary + SBOM operator doc. |
 
 ## 7. Stop-ship / do-not
 

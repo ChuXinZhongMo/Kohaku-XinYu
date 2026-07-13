@@ -2256,9 +2256,12 @@ class NativeQQGateway:
             print(f"[xinyu_qq_gateway] blocked command: {text.split(maxsplit=1)[0]}", flush=True)
             return None
 
-        if self.config.private_only and message_kind != "private":
-            return None
-        if message_kind == "group" and not self.config.allow_group_messages:
+        channel_reject = xinyu_qq_prepare_policy.basic_channel_reject_reason(
+            private_only=self.config.private_only,
+            message_kind=message_kind,
+            allow_group_messages=self.config.allow_group_messages,
+        )
+        if channel_reject:
             return None
         if self.config.require_whitelist and sender_id not in self._effective_whitelist_user_ids():
             print(f"[xinyu_qq_gateway] ignored non-whitelisted sender={sender_id} kind={message_kind}", flush=True)
@@ -2291,9 +2294,15 @@ class NativeQQGateway:
             return PreparedMessage(target=target, payload=payload, route="chat")
 
         if sticker_material is not None and self.config.qq_sticker_import_enabled:
-            if self.config.qq_sticker_import_private_owner_only and (
-                message_kind != "private" or sender_id not in self.config.owner_user_ids
-            ):
+            sticker_scope = xinyu_qq_prepare_policy.sticker_import_scope_reject_reason(
+                enabled=True,
+                private_owner_only=self.config.qq_sticker_import_private_owner_only,
+                message_kind=message_kind,
+                sender_id=sender_id,
+                owner_user_ids=self.config.owner_user_ids,
+                has_sticker_material=True,
+            )
+            if sticker_scope:
                 print("[xinyu_qq_gateway] ignored QQ sticker import outside owner private chat", flush=True)
                 return None
             return PreparedMessage(
@@ -2309,7 +2318,11 @@ class NativeQQGateway:
 
         goldmark_command = xinyu_qq_command_router.extract_goldmark_command(self, text)
         if goldmark_command is not None:
-            if message_kind != "private" or sender_id not in self.config.owner_user_ids:
+            if xinyu_qq_prepare_policy.owner_private_command_reject_reason(
+                message_kind=message_kind,
+                sender_id=sender_id,
+                owner_user_ids=self.config.owner_user_ids,
+            ):
                 print("[xinyu_qq_gateway] ignored goldmark outside owner private chat", flush=True)
                 return None
             reply_message_id = _safe_str(rich_context.get("reply_message_id") or self._extract_reply_message_id(event)).strip()
@@ -2334,7 +2347,11 @@ class NativeQQGateway:
 
         review_command = xinyu_qq_command_router.extract_review_admin_command(self, text)
         if review_command is not None:
-            if message_kind != "private" or sender_id not in self.config.owner_user_ids:
+            if xinyu_qq_prepare_policy.owner_private_command_reject_reason(
+                message_kind=message_kind,
+                sender_id=sender_id,
+                owner_user_ids=self.config.owner_user_ids,
+            ):
                 print("[xinyu_qq_gateway] ignored review admin outside owner private chat", flush=True)
                 return None
             return PreparedMessage(
@@ -2350,7 +2367,11 @@ class NativeQQGateway:
 
         self_action_quote_command = xinyu_qq_command_router.extract_self_action_quote_approval_command(self, text)
         if self_action_quote_command is not None:
-            if message_kind != "private" or sender_id not in self.config.owner_user_ids:
+            if xinyu_qq_prepare_policy.owner_private_command_reject_reason(
+                message_kind=message_kind,
+                sender_id=sender_id,
+                owner_user_ids=self.config.owner_user_ids,
+            ):
                 print("[xinyu_qq_gateway] ignored quoted self action approval outside owner private chat", flush=True)
                 return None
             reply_message_id = _safe_str(rich_context.get("reply_message_id") or self._extract_reply_message_id(event)).strip()
@@ -2380,7 +2401,11 @@ class NativeQQGateway:
 
         self_action_command = xinyu_qq_command_router.extract_self_action_approval_command(self, text)
         if self_action_command is not None:
-            if message_kind != "private" or sender_id not in self.config.owner_user_ids:
+            if xinyu_qq_prepare_policy.owner_private_command_reject_reason(
+                message_kind=message_kind,
+                sender_id=sender_id,
+                owner_user_ids=self.config.owner_user_ids,
+            ):
                 print("[xinyu_qq_gateway] ignored self action approval outside owner private chat", flush=True)
                 return None
             return PreparedMessage(
