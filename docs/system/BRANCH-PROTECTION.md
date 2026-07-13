@@ -38,13 +38,31 @@ After the rule exists, open a draft PR or wait for a run so checks appear, then 
 1. **`Python tests (blocking)`**
 2. **`Python lint critical (blocking)`**
 3. **`Desktop typecheck (blocking)`**
+4. **`Python smoke offline (blocking)`** — curated hermetic smokes only
 
 Do **not** require (informational only):
 
 - `Python lint core full (informational)`
 - `Python lint app full (informational)`
-- `Python smoke (informational)`
+- `Python smoke (informational)` — full corpus / live-ish
 - jobs from `security.yml` (pip-audit / npm audit)
+
+API (admin) sketch to set the four required checks:
+
+```bash
+gh api -X PATCH repos/ChuXinZhongMo/Kohaku-XinYu/branches/main/protection/required_status_checks \
+  --input - <<'EOF'
+{
+  "strict": true,
+  "checks": [
+    {"context": "Python tests (blocking)"},
+    {"context": "Python lint critical (blocking)"},
+    {"context": "Desktop typecheck (blocking)"},
+    {"context": "Python smoke offline (blocking)"}
+  ]
+}
+EOF
+```
 
 ## 3. Optional `gh` sketch (admin)
 
@@ -60,9 +78,9 @@ If you use the API, always keep an admin bypass until the first green PR merges 
 
 ## 4. What about `master`?
 
-- Keep `origin/master` for one release cycle as a mirror (currently same tip as `main`).
+- Remote `master` archived after `v0.1.0` (see `docs/system/BRANCH-POLICY.md`).
+- Tip preserved as `archive/master` + cutover backup tags.
 - Do **not** protect `master` as a second product line.
-- After `v0.1.0` (or stable RC), rename/archive to `archive/master` or delete remote `master`.
 
 ## 5. Labels (community hygiene)
 

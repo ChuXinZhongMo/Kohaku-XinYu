@@ -129,12 +129,32 @@ jobs:
           TZ: Asia/Shanghai
         run: |
           set -euo pipefail
-          # Only scripts verified green offline on the release line.
-          # mojibake_guard / runtime_presence currently fail on intentional
-          # marker drift — keep them out of blocking until cleaned.
-          python tests/smoke/runtime/runtime_security_smoke.py
-          python tests/smoke/memory/memory_braid_smoke.py
-          python tests/smoke/bridge/bridge_renderer_guard_flags_smoke.py
+          # Curated hermetic set only (see docs/plans/QUICK-SMOKE-SET.md).
+          # Intentionally excluded until cleaned:
+          #   mojibake_guard, runtime_presence, codex_delegation_reality,
+          #   self_code_watchdog, qq gateway integration (API drift).
+          scripts=(
+            tests/smoke/runtime/runtime_security_smoke.py
+            tests/smoke/memory/memory_braid_smoke.py
+            tests/smoke/bridge/bridge_renderer_guard_flags_smoke.py
+            tests/smoke/bridge/bridge_auth_smoke.py
+            tests/smoke/bridge/bridge_values_smoke.py
+            tests/smoke/bridge/bridge_session_cleanup_smoke.py
+            tests/smoke/codex/self_code_approval_smoke.py
+            tests/smoke/voice/xinyu_speech_controller_smoke.py
+            tests/smoke/voice/persona_realism_eval_smoke.py
+            tests/smoke/life/environment_sensor_smoke.py
+            tests/smoke/life/life_kernel_smoke.py
+            tests/smoke/life/life_kernel_entropy_smoke.py
+            tests/smoke/life/life_kernel_self_choice_bias_smoke.py
+            tests/smoke/life/xinyu_self_choice_store_smoke.py
+            tests/smoke/life/xinyu_dream_engine_smoke.py
+          )
+          for script in "${scripts[@]}"; do
+            echo "::group::${script}"
+            python "${script}"
+            echo "::endgroup::"
+          done
 
   python-smoke:
     name: "Python smoke (informational)"
