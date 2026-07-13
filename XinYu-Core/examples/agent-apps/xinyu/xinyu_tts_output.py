@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_tts_output_store import append_tts_output_trace
+from xinyu_tts_emotion import derive_delivery
 
 try:
     import winsound
@@ -27,6 +28,8 @@ except ImportError:  # pragma: no cover - non-Windows fallback
 
 TRACE_REL = Path("runtime") / "tts_output_trace.jsonl"
 TEMP_REL = Path("runtime") / "tts_audio_tmp"
+EMOTION_STATE_REL = Path("runtime") / "emotion_state.json"
+COUNCIL_STATE_REL = Path("memory") / "context" / "emotion_council_state.md"
 LOCAL_ENV_FILES = ("xinyu.local.env", ".env")
 REQUEST_MODES = {"auto", "chat_audio", "audio_speech"}
 TTS_ENGINES = {"current", "genie"}
@@ -232,6 +235,7 @@ class XinYuTTSOutput:
         self.genie_sample_rate = _genie_tts_sample_rate()
         self.genie_channels = _genie_tts_channels()
         self.genie_sample_width = _genie_tts_sample_width()
+        self.emotion_enabled = _as_bool(os.environ.get("XINYU_TTS_EMOTION"), default=False)
         self.timeout_seconds = max(1.0, _as_float(os.environ.get("XINYU_TTS_TIMEOUT_SECONDS"), DEFAULT_TTS_TIMEOUT_SECONDS))
         self._jobs: queue.Queue[TTSJob | None] = queue.Queue(maxsize=MAX_PENDING_JOBS)
         self._retained_files: list[tuple[Path, float]] = []
@@ -414,12 +418,48 @@ class XinYuTTSOutput:
         suffix = f":{'; '.join(errors)}" if errors else ""
         raise RuntimeError("tts_request_failed:" + ",".join(tried or [mode]) + suffix)
 
+    def _read_delivery_category(self) -> str:
+        """Derive the current TTS delivery category from the cognitive emotion state.
+
+        Reads only two lightweight on-disk signals (the 21-dim vector and the
+        council's strongest_lens); any read/parse failure degrades to '' (neutral).
+        """
+        vector: dict[str, Any] = {}
+        state_path = self.root / EMOTION_STATE_REL
+        try:
+            if state_path.is_file() and state_path.stat().st_size <= 200_000:
+                data = json.loads(state_path.read_text(encoding="utf-8", errors="replace"))
+                if isinstance(data, dict) and isinstance(data.get("vector"), dict):
+                    vector = data["vector"]
+        except (OSError, ValueError):
+            vector = {}
+        strongest = ""
+        council_path = self.root / COUNCIL_STATE_REL
+        try:
+            if council_path.is_file() and council_path.stat().st_size <= 200_000:
+                md = council_path.read_text(encoding="utf-8", errors="replace")
+                if re.search(r"^- status:\s*active\b", md, re.MULTILINE):
+                    match = re.search(r"^- strongest_lens:\s*([a-z_]+)", md, re.MULTILINE)
+                    if match:
+                        strongest = match.group(1)
+        except OSError:
+            strongest = ""
+        try:
+            category = derive_delivery(vector, strongest)
+        except Exception:
+            return ""
+        return "" if category == "neutral" else category
+
     def _request_genie_tts(self, text: str) -> bytes:
         payload = {
             "character_name": self.genie_character,
             "text": text,
             "split_sentence": self.genie_split_sentence,
         }
+        if self.emotion_enabled:
+            category = self._read_delivery_category()
+            if category:
+                payload["emotion"] = category
         audio = self._post_genie_binary("/tts", payload)
         if audio.startswith(b"RIFF"):
             return audio

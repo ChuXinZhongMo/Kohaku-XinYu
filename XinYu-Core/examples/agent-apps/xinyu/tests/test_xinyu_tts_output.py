@@ -65,7 +65,7 @@ def test_tts_engine_genie_posts_to_genie_server_without_current_api_key(monkeypa
     wav_path = tmp_path / "genie.wav"
     wav_path.write_bytes(audio)
     with wave.open(str(wav_path), "rb") as handle:
-        assert handle.getframerate() == 32000
+        assert handle.getframerate() == 24000
         assert handle.getnchannels() == 1
         assert handle.getsampwidth() == 2
     assert requests == [
@@ -75,6 +75,62 @@ def test_tts_engine_genie_posts_to_genie_server_without_current_api_key(monkeypa
             {"Accept": "audio/wav, application/octet-stream", "Content-type": "application/json"},
         )
     ]
+
+
+def test_genie_payload_carries_emotion_when_enabled(monkeypatch, tmp_path: Path) -> None:
+    _enable_windows_playback(monkeypatch)
+    monkeypatch.setenv("XINYU_TTS_ENABLED", "1")
+    monkeypatch.setenv("XINYU_TTS_ENGINE", "genie")
+    monkeypatch.setenv("XINYU_TTS_FORMAT", "wav")
+    monkeypatch.setenv("XINYU_GENIE_TTS_BASE_URL", "http://127.0.0.1:8000")
+    monkeypatch.setenv("XINYU_GENIE_TTS_CHARACTER", "xinyu")
+    monkeypatch.setenv("XINYU_TTS_EMOTION", "1")
+
+    # The cognitive layer's on-disk signal: a strong hurt vector.
+    (tmp_path / "runtime").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "runtime" / "emotion_state.json").write_text(
+        json.dumps({"vector": {"hurt": 0.6}}), encoding="utf-8"
+    )
+
+    requests: list[dict[str, object]] = []
+
+    def fake_urlopen(request, timeout):  # noqa: ANN001, ARG001
+        requests.append(json.loads(request.data.decode("utf-8")))
+        return _FakeResponse(b"\x00\x01" * 1200)
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    speaker = XinYuTTSOutput(tmp_path)
+    try:
+        speaker._synthesize_audio("你好")
+    finally:
+        speaker.close()
+
+    assert requests == [{"character_name": "xinyu", "text": "你好", "split_sentence": False, "emotion": "hurt"}]
+
+
+def test_genie_payload_omits_emotion_when_state_neutral(monkeypatch, tmp_path: Path) -> None:
+    _enable_windows_playback(monkeypatch)
+    monkeypatch.setenv("XINYU_TTS_ENABLED", "1")
+    monkeypatch.setenv("XINYU_TTS_ENGINE", "genie")
+    monkeypatch.setenv("XINYU_TTS_FORMAT", "wav")
+    monkeypatch.setenv("XINYU_GENIE_TTS_BASE_URL", "http://127.0.0.1:8000")
+    monkeypatch.setenv("XINYU_GENIE_TTS_CHARACTER", "xinyu")
+    monkeypatch.setenv("XINYU_TTS_EMOTION", "1")  # enabled, but no state on disk -> neutral -> no key
+
+    requests: list[dict[str, object]] = []
+
+    def fake_urlopen(request, timeout):  # noqa: ANN001, ARG001
+        requests.append(json.loads(request.data.decode("utf-8")))
+        return _FakeResponse(b"\x00\x01" * 1200)
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    speaker = XinYuTTSOutput(tmp_path)
+    try:
+        speaker._synthesize_audio("你好")
+    finally:
+        speaker.close()
+
+    assert requests == [{"character_name": "xinyu", "text": "你好", "split_sentence": False}]
 
 
 def test_tts_engine_current_keeps_existing_audio_speech_path(monkeypatch, tmp_path: Path) -> None:
