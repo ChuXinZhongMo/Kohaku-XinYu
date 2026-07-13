@@ -4,7 +4,6 @@ import asyncio
 import contextlib
 import json
 import mimetypes
-import re
 import sys
 import tempfile
 import time
