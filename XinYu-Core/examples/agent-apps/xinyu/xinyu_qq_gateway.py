@@ -20,29 +20,27 @@ from xinyu_group_interest_memory import group_interest_metadata, observe_group_i
 from xinyu_group_shadow_observer import record_group_shadow_observation
 from xinyu_group_social_observer import observe_group_social_event
 from xinyu_group_social_sidecar import group_social_enabled
-from xinyu_image_context import build_image_context, build_image_context_from_path, is_image_learning_payload
-from xinyu_codex_delegate import looks_like_owner_local_write_request
+from xinyu_image_context import build_image_context, build_image_context_from_path
 from xinyu_behavior_shadow_client import record_behavior_shadow_log
 import xinyu_qq_attachment_resolver
 import xinyu_qq_command_router
 import xinyu_qq_gateway_context_enrichment
+import xinyu_qq_owner_private_intent
+import xinyu_qq_payload_builders
+import xinyu_qq_sticker_context
 from xinyu_qq_cli import build_gateway_parser
 from xinyu_qq_config import (
     GatewayConfig,
     as_bool as _as_bool,
     as_int as _as_int,
-    as_str_list as _as_str_list,
     load_json_object as _load_json,
 )
 from xinyu_qq_bridge_errors import BRIDGE_TIMEOUT_OWNER_REPLY, BRIDGE_UNAVAILABLE_OWNER_REPLY
 import xinyu_qq_bridge_errors
 from xinyu_qq_core_client import BridgeError, CoreBridgeClient
-from xinyu_qq_event_time import event_time_iso as _event_time_iso
-from xinyu_qq_event_time import event_timestamp_seconds as _event_timestamp_seconds
 import xinyu_qq_forward_context
 from xinyu_qq_models import PendingAction, PreparedMessage, RecentStickerImportState, ReplyTarget
 from xinyu_qq_gateway_utils import hash_id as _hash_id
-from xinyu_qq_gateway_utils import maybe_int as _maybe_int
 from xinyu_qq_gateway_utils import quiet_websockets_handshake_noise as _quiet_websockets_handshake_noise
 from xinyu_qq_gateway_utils import safe_str as _safe_str
 import xinyu_qq_normalizer
@@ -120,6 +118,7 @@ class NativeQQGateway:
         self._shadow_fail_count: int = 0
         self._shadow_circuit_open_until: float = 0.0
         self._last_napcat_connected_at: float = 0.0
+        self._live_napcat_websocket: Any | None = None
 
     _effective_whitelist_user_ids = xinyu_qq_trust_policy.gateway_effective_whitelist_user_ids
 
@@ -354,20 +353,36 @@ class NativeQQGateway:
                 continue
             if time.time() - last_restart_at < RESTART_COOLDOWN:
                 continue
-            restart_bat = self.config.napcat_restart_bat
-            if restart_bat and Path(restart_bat).is_file():
+            restart_target = self.config.napcat_restart_bat
+            if restart_target and Path(restart_target).is_file():
                 last_restart_at = time.time()
                 print(
-                    f"[xinyu_qq_gateway] NapCat disconnected for {int(since)}s, restarting: {restart_bat}",
+                    f"[xinyu_qq_gateway] NapCat disconnected for {int(since)}s, restarting: {restart_target}",
                     flush=True,
                 )
                 try:
                     import subprocess
-                    subprocess.Popen(
-                        ["cmd.exe", "/c", restart_bat],
-                        cwd=str(Path(restart_bat).parent),
-                        creationflags=subprocess.CREATE_NEW_CONSOLE,
-                    )
+
+                    restart_path = Path(restart_target)
+                    if restart_path.suffix.lower() == ".ps1":
+                        subprocess.Popen(
+                            [
+                                "powershell.exe",
+                                "-NoProfile",
+                                "-ExecutionPolicy",
+                                "Bypass",
+                                "-File",
+                                str(restart_path),
+                            ],
+                            cwd=str(restart_path.parent),
+                            creationflags=subprocess.CREATE_NEW_CONSOLE,
+                        )
+                    else:
+                        subprocess.Popen(
+                            ["cmd.exe", "/c", str(restart_path)],
+                            cwd=str(restart_path.parent),
+                            creationflags=subprocess.CREATE_NEW_CONSOLE,
+                        )
                 except Exception as exc:
                     print(f"[xinyu_qq_gateway] NapCat restart failed: {exc}", flush=True)
             else:
@@ -427,6 +442,7 @@ class NativeQQGateway:
         self._connection_count += 1
         connection_id = xinyu_qq_server.connection_id("napcat", int(time.time()), self._connection_count)
         self._websocket_connection_ids[id(websocket)] = connection_id
+        self._live_napcat_websocket = websocket
         self._last_napcat_connected_at = time.time()
         print(f"[xinyu_qq_gateway] NapCat connected: {connection_id} path={path or self.config.onebot_path}", flush=True)
         outbox_task: asyncio.Task[Any] | None = None
@@ -453,6 +469,8 @@ class NativeQQGateway:
             print(f"[xinyu_qq_gateway] NapCat connection closed: {type(exc).__name__}: {exc}", flush=True)
         finally:
             self._websocket_connection_ids.pop(id(websocket), None)
+            if self._live_napcat_websocket is websocket:
+                self._live_napcat_websocket = None
             self._fail_pending_actions_for_connection(
                 connection_id,
                 BridgeError("NapCat connection closed before action response"),
@@ -1941,44 +1959,18 @@ class NativeQQGateway:
         return replace(prepared, payload=payload)
 
     def _should_coalesce_owner_private_chat(self, prepared: PreparedMessage) -> bool:
-        if self.config.owner_private_coalesce_seconds <= 0:
-            return False
-        if prepared.route != "chat" or prepared.local_reply:
-            return False
-        if prepared.target.message_kind != "private" or prepared.target.user_id not in self.config.owner_user_ids:
-            return False
-        text = _safe_str(prepared.payload.get("text")).strip()
-        if not text:
-            return False
-        metadata = prepared.payload.get("metadata")
-        if isinstance(metadata, dict) and _as_bool(metadata.get("control_plane"), default=False):
-            return False
-        return True
+        return xinyu_qq_owner_private_intent.should_coalesce_owner_private_chat(self, prepared)
 
     def _owner_private_intent_gate_applies(self, prepared: PreparedMessage) -> bool:
-        if prepared.route != "chat" or prepared.local_reply:
-            return False
-        if prepared.target.message_kind != "private" or prepared.target.user_id not in self.config.owner_user_ids:
-            return False
-        payload = prepared.payload if isinstance(prepared.payload, dict) else {}
-        text = _safe_str(payload.get("text")).strip()
-        if not text:
-            return False
-        metadata = payload.get("metadata")
-        if isinstance(metadata, dict) and _as_bool(metadata.get("control_plane"), default=False):
-            return False
-        return True
+        return xinyu_qq_owner_private_intent.owner_private_intent_gate_applies(self, prepared)
 
     @staticmethod
     def _owner_private_intent_compact(text: str) -> str:
-        return re.sub(r"\s+", "", _safe_str(text)).strip(
-            " \t\r\n,.;:!?~`'\"()[]{}<>\u3002\uff0c\uff01\uff1f\uff1b\uff1a\u3001\u2026\u2014-"
-        ).lower()
+        return xinyu_qq_owner_private_intent.owner_private_intent_compact(text)
 
     @staticmethod
     def _owner_private_contains_any(text: str, markers: tuple[str, ...]) -> bool:
-        lowered = _safe_str(text).lower()
-        return any(marker and marker in lowered for marker in markers)
+        return xinyu_qq_owner_private_intent.owner_private_contains_any(text, markers)
 
     def _owner_private_is_low_info_unit(
         self,
@@ -1988,284 +1980,24 @@ class NativeQQGateway:
         has_task: bool,
         has_technical: bool,
     ) -> bool:
-        compact = self._owner_private_intent_compact(unit)
-        if not compact:
-            return True
-        low_info_exact = (
-            "\u55ef",
-            "\u55ef\u55ef",
-            "\u54e6",
-            "\u597d",
-            "\u597d\u7684",
-            "\u884c",
-            "\u53ef\u4ee5",
-            "\u77e5\u9053\u4e86",
-            "\u7b49\u4e00\u4e0b",
-            "\u7b49\u4e0b",
-            "\u7b49\u4f1a",
-            "\u6211\u60f3\u60f3",
-            "\u518d\u60f3\u60f3",
-            "\u6211\u770b\u770b",
-        )
-        if compact in low_info_exact:
-            return True
-        thinking_markers = (
-            "\u6211\u60f3\u60f3",
-            "\u518d\u60f3\u60f3",
-            "\u7b49\u6211\u60f3\u60f3",
-            "\u60f3\u60f3\u529e\u6cd5",
-            "\u6211\u770b\u770b",
-            "\u5148\u60f3\u60f3",
-        )
-        return (
-            len(compact) <= 18
-            and not has_question
-            and not has_task
-            and not has_technical
-            and self._owner_private_contains_any(compact, thinking_markers)
+        return xinyu_qq_owner_private_intent.owner_private_is_low_info_unit(
+            unit,
+            has_question=has_question,
+            has_task=has_task,
+            has_technical=has_technical,
         )
 
     def _owner_private_looks_like_fragment_continuation(self, text: str) -> bool:
-        stripped = _safe_str(text).strip()
-        if not stripped:
-            return False
-        continuation_suffixes = (",", "\uff0c", "\u3001", "...", "\u2026", "\u2026\u2026")
-        if stripped.endswith(continuation_suffixes):
-            return True
-        compact = self._owner_private_intent_compact(stripped)
-        continuation_words = (
-            "\u8fd8\u6709",
-            "\u7136\u540e",
-            "\u4f46\u662f",
-            "\u4e0d\u8fc7",
-            "\u800c\u4e14",
-            "\u56e0\u4e3a",
-        )
-        return any(compact.endswith(word) for word in continuation_words)
+        return xinyu_qq_owner_private_intent.owner_private_looks_like_fragment_continuation(text)
 
     def _owner_private_segmented_intent_decision(self, prepared: PreparedMessage) -> dict[str, Any]:
-        if not self._owner_private_intent_gate_applies(prepared):
-            return {"applies": False, "action": "reply_now", "should_reply": True, "notes": []}
-
-        payload = prepared.payload if isinstance(prepared.payload, dict) else {}
-        metadata = payload.get("metadata")
-        metadata = metadata if isinstance(metadata, dict) else {}
-        text = _safe_str(payload.get("text")).strip()
-        fragments = [part.strip() for part in re.split(r"[\r\n]+", text) if part.strip()]
-        units = [part.strip() for part in re.split(r"[\r\n,;\uff0c\uff1b\u3001]+", text) if part.strip()]
-        if not fragments:
-            fragments = [text]
-        if not units:
-            units = fragments
-
-        notes: list[str] = []
-        coalesced_count = _as_int(metadata.get("qq_coalesced_message_count"), len(fragments))
-        if _as_bool(metadata.get("qq_coalesced_owner_messages"), default=False) or coalesced_count > 1:
-            notes.append("coalesced_owner_fragments")
-        turn_completion_should_generate = _as_bool(
-            metadata.get("qq_turn_completion_should_generate"),
-            default=False,
-        )
-
-        correction_markers = (
-            "\u4e0d\u662f",
-            "\u4e0d\u5bf9",
-            "\u6211\u7684\u610f\u601d\u662f",
-            "\u6211\u662f\u8bf4",
-            "\u521a\u624d",
-            "\u6ca1\u63a5\u4e0a",
-        )
-        task_markers = (
-            "\u4fee\u590d",
-            "\u4fee\u4e00\u4e0b",
-            "\u6539",
-            "\u6dfb\u52a0",
-            "\u52a0\u4e2a",
-            "\u5b9e\u73b0",
-            "\u5199",
-            "\u6574\u7406",
-            "\u67e5\u770b",
-            "\u68c0\u67e5",
-            "\u6d4b\u8bd5",
-            "\u8dd1",
-            "\u8fd0\u884c",
-            "\u542f\u52a8",
-            "\u7ee7\u7eed",
-            "\u5f00\u59cb",
-            "\u5220",
-            "\u66ff\u6362",
-            "\u63a5\u5165",
-            "\u63a5\u4e0a",
-            "\u4e0b\u8f7d",
-            "\u5b89\u88c5",
-            "\u66f4\u65b0",
-            "\u90e8\u7f72",
-            "\u6c49\u5316",
-            "plan",
-            "api",
-            "ui",
-            "codex",
-            "kohaku",
-            "mcp",
-            "plugin",
-        )
-        question_markers = (
-            "?",
-            "\uff1f",
-            "\u4ec0\u4e48",
-            "\u4e3a\u4ec0\u4e48",
-            "\u600e\u4e48",
-            "\u80fd\u4e0d\u80fd",
-            "\u662f\u4e0d\u662f",
-            "\u6709\u6ca1\u6709",
-            "\u54ea",
-            "\u5982\u4f55",
-            "\u591a\u5c11",
-            "\u5417",
-        )
-        emotion_markers = (
-            "\u6211\u8d85",
-            "\u5367\u69fd",
-            "\u70e6",
-            "\u5d29",
-            "\u7206\u4e86",
-            "\u5b8c\u4e86",
-            "\u96be\u53d7",
-            "\u7b11\u6b7b",
-            "\u6c14\u6b7b",
-        )
-        technical_markers = (
-            "api",
-            "qq",
-            "xinyu",
-            "\u5fc3\u7389",
-            "\u524d\u7aef",
-            "\u6a21\u578b",
-            "\u63d2\u4ef6",
-            "\u6d4b\u8bd5",
-            "\u62a5\u9519",
-            "fast path",
-            "\u672c\u5730",
-            "\u989d\u5ea6",
-            "\u7a7a\u56de\u590d",
-            "\u4e0d\u56de\u590d",
-        )
-        social_markers = (
-            "\u4f60\u597d",
-            "\u65e9",
-            "\u665a\u5b89",
-            "\u56de\u6765",
-            "\u5230\u5bb6",
-            "\u8c22\u8c22",
-            "\u8f9b\u82e6",
-            "\u60f3\u4f60",
-            "\u751f\u65e5",
-        )
-        status_markers = (
-            "\u5750",
-            "\u8d70",
-            "\u5403",
-            "\u7761",
-            "\u5730\u94c1",
-            "\u516c\u4ea4",
-            "\u5f00\u8f66",
-            "\u51fa\u95e8",
-            "\u4e0a\u73ed",
-            "\u4e0b\u73ed",
-            "\u6d17\u6fa1",
-            "\u5fd9",
-        )
-
-        has_correction = self._owner_private_contains_any(text, correction_markers)
-        has_task = self._owner_private_contains_any(text, task_markers)
-        has_question = self._owner_private_contains_any(text, question_markers)
-        has_emotion = self._owner_private_contains_any(text, emotion_markers)
-        has_technical = self._owner_private_contains_any(text, technical_markers)
-        has_social = self._owner_private_contains_any(text, social_markers)
-        all_low_info = bool(units) and all(
-            self._owner_private_is_low_info_unit(
-                unit,
-                has_question=has_question,
-                has_task=has_task,
-                has_technical=has_technical,
-            )
-            for unit in units
-        )
-
-        compact = self._owner_private_intent_compact(text)
-        short_status_update = (
-            len(compact) <= 8
-            and not has_question
-            and not has_task
-            and not has_technical
-            and not has_social
-            and self._owner_private_contains_any(compact, status_markers)
-        )
-
-        action = "reply_now"
-        should_reply = True
-        if has_correction:
-            action = "correction"
-            notes.append("owner_correction_or_repair")
-        elif has_task:
-            action = "task_instruction"
-            notes.append("owner_task_instruction")
-        elif has_question or has_emotion or has_technical or has_social:
-            action = "reply_now"
-        elif all_low_info:
-            if turn_completion_should_generate:
-                action = "reply_now"
-                notes.append("turn_completion_ready_overrides_silent")
-            else:
-                action = "silent"
-                should_reply = False
-                notes.append("low_info_owner_turn")
-        elif self._owner_private_looks_like_fragment_continuation(fragments[-1]):
-            if turn_completion_should_generate:
-                action = "reply_now"
-                notes.append("turn_completion_ready_overrides_fragment_wait")
-            else:
-                action = "wait_more"
-                should_reply = False
-                notes.append("fragment_continuation_marker")
-        elif short_status_update:
-            if turn_completion_should_generate:
-                action = "reply_now"
-                notes.append("turn_completion_ready_overrides_silent")
-            else:
-                action = "silent"
-                should_reply = False
-                notes.append("short_status_update")
-
-        return {
-            "applies": True,
-            "action": action,
-            "should_reply": should_reply,
-            "notes": notes,
-            "fragment_count": max(1, coalesced_count),
-        }
+        return xinyu_qq_owner_private_intent.owner_private_segmented_intent_decision(self, prepared)
 
     def _apply_owner_private_segmented_intent_gate(
         self,
         prepared: PreparedMessage,
     ) -> tuple[PreparedMessage, dict[str, Any]]:
-        decision = self._owner_private_segmented_intent_decision(prepared)
-        if not decision.get("applies"):
-            return prepared, decision
-        payload = dict(prepared.payload if isinstance(prepared.payload, dict) else {})
-        metadata = dict(payload.get("metadata")) if isinstance(payload.get("metadata"), dict) else {}
-        action = _safe_str(decision.get("action"), "reply_now").strip() or "reply_now"
-        metadata.update(
-            {
-                "qq_segmented_intent_gate": True,
-                "qq_segmented_intent_action": action,
-                "qq_segmented_intent_notes": list(decision.get("notes") or [])[:8],
-                "qq_segmented_fragment_count": _as_int(decision.get("fragment_count"), 1),
-                "qq_should_reply": bool(decision.get("should_reply", True)),
-            }
-        )
-        payload["metadata"] = metadata
-        return replace(prepared, payload=payload), decision
+        return xinyu_qq_owner_private_intent.apply_owner_private_segmented_intent_gate(self, prepared)
 
     async def _enqueue_coalesced_owner_private_chat(self, websocket: Any, prepared: PreparedMessage) -> bool:
         if not self._should_coalesce_owner_private_chat(prepared):
@@ -2309,19 +2041,7 @@ class NativeQQGateway:
         prepared: PreparedMessage,
         decision: TurnCompletionDecision,
     ) -> PreparedMessage:
-        payload = dict(prepared.payload if isinstance(prepared.payload, dict) else {})
-        metadata = dict(payload.get("metadata")) if isinstance(payload.get("metadata"), dict) else {}
-        metadata.update(
-            {
-                "qq_turn_completion_state": decision.state,
-                "qq_turn_completion_reason": decision.reason,
-                "qq_turn_completion_wait_seconds": decision.wait_seconds,
-                "qq_turn_completion_should_generate": decision.should_generate,
-                "qq_turn_completion_notes": list(decision.notes)[:8],
-            }
-        )
-        payload["metadata"] = metadata
-        return replace(prepared, payload=payload)
+        return xinyu_qq_owner_private_intent.with_turn_completion_metadata(prepared, decision)
 
     async def _flush_coalesced_owner_private_chat(self, websocket: Any, key: str) -> None:
         prepared: PreparedMessage | None = None
@@ -2445,98 +2165,7 @@ class NativeQQGateway:
     _group_shadow_group_allowed = xinyu_qq_trust_policy.gateway_group_shadow_group_allowed
 
     def _build_coalesced_prepared_message(self, prepareds: list[PreparedMessage]) -> PreparedMessage | None:
-        items = [item for item in prepareds if item is not None]
-        if not items:
-            return None
-        if len(items) == 1:
-            return items[0]
-        base = items[-1]
-        payload = dict(base.payload)
-        metadata = dict(payload.get("metadata")) if isinstance(payload.get("metadata"), dict) else {}
-        texts = [_safe_str(item.payload.get("text")).strip() for item in items]
-        texts = [text for text in texts if text]
-        raw_messages = [_safe_str(item.payload.get("raw_message")).strip() for item in items]
-        raw_messages = [text for text in raw_messages if text]
-        message_ids = [_safe_str(item.payload.get("message_id")).strip() for item in items]
-        message_ids = [text for text in message_ids if text]
-        payload["text"] = "\n".join(texts)
-        payload["raw_message"] = "\n".join(raw_messages or texts)
-        payload["message_id"] = ",".join(message_ids)
-        metadata.update(
-            {
-                "qq_coalesced_owner_messages": True,
-                "qq_coalesced_message_count": len(items),
-                "qq_coalesced_window_seconds": self.config.owner_private_coalesce_seconds,
-            }
-        )
-        rich_segments: list[Any] = []
-        forward_context: dict[str, Any] | None = None
-        reply_context: dict[str, Any] | None = None
-        forward_ids: list[str] = []
-        arrival_seqs: list[int] = []
-        prepared_seqs: list[int] = []
-        for item in items:
-            item_metadata = item.payload.get("metadata") if isinstance(item.payload, dict) else {}
-            if not isinstance(item_metadata, dict):
-                continue
-            arrival_seq = _as_int(item_metadata.get("qq_arrival_seq"), 0)
-            prepared_seq = _as_int(item_metadata.get("qq_prepared_seq"), 0)
-            if arrival_seq:
-                arrival_seqs.append(arrival_seq)
-            if prepared_seq:
-                prepared_seqs.append(prepared_seq)
-            segments = item_metadata.get("qq_message_segments")
-            if isinstance(segments, list):
-                rich_segments.extend(segment for segment in segments if isinstance(segment, dict))
-            forward_ids.extend(_as_str_list(item_metadata.get("qq_forward_message_ids")))
-            candidate_forward = item_metadata.get("qq_forward_context")
-            if isinstance(candidate_forward, dict):
-                forward_context = candidate_forward
-            candidate_reply = item_metadata.get("qq_reply_context")
-            if isinstance(candidate_reply, dict):
-                reply_context = candidate_reply
-                reply_id = _safe_str(item_metadata.get("qq_reply_message_id")).strip()
-                if reply_id:
-                    metadata["qq_reply_message_id"] = reply_id
-        if arrival_seqs:
-            metadata["qq_arrival_seq"] = arrival_seqs[0]
-            metadata["qq_arrival_seqs"] = arrival_seqs
-        if prepared_seqs:
-            metadata["qq_prepared_seqs"] = prepared_seqs
-        if rich_segments:
-            metadata["qq_rich_message"] = True
-            metadata["qq_message_segments"] = rich_segments[:12]
-            metadata["qq_sticker_count"] = sum(1 for segment in rich_segments if segment.get("kind") == "sticker")
-            metadata["qq_image_count"] = sum(1 for segment in rich_segments if segment.get("kind") == "image")
-            metadata["qq_voice_count"] = sum(1 for segment in rich_segments if segment.get("kind") == "voice")
-            metadata["qq_record_count"] = sum(
-                1
-                for segment in rich_segments
-                if segment.get("kind") == "voice" and _safe_str(segment.get("segment_type")).lower() == "record"
-            )
-            metadata["qq_audio_count"] = sum(
-                1
-                for segment in rich_segments
-                if segment.get("kind") == "voice" and _safe_str(segment.get("segment_type")).lower() in {"audio", "voice"}
-            )
-            metadata["qq_rich_summary"] = "；".join(
-                _safe_str(segment.get("summary") or segment.get("name") or segment.get("id")).strip()
-                for segment in rich_segments[:6]
-                if isinstance(segment, dict)
-            )[:1200]
-        if reply_context is not None:
-            metadata["qq_reply_context_available"] = True
-            metadata["qq_reply_context"] = reply_context
-        if forward_ids:
-            metadata["qq_forward_message_ids"] = list(dict.fromkeys(forward_ids))[:6]
-        if forward_context is not None:
-            metadata["qq_forward_context_available"] = True
-            metadata["qq_forward_context"] = forward_context
-            metadata["qq_forward_message_count"] = int(forward_context.get("message_count") or 0)
-            metadata["qq_forward_count"] = int(forward_context.get("message_count") or 0)
-            payload["forwarded_messages"] = forward_context
-        payload["metadata"] = metadata
-        return PreparedMessage(target=base.target, payload=payload, route=base.route, local_reply=base.local_reply)
+        return xinyu_qq_owner_private_intent.build_coalesced_prepared_message(self, prepareds)
 
     def _trace_qq_rich_context(self, event: dict[str, Any], prepared: PreparedMessage, *, stage: str) -> None:
         payload = prepared.payload if isinstance(prepared.payload, dict) else {}
@@ -3073,51 +2702,22 @@ class NativeQQGateway:
         owner_note: str,
         text: str,
     ) -> dict[str, Any]:
-        event_timestamp = _event_timestamp_seconds(event)
-        return {
-            "platform": "qq",
-            "adapter": GATEWAY_NAME,
-            "adapter_message_id": reply_message_id,
-            "route": "chat",
-            "owner_note": owner_note[:500],
-            "session_id": self._session_id(target),
-            "user_id": target.user_id,
-            "source_message_id": _safe_str(event.get("message_id")).strip(),
-            "command_text": text,
-            "timestamp": event_timestamp,
-            "metadata": {
-                "gateway": GATEWAY_NAME,
-                "gateway_version": GATEWAY_VERSION,
-                "source": "qq_gateway_goldmark_command",
-                "qq_event_time_iso": _event_time_iso(event_timestamp),
-                "qq_event_time_unix": event_timestamp,
-                "onebot_post_type": _safe_str(event.get("post_type")),
-                "onebot_message_type": _safe_str(event.get("message_type")),
-                "is_owner_user": True,
-                "control_plane": True,
-            },
-        }
+        return xinyu_qq_payload_builders.build_goldmark_mark_payload(
+            self,
+            event,
+            target=target,
+            reply_message_id=reply_message_id,
+            owner_note=owner_note,
+            text=text,
+        )
 
     @staticmethod
     def _goldmark_result_reply(response: dict[str, Any]) -> str:
-        if response.get("marked"):
-            mark_id = _safe_str(response.get("mark_id")).strip()
-            return f"标好了。{mark_id}" if mark_id else "标好了。"
-        error = _safe_str(response.get("error")).strip()
-        if error == "target_not_found":
-            return "没找到这条回复的索引。确认你回复的是心玉刚发出的那条消息，再试一次。"
-        if error == "invalid_target":
-            return "这条不能标：目标回复没有有效 turn，或者被安全检查挡住了。"
-        return "标记没写进去。"
+        return xinyu_qq_payload_builders.goldmark_result_reply(response)
 
     @staticmethod
     def _goldmark_error_reply(error_text: str) -> str:
-        lowered = error_text.lower()
-        if "target_not_found" in lowered or "404" in lowered:
-            return "没找到这条回复的索引。确认你回复的是心玉刚发出的那条消息，再试一次。"
-        if "invalid_target" in lowered or "409" in lowered:
-            return "这条不能标：目标回复没有有效 turn，或者被安全检查挡住了。"
-        return "标记失败，Core 没接住这次请求。"
+        return xinyu_qq_payload_builders.goldmark_error_reply(error_text)
 
     def _self_action_outbox_metadata_for_reply(self, reply_message_id: str) -> dict[str, Any]:
         reply_message_id = _safe_str(reply_message_id).strip()
@@ -3155,39 +2755,14 @@ class NativeQQGateway:
         command: dict[str, str],
         reply_message_id: str = "",
     ) -> dict[str, Any]:
-        event_timestamp = _event_timestamp_seconds(event)
-        decision = _safe_str(command.get("decision"), "approved")
-        authorize_existing = _as_bool(command.get("authorize_existing"), default=decision != "denied")
-        return {
-            "queueId": _safe_str(command.get("queue_id"), "latest") or "latest",
-            "decision": "denied" if decision == "denied" else "approved",
-            "reason": _safe_str(command.get("reason")),
-            "execute": decision != "denied",
-            "authorizeCodex": decision != "denied",
-            "authorizeExisting": authorize_existing,
-            "decidedBy": "owner_qq",
-            "platform": "qq",
-            "adapter": GATEWAY_NAME,
-            "message_type": "private_self_action_approval_command",
-            "session_id": self._session_id(target),
-            "user_id": target.user_id,
-            "sender_name": self._sender_name(event),
-            "message_id": _safe_str(event.get("message_id")),
-            "reply_message_id": reply_message_id,
-            "raw_command": text,
-            "timestamp": event_timestamp,
-            "metadata": {
-                "gateway": GATEWAY_NAME,
-                "gateway_version": GATEWAY_VERSION,
-                "source": "qq_gateway_self_action_approval_command",
-                "qq_event_time_iso": _event_time_iso(event_timestamp),
-                "qq_event_time_unix": event_timestamp,
-                "is_owner_user": target.user_id in self.config.owner_user_ids,
-                "control_plane": True,
-                "quoted_self_action_message": bool(reply_message_id),
-                "qq_reply_message_id": reply_message_id,
-            },
-        }
+        return xinyu_qq_payload_builders.build_self_action_approval_payload(
+            self,
+            event,
+            target=target,
+            text=text,
+            command=command,
+            reply_message_id=reply_message_id,
+        )
 
     def _build_review_admin_payload(
         self,
@@ -3197,31 +2772,13 @@ class NativeQQGateway:
         text: str,
         command: dict[str, Any],
     ) -> dict[str, Any]:
-        event_timestamp = _event_timestamp_seconds(event)
-        return {
-            "batch_id": "latest",
-            "command": _safe_str(command.get("command")),
-            "indices": command.get("indices", []),
-            "mod_text": _safe_str(command.get("mod_text")),
-            "raw_command": text,
-            "platform": "qq",
-            "adapter": GATEWAY_NAME,
-            "message_type": "private_review_admin_command",
-            "session_id": self._session_id(target),
-            "user_id": target.user_id,
-            "sender_name": self._sender_name(event),
-            "message_id": _safe_str(event.get("message_id")),
-            "timestamp": event_timestamp,
-            "metadata": {
-                "gateway": GATEWAY_NAME,
-                "gateway_version": GATEWAY_VERSION,
-                "source": "qq_gateway_review_admin_command",
-                "qq_event_time_iso": _event_time_iso(event_timestamp),
-                "qq_event_time_unix": event_timestamp,
-                "is_owner_user": target.user_id in self.config.owner_user_ids,
-                "control_plane": True,
-            },
-        }
+        return xinyu_qq_payload_builders.build_review_admin_payload(
+            self,
+            event,
+            target=target,
+            text=text,
+            command=command,
+        )
 
     _message_kind = xinyu_qq_normalizer.message_kind
 
@@ -3420,61 +2977,13 @@ class NativeQQGateway:
         text: str,
         rich_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        session_id = self._session_id(target)
-        message_type = f"{target.message_kind}_text"
-        rich_context = rich_context or self._extract_rich_message_context(event)
-        event_timestamp = _event_timestamp_seconds(event)
-        metadata = {
-            "gateway": GATEWAY_NAME,
-            "gateway_version": GATEWAY_VERSION,
-            "source": "onebot_message_event",
-            "qq_event_time_iso": _event_time_iso(event_timestamp),
-            "qq_event_time_unix": event_timestamp,
-            "source_channel": (
-                "owner_private"
-                if target.message_kind == "private" and target.user_id in self.config.owner_user_ids
-                else ("qq_group" if target.message_kind == "group" else "qq_private")
-            ),
-            "qq_gateway_live_current_turn": True,
-            "qq_current_turn_transport": GATEWAY_NAME,
-            "qq_current_turn_message_kind": target.message_kind,
-            "onebot_post_type": _safe_str(event.get("post_type")),
-            "onebot_message_type": _safe_str(event.get("message_type")),
-            "is_owner_user": target.user_id in self.config.owner_user_ids,
-            "is_trusted_user": self._is_trusted_user_id(target.user_id),
-            "user_trust_level": self._trust_level_for_user_id(target.user_id),
-        }
-        if rich_context.get("segments"):
-            metadata["qq_rich_message"] = True
-            metadata["qq_rich_summary"] = _safe_str(rich_context.get("summary"))[:1200]
-            metadata["qq_message_segments"] = rich_context.get("segments", [])[:12]
-            metadata["qq_sticker_count"] = int(rich_context.get("sticker_count") or 0)
-            metadata["qq_image_count"] = int(rich_context.get("image_count") or 0)
-            metadata["qq_voice_count"] = int(rich_context.get("voice_count") or 0)
-            metadata["qq_audio_count"] = int(rich_context.get("audio_count") or 0)
-            metadata["qq_record_count"] = int(rich_context.get("record_count") or 0)
-            metadata["qq_forward_count"] = int(rich_context.get("forward_count") or 0)
-        reply_message_id = _safe_str(rich_context.get("reply_message_id")).strip()
-        if reply_message_id:
-            metadata["qq_reply_message_id"] = reply_message_id
-        forward_ids = rich_context.get("forward_message_ids")
-        if isinstance(forward_ids, list) and forward_ids:
-            metadata["qq_forward_message_ids"] = forward_ids[:6]
-        return {
-            "platform": "qq",
-            "adapter": GATEWAY_NAME,
-            "message_type": message_type,
-            "session_id": session_id,
-            "user_id": target.user_id,
-            "sender_name": self._sender_name(event),
-            "group_id": target.group_id or None,
-            "bot_id": _safe_str(event.get("self_id")),
-            "message_id": _safe_str(event.get("message_id")),
-            "text": text,
-            "raw_message": _safe_str(event.get("raw_message"), text),
-            "timestamp": event_timestamp,
-            "metadata": metadata,
-        }
+        return xinyu_qq_payload_builders.build_chat_payload(
+            self,
+            event,
+            target=target,
+            text=text,
+            rich_context=rich_context,
+        )
 
     def _build_learning_ingest_payload(
         self,
@@ -3484,49 +2993,13 @@ class NativeQQGateway:
         material: dict[str, str],
         text: str,
     ) -> dict[str, Any]:
-        name = _safe_str(material.get("name"), "qq-file").strip() or "qq-file"
-        reason_text = self._learning_reason_text(text)
-        event_timestamp = _event_timestamp_seconds(event)
-        payload: dict[str, Any] = {
-            "origin": "owner_supplied",
-            "reason": reason_text,
-            "question_id": "qq-file-learning",
-            "title": name,
-            "label": name,
-            "file_name": name,
-            "file_id": _safe_str(material.get("file_id")).strip(),
-            "busid": _safe_str(material.get("busid")).strip(),
-            "stage": self.config.qq_file_learning_stage,
-            "curated": self.config.qq_file_learning_curated,
-            "timestamp": event_timestamp,
-            "metadata": {
-                "gateway": GATEWAY_NAME,
-                "gateway_version": GATEWAY_VERSION,
-                "source": "qq_file_message",
-                "qq_event_time_iso": _event_time_iso(event_timestamp),
-                "qq_event_time_unix": event_timestamp,
-                "onebot_post_type": _safe_str(event.get("post_type")),
-                "onebot_message_type": _safe_str(event.get("message_type")),
-                "message_id": _safe_str(event.get("message_id")),
-                "session_id": self._session_id(target),
-                "user_id": target.user_id,
-                "group_id": target.group_id or "",
-                "sender_name": self._sender_name(event),
-                "segment_type": _safe_str(material.get("segment_type")),
-                "file_id": _safe_str(material.get("file_id")).strip(),
-                "busid": _safe_str(material.get("busid")).strip(),
-                "is_owner_user": target.user_id in self.config.owner_user_ids,
-                "is_trusted_user": self._is_trusted_user_id(target.user_id),
-                "user_trust_level": self._trust_level_for_user_id(target.user_id),
-            },
-        }
-        file_url = _safe_str(material.get("url")).strip()
-        file_path = _safe_str(material.get("path")).strip()
-        if file_url:
-            payload["file_url"] = file_url
-        elif file_path:
-            payload["file_path"] = file_path
-        return payload
+        return xinyu_qq_payload_builders.build_learning_ingest_payload(
+            self,
+            event,
+            target=target,
+            material=material,
+            text=text,
+        )
 
     def _build_sticker_import_payload(
         self,
@@ -3536,62 +3009,17 @@ class NativeQQGateway:
         material: dict[str, str],
         text: str,
     ) -> dict[str, Any]:
-        name = _safe_str(material.get("name"), "qq-sticker").strip() or "qq-sticker"
-        event_timestamp = _event_timestamp_seconds(event)
-        payload: dict[str, Any] = {
-            "origin": "qq_owner_sticker",
-            "platform": "qq",
-            "adapter": GATEWAY_NAME,
-            "message_type": "private_sticker_import",
-            "session_id": self._session_id(target),
-            "user_id": target.user_id,
-            "sender_name": self._sender_name(event),
-            "group_id": target.group_id or "",
-            "message_id": _safe_str(event.get("message_id")),
-            "timestamp": event_timestamp,
-            "file_name": name,
-            "name": name,
-            "summary": _safe_str(material.get("summary")).strip(),
-            "file_id": _safe_str(material.get("file_id")).strip(),
-            "owner_text": text.strip()[:500],
-            "use_clip": self.config.qq_sticker_import_use_clip,
-            "use_ocr": self.config.qq_sticker_import_use_ocr,
-            "metadata": {
-                "gateway": GATEWAY_NAME,
-                "gateway_version": GATEWAY_VERSION,
-                "source": "qq_sticker_message",
-                "qq_event_time_iso": _event_time_iso(event_timestamp),
-                "qq_event_time_unix": event_timestamp,
-                "onebot_post_type": _safe_str(event.get("post_type")),
-                "onebot_message_type": _safe_str(event.get("message_type")),
-                "message_id": _safe_str(event.get("message_id")),
-                "session_id": self._session_id(target),
-                "user_id": target.user_id,
-                "group_id": target.group_id or "",
-                "sender_name": self._sender_name(event),
-                "segment_type": _safe_str(material.get("segment_type")),
-                "file_id": _safe_str(material.get("file_id")).strip(),
-                "is_owner_user": target.user_id in self.config.owner_user_ids,
-                "is_trusted_user": self._is_trusted_user_id(target.user_id),
-                "user_trust_level": self._trust_level_for_user_id(target.user_id),
-                "control_plane": True,
-            },
-        }
-        file_url = _safe_str(material.get("url")).strip()
-        file_path = _safe_str(material.get("path")).strip()
-        if file_url:
-            payload["file_url"] = file_url
-        elif file_path:
-            payload["file_path"] = file_path
-        return payload
+        return xinyu_qq_payload_builders.build_sticker_import_payload(
+            self,
+            event,
+            target=target,
+            material=material,
+            text=text,
+        )
 
     @staticmethod
     def _learning_reason_text(text: str) -> str:
-        stripped = text.strip()
-        if not stripped:
-            return "owner supplied QQ file"
-        without_cq = NativeQQGateway._strip_cq_segments(stripped)
-        return without_cq or "owner supplied QQ file"
+        return xinyu_qq_sticker_context.learning_reason_text(text)
 
     def _build_sticker_followup_chat_payload(
         self,
@@ -3602,53 +3030,14 @@ class NativeQQGateway:
         sticker_response: dict[str, Any] | None = None,
         vision_meaning: str = "",
     ) -> dict[str, Any] | None:
-        if target.message_kind != "private":
-            return None
-        sticker_response = sticker_response if isinstance(sticker_response, dict) else {}
-        rich_context = self._extract_rich_message_context(event)
-        if not rich_context.get("segments"):
-            return None
-        sticker_context = self._sticker_context_from_import_response(sticker_payload, sticker_response)
-        if _safe_str(vision_meaning).strip():
-            sticker_context = {
-                **sticker_context,
-                "vision_meaning": _safe_str(vision_meaning).strip(),
-                "vision_inferred": True,
-            }
-        text = self._sticker_followup_text(rich_context, sticker_payload, sticker_context)
-        payload = self._build_chat_payload(event, target=target, text=text, rich_context=rich_context)
-        metadata = dict(payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {})
-        import_completed = _as_bool(sticker_context.get("import_completed"), default=False)
-        if import_completed:
-            metadata["qq_message_segments"] = self._enrich_sticker_segments_with_import_context(
-                metadata.get("qq_message_segments"),
-                sticker_context,
-            )
-        metadata.update(
-            {
-                "source": "qq_sticker_context_reaction",
-                "sticker_followup_before_import": not import_completed,
-                "sticker_followup_after_import": import_completed,
-                "sticker_import_queued": not import_completed,
-                "sticker_import_completed": import_completed,
-                "sticker_import_accepted": _as_bool(sticker_context.get("accepted"), default=False),
-                "sticker_imported": _as_bool(sticker_context.get("imported"), default=False),
-                "sticker_mood": _safe_str(sticker_context.get("mood")),
-                "sticker_mood_label": _safe_str(sticker_context.get("mood_label")),
-                "sticker_confidence": _safe_str(sticker_context.get("confidence")),
-                "sticker_destination": _safe_str(sticker_context.get("destination")),
-                "sticker_import_material_id": _safe_str(sticker_response.get("material_id")),
-                "sticker_import_item_id": _safe_str(sticker_response.get("learning_item_id")),
-                "sticker_file_name": _safe_str(sticker_payload.get("file_name") or sticker_payload.get("name")),
-                "attachment_followup_mode": "sticker_context_reaction",
-            }
+        return xinyu_qq_payload_builders.build_sticker_followup_chat_payload(
+            self,
+            event,
+            target=target,
+            sticker_payload=sticker_payload,
+            sticker_response=sticker_response,
+            vision_meaning=vision_meaning,
         )
-        if import_completed:
-            metadata["qq_image_context"] = sticker_context
-            metadata["qq_image_context_available"] = _as_bool(sticker_context.get("available"), default=False)
-            metadata["qq_image_context_notes"] = sticker_context.get("notes", [])[:8] if isinstance(sticker_context.get("notes"), list) else []
-        payload["metadata"] = metadata
-        return payload
 
     @staticmethod
     def _sticker_followup_text(
@@ -3656,122 +3045,22 @@ class NativeQQGateway:
         sticker_payload: dict[str, Any],
         sticker_context: dict[str, Any],
     ) -> str:
-        vision_meaning = _safe_str(sticker_context.get("vision_meaning")).strip()
-        if vision_meaning:
-            # The vision model actually looked at the sticker; trust its read over
-            # the local CLIP label (which mislabels, e.g. 困惑 -> "shy 0.60").
-            return f"我刚发了一张表情包。{vision_meaning}"[:500]
-        if _as_bool(sticker_context.get("import_completed"), default=False):
-            label = _safe_str(sticker_context.get("mood_label") or sticker_context.get("mood")).strip()
-            meaning = _safe_str(sticker_context.get("meaning")).strip()
-            summary = "我刚发了一张表情包。"
-            if label:
-                summary = f"我刚发了一张偏{label}的表情包。"
-            if meaning:
-                summary += f"大概是{meaning}。"
-            return summary[:500]
-        return (
-            _safe_str(rich_context.get("fallback_text")).strip()
-            or _safe_str(sticker_payload.get("summary") or sticker_payload.get("file_name")).strip()
-            or "\u6211\u521a\u53d1\u4e86\u4e00\u4e2a\u8868\u60c5\u5305\u3002"
-        )
+        return xinyu_qq_sticker_context.sticker_followup_text(rich_context, sticker_payload, sticker_context)
 
     @staticmethod
     def _first_sticker_import_item(sticker_response: dict[str, Any]) -> dict[str, Any]:
-        items = sticker_response.get("items")
-        if isinstance(items, list):
-            for item in items:
-                if isinstance(item, dict):
-                    return item
-        return {}
+        return xinyu_qq_sticker_context.first_sticker_import_item(sticker_response)
 
     def _sticker_context_from_import_response(
         self,
         sticker_payload: dict[str, Any],
         sticker_response: dict[str, Any],
     ) -> dict[str, Any]:
-        item = self._first_sticker_import_item(sticker_response)
-        import_completed = any(
-            key in sticker_response for key in ("accepted", "imported", "mood", "destination", "items", "failed")
-        )
-        accepted = _as_bool(sticker_response.get("accepted"), default=False)
-        imported = _as_bool(sticker_response.get("imported"), default=False)
-        mood = _safe_str(item.get("mood") or sticker_response.get("mood")).strip()
-        mood_label = _safe_str(sticker_response.get("mood_label") or mood).strip()
-        confidence = _safe_str(item.get("confidence") or sticker_response.get("confidence")).strip()
-        meaning = _safe_str(item.get("meaning")).strip()
-        destination = _safe_str(sticker_response.get("destination") or item.get("destination")).strip()
-        ocr_text = _safe_str(item.get("ocr_text")).strip()
-        clip_mood = _safe_str(item.get("clip_mood")).strip()
-        clip_confidence = _safe_str(item.get("clip_confidence")).strip()
-        file_name = _safe_str(sticker_payload.get("file_name") or sticker_payload.get("name")).strip()
-        notes = ["sticker_import_completed" if import_completed else "sticker_import_pending"]
-        if not accepted and import_completed:
-            notes.append("sticker_import_not_accepted")
-        if imported:
-            notes.append("sticker_imported")
-        summary_parts: list[str] = []
-        if import_completed:
-            if accepted and imported:
-                summary_parts.append("这张 QQ 表情已经收进本地表情库")
-            elif accepted:
-                summary_parts.append("这张 QQ 表情已经接收，但还没有稳定分类")
-            else:
-                summary_parts.append("这张 QQ 表情暂时没有成功入库")
-        if file_name:
-            summary_parts.append(f"文件名/摘要：{file_name}")
-        if mood_label or mood:
-            summary_parts.append(f"分类：{mood_label or mood}")
-        if confidence:
-            summary_parts.append(f"置信度：{confidence}")
-        if clip_mood:
-            clip_note = f"CLIP 判断：{clip_mood}"
-            if clip_confidence:
-                clip_note += f" ({clip_confidence})"
-            summary_parts.append(clip_note)
-        if meaning:
-            summary_parts.append(f"语义：{meaning}")
-        if destination:
-            summary_parts.append(f"入库位置：{destination}")
-        available = bool(import_completed and (accepted or mood or ocr_text or clip_mood or destination))
-        return {
-            "available": available,
-            "kind": "sticker",
-            "import_completed": import_completed,
-            "accepted": accepted,
-            "imported": imported,
-            "mood": mood,
-            "mood_label": mood_label,
-            "confidence": confidence,
-            "meaning": meaning,
-            "destination": destination,
-            "ocr_text": ocr_text,
-            "vision_summary": "；".join(summary_parts)[:1200],
-            "notes": notes,
-        }
+        return xinyu_qq_sticker_context.sticker_context_from_import_response(sticker_payload, sticker_response)
 
     @staticmethod
     def _enrich_sticker_segments_with_import_context(value: Any, sticker_context: dict[str, Any]) -> list[dict[str, Any]]:
-        segments = value if isinstance(value, list) else []
-        enriched: list[dict[str, Any]] = []
-        updated = False
-        for item in segments:
-            if not isinstance(item, dict):
-                continue
-            record = dict(item)
-            if not updated and _safe_str(record.get("kind")) == "sticker":
-                mood = _safe_str(sticker_context.get("mood")).strip()
-                meaning = _safe_str(sticker_context.get("meaning")).strip()
-                confidence = _safe_str(sticker_context.get("confidence")).strip()
-                if mood:
-                    record["mood"] = mood
-                if meaning:
-                    record["meaning"] = meaning
-                if confidence:
-                    record["confidence"] = confidence
-                updated = True
-            enriched.append(record)
-        return enriched
+        return xinyu_qq_sticker_context.enrich_sticker_segments_with_import_context(value, sticker_context)
 
     def _build_attachment_followup_chat_payload(
         self,
@@ -3782,47 +3071,14 @@ class NativeQQGateway:
         learning_response: dict[str, Any],
         image_context: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
-        image_context = image_context if isinstance(image_context, dict) else {}
-        is_image_attachment = is_image_learning_payload(learning_payload, learning_response)
-        has_image_context = bool(image_context.get("available"))
-        rich_context = self._extract_rich_message_context(event)
-        has_rich_context = bool(rich_context.get("segments"))
-        if not learning_response.get("extracted_text") and not has_image_context and not (
-            is_image_attachment and has_rich_context
-        ):
-            return None
-        if target.message_kind != "private":
-            return None
-        text = _safe_str(learning_payload.get("reason")).strip()
-        if not text or text == "owner supplied QQ file":
-            text = (
-                _safe_str(rich_context.get("fallback_text")).strip()
-                or (
-                    "\u6211\u521a\u53d1\u4e86\u4e00\u5f20\u56fe\u7247\u3002"
-                    if is_image_attachment
-                    else "\u6211\u521a\u53d1\u4e86\u4e00\u4e2a\u9644\u4ef6\u3002"
-                )
-            )
-        payload = self._build_chat_payload(event, target=target, text=text, rich_context=rich_context)
-        metadata = dict(payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {})
-        metadata.update(
-            {
-                "source": "qq_attachment_followup_after_learning_ingest",
-                "attachment_learning_item_id": _safe_str(learning_response.get("learning_item_id")),
-                "attachment_material_id": _safe_str(learning_response.get("material_id")),
-                "attachment_extracted_text_path": _safe_str(learning_response.get("extracted_text_path")),
-                "attachment_followup_after_ingest": True,
-                "attachment_followup_mode": "read_then_natural_reaction",
-            }
+        return xinyu_qq_payload_builders.build_attachment_followup_chat_payload(
+            self,
+            event,
+            target=target,
+            learning_payload=learning_payload,
+            learning_response=learning_response,
+            image_context=image_context,
         )
-        if image_context or is_image_attachment:
-            if not image_context:
-                image_context = {"available": False, "kind": "image", "notes": ["image_context_unavailable"]}
-            metadata["qq_image_context"] = image_context
-            metadata["qq_image_context_available"] = bool(image_context.get("available"))
-            metadata["qq_image_context_notes"] = image_context.get("notes", [])[:8]
-        payload["metadata"] = metadata
-        return payload
 
     def _build_package_install_payload(
         self,
@@ -3832,71 +3088,21 @@ class NativeQQGateway:
         package_text: str,
         text: str,
     ) -> dict[str, Any]:
-        session_id = self._session_id(target)
-        event_timestamp = _event_timestamp_seconds(event)
-        return {
-            "packages": package_text,
-            "current_text": text,
-            "session_id": session_id,
-            "source": "qq_gateway_package_install_message",
-            "requested_by": target.user_id,
-            "message_id": _safe_str(event.get("message_id")),
-            "timestamp": event_timestamp,
-            "metadata": {
-                "gateway": GATEWAY_NAME,
-                "gateway_version": GATEWAY_VERSION,
-                "source": "qq_gateway_package_install_message",
-                "qq_event_time_iso": _event_time_iso(event_timestamp),
-                "qq_event_time_unix": event_timestamp,
-                "onebot_post_type": _safe_str(event.get("post_type")),
-                "onebot_message_type": _safe_str(event.get("message_type")),
-                "session_id": session_id,
-                "user_id": target.user_id,
-                "sender_name": self._sender_name(event),
-                "is_owner_user": target.user_id in self.config.owner_user_ids,
-                "is_trusted_user": self._is_trusted_user_id(target.user_id),
-                "user_trust_level": self._trust_level_for_user_id(target.user_id),
-            },
-        }
+        return xinyu_qq_payload_builders.build_package_install_payload(
+            self,
+            event,
+            target=target,
+            package_text=package_text,
+            text=text,
+        )
 
     def _build_codex_payload(self, event: dict[str, Any], *, target: ReplyTarget, task_text: str) -> dict[str, Any]:
-        session_id = self._session_id(target)
-        event_timestamp = _event_timestamp_seconds(event)
-        metadata = {
-            "gateway": GATEWAY_NAME,
-            "gateway_version": GATEWAY_VERSION,
-            "source": "qq_gateway_codex_execute_message",
-            "qq_event_time_iso": _event_time_iso(event_timestamp),
-            "qq_event_time_unix": event_timestamp,
-            "onebot_post_type": _safe_str(event.get("post_type")),
-            "onebot_message_type": _safe_str(event.get("message_type")),
-            "is_owner_user": True,
-            "owner_local_write_approved": looks_like_owner_local_write_request(task_text),
-            "codex_auxiliary_brain": True,
-            "direct_cli_execution": False,
-        }
-        return {
-            "platform": "qq",
-            "adapter": GATEWAY_NAME,
-            "message_type": "private_codex_command",
-            "session_id": session_id,
-            "user_id": target.user_id,
-            "sender_name": self._sender_name(event),
-            "group_id": None,
-            "bot_id": _safe_str(event.get("self_id")),
-            "message_id": _safe_str(event.get("message_id")),
-            "text": f"用 Codex 辅助慢脑处理这个任务：{task_text}",
-            "raw_owner_task": task_text,
-            "source": "qq_gateway_codex_execute_message",
-            "background": self.config.codex_background,
-            "auto_study": self.config.codex_auto_study,
-            "timeout_seconds": self.config.codex_timeout_seconds,
-            "visible_window": self.config.codex_visible_window,
-            "window_title": self.config.codex_window_title,
-            "network_access": self.config.codex_network_access,
-            "timestamp": event_timestamp,
-            "metadata": metadata,
-        }
+        return xinyu_qq_payload_builders.build_codex_payload(
+            self,
+            event,
+            target=target,
+            task_text=task_text,
+        )
 
     def _session_id(self, target: ReplyTarget) -> str:
         return xinyu_qq_visible_dispatch.session_id(target)
@@ -4077,7 +3283,53 @@ class NativeQQGateway:
         action, params = xinyu_qq_sender.file_upload_action(target, file_path, name=name)
         return await self.send_action(websocket, action, params)
 
-    async def send_action(self, websocket: Any, action: str, params: dict[str, Any]) -> dict[str, Any] | None:
+    def _onebot_action_params(self, action: str, params: dict[str, Any]) -> dict[str, Any]:
+        effective = dict(params)
+        if action in {"send_private_msg", "send_group_msg"} and "timeout" not in effective:
+            effective["timeout"] = max(10000, int(self.config.onebot_action_timeout_seconds * 1000))
+        return effective
+
+    def _is_retryable_onebot_action_failure(
+        self,
+        response: dict[str, Any] | None,
+        *,
+        error: str = "",
+    ) -> bool:
+        if error:
+            return xinyu_qq_bridge_errors.is_retryable_onebot_action_error(error)
+        if response is None:
+            return True
+        ok, _, adapter_error = self._onebot_action_result(response)
+        if ok:
+            return False
+        return xinyu_qq_bridge_errors.is_retryable_onebot_action_error(adapter_error)
+
+    async def _sleep_before_onebot_action_retry(self, attempt: int) -> None:
+        delay = self.config.onebot_action_retry_delay_seconds * max(1, attempt + 1)
+        await asyncio.sleep(delay)
+
+    async def _resolve_action_websocket(
+        self,
+        websocket: Any,
+        *,
+        wait_seconds: float,
+    ) -> Any | None:
+        if id(websocket) in self._websocket_connection_ids:
+            return websocket
+        deadline = time.monotonic() + max(0.0, wait_seconds)
+        while time.monotonic() < deadline:
+            live = self._live_napcat_websocket
+            if live is not None and id(live) in self._websocket_connection_ids:
+                return live
+            await asyncio.sleep(0.25)
+        return None
+
+    async def _send_action_once(
+        self,
+        websocket: Any,
+        action: str,
+        params: dict[str, Any],
+    ) -> tuple[dict[str, Any] | None, str]:
         connection_id = self._connection_id_for_websocket(websocket)
         echo = f"xinyu-{connection_id}-{int(time.time() * 1000)}-{id(params)}"
         payload = {"action": action, "params": params, "echo": echo}
@@ -4090,17 +3342,60 @@ class NativeQQGateway:
             self._pending_actions.pop(echo, None)
             if not future.done():
                 future.cancel()
-            print(f"[xinyu_qq_gateway] OneBot action send failed: {action}: {type(exc).__name__}: {exc}", flush=True)
-            return None
+            error = f"{type(exc).__name__}: {exc}"
+            print(f"[xinyu_qq_gateway] OneBot action send failed: {action}: {error}", flush=True)
+            return None, error
         try:
-            return await asyncio.wait_for(future, timeout=15)
+            return (
+                await asyncio.wait_for(future, timeout=self.config.onebot_action_timeout_seconds),
+                "",
+            )
         except TimeoutError:
             print(f"[xinyu_qq_gateway] OneBot action timed out: {action}", flush=True)
             self._pending_actions.pop(echo, None)
-            return None
+            return None, "onebot_action_timeout"
         except BridgeError as exc:
-            print(f"[xinyu_qq_gateway] OneBot action failed: {action}: {exc}", flush=True)
-            return None
+            error = str(exc)
+            print(f"[xinyu_qq_gateway] OneBot action failed: {action}: {error}", flush=True)
+            return None, error
+
+    async def send_action(self, websocket: Any, action: str, params: dict[str, Any]) -> dict[str, Any] | None:
+        effective_params = self._onebot_action_params(action, params)
+        max_attempts = self.config.onebot_action_max_retries + 1
+        last_response: dict[str, Any] | None = None
+        last_error = ""
+        for attempt in range(max_attempts):
+            wait_seconds = self.config.onebot_action_retry_delay_seconds * max(1, attempt + 1)
+            active_ws = await self._resolve_action_websocket(websocket, wait_seconds=wait_seconds)
+            if active_ws is None:
+                last_error = "napcat websocket unavailable"
+                if attempt + 1 < max_attempts:
+                    print(
+                        f"[xinyu_qq_gateway] OneBot action waiting for NapCat reconnect: {action} "
+                        f"attempt={attempt + 1}/{max_attempts}",
+                        flush=True,
+                    )
+                    await self._sleep_before_onebot_action_retry(attempt)
+                    continue
+                break
+            response, error = await self._send_action_once(active_ws, action, effective_params)
+            last_response = response
+            last_error = error
+            if not self._is_retryable_onebot_action_failure(response, error=error):
+                return response
+            if attempt + 1 < max_attempts:
+                print(
+                    f"[xinyu_qq_gateway] OneBot action retrying: {action} "
+                    f"attempt={attempt + 1}/{max_attempts} error={error or self._onebot_action_result(response)[2]}",
+                    flush=True,
+                )
+                await self._sleep_before_onebot_action_retry(attempt)
+        if last_error:
+            print(
+                f"[xinyu_qq_gateway] OneBot action exhausted retries: {action} error={last_error}",
+                flush=True,
+            )
+        return last_response
 
     async def _drop_unsent_visible_reply(
         self,
