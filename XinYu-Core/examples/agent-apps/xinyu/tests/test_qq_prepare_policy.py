@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from xinyu_qq_prepare_policy import (
+    basic_channel_reject_reason,
     codex_command_scope_reject_reason,
     empty_message_reason,
+    owner_private_command_reject_reason,
     package_install_scope_reject_reason,
     sticker_import_scope_reject_reason,
 )
@@ -60,4 +62,26 @@ def test_sticker_and_package_and_codex_scope() -> None:
             owner_user_ids=owners,
         )
         == "codex_owner_only"
+    )
+    assert basic_channel_reject_reason(
+        private_only=True, message_kind="group", allow_group_messages=True
+    ) == "private_only"
+    assert basic_channel_reject_reason(
+        private_only=False, message_kind="group", allow_group_messages=False
+    ) == "group_disabled"
+    assert (
+        owner_private_command_reject_reason(
+            message_kind="group",
+            sender_id="owner",
+            owner_user_ids=owners,
+        )
+        == "owner_private_only"
+    )
+    assert (
+        owner_private_command_reject_reason(
+            message_kind="private",
+            sender_id="owner",
+            owner_user_ids=owners,
+        )
+        is None
     )

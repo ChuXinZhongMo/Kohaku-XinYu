@@ -32,6 +32,13 @@ from xinyu_runtime_presence_text import (
     stable_hash as _stable_hash,
 )
 
+from xinyu_runtime_presence_io import (
+    append_jsonl as _append_jsonl_io,
+    atomic_write_json as _atomic_write_json_io,
+    atomic_write_text as _atomic_write_text_io,
+    clean_json_value as _clean_json_value_io,
+)
+
 DEFAULT_PROMPT_LIMIT = 2200
 DEFAULT_VISIBLE_WINDOW_TITLE = "Xinyu codex"
 DEFAULT_RUNNING_STALE_SECONDS = 300
@@ -2280,46 +2287,23 @@ def _write_presence_markdown(root: Path, fields: dict[str, str]) -> list[str]:
 
 
 def _append_trace(root: Path, event: dict[str, Any]) -> list[str]:
-    path = root / PRESENCE_TRACE_REL
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        clean_event = _clean_json_value(event)
-        with path.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps(clean_event, ensure_ascii=False, sort_keys=True) + "\n")
-        return []
-    except OSError as exc:
-        return [f"presence_trace_write_failed:{type(exc).__name__}"]
+    return _append_jsonl_io(root / PRESENCE_TRACE_REL, event)
+
 
 
 def _atomic_write_json(path: Path, data: dict[str, Any]) -> list[str]:
-    return _atomic_write_text(path, json.dumps(_clean_json_value(data), ensure_ascii=False, indent=2) + "\n")
+    return _atomic_write_json_io(path, data)
+
 
 
 def _atomic_write_text(path: Path, text: str) -> list[str]:
-    tmp = path.with_name(f".{path.name}.{os.getpid()}.{time.time_ns()}.tmp")
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp.write_text(_scrub_field(text), encoding="utf-8")
-        os.replace(tmp, path)
-        return []
-    except OSError as exc:
-        try:
-            tmp.unlink(missing_ok=True)
-        except OSError:
-            pass
-        return [f"presence_write_failed:{type(exc).__name__}"]
+    return _atomic_write_text_io(path, text)
+
 
 
 def _clean_json_value(value: Any) -> Any:
-    if isinstance(value, dict):
-        return {_safe_str(key): _clean_json_value(item) for key, item in value.items()}
-    if isinstance(value, list):
-        return [_clean_json_value(item) for item in value]
-    if isinstance(value, tuple):
-        return [_clean_json_value(item) for item in value]
-    if isinstance(value, str):
-        return _scrub_field(value)
-    return value
+    return _clean_json_value_io(value)
+
 
 
 def _classify_payload(payload: dict[str, Any]) -> tuple[str, str, str]:

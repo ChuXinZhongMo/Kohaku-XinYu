@@ -73,3 +73,30 @@ def codex_command_scope_reject_reason(
     if sender_id not in owner_user_ids:
         return "codex_owner_only"
     return None
+
+
+def basic_channel_reject_reason(
+    *,
+    private_only: bool,
+    message_kind: str,
+    allow_group_messages: bool,
+) -> str | None:
+    """Top-level channel gates used by prepare_message."""
+    if private_only and message_kind != "private":
+        return "private_only"
+    if message_kind == "group" and not allow_group_messages:
+        return "group_disabled"
+    return None
+
+
+def owner_private_command_reject_reason(
+    *,
+    message_kind: str,
+    sender_id: str,
+    owner_user_ids: Container[str],
+    reason: str = "owner_private_only",
+) -> str | None:
+    """Goldmark / review / self-action commands are owner-private only."""
+    if message_kind != "private" or sender_id not in owner_user_ids:
+        return reason
+    return None

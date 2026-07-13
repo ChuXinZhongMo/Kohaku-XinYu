@@ -82,17 +82,18 @@ Estimated distance to formal **Passing**: medium-low after v0.1.0 + protection +
 | Dependency vulnerability scan | **partial** | Informational `security.yml` (`pip-audit`, `npm audit`); not blocking |
 | SBOM on release | **missing** | Planned Phase 4 |
 | Signed / attested releases | **missing** | No signed tags/artifacts yet |
-| Pinned GitHub Actions SHAs | **missing** | Floating majors (`@v6`/`@v7` after Dependabot batch); pin-SHA is a follow-up |
+| Pinned GitHub Actions SHAs | **met** | `ci.yml` / `security.yml` pin checkout/setup-*/upload-artifact full SHAs |
 | Secrets out of VCS | **met** / **partial** | Strong `.gitignore` + privacy dry-run; continuous vigilance required |
 | Release dry-run / privacy check | **met** / partial | `scripts/Release-DryRun.ps1` used for v0.1.0; not yet CI-automated |
+| Coverage floor | **partial** | Informational 35% summary in CI (no fail yet) |
+| SBOM | **partial** | Operator recipe in `docs/plans/SBOM-AND-RELEASE-SUPPLY-CHAIN.md` |
 
 ## Next OpenSSF actions (ordered)
 
-1. Optional coverage floor (e.g. fail under 40% on app unit suite) behind a flag first.
-2. Pin GitHub Actions to full commit SHAs in `ci.yml` / `security.yml`.
-3. Generate SBOM on tag (CycloneDX or SPDX) and attach to GitHub Release.
-4. Tabletop: run one private vulnerability report drill; document SLA in `SECURITY.md`.
-5. Formal badge submission only after (2)+(3) and maintainer bandwidth.
+1. Promote coverage floor to fail-under only after two stable release cycles.
+2. Optional tag workflow: build CycloneDX SBOM artifacts automatically.
+3. Tabletop: run one private vulnerability report drill; document SLA in `SECURITY.md`.
+4. Formal badge submission only after SBOM automation + maintainer bandwidth.
 
 ### Analysis & governance
 

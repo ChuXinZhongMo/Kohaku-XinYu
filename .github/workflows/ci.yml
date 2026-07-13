@@ -24,8 +24,8 @@ jobs:
     name: "Python tests (blocking)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: "3.12"
           cache: pip
@@ -49,11 +49,38 @@ jobs:
           --cov-report=xml:coverage.xml
       - name: Upload coverage XML
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: coverage-xml
           path: ${{ env.XINYU_APP_DIR }}/coverage.xml
           if-no-files-found: ignore
+      # Soft floor: report total coverage in the job summary without failing PRs yet.
+      # Raise fail_under only after the baseline stabilizes on main.
+      - name: Coverage summary (informational floor)
+        if: always()
+        working-directory: ${{ env.XINYU_APP_DIR }}
+        continue-on-error: true
+        run: |
+          if [ ! -f coverage.xml ]; then
+            echo "coverage.xml missing; skip floor" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          python - <<'PY'
+          import os
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          root = ET.parse("coverage.xml").getroot()
+          rate = float(root.attrib.get("line-rate") or 0.0)
+          pct = rate * 100.0
+          floor = 35.0
+          status = "PASS" if pct >= floor else "BELOW_FLOOR"
+          line = f"line_rate={pct:.2f}% floor={floor:.1f}% status={status}"
+          print(line)
+          summary = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          prev = summary.read_text(encoding="utf-8") if summary.exists() else ""
+          summary.write_text(prev + f"\n## coverage\n{line}\n", encoding="utf-8")
+          PY
 
   # ── Blocking: critical correctness lint on core + app ───────────────────────
   # Full expanded ruff remains informational (style debt). Critical = F/E9 class.
@@ -62,8 +89,8 @@ jobs:
     name: "Python lint critical (blocking)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: "3.12"
       - name: Install ruff
@@ -82,8 +109,8 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: "3.12"
       - name: Install ruff
@@ -97,8 +124,8 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: "3.12"
       - name: Install ruff
@@ -113,8 +140,8 @@ jobs:
     name: "Python smoke offline (blocking)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: "3.12"
           cache: pip
@@ -163,8 +190,8 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: "3.12"
           cache: pip
@@ -182,8 +209,8 @@ jobs:
     name: "Desktop typecheck (blocking)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6
         with:
           node-version: "20"
           cache: npm
