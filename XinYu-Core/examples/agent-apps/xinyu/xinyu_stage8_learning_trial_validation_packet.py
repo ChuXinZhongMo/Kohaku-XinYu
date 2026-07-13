@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "STATE_REL",
+)
+
 import argparse
 import json
 import re
@@ -17,6 +22,8 @@ from xinyu_stage8_learning_trial_validation_packet_store import write_stage8_lea
 from xinyu_stage8_learning_trial_validation_packet_store import write_stage8_learning_trial_validation_state_text
 from xinyu_text_variants import LEGACY_MOJIBAKE_FRAGMENTS
 
+
+from xinyu_action_feedback_coverage import STATE_REL
 
 SUCCESS_GATE_TARGET_STREAK = 2
 NONE_VALUES = {"", "none", "unknown", "missing", "null"}

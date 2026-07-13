@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "APPLY_TRACE_REL",
+    "STATE_REL",
+)
+
 import argparse
 import json
 import re
@@ -15,6 +21,10 @@ from xinyu_stage8_duplicate_consolidation_packet_store import PACKET_REL
 from xinyu_stage8_duplicate_consolidation_packet_store import append_stage8_duplicate_consolidation_apply_trace_event
 from xinyu_stage8_duplicate_consolidation_packet_store import write_stage8_duplicate_consolidation_packet_text
 from xinyu_stage8_duplicate_consolidation_packet_store import write_stage8_duplicate_consolidation_state_text
+from xinyu_stage8_duplicate_consolidation_packet_store import APPLY_TRACE_REL
+
+from xinyu_action_feedback_coverage import STATE_REL
+
 ARCHIVED_DUPLICATE_STATUS = "archived_duplicate"
 PROTECTED_NON_REPRESENTATIVE_STATUSES = {"approved"}
 PRIVATE_TEXT_MARKERS = (

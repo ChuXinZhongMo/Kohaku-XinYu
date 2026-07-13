@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "INTENTION_TRACE_REL",
+    "REPORT_REL",
+)
+
 import argparse
 import json
 from dataclasses import dataclass
@@ -28,6 +34,10 @@ from xinyu_autonomy_loop_report_store import read_autonomy_loop_state_text
 from xinyu_autonomy_loop_report_store import read_latest_intention_trace
 from xinyu_autonomy_loop_report_store import write_autonomy_loop_report_text
 
+
+from xinyu_autonomy_canary_report_store import INTENTION_TRACE_REL
+
+from xinyu_action_feedback_coverage import REPORT_REL
 
 DEFAULT_WINDOW_MINUTES = 120
 

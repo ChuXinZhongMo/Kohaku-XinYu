@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "DESKTOP_EVENT_STREAM_LIFECYCLE_BOUNDARY",
+)
+
 import asyncio
 import os
 from dataclasses import dataclass
@@ -13,6 +18,8 @@ from xinyu_bridge_desktop_surface_contract import (
 from xinyu_desktop_events import DesktopEventBus
 from xinyu_desktop_ws import DesktopWSServer
 
+
+from xinyu_bridge_desktop_surface_contract import DESKTOP_EVENT_STREAM_LIFECYCLE_BOUNDARY
 
 @dataclass(slots=True)
 class DesktopService:

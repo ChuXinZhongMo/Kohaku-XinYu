@@ -21,9 +21,12 @@ from xinyu_bridge_semantic_fast_text_format import owner_private_direct_repair_r
 from xinyu_bridge_semantic_fast_text_format import owner_private_empty_state_notice as _owner_private_empty_state_notice_base
 from xinyu_bridge_semantic_fast_text_format import reply_looks_like_stale_plan_residue as _reply_looks_like_stale_plan_residue_base
 
+from xinyu_bridge_semantic_fast_text_extract import _OWNER_STATE_FAST_MAX_CHARS
+
 # Public re-export for routes/tests that import from this facade module.
 __all__ = (
     "SEMANTIC_FAST_ALLOWED_INTENTS",
+    "_OWNER_STATE_FAST_MAX_CHARS",
 )
 
 

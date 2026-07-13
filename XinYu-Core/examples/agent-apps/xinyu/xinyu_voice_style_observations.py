@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "OBSERVATIONS_REL",
+)
+
 import argparse
 import json
 import re
@@ -9,6 +14,8 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_voice_style_observations_store import write_voice_style_observations_text
+
+from xinyu_private_ecosystem import OBSERVATIONS_REL
 
 PUBLIC_REFERENCE_SOURCES: tuple[dict[str, str], ...] = (
     {

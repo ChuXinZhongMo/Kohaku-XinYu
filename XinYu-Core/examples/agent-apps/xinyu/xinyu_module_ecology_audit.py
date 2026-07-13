@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "SKIP_SCAN_DIRS",
+    "SKIP_SCAN_PREFIXES",
+)
+
 import argparse
 import ast
 import json
@@ -14,6 +20,8 @@ from xinyu_module_ecology_audit_store import read_module_ecology_git_status_text
 from xinyu_module_ecology_audit_store import read_module_ecology_reference_sources
 from xinyu_module_ecology_audit_store import read_module_ecology_status_file
 from xinyu_module_ecology_audit_store import write_module_ecology_output
+
+from xinyu_module_ecology_audit_store import SKIP_SCAN_DIRS, SKIP_SCAN_PREFIXES
 
 NON_LIVE_REFERENCE_PREFIXES = (
     "tests/",

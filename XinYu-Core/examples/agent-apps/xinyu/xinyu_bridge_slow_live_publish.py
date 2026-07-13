@@ -4,6 +4,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
+from xinyu_bridge_slow_live_notes import build_slow_live_success_notes
 from xinyu_bridge_slow_live_publish_service import (
     publish_slow_live_failed_turn as _publish_slow_live_failed_turn,
 )
@@ -12,6 +13,14 @@ from xinyu_bridge_slow_live_publish_service import (
 )
 from xinyu_bridge_time_utils import timestamp_or_now_iso
 from xinyu_bridge_values import safe_str as _safe_str
+from xinyu_bridge_slow_live_notes_normalization import notes_from_sidecar
+
+__all__ = (
+    "notes_from_sidecar",
+    "build_slow_live_success_notes",
+    "publish_slow_live_failed_turn",
+    "publish_slow_live_success_turn",
+)
 
 
 TraceRouteStage = Callable[..., Any]

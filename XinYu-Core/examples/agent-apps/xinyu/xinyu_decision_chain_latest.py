@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "REPORT_REL",
+    "STATE_REL",
+    "TRACE_REL",
+)
+
 import argparse
 import hashlib
 import json
@@ -13,6 +20,12 @@ from xinyu_decision_chain_latest_store import decision_chain_latest_state_path
 from xinyu_decision_chain_latest_store import write_decision_chain_latest_report_text
 from xinyu_decision_chain_latest_store import write_decision_chain_latest_state_text
 
+
+from xinyu_action_feedback_coverage import REPORT_REL
+
+from xinyu_action_feedback_coverage import STATE_REL
+
+from xinyu_action_feedback_coverage import TRACE_REL
 
 DEFAULT_WINDOW_MINUTES = 240
 

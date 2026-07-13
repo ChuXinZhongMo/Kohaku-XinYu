@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "REPORT_REL",
+    "TRACE_REL",
+)
+
 import argparse
 import hashlib
 import json
@@ -13,6 +19,10 @@ from xinyu_perception_importance_store import append_perception_importance_trace
 from xinyu_perception_importance_store import read_perception_importance_state_text
 from xinyu_perception_importance_store import write_perception_importance_report_text
 from xinyu_perception_importance_store import write_perception_importance_state_text
+
+from xinyu_action_feedback_coverage import REPORT_REL
+
+from xinyu_action_feedback_coverage import TRACE_REL
 
 NONE_VALUES = {"", "missing", "none", "unknown", "null"}
 

@@ -1,5 +1,14 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "DAILY_DIGEST_STORE_BOUNDARY",
+    "DIGEST_REL",
+    "SOURCE_STATE_REL",
+    "STATE_REL",
+    "TRACE_REL",
+)
+
 import hashlib
 import re
 from datetime import datetime, timedelta
@@ -7,12 +16,19 @@ from pathlib import Path
 from typing import Any
 
 from stores.daily_digest_state import (
+    DIGEST_REL,
+    SOURCE_STATE_REL,
+    STATE_REL,
+    TRACE_REL,
     append_daily_digest_trace,
     read_daily_digest,
     read_daily_digest_source_state,
     write_daily_digest,
     write_daily_digest_state_text,
 )
+
+# Service boundary marker expected by store contract tests.
+DAILY_DIGEST_STORE_BOUNDARY = "stores/daily_digest_state"
 
 TTL_SECONDS = 24 * 3600
 MAX_COMMENT_CHARS = 50

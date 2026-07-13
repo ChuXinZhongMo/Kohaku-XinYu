@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "STATE_REL",
+)
+
 import math
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -10,6 +15,8 @@ from stores.slow_state_modulator_state import read_slow_state_payload
 from stores.slow_state_modulator_state import write_slow_state_payload
 from xinyu_turn_residue import TurnResidue, read_turn_residue
 
+
+from xinyu_action_feedback_coverage import STATE_REL
 
 FATIGUE_HALF_LIFE_HOURS = 2.5
 RELATION_HALF_LIFE_HOURS = 8.0

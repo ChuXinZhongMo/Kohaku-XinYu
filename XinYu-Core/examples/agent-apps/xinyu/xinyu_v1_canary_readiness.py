@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "OWNER_CONFIG_REL",
+)
+
 import os
 import re
 from collections import Counter
@@ -18,6 +23,8 @@ from xinyu_v1_canary_readiness_store import read_v1_shadow_observation_tail
 from xinyu_v1_canary_readiness_store import v1_owner_config_path
 from xinyu_v1_canary_readiness_store import write_v1_canary_text
 
+
+from xinyu_v1_canary_readiness_store import OWNER_CONFIG_REL
 
 DEFAULT_MIN_SHADOW_TURNS = 100
 DEFAULT_MAX_ERROR_RATE = 0.02

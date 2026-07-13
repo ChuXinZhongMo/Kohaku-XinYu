@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "CURSOR_REL",
+    "DECISIONS_REL",
+    "REVIEW_STATE_BOUNDARY",
+)
+
 import hashlib
 import json
 import os
@@ -18,12 +25,16 @@ from xinyu_qq_outbox import enqueue_qq_outbox_message
 from xinyu_storage_paths import knowledge_file_path, knowledge_ref
 from xinyu_visible_persona_voice import compose_review_inbox_card, compose_review_inbox_command_reply
 from stores.review_state import (
+    CURSOR_REL,
+    DECISIONS_REL,
     read_review_cursor,
     read_review_decisions,
     review_lock_path,
     write_review_cursor,
     write_review_decisions,
 )
+
+REVIEW_STATE_BOUNDARY = "stores/review_state"
 
 
 STATE_REL = Path("memory/context/review_inbox_state.md")

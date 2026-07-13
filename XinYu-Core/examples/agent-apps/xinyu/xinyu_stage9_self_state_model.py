@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "REPORT_REL",
+    "STATE_REL",
+    "TRACE_REL",
+)
+
 import argparse
 import json
 import re
@@ -13,6 +20,12 @@ from xinyu_stage9_self_state_model_store import read_stage9_source_text
 from xinyu_stage9_self_state_model_store import stage9_report_path
 from xinyu_stage9_self_state_model_store import write_stage9_report_text
 from xinyu_stage9_self_state_model_store import write_stage9_state_text
+
+from xinyu_action_feedback_coverage import REPORT_REL
+
+from xinyu_action_feedback_coverage import STATE_REL
+
+from xinyu_action_feedback_coverage import TRACE_REL
 
 NONE_VALUES = {"", "none", "unknown", "missing", "null"}
 

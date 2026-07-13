@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "STATE_REL",
+    "TRACE_REL",
+)
+
 import argparse
 import hashlib
 import json
@@ -20,6 +26,10 @@ from xinyu_stage11_visual_ingress_diagnostics_store import stage11_visual_qq_ric
 from xinyu_stage11_visual_ingress_diagnostics_store import stage11_visual_qq_trace_path
 from xinyu_stage11_visual_ingress_diagnostics_store import write_stage11_visual_report_text
 from xinyu_stage11_visual_ingress_diagnostics_store import write_stage11_visual_state_text
+
+from xinyu_action_feedback_coverage import STATE_REL
+
+from xinyu_action_feedback_coverage import TRACE_REL
 
 VISUAL_COUNT_FIELDS = (
     "image_count",

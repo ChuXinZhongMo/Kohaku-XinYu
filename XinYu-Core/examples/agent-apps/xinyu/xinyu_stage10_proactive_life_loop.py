@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "REPORT_REL",
+    "STATE_REL",
+    "TRACE_REL",
+)
+
 import argparse
 import json
 import re
@@ -17,6 +24,12 @@ from xinyu_stage10_proactive_life_loop_store import stage10_proactive_life_loop_
 from xinyu_stage10_proactive_life_loop_store import write_stage10_proactive_life_loop_report_text
 from xinyu_stage10_proactive_life_loop_store import write_stage10_proactive_life_loop_state_text
 
+
+from xinyu_action_feedback_coverage import REPORT_REL
+
+from xinyu_action_feedback_coverage import STATE_REL
+
+from xinyu_action_feedback_coverage import TRACE_REL
 
 NONE_VALUES = {"", "none", "unknown", "missing", "null"}
 

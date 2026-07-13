@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "STATE_JSON_REL",
+)
+
 import argparse
 import hashlib
 import json
@@ -15,6 +20,7 @@ from stores.impulse_soup_state import (
     read_impulse_soup_state,
     write_impulse_soup_state,
 )
+from xinyu_browser_control import STATE_JSON_REL
 from xinyu_runtime_failure_freshness import (
     codex_delegate_failure_active as _codex_delegate_failure_active,
     runtime_failure_detail_active as _runtime_failure_detail_active,

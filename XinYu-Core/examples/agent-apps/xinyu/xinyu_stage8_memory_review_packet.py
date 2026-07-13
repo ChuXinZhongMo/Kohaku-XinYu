@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "PACKET_REL",
+    "STATE_REL",
+)
+
 import argparse
 import json
 import re
@@ -15,6 +21,10 @@ from xinyu_stage8_memory_review_packet_store import stage8_memory_review_packet_
 from xinyu_stage8_memory_review_packet_store import write_stage8_memory_review_packet_state_text
 from xinyu_stage8_memory_review_packet_store import write_stage8_memory_review_packet_text
 
+
+from xinyu_stage8_duplicate_consolidation_packet_store import PACKET_REL
+
+from xinyu_action_feedback_coverage import STATE_REL
 
 PRIVATE_TEXT_MARKERS = (
     "owner_turn:",

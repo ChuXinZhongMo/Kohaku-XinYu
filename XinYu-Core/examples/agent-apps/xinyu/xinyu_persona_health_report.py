@@ -1,5 +1,15 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "DIMENSIONS_REL",
+    "EVOLUTION_REL",
+    "PROFILE_REL",
+    "REFLECTION_LOG_REL",
+    "REPORT_REL",
+    "SELF_REVIEW_REL",
+)
+
 import argparse
 import json
 import re
@@ -13,6 +23,18 @@ from xinyu_persona_health_report_store import TRIAL_FEEDBACK_REL
 from xinyu_persona_health_report_store import read_persona_health_source_text
 from xinyu_persona_health_report_store import read_persona_health_text
 from xinyu_persona_health_report_store import write_persona_health_report_text
+
+from xinyu_persona_health_report_store import DIMENSIONS_REL
+
+from xinyu_persona_health_report_store import EVOLUTION_REL
+
+from xinyu_browser_control import PROFILE_REL
+
+from xinyu_persona_health_report_store import REFLECTION_LOG_REL
+
+from xinyu_action_feedback_coverage import REPORT_REL
+
+from xinyu_persona_health_report_store import SELF_REVIEW_REL
 
 BLOCKED_STABLE_WRITE = "review_only_not_auto_apply"
 BLOCKED_OWNER_WRITE = "blocked_without_explicit_owner_apply"

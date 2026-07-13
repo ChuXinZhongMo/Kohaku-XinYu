@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "SAMPLE_REPORT_REL",
+)
+
 import argparse
 import json
 import re
@@ -10,6 +15,8 @@ from typing import Any
 
 from xinyu_voice_style_observations import PUBLIC_CORPUS_FINDINGS, PUBLIC_EXAMPLES
 from xinyu_voice_style_sampler_store import write_voice_style_sample_report_text
+
+from xinyu_voice_style_sampler_store import SAMPLE_REPORT_REL
 
 BANNED_SAMPLE_PATTERNS: tuple[str, ...] = (
     "傻逼",

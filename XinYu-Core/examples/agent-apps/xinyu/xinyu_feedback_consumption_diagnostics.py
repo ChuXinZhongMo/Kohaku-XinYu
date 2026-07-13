@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "INTENTION_STATE_REL",
+    "REPORT_REL",
+    "TRACE_REL",
+)
+
 import argparse
 import hashlib
 import json
@@ -14,6 +21,12 @@ from xinyu_feedback_consumption_diagnostics_store import read_feedback_consumpti
 from xinyu_feedback_consumption_diagnostics_store import read_feedback_consumption_state_text
 from xinyu_feedback_consumption_diagnostics_store import write_feedback_consumption_report_text
 from xinyu_feedback_consumption_diagnostics_store import write_feedback_consumption_state_text
+
+from xinyu_autonomy_canary_report_store import INTENTION_STATE_REL
+
+from xinyu_action_feedback_coverage import REPORT_REL
+
+from xinyu_action_feedback_coverage import TRACE_REL
 
 DEFAULT_TRACE_LIMIT = 200
 PASS_RATE_PCT = 80.0

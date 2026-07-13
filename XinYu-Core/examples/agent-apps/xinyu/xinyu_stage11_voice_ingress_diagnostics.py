@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "STATE_REL",
+    "TRACE_REL",
+)
+
 import argparse
 import hashlib
 import json
@@ -19,6 +25,10 @@ from xinyu_stage11_voice_ingress_diagnostics_store import stage11_voice_qq_rich_
 from xinyu_stage11_voice_ingress_diagnostics_store import stage11_voice_qq_trace_path
 from xinyu_stage11_voice_ingress_diagnostics_store import write_stage11_voice_report_text
 from xinyu_stage11_voice_ingress_diagnostics_store import write_stage11_voice_state_text
+
+from xinyu_action_feedback_coverage import STATE_REL
+
+from xinyu_action_feedback_coverage import TRACE_REL
 
 VOICE_COUNT_FIELDS = (
     "voice_count",

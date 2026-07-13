@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "APPROVAL_QUEUE_REL",
+    "SELF_ACTION_QUEUE_BOUNDARY",
+)
+
 import argparse
 import hashlib
 import json
@@ -29,12 +35,15 @@ from xinyu_self_action_trusted_autoapproval import (
     scope_is_auto_approvable,
     scope_is_codex_auto_runnable,
 )
+from stores.self_action_queue import APPROVAL_QUEUE_REL
 from xinyu_autonomy_expansion_grant import effective_autonomy_policy
 from xinyu_autonomy_policy import (
     PRODUCTIVE_GOAL_IDS,
     SCRATCH_DIR_REL,
     reliability_budget_bonus,
 )
+
+SELF_ACTION_QUEUE_BOUNDARY = "stores/self_action_queue"
 
 
 GATEWAY_VERSION = 1

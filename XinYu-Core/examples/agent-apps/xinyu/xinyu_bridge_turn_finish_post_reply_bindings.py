@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+
+__all__ = (
+    "bind_record_owner_voice_sidecars",
+)
+
 from typing import Any, Callable
 
 
+
+from xinyu_bridge_turn_finish_post_reply_owner_voice_bindings import bind_record_owner_voice_sidecars
 
 FacadeGlobals = Callable[[], dict[str, Any]]
 
