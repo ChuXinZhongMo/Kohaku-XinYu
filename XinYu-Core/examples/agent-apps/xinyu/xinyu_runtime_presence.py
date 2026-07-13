@@ -37,6 +37,15 @@ DEFAULT_VISIBLE_WINDOW_TITLE = "Xinyu codex"
 DEFAULT_RUNNING_STALE_SECONDS = 300
 CODEX_RUNNING_STALE_SECONDS = 4500
 
+# Keep DEFAULT_PREVIEW_CHARS re-exported for compatibility (imported above).
+# Ruff F401 would drop a bare re-export without __all__; list the public constant.
+__all__ = (
+    "DEFAULT_PREVIEW_CHARS",
+    "DEFAULT_PROMPT_LIMIT",
+    "DEFAULT_RUNNING_STALE_SECONDS",
+    "CODEX_RUNNING_STALE_SECONDS",
+)
+
 _FIELD_RE = re.compile(r"^\s*-\s*([A-Za-z0-9_]+):\s*(.*?)\s*$")
 _FRONTMATTER_FIELD_RE = re.compile(r"^\s*([A-Za-z0-9_]+):\s*(.*?)\s*$")
 
