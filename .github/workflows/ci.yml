@@ -24,8 +24,8 @@ jobs:
     name: "Python tests (blocking)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -49,7 +49,7 @@ jobs:
           --cov-report=xml:coverage.xml
       - name: Upload coverage XML
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-xml
           path: ${{ env.XINYU_APP_DIR }}/coverage.xml
@@ -62,8 +62,8 @@ jobs:
     name: "Python lint critical (blocking)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install ruff
@@ -82,8 +82,8 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install ruff
@@ -97,8 +97,8 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Install ruff
@@ -108,13 +108,41 @@ jobs:
           ruff check "${{ env.XINYU_APP_DIR }}"
           --exclude "**/learning/**,**/runtime/**,**/.venv/**,**/ops/archive/**"
 
+  # ── Blocking: curated offline smokes (see docs/plans/QUICK-SMOKE-SET.md) ────
+  python-smoke-offline:
+    name: "Python smoke offline (blocking)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: XinYu-Core/pyproject.toml
+      - name: Install runtime + dev deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "./XinYu-Core[dev]"
+      - name: Offline smoke scripts
+        working-directory: ${{ env.XINYU_APP_DIR }}
+        env:
+          TZ: Asia/Shanghai
+        run: |
+          set -euo pipefail
+          # Only scripts verified green offline on the release line.
+          # mojibake_guard / runtime_presence currently fail on intentional
+          # marker drift — keep them out of blocking until cleaned.
+          python tests/smoke/runtime/runtime_security_smoke.py
+          python tests/smoke/memory/memory_braid_smoke.py
+          python tests/smoke/bridge/bridge_renderer_guard_flags_smoke.py
+
   python-smoke:
     name: "Python smoke (informational)"
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -132,8 +160,8 @@ jobs:
     name: "Desktop typecheck (blocking)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: npm

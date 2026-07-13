@@ -80,8 +80,10 @@ src/kohakuterrarium/web_dist/
 kt-biome/
 
 # XinYu local/private runtime
-memory/
-runtime/
+# Anchor to this package root only — bare "memory/" / "runtime/" also
+# matched tests/smoke/{memory,runtime}/ and kept offline smokes untracked.
+/memory/
+/runtime/
 examples/agent-apps/xinyu/xinyu.local.env
 examples/agent-apps/xinyu/xinyu_qq_gateway.config.json
 examples/agent-apps/xinyu/config/external_plugins.json

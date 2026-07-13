@@ -317,20 +317,65 @@ def _failure(
     )
 
 
+def _tts_emotion_enabled() -> bool:
+    """Mirror xinyu_tts_output: feed cognitive emotion into Higgs when enabled."""
+    return _flag("XINYU_TTS_EMOTION")
+
+
+def _read_delivery_category_for_voice() -> str:
+    """Best-effort read of runtime emotion → delivery category (empty = neutral)."""
+    if not _tts_emotion_enabled():
+        return ""
+    try:
+        from xinyu_tts_emotion import derive_delivery
+    except Exception:
+        return ""
+    root = Path(__file__).resolve().parent
+    vector: dict = {}
+    strongest = ""
+    try:
+        state_path = root / "runtime" / "emotion_state.json"
+        if state_path.is_file() and state_path.stat().st_size <= 200_000:
+            data = json.loads(state_path.read_text(encoding="utf-8", errors="replace"))
+            if isinstance(data, dict) and isinstance(data.get("vector"), dict):
+                vector = data["vector"]
+    except (OSError, ValueError):
+        vector = {}
+    try:
+        import re
+
+        council_path = root / "memory" / "context" / "emotion_council_state.md"
+        if council_path.is_file() and council_path.stat().st_size <= 200_000:
+            md = council_path.read_text(encoding="utf-8", errors="replace")
+            if re.search(r"^- status:\s*active\b", md, re.MULTILINE):
+                match = re.search(r"^- strongest_lens:\s*([a-z_]+)", md, re.MULTILINE)
+                if match:
+                    strongest = match.group(1)
+    except OSError:
+        strongest = ""
+    try:
+        category = derive_delivery(vector, strongest)
+    except Exception:
+        return ""
+    return "" if category == "neutral" else category
+
+
 def synth_voice_b64_result(text: str) -> VoiceSynthesisResult:
     """Synthesize `text` to a WAV via the Genie adapter with failure details."""
     text = (text or "").strip()
     started = time.monotonic()
     if not text:
         return _failure(reason="empty_text", started=started)
-    body = json.dumps(
-        {
-            "character_name": _tts_character(),
-            "text": text,
-            "split_sentence": _tts_split_sentence(),
-        },
-        ensure_ascii=False,
-    ).encode("utf-8")
+    payload = {
+        "character_name": _tts_character(),
+        "text": text,
+        "split_sentence": _tts_split_sentence(),
+    }
+    if _tts_emotion_enabled():
+        emotion = _read_delivery_category_for_voice()
+        if emotion:
+            payload["emotion"] = emotion
+    body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     base_url = _tts_base_url()
     req = urllib.request.Request(
         f"{base_url}/tts",

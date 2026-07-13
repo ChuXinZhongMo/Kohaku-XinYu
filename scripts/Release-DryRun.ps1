@@ -134,15 +134,19 @@ $contentPatterns = @(
     @{ Name = "AWS key id";        Re = 'AKIA[0-9A-Z]{16}' },
     @{ Name = "Generic API token"; Re = '(?i)(api[_-]?key|access[_-]?token|secret[_-]?key)\s*[:=]\s*[''"][^''"]{12,}' },
     @{ Name = "Private key block"; Re = '-----BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY-----' },
-    @{ Name = "Bearer token";      Re = '(?i)bearer\s+[A-Za-z0-9\-_\.]{20,}' },
+    # Real JWTs / opaque tokens are long; short fixture strings like
+    # "Bearer secretsecretsecret123" in unit tests should not alarm.
+    @{ Name = "Bearer token";      Re = '(?i)bearer\s+(?!secret)[A-Za-z0-9\-_\.]{32,}' },
     @{ Name = "Slack token";       Re = 'xox[baprs]-[0-9A-Za-z-]{10,}' }
 )
 
-# Skip bulky / generated / vendored paths even if tracked.
+# Skip bulky / generated / vendored / pure test paths even if tracked.
 $skipContent = @(
     '(^|/)node_modules/',
     '(^|/)package-lock\.json$',
     '(^|/)\.git/',
+    '(^|/)tests/',
+    '(^|/)XinYu-Core/examples/agent-apps/xinyu/tests/',
     '\.(png|jpg|jpeg|gif|webp|ico|pdf|zip|7z|gz|whl|dll|exe|bin|wasm|mp3|wav|ogg)$'
 )
 

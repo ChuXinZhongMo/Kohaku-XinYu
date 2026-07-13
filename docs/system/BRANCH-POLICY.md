@@ -55,3 +55,9 @@ On `main`:
 
 `.github/workflows/ci.yml` may still list `master` briefly for compatibility;
 new work should target `main` only.
+
+## Remote master archive (2026-07-13)
+
+- `origin/master` deleted after cutover; tip preserved as `archive/master`.
+- Backup tags: `backup/pre-main-cutover-20260713-main`, `backup/pre-main-cutover-20260713-master`.
+- Work only on `main`.
