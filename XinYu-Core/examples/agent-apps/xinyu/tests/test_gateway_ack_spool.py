@@ -44,6 +44,7 @@ def test_ack_spool_folds_pending_and_acked_events(tmp_path: Path) -> None:
 class _FakeCoreClient:
     def __init__(self, *, fail_ack: bool) -> None:
         self.fail_ack = fail_ack
+        self.message_ack_url = "http://127.0.0.1:8765/internal/message/ack"
         self.acks: list[dict[str, Any]] = []
         self.outbox_acks: list[dict[str, Any]] = []
 
@@ -73,6 +74,8 @@ class _AckGateway(NativeQQGateway):
     def __init__(self, config: GatewayConfig, client: _FakeCoreClient) -> None:
         super().__init__(config)
         self.client = client
+        # NativeQQGateway recreates ack_spool from config; keep the fake client
+        # attribute surface complete for outbox ack helpers.
         self.sent_actions: list[tuple[str, dict[str, Any]]] = []
 
     async def send_action(self, websocket: Any, action: str, params: dict[str, Any]) -> dict[str, Any] | None:
@@ -138,7 +141,8 @@ async def test_gateway_spools_failed_sent_message_ack_and_retries(tmp_path: Path
         route="chat",
     )
 
-    await gateway._dispatch_prepared_message(None, prepared)
+    ws = _FakeWebSocket()
+    await gateway._dispatch_prepared_message(ws, prepared)
 
     assert failing_client.acks[0]["adapter_message_id"] == "adapter-1"
     assert failing_client.acks[0]["visible_text"] == "visible reply"
@@ -171,7 +175,8 @@ async def test_gateway_write_ahead_spools_before_successful_sent_message_ack(tmp
         route="chat",
     )
 
-    await gateway._dispatch_prepared_message(None, prepared)
+    ws = _FakeWebSocket()
+    await gateway._dispatch_prepared_message(ws, prepared)
 
     events = [json.loads(line) for line in gateway.ack_spool.path.read_text(encoding="utf-8").splitlines()]
     assert [event["event"] for event in events] == ["pending", "acked"]

@@ -86,6 +86,7 @@ class SentAckSpool:
         max_bytes: int = DEFAULT_MAX_BYTES,
     ) -> None:
         self.path = path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         self.ttl_seconds = ttl_seconds
         self.max_entries = max_entries
         self.max_bytes = max_bytes

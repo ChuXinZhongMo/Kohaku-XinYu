@@ -1064,6 +1064,7 @@ def test_run_autonomous_self_thought_sidecars_runs_candidate_branch_in_order() -
         _append_review_inbox_note=append("review", "review"),
         _append_goldmark_dehydrate_note=append("goldmark", "goldmark"),
         _append_goal_ecology_note=append("goal", "goal"),
+        _append_action_followup_audit_note=append("action_followup", "action_followup"),
         _append_private_ecosystem_note=append("private", "private"),
         _append_self_action_gateway_note=append("gateway", "gateway"),
         _append_self_action_patch_executor_note=append("patch", "patch"),
@@ -1088,6 +1089,7 @@ def test_run_autonomous_self_thought_sidecars_runs_candidate_branch_in_order() -
         "review",
         "goldmark",
         "goal",
+        "action_followup",
         "private",
         "gateway",
         "patch",
@@ -1106,6 +1108,7 @@ def test_run_autonomous_self_thought_sidecars_runs_candidate_branch_in_order() -
         "review",
         "goldmark",
         "goal",
+        "action_followup",
         "private",
         "gateway",
         "patch",
@@ -1116,8 +1119,8 @@ def test_run_autonomous_self_thought_sidecars_runs_candidate_branch_in_order() -
         "closed_loop",
         "outcome",
     ]
-    assert calls[12][1] == {"checked_at": "2026-06-06T01:00:00+08:00", "prepare_request": False}
-    assert calls[14][1]["request"] == {"status": "ready", "notes": ["request-note"]}  # type: ignore[index]
+    assert calls[13][1] == {"checked_at": "2026-06-06T01:00:00+08:00", "prepare_request": False}
+    assert calls[15][1]["request"] == {"status": "ready", "notes": ["request-note"]}  # type: ignore[index]
 
 
 def test_run_autonomous_self_thought_sidecars_handles_research_without_candidate() -> None:
@@ -1156,6 +1159,7 @@ def test_run_autonomous_self_thought_sidecars_handles_research_without_candidate
         _append_review_inbox_note=append_base("review"),
         _append_goldmark_dehydrate_note=append_base("goldmark"),
         _append_goal_ecology_note=append_base("goal"),
+        _append_action_followup_audit_note=append_base("action_followup"),
         _append_private_ecosystem_note=append_base("private"),
         _append_self_action_gateway_note=append_base("gateway"),
         _append_self_action_patch_executor_note=append_base("patch"),
@@ -1195,6 +1199,7 @@ def test_run_autonomous_self_thought_sidecars_records_outcome_when_thought_fails
         _append_review_inbox_note=append_base("review"),
         _append_goldmark_dehydrate_note=append_base("goldmark"),
         _append_goal_ecology_note=append_base("goal"),
+        _append_action_followup_audit_note=append_base("action_followup"),
         _append_private_ecosystem_note=append_base("private"),
         _append_self_action_gateway_note=append_base("gateway"),
         _append_self_action_patch_executor_note=append_base("patch"),
@@ -1216,6 +1221,7 @@ def test_run_autonomous_self_thought_sidecars_records_outcome_when_thought_fails
         "review",
         "goldmark",
         "goal",
+        "action_followup",
         "private",
         "gateway",
         "patch",

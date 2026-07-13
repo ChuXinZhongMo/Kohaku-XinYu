@@ -44,6 +44,9 @@ class _StickerImportClient:
 
 
 class _StaleGateway(NativeQQGateway):
+    # Unit tests dispatch with websocket=None and capture synthetic sends.
+    allows_null_websocket_send = True
+
     def __init__(self) -> None:
         super().__init__(
             GatewayConfig(

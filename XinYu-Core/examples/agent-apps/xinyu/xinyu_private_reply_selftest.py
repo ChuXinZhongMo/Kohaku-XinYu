@@ -125,6 +125,10 @@ def _model_trace_summary(root: Path, turn_id: str) -> dict[str, Any]:
 
 
 class SyntheticPrivateGateway(NativeQQGateway):
+    # Private selftest does not open a real NapCat websocket; allow send_reply
+    # to capture synthetic deliveries with websocket=None.
+    allows_null_websocket_send = True
+
     def __init__(self, config: GatewayConfig, *, client: Any | None = None) -> None:
         super().__init__(config)
         if client is not None:

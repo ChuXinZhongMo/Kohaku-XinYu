@@ -43,8 +43,15 @@ async def send_reply_bubbles(
             delay = max(0.0, float(getattr(gateway.config, "reply_bubble_delay_seconds", 0.6)))
             if delay:
                 await asyncio.sleep(delay)
-        active_ws = await gateway._resolve_action_websocket(websocket, wait_seconds=wait_seconds)
-        if active_ws is None:
+        # Prefer an explicit websocket. Resolve only when the caller did not supply
+        # one. Synthetic/selftest gateways may still send with websocket=None.
+        if websocket is not None:
+            active_ws = websocket
+        elif hasattr(gateway, "_resolve_action_websocket"):
+            active_ws = await gateway._resolve_action_websocket(None, wait_seconds=wait_seconds)
+        else:
+            active_ws = None
+        if active_ws is None and not getattr(gateway, "allows_null_websocket_send", False):
             responses.append(
                 {
                     "status": "failed",
