@@ -215,6 +215,46 @@ def _growth_trial_fields(root: Path) -> dict[str, str]:
     }
 
 
+def _kernel_orientation_summary(root: Path, *, limit: int = 200) -> str:
+    """Quiet continuity gravity from kernel self-story (K-011), not owner memory."""
+    path = root / "memory" / "kernel" / "self_story_state.json"
+    if not path.exists():
+        return ""
+    try:
+        import json
+
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return ""
+    summary = _compact(str(data.get("summary") or ""), limit=limit)
+    if not summary or summary == "none":
+        return ""
+    return re.sub(r"(?i)(?:[a-z]:\\|/users/|/home/|\\\\)[^\s]+", "<path>", summary)
+
+
+def _stable_self_seed(root: Path, *, limit: int = 1400) -> str:
+    """The persistent character card (`personality_profile.md`): owner-seeded concept
+    plus any stable habits the personality self-review has promoted into it.
+
+    This closes the self-review -> profile -> live-reply loop: the patched card was
+    previously only eligible for opportunistic recall, so a promoted habit rarely
+    reached the prompt. Injecting it here makes the earned self always-on. The YAML
+    frontmatter is stripped; only the human-readable body is kept.
+    """
+    raw = _read_text(root, "memory/self/personality_profile.md", limit=4000)
+    if not raw:
+        return ""
+    if raw.startswith("---"):
+        close = raw.find("\n---", 3)
+        if close != -1:
+            newline = raw.find("\n", close + 1)
+            raw = raw[newline + 1 :] if newline != -1 else ""
+    body = raw.strip()
+    if len(body) > limit:
+        body = body[:limit].rstrip()
+    return body
+
+
 def _quiet_private_bias_fields(root: Path) -> dict[str, str]:
     private_state = _read_text(root, "memory/self/private_thought_state.md", limit=4200)
     self_model = _read_text(root, "memory/self/self_model_state.md", limit=4200)
@@ -301,8 +341,33 @@ class PersonaRuntimeState:
     persona_trial_feedback: str = "none"
     promotion_signal: str = "false"
     repair_signal: str = "false"
+    stable_self_seed: str = ""
+    continuity_orientation: str = ""
 
     def to_prompt_block(self) -> str:
+        stable_self_lines: list[str] = []
+        if self.stable_self_seed:
+            stable_self_lines = [
+                "## Stable Self (owner-seeded + earned; persistent across turns)",
+                (
+                    "This is who 心玉 already is. It outranks the trial layer below and the "
+                    "model's default helpful-assistant reflexes: do not regress to a generic "
+                    "assistant tone or tack on service offers that contradict it."
+                ),
+                self.stable_self_seed,
+                "",
+            ]
+        continuity_lines: list[str] = []
+        if self.continuity_orientation:
+            continuity_lines = [
+                "## Continuity Orientation",
+                (
+                    "Quiet gravity from recent structural continuity. Tint wording only; "
+                    "do not quote this block or name files/systems in the visible reply."
+                ),
+                f"- orientation_summary: {self.continuity_orientation}",
+                "",
+            ]
         return "\n".join(
             [
                 "## Persona Runtime State",
@@ -311,6 +376,8 @@ class PersonaRuntimeState:
                 "",
                 build_persona_runtime_contract_block(),
                 "",
+                *stable_self_lines,
+                *continuity_lines,
                 "## Concept",
                 "- name: 心玉 / XinYu",
                 "- concept: a self-forming presence shaped by memory, relation, time, hesitation, correction, and choice",
@@ -374,6 +441,13 @@ def build_persona_runtime_state(
     previous_residue = read_turn_residue(root)
     growth_trial = _growth_trial_fields(root)
     quiet_private_bias = _quiet_private_bias_fields(root)
+    stable_self_seed = _stable_self_seed(root)
+    continuity_orientation = _kernel_orientation_summary(root)
+    pre_turn = _metadata(payload).get("kernel_pre_turn")
+    if isinstance(pre_turn, dict):
+        pre_summary = _compact(str(pre_turn.get("self_story_summary") or ""), limit=200)
+        if pre_summary and pre_summary != "none":
+            continuity_orientation = pre_summary
     life_posture = build_life_posture(
         root,
         payload=payload,
@@ -479,4 +553,6 @@ def build_persona_runtime_state(
         persona_trial_feedback=quiet_private_bias["persona_trial_feedback"],
         promotion_signal=quiet_private_bias["promotion_signal"],
         repair_signal=quiet_private_bias["repair_signal"],
+        stable_self_seed=stable_self_seed,
+        continuity_orientation=continuity_orientation,
     )

@@ -96,6 +96,41 @@ def test_life_reply_policy_blocks_bare_ack_without_template_for_life_chat() -> N
     assert "life_reply_bare_ack_blocked_no_template" in state_question["notes"]
 
 
+def test_service_offer_tail_stripped_even_under_natural_voice(monkeypatch) -> None:
+    # XINYU_NATURAL_VOICE intentionally lets her end on a *genuine* question back,
+    # but the tacked-on "要不要我帮你…？" service offer is the 模板静音 tic and must
+    # still go, in ordinary steady chat (where suppress_optional_question is False).
+    monkeypatch.setenv("XINYU_NATURAL_VOICE", "1")
+    policy = {"technical_turn": False, "mode": "steady", "max_sentences": 3}
+
+    shaped = apply_life_reply_policy(
+        "嗯，知道了，那条链我盯着。要不要我现在就帮你跑一遍测试？",
+        policy=policy,
+        user_text="刚醒，随便聊聊",
+    )
+    assert shaped["changed"] is True
+    assert "要不要" not in shaped["reply"]
+    assert shaped["reply"] == "嗯，知道了，那条链我盯着。"
+    assert "life_reply_service_offer_tail_removed" in shaped["notes"]
+
+    # A genuine question back (not a self-offer) is preserved.
+    kept = apply_life_reply_policy(
+        "我也这么觉得。你今天打算先弄哪个？",
+        policy=policy,
+        user_text="随便聊聊",
+    )
+    assert kept["reply"] == "我也这么觉得。你今天打算先弄哪个？"
+    assert "life_reply_service_offer_tail_removed" not in kept["notes"]
+
+    # A reply that is *purely* an offer is left intact rather than blanked.
+    pure = apply_life_reply_policy(
+        "要不要我帮你跑一遍？",
+        policy=policy,
+        user_text="随便聊聊",
+    )
+    assert pure["reply"] == "要不要我帮你跑一遍？"
+
+
 def test_life_reply_policy_keeps_bare_ack_for_technical_turn() -> None:
     shaped = apply_life_reply_policy(
         "嗯。",

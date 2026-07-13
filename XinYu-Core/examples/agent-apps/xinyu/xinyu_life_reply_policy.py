@@ -15,7 +15,33 @@ TECHNICAL_RE = re.compile(
 QUESTION_TAIL_RE = re.compile(
     r"(。?\s*(要不要|需不需要|你要是想|如果你想|要我|我可以继续|需要的话).{0,42}[？?]\s*)$"
 )
+# A mechanical "service-offer" tail: a *trailing* sentence where XinYu offers her
+# own labor as a question ("要不要我帮你跑一遍？" / "要我现在就改吗？" /
+# "我可以继续接着弄？" / "需要的话我来弄？"). The owner reads these tacked-on offers
+# as a templated check-in tic (模板静音, 2026-06-15). Unlike a genuine question back
+# (e.g. "你今天怎么样？"), it must START with a self-offer marker, so ordinary
+# questions are not caught. Stripped independently of XINYU_NATURAL_VOICE — that flag
+# is meant to permit a real question back, not a canned offer.
+SERVICE_OFFER_SENTENCE_RE = re.compile(
+    r"^(?:那|那我|嗯|好)?[，,]?\s*"
+    r"(?:要不要我|需不需要我|需要不需要我|要我|"
+    r"我可以(?:继续|帮你|再|接着|先|马上|现在)|"
+    r"我(?:继续|接着|来帮?|帮你)|"
+    r"需要的话我?|你要是想我?|如果你想我?|你想的话我?)"
+    r"[^。！？!?]*[？?]$"
+)
 BARE_ACK_REPLY_RE = re.compile(r"^嗯+[。.!！]*$")
+
+
+def _strip_trailing_service_offer(text: str) -> str:
+    """Drop a single trailing service-offer question, but only when real content
+    precedes it — a reply that is *purely* an offer is left intact (not blanked)."""
+    parts = _split_sentences(text)
+    if len(parts) < 2:
+        return text
+    if SERVICE_OFFER_SENTENCE_RE.match(parts[-1]):
+        return "".join(parts[:-1]).strip()
+    return text
 
 
 def _safe_str(value: Any, default: str = "") -> str:
@@ -225,6 +251,15 @@ def apply_life_reply_policy(
     if not technical and BARE_ACK_REPLY_RE.fullmatch(next_text):
         next_text = _replacement_for_bare_ack_reply(user_text)
         notes.append("life_reply_bare_ack_blocked_no_template")
+
+    # Always trim a tacked-on service-offer tail (the "要不要我帮你…？" check-in tic),
+    # regardless of natural voice / mood — this is the owner's 模板静音 complaint, not
+    # the genuine question-back that natural voice is meant to allow.
+    if not technical:
+        de_offered = _strip_trailing_service_offer(next_text)
+        if de_offered and de_offered != next_text:
+            next_text = de_offered
+            notes.append("life_reply_service_offer_tail_removed")
 
     if suppress_question:
         stripped = QUESTION_TAIL_RE.sub("", next_text).strip()
