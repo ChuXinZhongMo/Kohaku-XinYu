@@ -23,13 +23,11 @@ from xinyu_stage11_multisensory_extension_store import append_stage11_multisenso
 from xinyu_stage11_multisensory_extension_store import stage11_multisensory_report_path
 from xinyu_stage11_multisensory_extension_store import write_stage11_multisensory_report_text
 from xinyu_stage11_multisensory_extension_store import write_stage11_multisensory_state_text
+from xinyu_stage11_multisensory_extension_store import REPORT_REL, STATE_REL, TRACE_REL
 
 
-from xinyu_action_feedback_coverage import REPORT_REL
 
-from xinyu_action_feedback_coverage import STATE_REL
 
-from xinyu_action_feedback_coverage import TRACE_REL
 
 NONE_VALUES = {"", "none", "unknown", "missing", "null"}
 

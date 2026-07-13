@@ -22,12 +22,10 @@ from xinyu_owner_feedback_effects_store import read_owner_feedback_effect_state_
 from xinyu_owner_feedback_effects_store import write_owner_feedback_effect_report_text
 from xinyu_owner_feedback_effects_store import write_owner_feedback_effect_state_text
 from xinyu_state_io import read_text
+from xinyu_owner_feedback_effects_store import REPORT_REL, STATE_REL, TRACE_REL
 
-from xinyu_action_feedback_coverage import REPORT_REL
 
-from xinyu_action_feedback_coverage import STATE_REL
 
-from xinyu_action_feedback_coverage import TRACE_REL
 
 LEARNING_STATE_REL = Path("memory/self/learning_closed_loop_state.md")
 LEARNING_TRACE_REL = Path("runtime/learning_closed_loop_trace.jsonl")

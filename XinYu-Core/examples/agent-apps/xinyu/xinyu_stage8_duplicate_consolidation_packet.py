@@ -2,6 +2,7 @@ from __future__ import annotations
 
 
 __all__ = (
+    "PACKET_REL",
     "APPLY_TRACE_REL",
     "STATE_REL",
 )
@@ -17,13 +18,11 @@ from typing import Any
 from xinyu_dialogue_archive import list_memory_candidates, update_memory_candidate_status
 from xinyu_memory_candidate_analysis import candidate_claim_metadata_from_row, candidate_review_context
 from xinyu_memory_health_report import DUPLICATE_BACKLOG_STATUSES, build_memory_health_report
-from xinyu_stage8_duplicate_consolidation_packet_store import PACKET_REL
 from xinyu_stage8_duplicate_consolidation_packet_store import append_stage8_duplicate_consolidation_apply_trace_event
 from xinyu_stage8_duplicate_consolidation_packet_store import write_stage8_duplicate_consolidation_packet_text
 from xinyu_stage8_duplicate_consolidation_packet_store import write_stage8_duplicate_consolidation_state_text
-from xinyu_stage8_duplicate_consolidation_packet_store import APPLY_TRACE_REL
+from xinyu_stage8_duplicate_consolidation_packet_store import APPLY_TRACE_REL, PACKET_REL, STATE_REL
 
-from xinyu_action_feedback_coverage import STATE_REL
 
 ARCHIVED_DUPLICATE_STATUS = "archived_duplicate"
 PROTECTED_NON_REPRESENTATIVE_STATUSES = {"approved"}

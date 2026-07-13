@@ -6,11 +6,9 @@ from pathlib import Path
 from typing import Any
 
 from xinyu_autonomy_expansion_grant import expansion_canary_fields
-from xinyu_autonomy_canary_report_store import INTENTION_STATE_REL
-from xinyu_autonomy_canary_report_store import INTENTION_TRACE_REL
-from xinyu_autonomy_canary_report_store import RELATION_STATE_REL
 from xinyu_autonomy_canary_report_store import read_autonomy_canary_recent_traces
 from xinyu_autonomy_canary_report_store import read_autonomy_canary_text
+from xinyu_autonomy_canary_report_store import INTENTION_STATE_REL, INTENTION_TRACE_REL, RELATION_STATE_REL
 
 CANARY_PROMPTS = [
     {

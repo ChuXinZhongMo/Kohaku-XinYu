@@ -2,6 +2,7 @@ from __future__ import annotations
 
 
 __all__ = (
+    "STAGE8_STATE_REL",
     "REPORT_REL",
     "STAGE8_DUPLICATE_CONSOLIDATION_STATE_REL",
     "STAGE8_LEARNING_TRIAL_VALIDATION_STATE_REL",
@@ -18,18 +19,15 @@ from typing import Any
 from xinyu_dialogue_archive import list_memory_candidates
 from xinyu_feedback_consumption_diagnostics import build_feedback_consumption_diagnostics
 from xinyu_memory_candidate_analysis import candidate_claim_metadata_from_row, candidate_review_context
-from xinyu_memory_health_report_store import STAGE8_STATE_REL
 from xinyu_memory_health_report_store import memory_health_report_path
 from xinyu_memory_health_report_store import read_memory_health_source_text
 from xinyu_memory_health_report_store import read_memory_health_text
 from xinyu_memory_health_report_store import write_memory_health_report_text
 from xinyu_memory_health_report_store import write_stage8_memory_governance_state_text
+from xinyu_memory_health_report_store import REPORT_REL, STAGE8_DUPLICATE_CONSOLIDATION_STATE_REL, STAGE8_LEARNING_TRIAL_VALIDATION_STATE_REL, STAGE8_STATE_REL
 
-from xinyu_action_feedback_coverage import REPORT_REL
 
-from xinyu_memory_health_report_store import STAGE8_DUPLICATE_CONSOLIDATION_STATE_REL
 
-from xinyu_memory_health_report_store import STAGE8_LEARNING_TRIAL_VALIDATION_STATE_REL
 
 CANDIDATE_STATUSES = (
     "pending",

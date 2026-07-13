@@ -20,11 +20,10 @@ from xinyu_memory_health_report import CANDIDATE_STATUSES, build_memory_health_r
 from xinyu_stage8_memory_review_packet_store import stage8_memory_review_packet_path
 from xinyu_stage8_memory_review_packet_store import write_stage8_memory_review_packet_state_text
 from xinyu_stage8_memory_review_packet_store import write_stage8_memory_review_packet_text
+from xinyu_stage8_memory_review_packet_store import PACKET_REL, STATE_REL
 
 
-from xinyu_stage8_duplicate_consolidation_packet_store import PACKET_REL
 
-from xinyu_action_feedback_coverage import STATE_REL
 
 PRIVATE_TEXT_MARKERS = (
     "owner_turn:",

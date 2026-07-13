@@ -17,10 +17,10 @@ from pathlib import Path
 from typing import Any
 
 from stores.impulse_soup_state import (
+    IMPULSE_SOUP_STATE_REL as STATE_JSON_REL,
     read_impulse_soup_state,
     write_impulse_soup_state,
 )
-from xinyu_browser_control import STATE_JSON_REL
 from xinyu_runtime_failure_freshness import (
     codex_delegate_failure_active as _codex_delegate_failure_active,
     runtime_failure_detail_active as _runtime_failure_detail_active,

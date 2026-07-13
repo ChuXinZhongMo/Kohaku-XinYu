@@ -2,6 +2,9 @@ from __future__ import annotations
 
 
 __all__ = (
+    "PACKET_REL",
+    "LEARNING_TRACE_REL",
+    "LEARNING_STATE_REL",
     "STATE_REL",
 )
 
@@ -13,17 +16,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_stage8_learning_trial_validation_packet_store import LEARNING_STATE_REL
-from xinyu_stage8_learning_trial_validation_packet_store import LEARNING_TRACE_REL
-from xinyu_stage8_learning_trial_validation_packet_store import PACKET_REL
 from xinyu_stage8_learning_trial_validation_packet_store import latest_stage8_learning_trial_validation_jsonl_row
 from xinyu_stage8_learning_trial_validation_packet_store import read_stage8_learning_trial_validation_text
 from xinyu_stage8_learning_trial_validation_packet_store import write_stage8_learning_trial_validation_packet_text
 from xinyu_stage8_learning_trial_validation_packet_store import write_stage8_learning_trial_validation_state_text
 from xinyu_text_variants import LEGACY_MOJIBAKE_FRAGMENTS
+from xinyu_stage8_learning_trial_validation_packet_store import LEARNING_STATE_REL, LEARNING_TRACE_REL, PACKET_REL, STATE_REL
 
 
-from xinyu_action_feedback_coverage import STATE_REL
 
 SUCCESS_GATE_TARGET_STREAK = 2
 NONE_VALUES = {"", "none", "unknown", "missing", "null"}

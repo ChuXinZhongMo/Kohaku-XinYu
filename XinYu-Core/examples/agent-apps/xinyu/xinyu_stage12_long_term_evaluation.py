@@ -2,6 +2,7 @@ from __future__ import annotations
 
 
 __all__ = (
+    "REPORT_REL",
     "STATE_REL",
     "TRACE_REL",
 )
@@ -19,15 +20,13 @@ from xinyu_owner_feedback_effects import build_owner_feedback_effect_report
 from xinyu_proactive_response_diagnostics import build_proactive_response_diagnostics
 from xinyu_short_term_continuity_canary import build_short_term_continuity_canary_report
 from xinyu_stage11_multisensory_extension import build_stage11_multisensory_extension
-from xinyu_stage12_long_term_evaluation_store import REPORT_REL
 from xinyu_stage12_long_term_evaluation_store import append_stage12_long_term_evaluation_trace_event
 from xinyu_stage12_long_term_evaluation_store import write_stage12_long_term_evaluation_report_text
 from xinyu_stage12_long_term_evaluation_store import write_stage12_long_term_evaluation_state_text
 from xinyu_state_io import read_text
+from xinyu_stage12_long_term_evaluation_store import REPORT_REL, STATE_REL, TRACE_REL
 
-from xinyu_action_feedback_coverage import STATE_REL
 
-from xinyu_action_feedback_coverage import TRACE_REL
 
 V1_CANARY_STATE_REL = Path("memory/context/v1_canary_readiness_state.md")
 PRIVATE_REPLY_SELFTEST_STATE_REL = Path("runtime/private_reply_selftest_state.json")

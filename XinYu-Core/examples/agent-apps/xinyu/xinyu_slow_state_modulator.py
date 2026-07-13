@@ -11,12 +11,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from stores.slow_state_modulator_state import read_slow_state_payload
-from stores.slow_state_modulator_state import write_slow_state_payload
+from stores.slow_state_modulator_state import (
+    SLOW_STATE_REL as STATE_REL,
+    read_slow_state_payload,
+    write_slow_state_payload,
+)
 from xinyu_turn_residue import TurnResidue, read_turn_residue
-
-
-from xinyu_action_feedback_coverage import STATE_REL
 
 FATIGUE_HALF_LIFE_HOURS = 2.5
 RELATION_HALF_LIFE_HOURS = 8.0

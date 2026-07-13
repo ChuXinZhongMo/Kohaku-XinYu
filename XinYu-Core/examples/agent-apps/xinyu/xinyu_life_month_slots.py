@@ -7,11 +7,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from xinyu_life_month_slots_store import LIFE_MONTH_SLOTS_REL
 from xinyu_life_month_slots_store import current_life_month_context_path
 from xinyu_life_month_slots_store import life_month_slots_path
 from xinyu_life_month_slots_store import read_life_month_text
 from xinyu_life_month_slots_store import write_current_life_month_context
+from xinyu_life_month_slots_store import LIFE_MONTH_SLOTS_REL
 
 VALID_STATUSES = {"empty", "light", "active", "important"}
 VALID_SOURCES = {"owner_supplied", "inferred_style_anchor", "runtime_event", "unset"}

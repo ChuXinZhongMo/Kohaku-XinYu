@@ -3,6 +3,7 @@ from __future__ import annotations
 
 __all__ = (
     "OVERLAY_REL",
+    "PERSONA_RUNTIME_OVERLAY_BOUNDARY",
 )
 
 import hashlib
@@ -15,16 +16,13 @@ from pathlib import Path
 from typing import Any
 
 from stores.persona_runtime_overlay import (
+    BOUNDARY_ID as PERSONA_RUNTIME_OVERLAY_BOUNDARY,
+    OVERLAY_REL,
     read_goldmark_overlay as store_read_goldmark_overlay,
     write_goldmark_overlay,
 )
 from xinyu_dialogue_archive import dialogue_archive_path
 from xinyu_sent_reply_index import lookup_sent_reply_by_adapter_msg_id, normalize_visible_text
-
-
-from xinyu_dialogue_rule_trial_overlay_store import OVERLAY_REL
-
-PERSONA_RUNTIME_OVERLAY_BOUNDARY = "xinyu_goldmark.persona_runtime_overlay"
 
 MAX_OWNER_NOTE_CHARS = 500
 MAX_OVERLAY_ENTRIES = 1000

@@ -7,11 +7,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from xinyu_uncertainty_pause_store import STATE_REL
-from xinyu_uncertainty_pause_store import TRACE_REL
 from xinyu_uncertainty_pause_store import append_uncertainty_pause_trace
 from xinyu_uncertainty_pause_store import read_uncertainty_pause_text
 from xinyu_uncertainty_pause_store import write_uncertainty_pause_text
+from xinyu_uncertainty_pause_store import STATE_REL, TRACE_REL
 
 
 ACTIVE_STATUSES = {"active", "pending_owner_reply"}

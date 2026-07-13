@@ -19,13 +19,11 @@ from xinyu_decision_chain_latest_store import append_decision_chain_latest_trace
 from xinyu_decision_chain_latest_store import decision_chain_latest_state_path
 from xinyu_decision_chain_latest_store import write_decision_chain_latest_report_text
 from xinyu_decision_chain_latest_store import write_decision_chain_latest_state_text
+from xinyu_decision_chain_latest_store import REPORT_REL, STATE_REL, TRACE_REL
 
 
-from xinyu_action_feedback_coverage import REPORT_REL
 
-from xinyu_action_feedback_coverage import STATE_REL
 
-from xinyu_action_feedback_coverage import TRACE_REL
 
 DEFAULT_WINDOW_MINUTES = 240
 

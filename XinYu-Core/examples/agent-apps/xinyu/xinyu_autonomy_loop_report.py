@@ -2,6 +2,11 @@ from __future__ import annotations
 
 
 __all__ = (
+    "SHORT_TERM_CONTINUITY_STATE_REL",
+    "SELF_THOUGHT_STATE_REL",
+    "RELATION_STATE_REL",
+    "INTENTION_STATE_REL",
+    "ATTENTION_STATE_REL",
     "INTENTION_TRACE_REL",
     "REPORT_REL",
 )
@@ -25,19 +30,13 @@ from xinyu_proactive_response_diagnostics import build_proactive_response_diagno
 from xinyu_qq_reply_integrity_diagnostics import build_qq_reply_integrity_diagnostics
 from xinyu_short_term_continuity_canary import build_short_term_continuity_canary_report
 from xinyu_short_term_recall_diagnostics import build_short_term_recall_diagnostics
-from xinyu_autonomy_loop_report_store import ATTENTION_STATE_REL
-from xinyu_autonomy_loop_report_store import INTENTION_STATE_REL
-from xinyu_autonomy_loop_report_store import RELATION_STATE_REL
-from xinyu_autonomy_loop_report_store import SELF_THOUGHT_STATE_REL
-from xinyu_autonomy_loop_report_store import SHORT_TERM_CONTINUITY_STATE_REL
 from xinyu_autonomy_loop_report_store import read_autonomy_loop_state_text
 from xinyu_autonomy_loop_report_store import read_latest_intention_trace
 from xinyu_autonomy_loop_report_store import write_autonomy_loop_report_text
+from xinyu_autonomy_loop_report_store import ATTENTION_STATE_REL, INTENTION_STATE_REL, INTENTION_TRACE_REL, RELATION_STATE_REL, REPORT_REL, SELF_THOUGHT_STATE_REL, SHORT_TERM_CONTINUITY_STATE_REL
 
 
-from xinyu_autonomy_canary_report_store import INTENTION_TRACE_REL
 
-from xinyu_action_feedback_coverage import REPORT_REL
 
 DEFAULT_WINDOW_MINUTES = 120
 
