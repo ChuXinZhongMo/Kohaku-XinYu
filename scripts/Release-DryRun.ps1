@@ -217,9 +217,25 @@ if ($Archive) {
             Add-Finding -Severity "info" -Message ("Archive size: {0:N0} bytes" -f $size)
 
             # List names via tar if available; else skip listing.
-            $tarCmd = Get-Command tar -ErrorAction SilentlyContinue
-            if ($tarCmd) {
-                $names = & tar -tf $tarPath 2>$null
+            # Prefer Windows tar.exe — Git Bash tar mis-parses drive letters (C:).
+            $tarExe = $null
+            foreach ($candidate in @(
+                    "$env:SystemRoot\System32\tar.exe",
+                    "C:\Windows\System32\tar.exe"
+                )) {
+                if ($candidate -and (Test-Path -LiteralPath $candidate)) {
+                    $tarExe = $candidate
+                    break
+                }
+            }
+            if (-not $tarExe) {
+                $cmd = Get-Command tar.exe -ErrorAction SilentlyContinue
+                if ($cmd -and $cmd.Source -notmatch 'Git\\usr\\bin\\tar') {
+                    $tarExe = $cmd.Source
+                }
+            }
+            if ($tarExe) {
+                $names = & $tarExe -tf $tarPath 2>$null
                 $archiveHits = foreach ($name in $names) {
                     foreach ($re in $pathPatterns) {
                         if ($name -match $re) {
