@@ -115,6 +115,33 @@ def sticker_context_from_import_response(
     }
 
 
+def looks_like_recent_sticker_question(text: str) -> bool:
+    """Heuristic: owner asks what the sticker they just sent was."""
+    import re
+
+    compact = re.sub(r"\s+", "", _safe_str(text))
+    if not compact:
+        return False
+    exact_markers = (
+        "我刚发的是什么",
+        "刚发的是什么",
+        "刚才发的是什么",
+        "我刚发了什么",
+        "刚发了什么",
+        "刚才发了什么",
+        "我发的是什么",
+        "我发了什么",
+        "刚那个表情是什么",
+        "刚才那个表情是什么",
+        "刚刚那个表情是什么",
+    )
+    if any(marker in compact for marker in exact_markers):
+        return True
+    return "刚" in compact and "表情" in compact and any(
+        marker in compact for marker in ("什么", "啥", "内容")
+    )
+
+
 def enrich_sticker_segments_with_import_context(value: Any, sticker_context: dict[str, Any]) -> list[dict[str, Any]]:
     segments = value if isinstance(value, list) else []
     enriched: list[dict[str, Any]] = []

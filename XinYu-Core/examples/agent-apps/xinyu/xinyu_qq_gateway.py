@@ -41,8 +41,10 @@ from xinyu_qq_core_client import BridgeError, CoreBridgeClient
 import xinyu_qq_forward_context
 from xinyu_qq_models import PendingAction, PreparedMessage, RecentStickerImportState, ReplyTarget
 from xinyu_qq_gateway_utils import hash_id as _hash_id
+from xinyu_qq_gateway_utils import message_ids_from_action_response as _message_ids_from_action_response_util
 from xinyu_qq_gateway_utils import quiet_websockets_handshake_noise as _quiet_websockets_handshake_noise
 from xinyu_qq_gateway_utils import safe_str as _safe_str
+import xinyu_qq_group_policy
 import xinyu_qq_normalizer
 import xinyu_qq_outbox_client
 import xinyu_qq_outbox_dispatcher
@@ -137,7 +139,7 @@ class NativeQQGateway:
     _trust_command_target = xinyu_qq_trust_policy.gateway_trust_command_target
 
     def _group_followup_key(self, target: ReplyTarget) -> str:
-        return f"{target.group_id}:{target.user_id}"
+        return xinyu_qq_group_policy.group_followup_key(group_id=target.group_id, user_id=target.user_id)
 
     def _prune_group_reply_state(self) -> None:
         now = time.monotonic()
@@ -185,28 +187,18 @@ class NativeQQGateway:
 
     @staticmethod
     def _message_ids_from_action_response(action_response: dict[str, Any] | None) -> list[str]:
-        if not isinstance(action_response, dict):
-            return []
-        data = action_response.get("data")
-        if not isinstance(data, dict):
-            return []
-        ids: list[str] = []
-        bubble_ids = data.get("reply_bubble_message_ids")
-        if isinstance(bubble_ids, list):
-            ids.extend(_safe_str(item).strip() for item in bubble_ids)
-        ids.extend(part.strip() for part in _safe_str(data.get("message_id")).replace("，", ",").split(","))
-        return list(dict.fromkeys(item for item in ids if item))
+        return _message_ids_from_action_response_util(action_response)
 
     def _group_interest_reply_group_allowed(self, group_id: str) -> bool:
         clean_group_id = _safe_str(group_id).strip()
-        if not clean_group_id:
-            return False
-        if self.config.allowed_group_ids and clean_group_id not in self.config.allowed_group_ids:
-            return False
-        allowed = getattr(self.config, "group_interest_reply_allowed_group_ids", frozenset())
-        if allowed:
-            return clean_group_id in allowed
-        return self._group_shadow_group_allowed(clean_group_id)
+        return xinyu_qq_group_policy.group_interest_reply_group_allowed(
+            clean_group_id,
+            allowed_group_ids=self.config.allowed_group_ids,
+            interest_allowed_group_ids=getattr(
+                self.config, "group_interest_reply_allowed_group_ids", frozenset()
+            ),
+            shadow_group_allowed=self._group_shadow_group_allowed(clean_group_id),
+        )
 
     def _group_interest_reply_enabled_for_group(self, group_id: str) -> bool:
         return bool(getattr(self.config, "group_interest_reply_enabled", False)) and self._group_interest_reply_group_allowed(
@@ -214,32 +206,32 @@ class NativeQQGateway:
         )
 
     def _file_learning_group_allowed(self, group_id: str) -> bool:
-        clean_group_id = _safe_str(group_id).strip()
-        if not clean_group_id:
-            return False
-        if self.config.allowed_group_ids and clean_group_id not in self.config.allowed_group_ids:
-            return False
-        allowed = getattr(self.config, "qq_file_learning_allowed_group_ids", frozenset())
-        return bool(allowed and clean_group_id in allowed)
+        return xinyu_qq_group_policy.file_learning_group_allowed(
+            group_id,
+            allowed_group_ids=self.config.allowed_group_ids,
+            file_learning_allowed_group_ids=getattr(
+                self.config, "qq_file_learning_allowed_group_ids", frozenset()
+            ),
+        )
 
     def _file_learning_scope_reject_reason(self, *, message_kind: str, sender_id: str, group_id: str) -> str:
-        if not self.config.qq_file_learning_private_owner_only:
-            return ""
         clean_sender_id = _safe_str(sender_id).strip()
-        if message_kind == "private":
-            return "" if clean_sender_id in self.config.owner_user_ids else "file_learning_private_owner_only"
-        if message_kind != "group":
-            return "file_learning_private_owner_only"
-        if not self._file_learning_group_allowed(group_id):
-            return "file_learning_group_not_allowed"
-        if clean_sender_id in self.config.owner_user_ids or self._is_trusted_user_id(clean_sender_id):
-            return ""
-        return "file_learning_sender_not_trusted"
+        return xinyu_qq_group_policy.file_learning_scope_reject_reason(
+            message_kind=message_kind,
+            sender_id=clean_sender_id,
+            group_id=group_id,
+            private_owner_only=self.config.qq_file_learning_private_owner_only,
+            owner_user_ids=self.config.owner_user_ids,
+            allowed_group_ids=self.config.allowed_group_ids,
+            file_learning_allowed_group_ids=getattr(
+                self.config, "qq_file_learning_allowed_group_ids", frozenset()
+            ),
+            sender_is_trusted=self._is_trusted_user_id(clean_sender_id),
+        )
 
     @staticmethod
     def _event_group_interest_observation(event: dict[str, Any]) -> dict[str, Any]:
-        observed = event.get("_xinyu_group_interest_observation")
-        return observed if isinstance(observed, dict) else {}
+        return xinyu_qq_group_policy.event_group_interest_observation(event)
 
     def _group_interest_decision_allows_reply(self, event: dict[str, Any], *, group_id: str, reject_reason: str) -> bool:
         if reject_reason == "group_not_allowed" or not self._group_interest_reply_enabled_for_group(group_id):
@@ -1764,25 +1756,7 @@ class NativeQQGateway:
 
     @staticmethod
     def _looks_like_recent_sticker_question(text: str) -> bool:
-        compact = re.sub(r"\s+", "", _safe_str(text))
-        if not compact:
-            return False
-        exact_markers = (
-            "我刚发的是什么",
-            "刚发的是什么",
-            "刚才发的是什么",
-            "我刚发了什么",
-            "刚发了什么",
-            "刚才发了什么",
-            "我发的是什么",
-            "我发了什么",
-            "刚那个表情是什么",
-            "刚才那个表情是什么",
-            "刚刚那个表情是什么",
-        )
-        if any(marker in compact for marker in exact_markers):
-            return True
-        return "刚" in compact and "表情" in compact and any(marker in compact for marker in ("什么", "啥", "内容"))
+        return xinyu_qq_sticker_context.looks_like_recent_sticker_question(text)
 
     def _recent_sticker_state_for_question(self, target: ReplyTarget) -> RecentStickerImportState | None:
         state = self._recent_sticker_imports.get(self._recent_sticker_key(target))
