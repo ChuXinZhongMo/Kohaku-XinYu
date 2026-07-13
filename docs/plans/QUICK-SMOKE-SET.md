@@ -117,6 +117,7 @@ Verified green offline and wired in `python-smoke-offline`:
 |---|
 | `tests/smoke/runtime/runtime_security_smoke.py` |
 | `tests/smoke/runtime/runtime_presence_smoke.py` |
+| `tests/smoke/runtime/mojibake_guard_smoke.py` |
 | `tests/smoke/memory/memory_braid_smoke.py` |
 | `tests/smoke/bridge/bridge_renderer_guard_flags_smoke.py` |
 | `tests/smoke/bridge/bridge_auth_smoke.py` |
@@ -139,7 +140,7 @@ Verified green offline and wired in `python-smoke-offline`:
 
 | Script | Why red |
 |---|---|
-| `mojibake_guard_smoke.py` | Intentional/legacy U+FFFD and mojibake fragments still in tree |
+| _(none for offline set)_ | Mojibake guard now skips private `memory/` and intentional dual-encoding matcher tables |
 
 ## Suggested next engineering steps
 

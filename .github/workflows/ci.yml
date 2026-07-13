@@ -130,11 +130,10 @@ jobs:
         run: |
           set -euo pipefail
           # Curated hermetic set only (see docs/plans/QUICK-SMOKE-SET.md).
-          # Intentionally excluded until cleaned:
-          #   mojibake_guard (legacy U+FFFD / mojibake fragments still in tree).
           scripts=(
             tests/smoke/runtime/runtime_security_smoke.py
             tests/smoke/runtime/runtime_presence_smoke.py
+            tests/smoke/runtime/mojibake_guard_smoke.py
             tests/smoke/memory/memory_braid_smoke.py
             tests/smoke/bridge/bridge_renderer_guard_flags_smoke.py
             tests/smoke/bridge/bridge_auth_smoke.py

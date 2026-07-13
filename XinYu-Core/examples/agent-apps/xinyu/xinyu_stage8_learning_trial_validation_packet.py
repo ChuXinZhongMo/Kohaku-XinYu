@@ -145,7 +145,7 @@ def _is_display_clean_marker(marker: str) -> bool:
     The matching set in xinyu_learning_closed_loop keeps these variants on purpose;
     this only governs what gets printed into the owner-facing packet.
     """
-    if "�" in marker or "?" in marker:
+    if chr(0xFFFD) in marker or "?" in marker:
         return False
     # Legacy GBK/CP936 mis-decodes often land in the private-use area.
     if any(0xE000 <= ord(ch) <= 0xF8FF for ch in marker):

@@ -24,7 +24,7 @@ from xinyu_text_variants import LEGACY_MOJIBAKE_FRAGMENTS
 
 
 def _looks_mojibake(text: str) -> bool:
-    if "�" in text or "?" in text:
+    if chr(0xFFFD) in text or "?" in text:
         return True
     if any(0xE000 <= ord(ch) <= 0xF8FF for ch in text):
         return True
@@ -146,7 +146,7 @@ def test_validation_packet_contract_samples_are_display_clean(tmp_path: Path) ->
     assert "自然多了" in contract["accepted_success_marker_examples"]
     assert "这句" in contract["generic_success_requires_reply_context_markers"]
     assert "但是" in contract["cancel_markers_that_turn_success_into_failure"]
-    assert "�" not in rendered
+    assert chr(0xFFFD) not in rendered
 
 
 def test_validation_packet_display_examples_stay_real_matcher_members() -> None:

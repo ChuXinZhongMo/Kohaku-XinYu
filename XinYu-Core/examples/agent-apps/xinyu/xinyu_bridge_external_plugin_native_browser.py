@@ -28,12 +28,16 @@ def execute_private_browser(
     safe_str = deps.safe_str
     action_kind = {"navigate": "navigate_readonly"}.get(capability, capability)
     engine = None
+    engine_open_error = ""
     try:
         from xinyu_browser_engine_playwright import create_browser_engine
 
         engine = create_browser_engine(root, headless=True)
-    except Exception:
+    except Exception as exc:
+        # Keep simulated fallback, but surface why live Edge/Chromium failed
+        # (missing Playwright, bad channel, dead proxy, etc.).
         engine = None
+        engine_open_error = f"{type(exc).__name__}: {exc}"
     try:
         result = run_browser_action(
             root,
@@ -51,8 +55,15 @@ def execute_private_browser(
 
     decision_data = result.get("decision") if isinstance(result.get("decision"), dict) else {}
     record = result.get("record") if isinstance(result.get("record"), dict) else {}
+    if engine_open_error and isinstance(record, dict):
+        record = dict(record)
+        record.setdefault("engine_open_error", engine_open_error)
+        if not record.get("error_code") and not result.get("ok"):
+            record.setdefault("error_code", "browser_engine_open_failed")
     error_code = safe_str(record.get("error_code") or decision_data.get("reason")) if not result.get("ok") else ""
-    return {
+    if engine_open_error and not error_code and engine is None:
+        error_code = "browser_engine_open_failed"
+    payload = {
         "ok": bool(result.get("ok")),
         "executed": True,
         "transport": TRANSPORT_NATIVE_BRIDGE,
@@ -62,3 +73,6 @@ def execute_private_browser(
         "record": record,
         "error_code": error_code,
     }
+    if engine_open_error:
+        payload["engine_open_error"] = engine_open_error
+    return payload
