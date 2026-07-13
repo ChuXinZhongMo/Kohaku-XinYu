@@ -53,7 +53,7 @@ dependencies = [
     # Lightweight embeddings (no pytorch)
     "model2vec>=0.8.0",
     # Desktop webview
-    "pywebview==6.1",
+    "pywebview==6.2.1",
     # Windows PTY for terminal panel (Nerd Font / PowerShell theme support)
     "pywinpty>=2.0.0; sys_platform == 'win32'",
 ]
@@ -201,7 +201,7 @@ requires = [
     "gitpython>=3.1.0",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.34.0",
-    "pywebview==6.1",
+    "pywebview==6.2.1",
     "trafilatura>=2.0.0",
     "ddgs>=9.0.0",
     "pymupdf>=1.24.0",
