@@ -4,7 +4,8 @@ from __future__ import annotations
 
 Implementation lives in:
 - xinyu_status_models.py  (Check, constants, pure helpers)
-- xinyu_status_collect.py (field collectors + health checks)
+- xinyu_status_qq_fields.py (QQ / private-reply / learning-trial field collectors)
+- xinyu_status_collect.py (aggregate status_fields + health checks)
 - xinyu_status_render.py  (CLI / printing)
 
 Public entrypoints remain importable from this module.

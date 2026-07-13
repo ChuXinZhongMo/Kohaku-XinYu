@@ -16,6 +16,7 @@ from xinyu_bridge_desktop_proactive_inbox_payload import build_desktop_proactive
 from xinyu_bridge_desktop_proactive_inbox_state import (
     DESKTOP_PROACTIVE_FINAL_STATUSES,
     DESKTOP_PROACTIVE_INBOX_MAX,
+    DESKTOP_PROACTIVE_INBOX_STATUSES,
 )
 from xinyu_bridge_values import safe_str as _safe_str
 
