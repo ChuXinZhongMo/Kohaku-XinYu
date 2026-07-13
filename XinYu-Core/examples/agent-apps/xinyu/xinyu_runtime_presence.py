@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import re
@@ -20,24 +19,35 @@ PRESENCE_TRACE_REL = Path("runtime/self_presence_trace.jsonl")
 CODEX_STATE_REL = Path("runtime/codex_presence_state.json")
 INITIATIVE_METRICS_REL = Path("runtime/initiative_metrics.json")
 
+from xinyu_runtime_presence_text import (
+    DEFAULT_PREVIEW_CHARS,
+    clip_note as _clip_note,
+    clip_preview as _clip_preview,
+    codex_event_kind as _codex_event_kind,
+    normalize_background_state as _normalize_background_state,
+    normalize_codex_status as _normalize_codex_status,
+    normalize_turn_status as _normalize_turn_status,
+    path_label as _path_label,
+    scrub_field as _scrub_field,
+    stable_hash as _stable_hash,
+)
+
 DEFAULT_PROMPT_LIMIT = 2200
-DEFAULT_PREVIEW_CHARS = 160
 DEFAULT_VISIBLE_WINDOW_TITLE = "Xinyu codex"
 DEFAULT_RUNNING_STALE_SECONDS = 300
 CODEX_RUNNING_STALE_SECONDS = 4500
 
+# Keep DEFAULT_PREVIEW_CHARS re-exported for compatibility (imported above).
+# Ruff F401 would drop a bare re-export without __all__; list the public constant.
+__all__ = (
+    "DEFAULT_PREVIEW_CHARS",
+    "DEFAULT_PROMPT_LIMIT",
+    "DEFAULT_RUNNING_STALE_SECONDS",
+    "CODEX_RUNNING_STALE_SECONDS",
+)
+
 _FIELD_RE = re.compile(r"^\s*-\s*([A-Za-z0-9_]+):\s*(.*?)\s*$")
 _FRONTMATTER_FIELD_RE = re.compile(r"^\s*([A-Za-z0-9_]+):\s*(.*?)\s*$")
-_LOCAL_PATH_RE = re.compile(r"(?i)(?:[a-z]:\\|/users/|/home/|\\\\)[^\s<>'\"]+")
-_LONG_NUMERIC_ID_RE = re.compile(r"\b\d{8,}\b")
-_SECRET_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"(?i)\bauthorization\s*:\s*[^\s<>'\"]+"),
-    re.compile(r"(?i)\bbearer\s+[a-z0-9._~+/=-]{12,}"),
-    re.compile(r"(?i)\bxinyu[_-]?(?:api[_-]?key|bridge[_-]?token)\s*[:=]\s*[^\s<>'\"]+"),
-    re.compile(r"(?i)\bapi[_-]?key\s*[:=]\s*[^\s<>'\"]+"),
-    re.compile(r"(?i)\btoken\s*[:=]\s*[a-z0-9._~+/=-]{12,}"),
-    re.compile(r"(?i)\bsk-[a-z0-9_-]{12,}"),
-)
 
 _PROGRAM_STATE_FILES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     (
@@ -2351,104 +2361,6 @@ def _make_turn_id(payload: dict[str, Any], session_key: str) -> str:
     )
     return f"turn-{datetime.now().astimezone().strftime('%Y%m%dT%H%M%S')}-{_stable_hash(raw, length=10)}"
 
-
-def _stable_hash(value: str, *, length: int = 12) -> str:
-    clean = _safe_str(value).strip()
-    if not clean:
-        return ""
-    return "sha256:" + hashlib.sha256(clean.encode("utf-8", errors="ignore")).hexdigest()[:length]
-
-
-def _scrub_field(value: Any) -> str:
-    text = _safe_str(value)
-    for pattern in _SECRET_PATTERNS:
-        text = pattern.sub("[redacted-secret]", text)
-    text = _LOCAL_PATH_RE.sub("[local-path]", text)
-    return text.replace("\r\n", "\n").replace("\r", "\n").strip()
-
-
-def _clip_preview(value: Any, *, limit: int = DEFAULT_PREVIEW_CHARS) -> str:
-    text = _scrub_field(value)
-    text = _LONG_NUMERIC_ID_RE.sub("[id]", text)
-    text = re.sub(r"\s+", " ", text).strip()
-    if len(text) <= limit:
-        return text
-    return text[: max(0, limit - 3)].rstrip() + "..."
-
-
-def _clip_note(value: Any, *, limit: int = 120) -> str:
-    return _clip_preview(value, limit=limit)
-
-
-def _path_label(value: Any) -> str:
-    text = _safe_str(value).strip()
-    if not text:
-        return ""
-    parts = re.split(r"[\\/]+", text)
-    return _clip_preview(parts[-1] if parts else text, limit=120)
-
-
-def _normalize_turn_status(value: Any) -> str:
-    text = _safe_str(value).strip().lower()
-    if text in {"ok", "done", "success", "finished"}:
-        return "ok"
-    if text in {"timeout", "timed_out", "time_out"}:
-        return "timeout"
-    if text in {"cancelled", "canceled"}:
-        return "cancelled"
-    if text in {"error", "failed", "fail"}:
-        return "error"
-    return _clip_preview(text or "unknown", limit=40)
-
-
-def _normalize_codex_status(value: Any, *, timed_out: bool = False) -> str:
-    if timed_out:
-        return "timed_out"
-    text = _safe_str(value).strip().lower()
-    aliases = {
-        "done": "finished",
-        "ok": "finished",
-        "success": "finished",
-        "completed": "finished",
-        "complete": "finished",
-        "timeout": "timed_out",
-        "timedout": "timed_out",
-        "time_out": "timed_out",
-        "error": "failed",
-        "failure": "failed",
-        "fail": "failed",
-        "scheduled": "running",
-        "started": "running",
-    }
-    clean = aliases.get(text, text)
-    if clean in {"idle", "running", "finished", "timed_out", "failed", "unknown"}:
-        return clean
-    return _clip_preview(clean or "unknown", limit=40)
-
-
-def _codex_event_kind(status: str) -> str:
-    if status == "running":
-        return "codex_started"
-    if status == "finished":
-        return "codex_finished"
-    if status == "timed_out":
-        return "codex_timed_out"
-    if status == "failed":
-        return "codex_failed"
-    return "codex_presence"
-
-
-def _normalize_background_state(value: Any) -> str:
-    if isinstance(value, bool):
-        return "running" if value else "idle"
-    text = _safe_str(value).strip().lower()
-    if text in {"idle", "running", "disabled", "unknown", "pending"}:
-        return text
-    if text in {"true", "yes", "on", "active"}:
-        return "running"
-    if text in {"false", "no", "off", "inactive"}:
-        return "idle"
-    return _clip_preview(text or "unknown", limit=40)
 
 
 def _safe_count(value: Any) -> str:

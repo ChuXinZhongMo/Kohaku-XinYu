@@ -47,6 +47,7 @@ import xinyu_qq_group_policy
 import xinyu_qq_normalizer
 import xinyu_qq_outbox_client
 import xinyu_qq_outbox_dispatcher
+import xinyu_qq_prepare_policy
 import xinyu_qq_reception_metadata
 import xinyu_qq_reply_bubbles
 import xinyu_qq_rich_context
@@ -2610,10 +2611,14 @@ class NativeQQGateway:
         )
         if not text and learning_material is None and sticker_material is None:
             text = _safe_str(rich_context.get("fallback_text")).strip()
-        if not text and learning_material is None and sticker_material is None:
-            if rich_context.get("segments"):
-                return "rich_message_without_supported_route"
-            return "empty_message"
+        empty_reason = xinyu_qq_prepare_policy.empty_message_reason(
+            text=text,
+            learning_material=learning_material,
+            sticker_material=sticker_material,
+            rich_segments=rich_context.get("segments"),
+        )
+        if empty_reason:
+            return empty_reason
         if text and xinyu_qq_command_router.is_blocked_command(self, text):
             return "blocked_command"
         if self.config.private_only and message_kind != "private":
@@ -2622,11 +2627,16 @@ class NativeQQGateway:
             return "group_disabled"
         if self.config.require_whitelist and sender_id not in self._effective_whitelist_user_ids():
             return "sender_not_whitelisted"
-        if sticker_material is not None and self.config.qq_sticker_import_enabled:
-            if self.config.qq_sticker_import_private_owner_only and (
-                message_kind != "private" or sender_id not in self.config.owner_user_ids
-            ):
-                return "sticker_import_private_owner_only"
+        sticker_scope = xinyu_qq_prepare_policy.sticker_import_scope_reject_reason(
+            enabled=self.config.qq_sticker_import_enabled,
+            private_owner_only=self.config.qq_sticker_import_private_owner_only,
+            message_kind=message_kind,
+            sender_id=sender_id,
+            owner_user_ids=self.config.owner_user_ids,
+            has_sticker_material=sticker_material is not None,
+        )
+        if sticker_scope:
+            return sticker_scope
         if learning_material is not None and self.config.qq_file_learning_enabled:
             file_learning_reject_reason = self._file_learning_scope_reject_reason(
                 message_kind=message_kind,
@@ -2647,21 +2657,26 @@ class NativeQQGateway:
             if not normalized_text.strip():
                 return "group_trigger_empty_text"
         package_text = xinyu_qq_command_router.extract_package_install_command(self, text)
-        if package_text is not None:
-            if not self.config.package_install_enabled:
-                return "package_install_disabled"
-            if self.config.package_install_owner_private_only and (
-                message_kind != "private" or sender_id not in self.config.owner_user_ids
-            ):
-                return "package_install_private_owner_only"
+        package_scope = xinyu_qq_prepare_policy.package_install_scope_reject_reason(
+            package_text=package_text,
+            enabled=self.config.package_install_enabled,
+            owner_private_only=self.config.package_install_owner_private_only,
+            message_kind=message_kind,
+            sender_id=sender_id,
+            owner_user_ids=self.config.owner_user_ids,
+        )
+        if package_scope:
+            return package_scope
         codex_task = xinyu_qq_command_router.extract_codex_command(self, text)
-        if codex_task is not None:
-            if not self.config.codex_command_enabled:
-                return "codex_command_disabled"
-            if message_kind != "private":
-                return "codex_private_only"
-            if sender_id not in self.config.owner_user_ids:
-                return "codex_owner_only"
+        codex_scope = xinyu_qq_prepare_policy.codex_command_scope_reject_reason(
+            codex_task=codex_task,
+            enabled=self.config.codex_command_enabled,
+            message_kind=message_kind,
+            sender_id=sender_id,
+            owner_user_ids=self.config.owner_user_ids,
+        )
+        if codex_scope:
+            return codex_scope
         if xinyu_qq_command_router.is_passthrough_command(self, text):
             return "passthrough_command"
         return "prepare_none"
