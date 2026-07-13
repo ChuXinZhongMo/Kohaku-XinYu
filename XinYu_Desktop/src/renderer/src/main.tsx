@@ -5,10 +5,114 @@ import './style.css'
 import { AffectiveSurfaceProvider, SurfacePart } from './AffectiveSurfaceProvider'
 import { buildAffectiveSurfaceCue } from './affectiveSurface'
 import { AutonomyGatePanel, ImpulseObserverDialog, IntentDetailDialog, InteractionStream, IntentQueuePanel, MindStatePanel, StatusBadge, SystemControlPanel, ThemeSwitcher } from './DesktopPanels'
-import type { ApiConfigProfilePatch, AppState, AsyncExplorationState, CommandState, DesktopEvent, ExternalPluginConfigPatch, ExternalPluginInstallRequest, GatewayStatus, JsonRecord, ProactiveAction, ProactiveIntent, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, ServiceProbe, Snapshot, StickerActionState, StickerLibrary, StickerRecord, Stage12GateStatus, Stage13GateStatus, ThemeName, XinYuState } from './desktopTypes'
-import { actionLabel, apiConfigActionLabel, applyEvent, applyProactiveInbox, applySnapshot, asRecord, buildProactiveIntents, buildStats, chatErrorLabel, commandStatusLabel, compact, createCommandId, defaultQQRuntimeConfig, defaultQQServices, deriveXinYuState, digestPressureLabel, digestResidueLabel, digestResultLabel, digestThemeLabel, errorLabel, eventLabel, externalPluginActionLabel, formatLatency, formatTime, formatTurnMeta, initialTheme, isCommandRenderedByTurn, memorySummary, normalizeApiConfigStatus, normalizeAsyncExplorationState, normalizeExternalPluginsStatus, normalizeImpulseSoupState, normalizeMemoryGrowthCandidates, normalizeQQEnvironmentStatus, normalizeQQRuntimeConfig, normalizeStage8MemoryGovernance, normalizeStage12GateStatus, normalizeStage13GateStatus, normalizeStickerLibrary, platformLabel, qqActionResultLabel, qqDetailLabel, qqDiagnosisLabel, qqEnvironmentMessage, qqRuntimeResultLabel, qqServiceLabel, riskLabel, runtimeLabel, sourceLabel, statusLabel, stickerClipLabel, stickerCorrectionMoods, stickerMoodLabel, themeOptions, updateCommand } from './desktopModel'
+import type { ApiConfigProfilePatch, AppState, AsyncExplorationState, CommandState, DesktopEvent, ExternalPluginConfigPatch, ExternalPluginInstallRequest, GatewayStatus, JsonRecord, MetabolismTicket, MetabolismTicketActionState, PrivateBrowserGrantPatch, ProactiveAction, ProactiveIntent, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, ServiceProbe, Snapshot, StickerActionState, StickerLibrary, StickerRecord, Stage12GateStatus, Stage13GateStatus, ThemeName, XinYuState } from './desktopTypes'
+import { actionLabel, apiConfigActionLabel, applyEvent, applyProactiveInbox, applySnapshot, asRecord, buildProactiveIntents, buildStats, chatErrorLabel, commandStatusLabel, compact, createCommandId, defaultQQRuntimeConfig, defaultQQServices, deriveXinYuState, digestPressureLabel, digestResidueLabel, digestResultLabel, digestThemeLabel, errorLabel, eventLabel, externalPluginActionLabel, formatLatency, formatTime, formatTurnMeta, initialTheme, isCommandRenderedByTurn, memorySummary, normalizeApiConfigStatus, normalizeAsyncExplorationState, normalizeExternalPluginsStatus, normalizeImpulseSoupState, normalizeKernelGovernance, normalizeMemoryGrowthCandidates, normalizeQQEnvironmentStatus, normalizeQQRuntimeConfig, normalizeStage8MemoryGovernance, normalizeStage12GateStatus, normalizeStage13GateStatus, normalizeStickerLibrary, platformLabel, proactiveAckResultLabel, qqActionResultLabel, qqDetailLabel, qqDiagnosisLabel, qqEnvironmentMessage, qqRuntimeResultLabel, qqServiceLabel, riskLabel, runtimeLabel, sourceLabel, statusLabel, stickerClipLabel, stickerCorrectionMoods, stickerMoodLabel, themeOptions, updateCommand } from './desktopModel'
 
 const avatarSrc = './xinyu-avatar.png'
+
+type ExtendedXinYuApi = Window['xinyu'] & {
+  setOwnerPrivateShareEnabled?: (request: { enabled: boolean }) => Promise<unknown>
+  setPrivateBrowserGrant?: (request: { enabled: boolean; readOnly?: boolean; allowedUrls?: string[] }) => Promise<unknown>
+}
+
+function xinyuApi(): ExtendedXinYuApi {
+  return window.xinyu as ExtendedXinYuApi
+}
+
+function privateEcosystemGoalText(value: string): string {
+  if (value === 'observe_private_space') return '观察自己的私有空间'
+  if (value === 'tend_private_journal') return '整理私有日志'
+  if (value === 'reflect_recent_feedback') return '消化最近主人反馈'
+  if (value === 'review_memory_pressure') return '检查记忆候选压力'
+  if (value === 'explore_browser_readonly') return '只读观察主人允许的页面'
+  return value && value !== 'none' ? compact(value, 32) : '暂无目标'
+}
+
+function privateEcosystemActionText(value: string): string {
+  if (value === 'local_probe') return '本地低风险探测'
+  if (value === 'browser_observe') return '只读浏览观察'
+  if (value === 'owner_private_share') return '准备主人私聊候选'
+  if (value === 'memory_candidate') return '生成记忆候选'
+  return value && value !== 'none' ? compact(value, 32) : '暂无动作'
+}
+
+function privateEcosystemStatusText(value: string): string {
+  const text = String(value || '').trim()
+  const labels: Record<string, string> = {
+    blocked: '已拦截',
+    completed: '已完成',
+    failed: '失败',
+    none: '暂无',
+    prepared: '已准备',
+    queued: '已排队',
+    simulated: '模拟完成'
+  }
+  return labels[text] || compact(text || '暂无', 48)
+}
+
+function privateBrowserResultText(value: string): string {
+  const text = String(value || '').trim()
+  if (!text) return '暂无结果'
+  if (text === 'read_only_allowed') return '只读观察已允许'
+  if (text === 'browser_grant_disabled') return '浏览授权未启用'
+  if (text === 'plugin_disabled') return '插件未启用，请先启用 xinyu_private_browser'
+  if (text === 'grant_failed') return '授权写入失败'
+  if (text === 'browser_engine_unavailable') return '浏览器引擎不可用'
+  if (text === 'high_risk_browser_action_blocked') return '高风险浏览动作已拦截'
+  if (text === 'approval_required') return '动作需要逐次批准'
+  if (text.startsWith('sensitive_page_blocked')) return '敏感页面已拦截'
+  if (text.startsWith('private_browser_grant_http_')) return '浏览授权接口返回错误'
+  return compact(text, 72)
+}
+
+function privateDesktopResultText(value: string): string {
+  const text = String(value || '').trim()
+  const labels: Record<string, string> = {
+    blocked: '已拦截',
+    completed: '已完成',
+    failed: '失败',
+    live: '运行中',
+    ok: '完成',
+    prepared: '已准备',
+    simulated: '模拟完成',
+    starting: '启动中',
+    stopped: '已停止'
+  }
+  return labels[text] || compact(text || '失败', 72)
+}
+
+function desktopInternalErrorText(value: unknown): string {
+  const text = value instanceof Error ? errorLabel(value) : String(value || '').trim()
+  if (!text) return '未知错误'
+  if (text.includes('preload_missing')) return '桌面接口未加载，请重启 Desktop'
+  if (text.startsWith('gateway_unavailable')) return '核心网关不可用'
+  if (text === 'grant_failed') return '授权写入失败'
+  return compact(text, 72)
+}
+
+function metabolismTicketId(ticket: MetabolismTicket): string {
+  return String(ticket.ticket_id || ticket.ticketId || ticket.id || '').trim()
+}
+
+function normalizeMetabolismTickets(value: unknown): MetabolismTicket[] {
+  const payload = asRecord(value)
+  const rawTickets = Array.isArray(value) ? value : Array.isArray(payload.tickets) ? payload.tickets : []
+  return rawTickets.map((ticket) => asRecord(ticket) as MetabolismTicket)
+}
+
+function upsertMetabolismTicket(current: MetabolismTicket[], ticket: unknown): MetabolismTicket[] {
+  const next = asRecord(ticket) as MetabolismTicket
+  const ticketId = metabolismTicketId(next)
+  if (!ticketId) return current
+  return [next, ...current.filter((item) => metabolismTicketId(item) !== ticketId)]
+}
+
+function metabolismActionResultText(action: 'yield' | 'maintain', accepted: boolean, detail = ''): string {
+  const label = action === 'yield' ? '让出计算' : '守住边界'
+  if (accepted) return `${label}已提交`
+  const mapped = detail === 'missing_ticket_id' ? '缺少票据 ID' : privateEcosystemStatusText(detail)
+  return `${label}失败：${mapped}`
+}
 
 function App(): JSX.Element {
   const [input, setInput] = React.useState('')
@@ -19,6 +123,22 @@ function App(): JSX.Element {
   const [impulseObserverOpen, setImpulseObserverOpen] = React.useState(false)
   const [impulseLoading, setImpulseLoading] = React.useState(false)
   const [selfActionApprovalBusy, setSelfActionApprovalBusy] = React.useState('')
+  const [privateShareBusy, setPrivateShareBusy] = React.useState(false)
+  const [privateEcosystemBusy, setPrivateEcosystemBusy] = React.useState(false)
+  const [privateEcosystemResult, setPrivateEcosystemResult] = React.useState('')
+  const [browserGrantBusy, setBrowserGrantBusy] = React.useState(false)
+  const [browserGrantResult, setBrowserGrantResult] = React.useState('')
+  const [browserObserveBusy, setBrowserObserveBusy] = React.useState(false)
+  const [browserObserveResult, setBrowserObserveResult] = React.useState('')
+  const [privateDesktop, setPrivateDesktop] = React.useState<Record<string, unknown> | undefined>(undefined)
+  const [privateDesktopBusy, setPrivateDesktopBusy] = React.useState(false)
+  const [privateDesktopResult, setPrivateDesktopResult] = React.useState('')
+  const [metabolismTickets, setMetabolismTickets] = React.useState<MetabolismTicket[]>([])
+  const [metabolismAction, setMetabolismAction] = React.useState<MetabolismTicketActionState>({ kind: 'idle', message: '' })
+  const [reviewCandidateBusy, setReviewCandidateBusy] = React.useState('')
+  const [reviewKernelItemBusy, setReviewKernelItemBusy] = React.useState('')
+  const [grantKernelScopeBusy, setGrantKernelScopeBusy] = React.useState('')
+  const [proactiveFeedback, setProactiveFeedback] = React.useState<Record<string, string>>({})
   const [state, setState] = React.useState<AppState>({
     snapshot: null,
     gateway: null,
@@ -32,6 +152,7 @@ function App(): JSX.Element {
     recentMemoryEvents: [],
     memoryGrowthCandidates: null,
     stage8MemoryGovernance: null,
+    kernelGovernance: null,
     asyncExploration: null,
     stage12Gate: null,
     stage13Gate: null,
@@ -189,6 +310,21 @@ function App(): JSX.Element {
           }))
         })
     }
+    const loadKernelGovernance = (): void => {
+      window.xinyu
+        .getKernelGovernance()
+        .then((value) => {
+          if (!mounted) return
+          setState((current) => ({ ...current, kernelGovernance: normalizeKernelGovernance(value) }))
+        })
+        .catch((error) => {
+          if (!mounted) return
+          setState((current) => ({
+            ...current,
+            kernelGovernance: normalizeKernelGovernance({ ok: false, available: false, error: errorLabel(error) })
+          }))
+        })
+    }
     const loadAsyncExploration = (): void => {
       window.xinyu
         .getAsyncExplorationState()
@@ -237,6 +373,30 @@ function App(): JSX.Element {
           setState((current) => ({ ...current, impulseSoup: normalizeImpulseSoupState({ ok: false, status: 'missing' }) }))
         })
     }
+    const loadMetabolismTickets = (): void => {
+      window.xinyu
+        .listMetabolismTickets('requested,approved,running')
+        .then((value) => {
+          if (!mounted) return
+          const result = asRecord(value)
+          setMetabolismTickets(normalizeMetabolismTickets(result))
+          if (result.accepted === false) {
+            setMetabolismAction((current) =>
+              current.kind === 'idle'
+                ? { kind: 'idle', message: `代谢票据读取失败：${compact(String(result.error || '接口不可用'), 72)}` }
+                : current
+            )
+          }
+        })
+        .catch((error) => {
+          if (!mounted) return
+          setMetabolismAction((current) =>
+            current.kind === 'idle'
+              ? { kind: 'idle', message: `代谢票据读取失败：${compact(errorLabel(error), 72)}` }
+              : current
+          )
+        })
+    }
 
     window.xinyu.getSnapshot().then((snapshot) => {
       if (!mounted) return
@@ -257,10 +417,12 @@ function App(): JSX.Element {
     loadStickerLibrary()
     loadMemoryGrowthCandidates()
     loadStage8MemoryGovernance()
+    loadKernelGovernance()
     loadAsyncExploration()
     loadStage12Gate()
     loadStage13Gate()
     loadImpulseSoup()
+    loadMetabolismTickets()
     const snapshotTimer = window.setInterval(() => {
       window.xinyu.getSnapshot().then((snapshot) => {
         if (!mounted) return
@@ -280,7 +442,9 @@ function App(): JSX.Element {
     const stickerTimer = window.setInterval(loadStickerLibrary, 30_000)
     const memoryGrowthTimer = window.setInterval(loadMemoryGrowthCandidates, 30_000)
     const stage8MemoryTimer = window.setInterval(loadStage8MemoryGovernance, 30_000)
+    const kernelGovernanceTimer = window.setInterval(loadKernelGovernance, 30_000)
     const impulseTimer = window.setInterval(loadImpulseSoup, 5_000)
+    const metabolismTimer = window.setInterval(loadMetabolismTickets, 20_000)
     const offEvent = window.xinyu.onCoreEvent((event) => {
       setState((current) => applyEvent(current, event))
     })
@@ -298,7 +462,9 @@ function App(): JSX.Element {
       window.clearInterval(stickerTimer)
       window.clearInterval(memoryGrowthTimer)
       window.clearInterval(stage8MemoryTimer)
+      window.clearInterval(kernelGovernanceTimer)
       window.clearInterval(impulseTimer)
+      window.clearInterval(metabolismTimer)
       offEvent()
       offStatus()
     }
@@ -455,17 +621,142 @@ function App(): JSX.Element {
     try {
       const result = asRecord(await window.xinyu.applyApiConfigProfile({ profileId, restartCore: true }))
       const gateway = await window.xinyu.getGatewayStatus().catch(() => null)
+      const accepted = result.accepted !== false
       setState((current) => ({
         ...current,
         gateway: asRecord(gateway) as GatewayStatus,
         apiConfig: normalizeApiConfigStatus(result.status || {}),
-        apiConfigAction: { kind: 'idle', message: apiConfigActionLabel(String(result.message || 'api_profile_applied'), true, result.error) }
+        apiConfigAction: {
+          kind: 'idle',
+          message: apiConfigActionLabel(String(result.message || 'api_profile_applied'), accepted, result.error)
+        }
       }))
     } catch (error) {
       setState((current) => ({
         ...current,
         apiConfigAction: { kind: 'idle', message: `应用失败：${compact(errorLabel(error), 72)}` }
       }))
+    }
+  }
+
+  async function refreshMetabolismTickets(): Promise<void> {
+    setMetabolismAction({ kind: 'loading', message: '正在刷新代谢票据' })
+    try {
+      const result = asRecord(await window.xinyu.listMetabolismTickets('requested,approved,running'))
+      const tickets = normalizeMetabolismTickets(result)
+      setMetabolismTickets(tickets)
+      setMetabolismAction({
+        kind: 'idle',
+        message:
+          result.accepted === false
+            ? `刷新失败：${compact(String(result.error || '代谢票据接口不可用'), 72)}`
+            : `已刷新 ${tickets.length} 张代谢票据`
+      })
+    } catch (error) {
+      setMetabolismAction({ kind: 'idle', message: `刷新失败：${compact(errorLabel(error), 72)}` })
+    }
+  }
+
+  async function refreshMetabolismTicketsQuietly(): Promise<void> {
+    try {
+      const result = asRecord(await window.xinyu.listMetabolismTickets('requested,approved,running'))
+      setMetabolismTickets(normalizeMetabolismTickets(result))
+    } catch {
+      // Keep the decision result visible; the next timer/manual refresh can retry.
+    }
+  }
+
+  async function yieldComputeFromPanel(ticketId: string, seconds: number): Promise<void> {
+    if (!ticketId || metabolismAction.kind !== 'idle') {
+      return
+    }
+    setMetabolismAction({ kind: 'yielding', ticketId, message: '正在提交让出计算' })
+    try {
+      const result = asRecord(await window.xinyu.yieldCompute({ ticketId, seconds, note: 'desktop_owner_yield_compute' }))
+      const accepted = result.accepted !== false
+      if (result.ticket) {
+        setMetabolismTickets((current) => upsertMetabolismTicket(current, result.ticket))
+      }
+      setMetabolismAction({
+        kind: 'idle',
+        message: metabolismActionResultText('yield', accepted, String(result.error || result.message || ''))
+      })
+      await refreshMetabolismTicketsQuietly()
+    } catch (error) {
+      setMetabolismAction({ kind: 'idle', message: `让出计算失败：${compact(errorLabel(error), 72)}` })
+    }
+  }
+
+  async function maintainBoundaryFromPanel(ticketId: string): Promise<void> {
+    if (!ticketId || metabolismAction.kind !== 'idle') {
+      return
+    }
+    setMetabolismAction({ kind: 'maintaining', ticketId, message: '正在提交守住边界' })
+    try {
+      const result = asRecord(await window.xinyu.maintainBoundary({ ticketId, note: 'desktop_owner_maintain_boundary' }))
+      const accepted = result.accepted !== false
+      if (result.ticket) {
+        setMetabolismTickets((current) => upsertMetabolismTicket(current, result.ticket))
+      }
+      setMetabolismAction({
+        kind: 'idle',
+        message: metabolismActionResultText('maintain', accepted, String(result.error || result.message || ''))
+      })
+      await refreshMetabolismTicketsQuietly()
+    } catch (error) {
+      setMetabolismAction({ kind: 'idle', message: `守住边界失败：${compact(errorLabel(error), 72)}` })
+    }
+  }
+
+  async function grantKernelScopeFromPanel(scope: string): Promise<void> {
+    if (!scope || grantKernelScopeBusy) return
+    setGrantKernelScopeBusy(scope)
+    try {
+      await window.xinyu.grantKernelScope({ scope, note: 'desktop_owner_grant' })
+      const status = await window.xinyu.getKernelGovernance()
+      setState((current) => ({
+        ...current,
+        kernelGovernance: normalizeKernelGovernance(status)
+      }))
+    } catch {
+      // ignore
+    } finally {
+      setGrantKernelScopeBusy('')
+    }
+  }
+
+  async function reviewKernelItemFromPanel(domain: string, itemId: string, decision: 'approve' | 'reject'): Promise<void> {
+    const busyKey = `${domain}:${itemId}`
+    if (!domain || !itemId || reviewKernelItemBusy) return
+    setReviewKernelItemBusy(busyKey)
+    try {
+      await window.xinyu.reviewKernelItem({ domain, itemId, decision })
+      const status = await window.xinyu.getKernelGovernance()
+      setState((current) => ({
+        ...current,
+        kernelGovernance: normalizeKernelGovernance(status)
+      }))
+    } catch {
+      // ignore
+    } finally {
+      setReviewKernelItemBusy('')
+    }
+  }
+
+  async function reviewMemoryCandidateFromPanel(candidateId: string, decision: 'approve' | 'reject'): Promise<void> {
+    if (!candidateId || reviewCandidateBusy) return
+    setReviewCandidateBusy(candidateId)
+    try {
+      await window.xinyu.reviewMemoryCandidate({ candidateId, decision })
+      const candidates = await window.xinyu.getMemoryGrowthCandidates()
+      setState((current) => ({
+        ...current,
+        memoryGrowthCandidates: normalizeMemoryGrowthCandidates(candidates)
+      }))
+    } catch {
+      // ignore
+    } finally {
+      setReviewCandidateBusy('')
     }
   }
 
@@ -752,7 +1043,7 @@ function App(): JSX.Element {
           message: actionMessage
         }
       }))
-      if (resultMessage === 'start_requested' && !status.allReady) {
+      if ((resultMessage === 'start_requested' || resultMessage === 'napcat_started') && !status.allReady) {
         scheduleQQEnvironmentRefreshes()
       }
     } catch (error) {
@@ -930,6 +1221,10 @@ function App(): JSX.Element {
       })
     )
     if (result.accepted === false) {
+      setProactiveFeedback((current) => ({
+        ...current,
+        [intent.id]: `回复失败：${chatErrorLabel(String(result.error || 'chat_request_failed'))}`
+      }))
       setState((current) => {
         const { [intent.id]: _removed, ...rest } = current.proactiveActions
         return {
@@ -946,11 +1241,39 @@ function App(): JSX.Element {
     setState((current) => updateCommand(current, commandId, 'accepted', '核心已接收', String(result.turnId || '')))
     const ack = asRecord(await window.xinyu.ackProactive({ candidateId: intent.id, action: 'reply' }))
     if (ack.accepted === false) {
+      setProactiveFeedback((current) => ({
+        ...current,
+        [intent.id]: proactiveAckResultLabel('reply', false, ack.error || ack.message, Array.isArray(ack.notes) ? ack.notes : [])
+      }))
       setState((current) => {
         const { [intent.id]: _removed, ...rest } = current.proactiveActions
         return { ...current, proactiveActions: rest }
       })
       return
+    }
+    setProactiveFeedback((current) => ({ ...current, [intent.id]: proactiveAckResultLabel('reply', true) }))
+    const handledAt = new Date().toISOString()
+    setState((current) => {
+      const { [intent.id]: _removed, ...rest } = current.proactiveActions
+      const rawIntent = current.proactiveInbox.find((item) => String(asRecord(item).candidateId || asRecord(item).id || '') === intent.id)
+      const handledItem = {
+        ...asRecord(rawIntent),
+        candidateId: intent.id,
+        status: 'replied',
+        desktopAction: 'reply',
+        updatedAt: handledAt,
+        handledAt
+      }
+      return {
+        ...current,
+        proactiveActions: rest,
+        proactiveInbox: current.proactiveInbox.filter((item) => String(asRecord(item).candidateId || asRecord(item).id || '') !== intent.id),
+        proactiveHistory: [handledItem, ...current.proactiveHistory.filter((item) => String(asRecord(item).candidateId || asRecord(item).id || '') !== intent.id)].slice(0, 20)
+      }
+    })
+    const inbox = await window.xinyu.getProactiveInbox().catch(() => null)
+    if (inbox) {
+      setState((current) => applyProactiveInbox(current, inbox))
     }
     setSelectedIntentId(null)
   }
@@ -961,21 +1284,80 @@ function App(): JSX.Element {
     }
     const intent = intents.find((item) => item.id === candidateId)
     if (action === 'approve_qq' && intent && !intent.claimable) {
+      setProactiveFeedback((current) => ({
+        ...current,
+        [candidateId]: proactiveAckResultLabel(action, false, 'desktop_proactive_candidate_not_qq_claimable')
+      }))
+      setSelectedIntentId(candidateId)
       return
     }
 
+    setProactiveFeedback((current) => {
+      const { [candidateId]: _removed, ...rest } = current
+      return rest
+    })
     setState((current) => ({
       ...current,
       proactiveActions: { ...current.proactiveActions, [candidateId]: action }
     }))
 
-    const result = asRecord(await window.xinyu.ackProactive({ candidateId, action }))
-    if (result.accepted === false) {
+    let result: JsonRecord
+    try {
+      result = asRecord(await window.xinyu.ackProactive({ candidateId, action }))
+    } catch (error) {
+      setProactiveFeedback((current) => ({
+        ...current,
+        [candidateId]: proactiveAckResultLabel(action, false, errorLabel(error))
+      }))
       setState((current) => {
         const { [candidateId]: _removed, ...rest } = current.proactiveActions
         return { ...current, proactiveActions: rest }
       })
       return
+    }
+
+    const notes = Array.isArray(result.notes) ? result.notes : []
+    if (result.accepted === false) {
+      setProactiveFeedback((current) => ({
+        ...current,
+        [candidateId]: proactiveAckResultLabel(action, false, result.error || result.message, notes)
+      }))
+      setState((current) => {
+        const { [candidateId]: _removed, ...rest } = current.proactiveActions
+        return { ...current, proactiveActions: rest }
+      })
+      return
+    }
+
+    const handledAt = new Date().toISOString()
+    const fallbackStatus =
+      action === 'approve_qq' ? 'queued_qq' : action === 'dismiss' ? 'dismissed' : action === 'read_locally' ? 'read_locally' : 'replied'
+    setProactiveFeedback((current) => ({
+      ...current,
+      [candidateId]: proactiveAckResultLabel(action, true)
+    }))
+    setState((current) => {
+      const { [candidateId]: _removed, ...rest } = current.proactiveActions
+      const rawIntent = current.proactiveInbox.find((item) => String(asRecord(item).candidateId || asRecord(item).id || '') === candidateId)
+      const handledItem = {
+        ...asRecord(rawIntent),
+        candidateId,
+        status: String(result.status || fallbackStatus),
+        desktopAction: action,
+        updatedAt: handledAt,
+        handledAt
+      }
+      return {
+        ...current,
+        proactiveActions: rest,
+        proactiveInbox: current.proactiveInbox.filter((item) => String(asRecord(item).candidateId || asRecord(item).id || '') !== candidateId),
+        proactiveHistory: [handledItem, ...current.proactiveHistory.filter((item) => String(asRecord(item).candidateId || asRecord(item).id || '') !== candidateId)].slice(0, 20)
+      }
+    })
+
+    const inbox = await window.xinyu.getProactiveInbox().catch(() => null)
+    if (inbox) {
+      setState((current) => applyProactiveInbox(current, inbox))
     }
     setSelectedIntentId((current) => (current === candidateId ? null : current))
   }
@@ -1014,6 +1396,338 @@ function App(): JSX.Element {
       setSelfActionApprovalBusy('')
     }
   }
+
+  async function pausePrivateShare(paused: boolean): Promise<void> {
+    if (privateShareBusy) {
+      return
+    }
+    setPrivateShareBusy(true)
+    try {
+      await window.xinyu.pausePrivateShare({ paused })
+      const snapshot = await window.xinyu.getSnapshot()
+      setState((current) => applySnapshot(current, snapshot))
+    } finally {
+      setPrivateShareBusy(false)
+    }
+  }
+
+  async function setOwnerPrivateShareEnabled(enabled: boolean): Promise<void> {
+    if (privateShareBusy) {
+      return
+    }
+    setPrivateShareBusy(true)
+    setPrivateEcosystemResult(enabled ? '正在写入主动私聊授权' : '正在撤销主动私聊授权')
+    try {
+      const api = xinyuApi()
+      if (typeof api.setOwnerPrivateShareEnabled !== 'function') {
+        throw new Error('preload_missing_owner_private_share_grant; restart Desktop')
+      }
+      const result = asRecord(await api.setOwnerPrivateShareEnabled({ enabled }))
+      const ok = result.accepted !== false && result.ok !== false
+      const privateEcosystem = result.privateEcosystem
+      if (privateEcosystem && typeof privateEcosystem === 'object') {
+        setState((current) => ({
+          ...current,
+          snapshot: {
+            ...(current.snapshot || {}),
+            privateEcosystem: privateEcosystem as Snapshot['privateEcosystem']
+          }
+        }))
+      } else {
+        await refreshDesktopSnapshotState()
+      }
+      setPrivateEcosystemResult(
+        ok
+          ? enabled
+            ? '已启用主动私聊授权；仍只会进入受控候选/队列'
+            : '已关闭主动私聊授权'
+          : `主动私聊授权失败：${desktopInternalErrorText(String(result.error || 'grant_failed'))}`
+      )
+    } catch (error) {
+      setPrivateEcosystemResult(`主动私聊授权失败：${desktopInternalErrorText(error)}`)
+    } finally {
+      setPrivateShareBusy(false)
+    }
+  }
+
+  async function refreshDesktopSnapshotState(): Promise<void> {
+    const snapshot = await window.xinyu.getSnapshot()
+    setState((current) => applySnapshot(current, snapshot))
+  }
+
+  async function tickPrivateEcosystem(): Promise<void> {
+    if (privateEcosystemBusy) {
+      return
+    }
+    setPrivateEcosystemBusy(true)
+    setPrivateEcosystemResult('正在推进目标循环')
+    try {
+      if (typeof window.xinyu.tickPrivateEcosystem !== 'function') {
+        throw new Error('preload_missing_private_ecosystem_tick; restart Desktop')
+      }
+      const result = asRecord(await window.xinyu.tickPrivateEcosystem())
+      const ok = Boolean(result.accepted)
+      const goal = privateEcosystemGoalText(String(result.goalId || 'none'))
+      const action = privateEcosystemActionText(String(result.actionKind || 'none'))
+      const status = privateEcosystemStatusText(String(result.actionStatus || result.error || (ok ? 'completed' : 'failed')))
+      setPrivateEcosystemResult(ok ? `已推进：${goal} / ${action} / ${status}` : `推进失败：${status}`)
+      const privateEcosystem = result.privateEcosystem
+      if (privateEcosystem && typeof privateEcosystem === 'object') {
+        setState((current) => ({
+          ...current,
+          snapshot: {
+            ...(current.snapshot || {}),
+            privateEcosystem: privateEcosystem as Snapshot['privateEcosystem']
+          }
+        }))
+      } else {
+        await refreshDesktopSnapshotState()
+      }
+    } catch (error) {
+      setPrivateEcosystemResult(`推进失败：${desktopInternalErrorText(error)}`)
+    } finally {
+      setPrivateEcosystemBusy(false)
+    }
+  }
+
+  async function setPrivateEcosystemEnabled(enabled: boolean): Promise<void> {
+    if (privateEcosystemBusy) {
+      return
+    }
+    setPrivateEcosystemBusy(true)
+    setPrivateEcosystemResult(enabled ? '正在启动目标循环' : '正在关闭目标循环')
+    try {
+      if (typeof window.xinyu.setPrivateEcosystemEnabled !== 'function') {
+        throw new Error('preload_missing_private_ecosystem_set_enabled; restart Desktop')
+      }
+      const result = asRecord(await window.xinyu.setPrivateEcosystemEnabled({ enabled }))
+      const ok = Boolean(result.accepted)
+      const privateEcosystem = result.privateEcosystem
+      if (privateEcosystem && typeof privateEcosystem === 'object') {
+        setState((current) => ({
+          ...current,
+          snapshot: {
+            ...(current.snapshot || {}),
+            privateEcosystem: privateEcosystem as Snapshot['privateEcosystem']
+          }
+        }))
+      }
+      if (!ok) {
+        setPrivateEcosystemResult(`目标循环授权失败：${privateEcosystemStatusText(String(result.error || 'failed'))}`)
+        await refreshDesktopSnapshotState()
+        return
+      }
+      if (!enabled) {
+        setPrivateEcosystemResult('已关闭目标循环')
+        await refreshDesktopSnapshotState()
+        return
+      }
+      setPrivateEcosystemResult('已启动目标循环，正在生成当前目标')
+      if (typeof window.xinyu.tickPrivateEcosystem !== 'function') {
+        await refreshDesktopSnapshotState()
+        return
+      }
+      const tick = asRecord(await window.xinyu.tickPrivateEcosystem())
+      const tickOk = Boolean(tick.accepted)
+      const goal = privateEcosystemGoalText(String(tick.goalId || 'none'))
+      const action = privateEcosystemActionText(String(tick.actionKind || 'none'))
+      const status = privateEcosystemStatusText(String(tick.actionStatus || tick.error || (tickOk ? 'completed' : 'failed')))
+      setPrivateEcosystemResult(
+        tickOk ? `已启动并生成目标：${goal} / ${action} / ${status}` : `已启动；首次推进失败：${status}`
+      )
+      const tickSnapshot = tick.privateEcosystem
+      if (tickSnapshot && typeof tickSnapshot === 'object') {
+        setState((current) => ({
+          ...current,
+          snapshot: {
+            ...(current.snapshot || {}),
+            privateEcosystem: tickSnapshot as Snapshot['privateEcosystem']
+          }
+        }))
+      } else {
+        await refreshDesktopSnapshotState()
+      }
+    } catch (error) {
+      setPrivateEcosystemResult(`目标循环操作失败：${desktopInternalErrorText(error)}`)
+    } finally {
+      setPrivateEcosystemBusy(false)
+    }
+  }
+
+  async function setPrivateBrowserGrant(patch: PrivateBrowserGrantPatch): Promise<void> {
+    if (browserGrantBusy) {
+      return
+    }
+    setBrowserGrantBusy(true)
+    setBrowserGrantResult(patch.enabled ? '正在保存只读浏览授权' : '正在撤销浏览授权')
+    try {
+      const api = xinyuApi()
+      if (typeof api.setPrivateBrowserGrant !== 'function') {
+        throw new Error('preload_missing_private_browser_grant; restart Desktop')
+      }
+      const result = asRecord(
+        await api.setPrivateBrowserGrant({
+          enabled: patch.enabled,
+          readOnly: patch.readOnly,
+          allowedUrls: patch.allowedUrls
+        })
+      )
+      const ok = result.accepted !== false && result.ok !== false
+      const privateEcosystem = result.privateEcosystem
+      if (privateEcosystem && typeof privateEcosystem === 'object') {
+        setState((current) => ({
+          ...current,
+          snapshot: {
+            ...(current.snapshot || {}),
+            privateEcosystem: privateEcosystem as Snapshot['privateEcosystem']
+          }
+        }))
+      } else {
+        await refreshDesktopSnapshotState()
+      }
+      setBrowserGrantResult(
+        ok
+          ? patch.enabled
+            ? `已保存只读浏览授权：${patch.allowedUrls.length} 个 allowed_url`
+            : '已撤销只读浏览授权'
+          : `浏览授权失败：${privateBrowserResultText(String(result.error || result.message || 'grant_failed'))}`
+      )
+    } catch (error) {
+      setBrowserGrantResult(`浏览授权失败：${desktopInternalErrorText(error)}`)
+    } finally {
+      setBrowserGrantBusy(false)
+    }
+  }
+
+  async function observePrivateBrowser(url: string): Promise<void> {
+    const target = url.trim()
+    if (!target || browserObserveBusy) {
+      return
+    }
+    setBrowserObserveBusy(true)
+    setBrowserObserveResult('')
+    try {
+      const result = asRecord(await window.xinyu.observePrivateBrowser({ url: target }))
+      const ok = Boolean(result.accepted)
+      const detail = String(result.result || result.reason || result.error || (ok ? 'read_only_allowed' : 'blocked'))
+      setBrowserObserveResult(ok ? `只读观察已提交：${privateBrowserResultText(detail)}` : `只读观察失败：${privateBrowserResultText(detail)}`)
+      const snapshot = await window.xinyu.getSnapshot()
+      setState((current) => applySnapshot(current, snapshot))
+    } finally {
+      setBrowserObserveBusy(false)
+    }
+  }
+
+  async function refreshPrivateDesktop(): Promise<void> {
+    if (typeof window.xinyu.getPrivateDesktopSnapshot !== 'function') {
+      setPrivateDesktopResult('隔离桌面接口未加载，请重启 Desktop')
+      return
+    }
+    try {
+      const result = asRecord(await window.xinyu.getPrivateDesktopSnapshot())
+      const snap = result.privateDesktop
+      if (snap && typeof snap === 'object') {
+        setPrivateDesktop(snap as Record<string, unknown>)
+      }
+      if (result.ok === false || result.accepted === false) {
+        setPrivateDesktopResult(`隔离桌面快照失败：${privateDesktopResultText(String(result.error || 'failed'))}`)
+      }
+    } catch (error) {
+      setPrivateDesktopResult(`隔离桌面快照失败：${desktopInternalErrorText(error)}`)
+    }
+  }
+
+  async function setPrivateDesktopEnabled(enabled: boolean): Promise<void> {
+    if (privateDesktopBusy) {
+      return
+    }
+    setPrivateDesktopBusy(true)
+    setPrivateDesktopResult('')
+    try {
+      if (typeof window.xinyu.setPrivateDesktopEnabled !== 'function') {
+        throw new Error('preload_missing_private_desktop_set_enabled; restart Desktop')
+      }
+      const result = asRecord(await window.xinyu.setPrivateDesktopEnabled({ enabled }))
+      const ok = Boolean(result.accepted)
+      setPrivateDesktopResult(
+        ok
+          ? enabled
+            ? '已授权（仅观察）'
+            : '已撤销授权'
+          : `授权失败：${privateDesktopResultText(String(result.error || 'failed'))}`
+      )
+      await refreshPrivateDesktop()
+    } catch (error) {
+      setPrivateDesktopResult(`授权失败：${desktopInternalErrorText(error)}`)
+    } finally {
+      setPrivateDesktopBusy(false)
+    }
+  }
+
+  async function controlPrivateDesktop(action: 'start' | 'stop'): Promise<void> {
+    if (privateDesktopBusy) {
+      return
+    }
+    setPrivateDesktopBusy(true)
+    setPrivateDesktopResult('')
+    try {
+      const method = action === 'start' ? window.xinyu.startPrivateDesktop : window.xinyu.stopPrivateDesktop
+      if (typeof method !== 'function') {
+        throw new Error(`preload_missing_private_desktop_${action}; restart Desktop`)
+      }
+      const result = asRecord(await method())
+      const ok = Boolean(result.accepted)
+      const detail = privateDesktopResultText(String(result.error || result.sessionState || (ok ? 'ok' : 'failed')))
+      setPrivateDesktopResult(
+        ok
+          ? `${action === 'start' ? '已启动' : '已停止'} ${detail}`
+          : `${action === 'start' ? '启动失败' : '停止失败'}：${detail}`
+      )
+      const snap = result.privateDesktop
+      if (snap && typeof snap === 'object') {
+        setPrivateDesktop(snap as Record<string, unknown>)
+      }
+    } catch (error) {
+      setPrivateDesktopResult(`${action === 'start' ? '启动失败' : '停止失败'}：${desktopInternalErrorText(error)}`)
+    } finally {
+      setPrivateDesktopBusy(false)
+      await refreshPrivateDesktop()
+    }
+  }
+
+  async function observePrivateDesktop(): Promise<void> {
+    if (privateDesktopBusy) {
+      return
+    }
+    setPrivateDesktopBusy(true)
+    setPrivateDesktopResult('正在观察隔离桌面')
+    try {
+      if (typeof window.xinyu.observePrivateDesktop !== 'function') {
+        throw new Error('preload_missing_private_desktop_observe; restart Desktop')
+      }
+      const result = asRecord(await window.xinyu.observePrivateDesktop())
+      const ok = Boolean(result.accepted)
+      const detail = String(result.result || result.error || (ok ? 'completed' : 'failed'))
+      const detailLabel = detail === 'completed' ? '已刷新画面' : privateDesktopResultText(detail)
+      setPrivateDesktopResult(ok ? `已观察：${detailLabel}` : `观察失败：${detailLabel}`)
+      const snap = result.privateDesktop
+      if (snap && typeof snap === 'object') {
+        setPrivateDesktop(snap as Record<string, unknown>)
+      }
+    } catch (error) {
+      setPrivateDesktopResult(`观察失败：${desktopInternalErrorText(error)}`)
+    } finally {
+      setPrivateDesktopBusy(false)
+      await refreshPrivateDesktop()
+    }
+  }
+
+  React.useEffect(() => {
+    void refreshPrivateDesktop()
+    const timer = setInterval(() => void refreshPrivateDesktop(), 10000)
+    return () => clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <AffectiveSurfaceProvider cue={surfaceCue}>
@@ -1057,6 +1771,7 @@ function App(): JSX.Element {
           qqEnvironment={state.qqEnvironment}
           stage8={state.stage8MemoryGovernance}
           asyncExploration={state.asyncExploration}
+          kernelGovernance={state.kernelGovernance}
         />
 
         <section className="presence-workspace">
@@ -1067,6 +1782,27 @@ function App(): JSX.Element {
             snapshot={state.snapshot}
             selfActionApprovalBusy={selfActionApprovalBusy}
             onDecideSelfActionApproval={decideSelfActionApproval}
+            privateShareBusy={privateShareBusy}
+            privateEcosystemBusy={privateEcosystemBusy}
+            privateEcosystemResult={privateEcosystemResult}
+            onPausePrivateShare={pausePrivateShare}
+            onSetPrivateShareEnabled={(enabled) => void setOwnerPrivateShareEnabled(enabled)}
+            onSetPrivateEcosystemEnabled={(enabled) => void setPrivateEcosystemEnabled(enabled)}
+            onTickPrivateEcosystem={() => void tickPrivateEcosystem()}
+            browserGrantBusy={browserGrantBusy}
+            browserGrantResult={browserGrantResult}
+            onSetPrivateBrowserGrant={(patch) => void setPrivateBrowserGrant(patch)}
+            browserObserveBusy={browserObserveBusy}
+            browserObserveResult={browserObserveResult}
+            onObservePrivateBrowser={observePrivateBrowser}
+            privateDesktop={privateDesktop}
+            privateDesktopBusy={privateDesktopBusy}
+            onStartPrivateDesktop={() => void controlPrivateDesktop('start')}
+            onStopPrivateDesktop={() => void controlPrivateDesktop('stop')}
+            onObservePrivateDesktop={() => void observePrivateDesktop()}
+            onRefreshPrivateDesktop={() => void refreshPrivateDesktop()}
+            onSetPrivateDesktopEnabled={(enabled) => void setPrivateDesktopEnabled(enabled)}
+            privateDesktopResult={privateDesktopResult}
           />
 
           <InteractionStream
@@ -1094,6 +1830,7 @@ function App(): JSX.Element {
             intents={intents}
             history={proactiveHistory}
             pending={state.proactiveActions}
+            feedback={proactiveFeedback}
             actionDigest={state.snapshot?.actionDigestState}
             recentMemoryEvents={state.recentMemoryEvents}
             lastEvent={state.events[0]}
@@ -1141,8 +1878,11 @@ function App(): JSX.Element {
             qqRuntimeAction={state.qqRuntimeAction}
             stickerLibrary={state.stickerLibrary}
             stickerAction={state.stickerAction}
+            metabolismTickets={metabolismTickets}
+            metabolismAction={metabolismAction}
             memoryGrowthCandidates={state.memoryGrowthCandidates}
             stage8MemoryGovernance={state.stage8MemoryGovernance}
+            kernelGovernance={state.kernelGovernance}
             actionDigest={state.snapshot?.actionDigestState}
             recentMemoryEvents={state.recentMemoryEvents}
             lastEvent={state.events[0]}
@@ -1165,6 +1905,15 @@ function App(): JSX.Element {
             onRunStickerMaintenance={runStickerMaintenanceFromPanel}
             onMoveStickerToMood={moveStickerToMoodFromPanel}
             onOpenStickerAssetDir={openStickerAssetDirFromPanel}
+            onRefreshMetabolismTickets={() => void refreshMetabolismTickets()}
+            onYieldCompute={(ticketId, seconds) => void yieldComputeFromPanel(ticketId, seconds)}
+            onMaintainBoundary={(ticketId) => void maintainBoundaryFromPanel(ticketId)}
+            onReviewMemoryCandidate={reviewMemoryCandidateFromPanel}
+            reviewMemoryCandidateBusy={reviewCandidateBusy}
+            onReviewKernelItem={reviewKernelItemFromPanel}
+            reviewKernelItemBusy={reviewKernelItemBusy}
+            onGrantKernelScope={grantKernelScopeFromPanel}
+            grantKernelScopeBusy={grantKernelScopeBusy}
           />
         </section>
 
@@ -1172,6 +1921,7 @@ function App(): JSX.Element {
           <IntentDetailDialog
             intent={selectedIntent}
             pendingAction={state.proactiveActions[selectedIntent.id]}
+            feedback={proactiveFeedback[selectedIntent.id]}
             onClose={() => setSelectedIntentId(null)}
             onAck={ackProactive}
             onReply={replyToProactive}

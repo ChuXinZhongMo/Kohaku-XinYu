@@ -29,6 +29,8 @@ export type XinYuSnapshot = {
   recentTurns?: unknown[]
   recentMemoryEvents?: unknown[]
   selfAction?: Record<string, unknown>
+  privateEcosystem?: Record<string, unknown>
+  privateDesktop?: Record<string, unknown>
   notes?: string[]
 }
 
@@ -245,6 +247,41 @@ export class XinyuGateway {
     return { ...this.status }
   }
 
+  async getVoiceFlags(): Promise<unknown> {
+    try {
+      const response = await fetch(`${this.httpUrl}/extension/voice-flags/state`, {
+        headers: this.authHeaders()
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        throw new Error(String(body.error || `voice_flags_http_${response.status}`))
+      }
+      return body
+    } catch (error) {
+      return { ok: false, error: errorLabel(error), flags: {} }
+    }
+  }
+
+  async setVoiceFlags(request: { flags?: Record<string, boolean>; persist?: boolean }): Promise<unknown> {
+    try {
+      const response = await fetch(`${this.httpUrl}/extension/voice-flags/update`, {
+        method: 'POST',
+        headers: {
+          ...this.authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ flags: request.flags || {}, persist: Boolean(request.persist) })
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        throw new Error(String(body.error || `voice_flags_http_${response.status}`))
+      }
+      return body
+    } catch (error) {
+      return { ok: false, error: errorLabel(error) }
+    }
+  }
+
   async sendChat(request: SendChatRequest): Promise<SendChatResponse> {
     const text = String(request.text || '').trim()
     const commandId = String(request.commandId || '').trim()
@@ -400,6 +437,408 @@ export class XinyuGateway {
       }
     } catch (error) {
       return { accepted: false, queueId, decision, error: errorLabel(error), notes: [] }
+    }
+  }
+
+  async pausePrivateShare(paused: boolean): Promise<{ accepted: boolean; paused?: boolean; error?: string }> {
+    try {
+      const response = await fetch(`${this.httpUrl}/desktop/private-ecosystem/pause`, {
+        method: 'POST',
+        headers: {
+          ...this.authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: paused ? 'pause' : 'resume',
+          metadata: { is_owner_user: true },
+          message_type: 'private'
+        })
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        return { accepted: false, error: String(body.error || body.message || `pause_http_${response.status}`) }
+      }
+      if (body.privateEcosystem && typeof body.privateEcosystem === 'object') {
+        this.snapshot = {
+          ...(this.snapshot || { version: 1 }),
+          privateEcosystem: body.privateEcosystem as Record<string, unknown>
+        }
+      }
+      return { accepted: Boolean(body.accepted ?? true), paused: Boolean(body.paused) }
+    } catch (error) {
+      return { accepted: false, error: errorLabel(error) }
+    }
+  }
+
+  async setOwnerPrivateShareEnabled(
+    enabled: boolean
+  ): Promise<{ accepted: boolean; error?: string; privateEcosystem?: Record<string, unknown>; shareEnabled?: boolean }> {
+    try {
+      const response = await fetch(`${this.httpUrl}/desktop/private-ecosystem/grant`, {
+        method: 'POST',
+        headers: {
+          ...this.authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          grant: {
+            owner_private_autonomous_share: {
+              enabled,
+              paused: !enabled
+            }
+          },
+          metadata: { is_owner_user: true },
+          message_type: 'private'
+        })
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        return { accepted: false, error: responseError(body, `owner_private_share_grant_http_${response.status}`) }
+      }
+      const privateEcosystem =
+        body.privateEcosystem && typeof body.privateEcosystem === 'object'
+          ? (body.privateEcosystem as Record<string, unknown>)
+          : undefined
+      if (privateEcosystem) {
+        this.snapshot = {
+          ...(this.snapshot || { version: 1 }),
+          privateEcosystem
+        }
+      }
+      return {
+        accepted: Boolean(body.accepted ?? true),
+        error: String(body.error || ''),
+        privateEcosystem,
+        shareEnabled: Boolean(body.share_enabled ?? enabled)
+      }
+    } catch (error) {
+      return { accepted: false, error: errorLabel(error) }
+    }
+  }
+
+  async setPrivateEcosystemEnabled(
+    enabled: boolean
+  ): Promise<{ accepted: boolean; error?: string; privateEcosystem?: Record<string, unknown> }> {
+    try {
+      const response = await fetch(`${this.httpUrl}/desktop/private-ecosystem/grant`, {
+        method: 'POST',
+        headers: {
+          ...this.authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          grant: {
+            private_ecosystem: {
+              enabled,
+              rollout_state: enabled ? 'observe_only' : 'disabled'
+            }
+          },
+          metadata: { is_owner_user: true },
+          message_type: 'private'
+        })
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        return { accepted: false, error: responseError(body, `private_ecosystem_grant_http_${response.status}`) }
+      }
+      if (body.privateEcosystem && typeof body.privateEcosystem === 'object') {
+        this.snapshot = {
+          ...(this.snapshot || { version: 1 }),
+          privateEcosystem: body.privateEcosystem as Record<string, unknown>
+        }
+      }
+      return {
+        accepted: Boolean(body.accepted ?? true),
+        error: String(body.error || ''),
+        privateEcosystem:
+          body.privateEcosystem && typeof body.privateEcosystem === 'object'
+            ? (body.privateEcosystem as Record<string, unknown>)
+            : undefined
+      }
+    } catch (error) {
+      return { accepted: false, error: errorLabel(error) }
+    }
+  }
+
+  async setPrivateBrowserGrant(request: {
+    enabled: boolean
+    readOnly?: boolean
+    allowedUrls?: string[]
+  }): Promise<{
+    accepted: boolean
+    error?: string
+    privateEcosystem?: Record<string, unknown>
+    browserEnabled?: boolean
+  }> {
+    const allowedUrls = Array.from(
+      new Set((request.allowedUrls || []).map((url) => String(url || '').trim()).filter(Boolean))
+    ).slice(0, 20)
+    try {
+      const response = await fetch(`${this.httpUrl}/desktop/private-ecosystem/grant`, {
+        method: 'POST',
+        headers: {
+          ...this.authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          grant: {
+            private_browser: {
+              enabled: Boolean(request.enabled),
+              read_only: request.readOnly !== false,
+              allowed_urls: allowedUrls
+            }
+          },
+          metadata: { is_owner_user: true },
+          message_type: 'private'
+        })
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        return { accepted: false, error: responseError(body, `private_browser_grant_http_${response.status}`) }
+      }
+      let privateEcosystem =
+        body.privateEcosystem && typeof body.privateEcosystem === 'object'
+          ? (body.privateEcosystem as Record<string, unknown>)
+          : undefined
+      if (privateEcosystem) {
+        const browser = isRecord(privateEcosystem.browser) ? privateEcosystem.browser : {}
+        privateEcosystem = {
+          ...privateEcosystem,
+          browser: {
+            ...browser,
+            enabled: Boolean(body.browser_enabled ?? request.enabled),
+            readOnly: request.readOnly !== false,
+            allowedUrls
+          }
+        }
+        this.snapshot = {
+          ...(this.snapshot || { version: 1 }),
+          privateEcosystem
+        }
+      }
+      return {
+        accepted: Boolean(body.accepted ?? true),
+        error: String(body.error || ''),
+        privateEcosystem,
+        browserEnabled: Boolean(body.browser_enabled ?? request.enabled)
+      }
+    } catch (error) {
+      return { accepted: false, error: errorLabel(error) }
+    }
+  }
+
+  async tickPrivateEcosystem(): Promise<{
+    accepted: boolean
+    goalId?: string
+    actionKind?: string
+    actionStatus?: string
+    error?: string
+    privateEcosystem?: Record<string, unknown>
+  }> {
+    try {
+      const response = await fetch(`${this.httpUrl}/desktop/private-ecosystem/tick`, {
+        method: 'POST',
+        headers: {
+          ...this.authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          trigger: 'owner_desktop',
+          metadata: { is_owner_user: true },
+          message_type: 'private'
+        })
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        return { accepted: false, error: responseError(body, `private_ecosystem_tick_http_${response.status}`) }
+      }
+      if (body.privateEcosystem && typeof body.privateEcosystem === 'object') {
+        this.snapshot = {
+          ...(this.snapshot || { version: 1 }),
+          privateEcosystem: body.privateEcosystem as Record<string, unknown>
+        }
+      }
+      return {
+        accepted: Boolean(body.accepted ?? body.ok ?? false),
+        goalId: String(body.goalId || ''),
+        actionKind: String(body.actionKind || ''),
+        actionStatus: String(body.actionStatus || ''),
+        error: String(body.error || ''),
+        privateEcosystem:
+          body.privateEcosystem && typeof body.privateEcosystem === 'object'
+            ? (body.privateEcosystem as Record<string, unknown>)
+            : undefined
+      }
+    } catch (error) {
+      return { accepted: false, error: errorLabel(error) }
+    }
+  }
+
+  async observePrivateBrowser(
+    url: string
+  ): Promise<{ accepted: boolean; result?: string; reason?: string; error?: string }> {
+    const target = String(url || '').trim()
+    if (!target) {
+      return { accepted: false, error: 'empty_url' }
+    }
+    try {
+      const response = await fetch(`${this.httpUrl}/desktop/private-browser/action`, {
+        method: 'POST',
+        headers: {
+          ...this.authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          action: 'navigate_readonly',
+          url: target,
+          metadata: { is_owner_user: true },
+          message_type: 'private'
+        })
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        return { accepted: false, error: String(body.error || body.message || `observe_http_${response.status}`) }
+      }
+      if (body.browser && typeof body.browser === 'object') {
+        this.snapshot = {
+          ...(this.snapshot || { version: 1 }),
+          privateEcosystem: {
+            ...((this.snapshot?.privateEcosystem as Record<string, unknown>) || {}),
+            browser: body.browser as Record<string, unknown>
+          }
+        }
+      }
+      return {
+        accepted: Boolean(body.accepted ?? body.ok ?? false),
+        result: String(body.result || ''),
+        reason: String(body.reason || '')
+      }
+    } catch (error) {
+      return { accepted: false, error: errorLabel(error) }
+    }
+  }
+
+  async getPrivateDesktopSnapshot(): Promise<{ ok: boolean; privateDesktop?: Record<string, unknown>; error?: string }> {
+    try {
+      const response = await fetch(`${this.httpUrl}/desktop/private-desktop/snapshot`, {
+        headers: this.authHeaders()
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        return { ok: false, error: responseError(body, `private_desktop_http_${response.status}`) }
+      }
+      if (body.privateDesktop && typeof body.privateDesktop === 'object') {
+        this.snapshot = {
+          ...(this.snapshot || { version: 1 }),
+          privateDesktop: body.privateDesktop as Record<string, unknown>
+        }
+      }
+      return { ok: true, privateDesktop: body.privateDesktop as Record<string, unknown> }
+    } catch (error) {
+      return { ok: false, error: errorLabel(error) }
+    }
+  }
+
+  private async controlPrivateDesktop(
+    action: 'start' | 'stop'
+  ): Promise<{ accepted: boolean; sessionState?: string; live?: boolean; error?: string; privateDesktop?: Record<string, unknown> }> {
+    try {
+      const response = await fetch(`${this.httpUrl}/desktop/private-desktop/${action}`, {
+        method: 'POST',
+        headers: {
+          ...this.authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ metadata: { is_owner_user: true }, message_type: 'private' })
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        return { accepted: false, error: responseError(body, `private_desktop_${action}_http_${response.status}`) }
+      }
+      if (body.privateDesktop && typeof body.privateDesktop === 'object') {
+        this.snapshot = {
+          ...(this.snapshot || { version: 1 }),
+          privateDesktop: body.privateDesktop as Record<string, unknown>
+        }
+      }
+      const accepted = Boolean(body.accepted ?? body.ok ?? false)
+      return {
+        accepted,
+        sessionState: String(body.session_state || ''),
+        live: Boolean(body.live),
+        error: String(body.error_code || body.error || body.message || (!accepted ? firstResponseNote(body) : '')),
+        privateDesktop: body.privateDesktop as Record<string, unknown>
+      }
+    } catch (error) {
+      return { accepted: false, error: errorLabel(error) }
+    }
+  }
+
+  async startPrivateDesktop(): Promise<{ accepted: boolean; sessionState?: string; live?: boolean; error?: string; privateDesktop?: Record<string, unknown> }> {
+    return this.controlPrivateDesktop('start')
+  }
+
+  async stopPrivateDesktop(): Promise<{ accepted: boolean; sessionState?: string; live?: boolean; error?: string; privateDesktop?: Record<string, unknown> }> {
+    return this.controlPrivateDesktop('stop')
+  }
+
+  async observePrivateDesktop(): Promise<{ accepted: boolean; result?: string; error?: string; privateDesktop?: Record<string, unknown> }> {
+    try {
+      const response = await fetch(`${this.httpUrl}/desktop/private-desktop/observe`, {
+        method: 'POST',
+        headers: {
+          ...this.authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: 'screenshot', metadata: { is_owner_user: true }, message_type: 'private' })
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        return { accepted: false, error: responseError(body, `private_desktop_observe_http_${response.status}`) }
+      }
+      if (body.privateDesktop && typeof body.privateDesktop === 'object') {
+        this.snapshot = {
+          ...(this.snapshot || { version: 1 }),
+          privateDesktop: body.privateDesktop as Record<string, unknown>
+        }
+      }
+      const accepted = Boolean(body.accepted ?? body.ok ?? false)
+      return {
+        accepted,
+        result: String(body.result || ''),
+        error: String(body.error_code || body.error || body.message || (!accepted ? firstResponseNote(body) : '')),
+        privateDesktop: body.privateDesktop as Record<string, unknown>
+      }
+    } catch (error) {
+      return { accepted: false, error: errorLabel(error) }
+    }
+  }
+
+  async setPrivateDesktopEnabled(
+    enabled: boolean
+  ): Promise<{ accepted: boolean; error?: string }> {
+    try {
+      const response = await fetch(`${this.httpUrl}/desktop/private-ecosystem/grant`, {
+        method: 'POST',
+        headers: {
+          ...this.authHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          // Owner enables XinYu's isolated desktop in observe-only mode. High-risk
+          // fields (single-step / shell / network) are NOT settable here.
+          grant: { private_desktop: { enabled: enabled, observe_only: true } },
+          metadata: { is_owner_user: true },
+          message_type: 'private'
+        })
+      })
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>
+      if (!response.ok) {
+        return { accepted: false, error: responseError(body, `grant_http_${response.status}`) }
+      }
+      return { accepted: Boolean(body.accepted ?? true) }
+    } catch (error) {
+      return { accepted: false, error: errorLabel(error) }
     }
   }
 
@@ -758,11 +1197,23 @@ function resolveBridgeToken(): string {
   if (envToken) {
     return envToken
   }
-  try {
-    return readFileSync('D:\\XinYu\\.xinyu_bridge_token', 'utf-8').trim()
-  } catch {
-    return ''
+  const candidates = [
+    process.env.XINYU_ROOT ? join(process.env.XINYU_ROOT, '.xinyu_bridge_token') : '',
+    process.env.XINYU_HOME ? join(process.env.XINYU_HOME, '.xinyu_bridge_token') : '',
+    join(process.cwd(), '..', '.xinyu_bridge_token'),
+    join(process.cwd(), '.xinyu_bridge_token')
+  ].filter(Boolean)
+  for (const path of candidates) {
+    try {
+      const token = readFileSync(path, 'utf-8').trim()
+      if (token) {
+        return token
+      }
+    } catch {
+      // Try the next conventional workspace location.
+    }
   }
+  return ''
 }
 
 function createDecisionId(prefix: string): string {
@@ -779,6 +1230,15 @@ function trimTrailingSlash(value: string): string {
 
 function errorLabel(error: unknown): string {
   return error instanceof Error ? `${error.name}: ${error.message}` : String(error)
+}
+
+function responseError(body: Record<string, unknown>, fallback: string): string {
+  return String(body.error || body.message || firstResponseNote(body) || fallback || '').trim()
+}
+
+function firstResponseNote(body: Record<string, unknown>): string {
+  const notes = Array.isArray(body.notes) ? body.notes : []
+  return notes.map((item) => String(item || '').trim()).find(Boolean) || ''
 }
 
 function appendLimited(items: unknown[] | undefined, item: Record<string, unknown>, limit: number, key: string): unknown[] {

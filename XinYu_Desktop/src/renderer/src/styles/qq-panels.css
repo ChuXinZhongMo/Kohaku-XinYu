@@ -252,6 +252,62 @@
   height: 40px;
 }
 
+.api-engine-choice {
+  min-width: 0;
+  height: 40px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  border: 1px solid rgba(39, 87, 82, 0.12);
+  border-radius: 8px;
+  padding: 3px;
+  background: #f7faf8;
+}
+
+.api-engine-choice button {
+  min-width: 0;
+  height: 100%;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 1px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 8px;
+  color: #526360;
+  background: transparent;
+  cursor: pointer;
+}
+
+.api-engine-choice strong,
+.api-engine-choice small {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.api-engine-choice strong {
+  color: #24312f;
+  font-size: 11px;
+}
+
+.api-engine-choice small {
+  color: #7a8985;
+  font-size: 9px;
+}
+
+.api-engine-choice button.active {
+  color: #1f7269;
+  background: #e7f3ef;
+}
+
+.api-engine-choice button.active strong,
+.api-engine-choice button.active small {
+  color: #1f7269;
+}
+
 .api-runtime-flags-single {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -306,7 +362,8 @@
 .api-section-tab:disabled,
 .api-config-actions button:disabled,
 .api-config-grid input:disabled,
-.api-config-grid select:disabled {
+.api-config-grid select:disabled,
+.api-engine-choice button:disabled {
   opacity: 0.5;
   cursor: default;
 }

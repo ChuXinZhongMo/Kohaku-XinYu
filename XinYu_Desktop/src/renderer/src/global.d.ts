@@ -8,8 +8,14 @@ declare global {
       getSnapshot: () => Promise<unknown>
       getProactiveInbox: () => Promise<unknown>
       getMemoryGrowthCandidates: () => Promise<unknown>
+      getVoiceFlags: () => Promise<unknown>
+      setVoiceFlags: (request: { flags?: Record<string, boolean>; persist?: boolean }) => Promise<unknown>
       getStage8MemoryGovernance: () => Promise<unknown>
+      getKernelGovernance: () => Promise<unknown>
+      reviewKernelItem: (request: { domain: string; itemId: string; decision: 'approve' | 'reject' }) => Promise<unknown>
+      grantKernelScope: (request: { scope: string; note?: string }) => Promise<unknown>
       getAsyncExplorationState: () => Promise<unknown>
+      reviewMemoryCandidate: (request: { candidateId: string; decision: 'approve' | 'reject'; notes?: string }) => Promise<unknown>
       getStage12GateStatus: () => Promise<unknown>
       getStage13GateStatus: () => Promise<unknown>
       getImpulseSoupState: () => Promise<unknown>
@@ -65,6 +71,15 @@ declare global {
         authorizeCodex?: boolean
         authorizeExisting?: boolean
       }) => Promise<unknown>
+      pausePrivateShare: (request: { paused: boolean }) => Promise<unknown>
+      setPrivateEcosystemEnabled: (request: { enabled: boolean }) => Promise<unknown>
+      tickPrivateEcosystem: () => Promise<unknown>
+      observePrivateBrowser: (request: { url: string }) => Promise<unknown>
+      getPrivateDesktopSnapshot: () => Promise<unknown>
+      startPrivateDesktop: () => Promise<unknown>
+      stopPrivateDesktop: () => Promise<unknown>
+      observePrivateDesktop: () => Promise<unknown>
+      setPrivateDesktopEnabled: (request: { enabled: boolean }) => Promise<unknown>
       listMetabolismTickets: (statuses?: string) => Promise<unknown>
       yieldCompute: (request: { ticketId: string; seconds?: number; note?: string }) => Promise<unknown>
       maintainBoundary: (request: { ticketId: string; note?: string }) => Promise<unknown>

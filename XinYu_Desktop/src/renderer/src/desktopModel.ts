@@ -1,4 +1,4 @@
-import type { ApiConfigCurrent, ApiConfigProfile, ApiConfigStatus, AppState, AsyncExplorationState, CommandState, DesktopEvent, ExternalPluginControl, ExternalPluginInstallState, ExternalPluginsStatus, GrowthCandidatePromotionItem, GrowthCandidatePromotionStatus, ImpulseSoupState, ImpulseThoughtlet, ImpulseTraceEvent, JsonRecord, ProactiveAction, ProactiveIntent, QQEnvironmentStatus, QQRuntimeConfig, ServiceProbe, Snapshot, Stage8BlockedGate, Stage8DuplicateCluster, Stage8MemoryGovernanceStatus, Stage8PromotionDryRun, Stage8ReviewDecision, Stage12GateStatus, Stage13GateStatus, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
+import type { ApiConfigCurrent, ApiConfigProfile, ApiConfigStatus, AppState, AsyncExplorationState, CommandState, DesktopEvent, ExternalPluginControl, ExternalPluginInstallState, ExternalPluginsStatus, GrowthCandidatePromotionItem, GrowthCandidatePromotionStatus, ImpulseSoupState, ImpulseThoughtlet, ImpulseTraceEvent, JsonRecord, KernelGovernanceStatus, KernelReviewItem, ProactiveAction, ProactiveIntent, QQEnvironmentStatus, QQRuntimeConfig, ServiceProbe, Snapshot, Stage8BlockedGate, Stage8DuplicateCluster, Stage8MemoryGovernanceStatus, Stage8PromotionDryRun, Stage8ReviewDecision, Stage12GateStatus, Stage13GateStatus, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
 
 export const themeOptions: { id: ThemeName; label: string }[] = [
   { id: 'pastel', label: '粉紫' },
@@ -292,15 +292,17 @@ export function buildProactiveIntents(items: unknown[]): ProactiveIntent[] {
       const id = String(row.candidateId || row.id || `intent-${index}`)
       const delivery = deliveryLabel(String(row.deliveryLevel || row.delivery || 'local'))
       const risk = intentRisk(row)
-      const trigger = proactiveTextLabel(String(row.whyNowPreview || row.reason || row.focusLabel || '主动循环生成'))
+      const trigger = proactiveTextLabel(String(row.focusLabel || row.title || row.focusKind || row.kind || '主动提醒'))
       const plannedText = proactiveTextLabel(String(row.candidatePreview || row.message || row.text || '等待核心补全内容'))
       const fullText = proactiveTextLabel(String(row.candidatePreview || row.message || row.text || row.concreteQuestion || ''))
+      const reasonText = proactiveTextLabel(String(row.reason || row.whyNowPreview || ''))
       return {
         id,
-        source: proactiveTextLabel(String(row.source || row.kind || 'initiative')),
+        source: proactiveTextLabel(String(row.source || row.sourceType || row.origin || 'initiative')),
         trigger: compact(trigger, 54),
         plannedText: compact(plannedText, 170),
         fullText,
+        reasonText,
         risk,
         riskLabel: riskLabel(risk),
         delivery,
@@ -366,6 +368,52 @@ export function normalizeMemoryGrowthCandidates(value: unknown): GrowthCandidate
     targetMemoryLayer: String(data.targetMemoryLayer || data.target_memory_layer || ''),
     notes: stringArray(data.notes),
     error: String(data.error || '')
+  }
+}
+
+function normalizeKernelReviewItem(value: unknown): KernelReviewItem {
+  const row = asRecord(value)
+  return {
+    domain: String(row.domain || ''),
+    itemId: String(row.item_id || row.itemId || ''),
+    contentPreview: String(row.content_preview || row.contentPreview || ''),
+    reviewStatus: String(row.review_status || row.reviewStatus || ''),
+    confidence: typeof row.confidence === 'number' ? row.confidence : undefined,
+    actionType: row.action_type ? String(row.action_type) : row.actionType ? String(row.actionType) : undefined,
+    sourceEventId: row.source_event_id ? String(row.source_event_id) : row.sourceEventId ? String(row.sourceEventId) : undefined
+  }
+}
+
+export function normalizeKernelGovernance(value: unknown): KernelGovernanceStatus {
+  const data = asRecord(value)
+  return {
+    ok: Boolean(data.ok),
+    available: Boolean(data.available),
+    loadedAt: String(data.loadedAt || ''),
+    selfId: String(data.self_id || data.selfId || ''),
+    error: String(data.error || ''),
+    pendingCount: numberValue(data.pending_count ?? data.pendingCount, 0),
+    worldModelCount: numberValue(data.world_model_count ?? data.worldModelCount, 0),
+    reorganizationCount: numberValue(data.reorganization_count ?? data.reorganizationCount, 0),
+    beliefCount: numberValue(data.belief_count ?? data.beliefCount, 0),
+    followupCount: numberValue(data.followup_count ?? data.followupCount, 0),
+    writesBlocked: Boolean(data.writes_blocked ?? data.writesBlocked),
+    items: Array.isArray(data.items) ? data.items.map(normalizeKernelReviewItem) : [],
+    cycleCount: numberValue(data.cycle_count ?? data.cycleCount, 0),
+    slowSignalCount: numberValue(data.slow_signal_count ?? data.slowSignalCount, 0),
+    slowEscalationThreshold: numberValue(data.slow_escalation_threshold ?? data.slowEscalationThreshold, 3),
+    reorgRecommendation: String(data.reorg_recommendation || data.reorgRecommendation || ''),
+    selfStorySummary: String(data.self_story_summary || data.selfStorySummary || ''),
+    grantedScopes: Array.isArray(data.granted_scopes)
+      ? data.granted_scopes.map((scope) => String(scope))
+      : Array.isArray(data.grantedScopes)
+        ? data.grantedScopes.map((scope) => String(scope))
+        : [],
+    grantableScopes: Array.isArray(data.grantable_scopes)
+      ? data.grantable_scopes.map((scope) => String(scope))
+      : Array.isArray(data.grantableScopes)
+        ? data.grantableScopes.map((scope) => String(scope))
+        : []
   }
 }
 
@@ -652,12 +700,19 @@ function normalizeApiConfigTts(value: unknown) {
   const row = asRecord(value)
   return {
     enabled: Boolean(row.enabled),
+    engine: String(row.engine || 'current'),
     model: String(row.model || 'mimo-v2.5-tts'),
     baseUrl: String(row.baseUrl || ''),
     voice: String(row.voice || 'mimo_default'),
     format: String(row.format || 'wav'),
     requestMode: String(row.requestMode || 'auto'),
     timeoutSeconds: numberValue(row.timeoutSeconds, 60),
+    genieBaseUrl: String(row.genieBaseUrl || 'http://127.0.0.1:8000'),
+    genieCharacter: String(row.genieCharacter || 'feibi'),
+    genieSplitSentence: Boolean(row.genieSplitSentence),
+    genieSampleRate: numberValue(row.genieSampleRate, 32000),
+    genieChannels: numberValue(row.genieChannels, 1),
+    genieSampleWidth: numberValue(row.genieSampleWidth, 2),
     hasApiKey: Boolean(row.hasApiKey),
     apiKeyPreview: String(row.apiKeyPreview || '')
   }
@@ -984,10 +1039,12 @@ export function qqActionResultLabel(message: string, accepted: boolean, error?: 
     if (message === 'start_script_missing') return `启动脚本缺失${errorText}`
     if (message === 'webui_open_failed') return `网页端打开失败${errorText}`
     if (message === 'webui_token_missing') return '未找到网页端口令'
+    if (message === 'webui_token_invalid') return '网页端口令和运行中的 NapCat 不匹配，请重启 NapCat 后再试'
     if (message === 'start_failed') return `启动失败${errorText}`
     return `操作失败${errorText}`
   }
-  if (message === 'start_requested') return '已打开 QQ 启动窗口'
+  if (message === 'start_requested') return '已提交 QQ 环境启动，请稍候刷新状态'
+  if (message === 'napcat_started') return 'NapCat 已启动'
   if (message === 'webui_opened') return '已在桌面窗口打开 NapCat 网页端'
   if (message === 'webui_token_copied') return '网页端口令已复制'
   if (message === 'webui_token_missing') return '未找到网页端口令'
@@ -1009,8 +1066,8 @@ export function qqRuntimeResultLabel(message: string, accepted: boolean, error?:
 }
 
 export function apiConfigActionLabel(message: string, accepted: boolean, error?: unknown): string {
-  if (message === 'api_test_non_json_response') return 'API returned non-JSON response'
-  if (message === 'api_test_empty_reply') return 'API returned empty chat content'
+  if (message === 'api_test_non_json_response') return 'API 返回的不是 JSON'
+  if (message === 'api_test_empty_reply') return 'API 没有返回可用回复'
   const errorText = error ? `：${compact(String(error), 58)}` : ''
   if (accepted) {
     if (message === 'api_profile_saved') return 'API 资料已保存'
@@ -1026,6 +1083,13 @@ export function apiConfigActionLabel(message: string, accepted: boolean, error?:
   if (message === 'missing_api_profile_id') return '缺少 API 资料 ID'
   if (message === 'missing_base_url') return '缺少基础地址'
   if (message === 'missing_model') return '缺少模型名称'
+  if (message === 'missing_provider') return '缺少提供方'
+  if (message === 'native_messages_provider_not_supported_by_core_runtime') {
+    return '这个 Claude Messages 接口只能测试连通性，当前不能应用到主运行时'
+  }
+  if (message === 'unknown_provider_select_custom_openai_compatible_or_known_provider') {
+    return '未知提供方：请选择已知提供方，或选择“自定义 OpenAI 兼容”'
+  }
   if (message === 'api_test_failed') return `API 测试失败${errorText}`
   if (message === 'api_profile_not_found') return `未找到 API 资料${errorText}`
   if (message.startsWith('api_profile_not_found:')) return `未找到 API 资料：${compact(message.slice('api_profile_not_found:'.length), 36)}${errorText}`
@@ -1222,52 +1286,118 @@ export function platformLabel(value: string): string {
   return value
 }
 
+const proactiveExactLabels: Record<string, string> = {
+  active: '进行中',
+  answered: '已回复',
+  blocked: '已阻止',
+  candidate_only: '仅候选',
+  claim_ack: '确认后发送',
+  codex_followup: '代码任务跟进',
+  completion: '完成提醒',
+  desktop_inbox: '桌面提醒',
+  external_private: '外部私聊',
+  failed: '失败',
+  group_context: '群聊上下文',
+  initiative: '主动提醒',
+  initiative_lifecycle: '主动性生命周期',
+  initiative_orchestrator: '主动编排器',
+  local: '本地',
+  local_review: '本地确认',
+  low_owner_private: '低风险主人私聊',
+  memory_review: '记忆审查',
+  none: '本地',
+  normal: '普通',
+  owner_action: '主人动作',
+  owner_decision: '需要主人决定',
+  owner_private: '主人私聊',
+  owner_replied: '主人已回复',
+  owner_review: '等待你确认',
+  pending: '待处理',
+  preview_only: '仅预览',
+  promise_followup: '承诺跟进',
+  queue_owner_private: '主人私聊队列',
+  ready: '就绪',
+  report_completion: '完成回报',
+  replied: '已回复',
+  runtime_error: '运行状态提醒',
+  screenshot: '截图观察',
+  self_thought: '自发想法',
+  state_only: '仅桌面可见',
+  status: '状态检查',
+  system_internal: '系统内部',
+  task_done: '任务有结果',
+  task_failed: '任务失败',
+  live_view: '实时画面',
+  list_windows: '窗口列表',
+  observe_text: '文字观察',
+  click: '点击',
+  double_click: '双击',
+  move_mouse: '移动鼠标',
+  scroll: '滚动',
+  type_text: '输入文字',
+  hotkey: '快捷键',
+  clipboard_set: '设置剪贴板',
+  unknown: '未知',
+  urgency_score: '紧急度评分',
+  utility_score: '价值评分',
+  xinyu_proactive_request_loop: '主动提醒循环'
+}
+
+function proactiveReasonLabel(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed || (!trimmed.includes(';') && !trimmed.includes('/') && !trimmed.includes('='))) {
+    return ''
+  }
+
+  const labels: string[] = []
+  const push = (label: string): void => {
+    if (label && !labels.includes(label)) {
+      labels.push(label)
+    }
+  }
+
+  const parts = trimmed.split(';').map((part) => part.trim()).filter(Boolean)
+  const head = parts.shift() || ''
+  head
+    .split(/[/:,]/)
+    .map((token) => token.trim())
+    .filter(Boolean)
+    .forEach((token) => {
+      if (/^\d+$/.test(token)) return
+      const label = proactiveExactLabels[token]
+      if (label && !['价值评分', '紧急度评分'].includes(label)) {
+        push(label)
+      }
+    })
+
+  for (const part of parts) {
+    const [rawKey, rawValue = ''] = part.split('=').map((item) => item.trim())
+    const key = proactiveExactLabels[rawKey] || rawKey
+    const label = proactiveExactLabels[rawValue] || rawValue
+    if (rawKey === 'gate' || rawKey === 'restraint') {
+      push(label)
+    } else if (label) {
+      push(`${key}：${label}`)
+    }
+  }
+
+  return labels.join(' · ')
+}
+
 export function proactiveTextLabel(value: string): string {
   if (!value) return value
-  const exact: Record<string, string> = {
-    active: '进行中',
-    answered: '已回复',
-    blocked: '已阻止',
-    candidate_only: '仅候选',
-    claim_ack: '确认后发送',
-    codex_followup: '代码任务跟进',
-    completion: '完成提醒',
-    external_private: '外部私聊',
-    failed: '失败',
-    group_context: '群聊上下文',
-    initiative: '主动提醒',
-    initiative_lifecycle: '主动性生命周期',
-    local: '本地',
-    low_owner_private: '低风险主人私聊',
-    memory_review: '记忆审查',
-    none: '本地',
-    normal: '普通',
-    owner_action: '主人动作',
-    owner_decision: '需要主人决定',
-    owner_private: '主人私聊',
-    owner_replied: '主人已回复',
-    owner_review: '主人审查',
-    pending: '待处理',
-    preview_only: '仅预览',
-    promise_followup: '承诺跟进',
-    queue_owner_private: '主人私聊队列',
-    ready: '就绪',
-    report_completion: '报告完成',
-    replied: '已回复',
-    self_thought: '自发想法',
-    state_only: '仅状态',
-    system_internal: '系统内部',
-    unknown: '未知',
-    xinyu_proactive_request_loop: '主动提醒循环',
-    initiative_orchestrator: '主动性编排器'
-  }
-  if (exact[value]) return exact[value]
+  if (proactiveExactLabels[value]) return proactiveExactLabels[value]
+  const reasonLabel = proactiveReasonLabel(value)
+  if (reasonLabel) return reasonLabel
   const phraseTranslated = value
+    .replace(/A delegated task finished\./g, '后台任务已经完成。')
+    .replace(/A delegated task failed or timed out\./g, '后台任务失败或超时。')
+    .replace(/A runtime subsystem reported an error\./g, '运行状态需要检查。')
     .replace(/background code task finished/g, '后台代码任务已完成')
     .replace(/Integrate the result or keep it as a report-only completion\./g, '根据主人选择，整合结果或仅保留报告。')
   const translated = phraseTranslated
     .split(':')
-    .map((part) => exact[part] || part)
+    .map((part) => proactiveExactLabels[part] || part)
     .join('：')
   if (translated !== value) return translated
   return value
@@ -1284,7 +1414,7 @@ export function sourceLabel(value: string): string {
 export function deliveryLabel(value: string): string {
   if (value === 'queue_owner_private') return '私聊队列'
   if (value === 'claim_ack') return '确认后发送'
-  if (value === 'state_only') return '仅状态'
+  if (value === 'state_only') return '仅桌面可见'
   if (value === 'preview_only') return '仅预览'
   if (value === 'none') return '本地'
   if (value === 'local') return '本地'
@@ -1307,6 +1437,29 @@ export function actionLabel(action: ProactiveAction): string {
   if (action === 'approve_qq') return '正在送到 QQ'
   if (action === 'read_locally') return '正在标记已读'
   return '正在忽略'
+}
+
+export function proactiveAckResultLabel(action: ProactiveAction, accepted: boolean, error?: unknown, notes?: unknown[]): string {
+  if (accepted) {
+    if (action === 'approve_qq') return '已排队发送到 QQ'
+    if (action === 'read_locally') return '已标记本地已读'
+    if (action === 'reply') return '已记录回复'
+    return '已忽略'
+  }
+
+  const noteText = (Array.isArray(notes) ? notes : [])
+    .map((note) => String(note || '').trim())
+    .filter(Boolean)
+    .join(', ')
+  const code = String(error || noteText || 'unknown').trim()
+  if (code.includes('desktop_proactive_candidate_not_qq_claimable')) return '这条仅桌面可见，不能直接发送到 QQ'
+  if (code.includes('missing_candidate_id')) return '缺少提醒 ID'
+  if (code.includes('invalid_action')) return '未知按钮动作'
+  if (code.includes('candidate_not_found') || code.includes('not_found')) return '这条提醒已经不在队列里，请刷新'
+  if (code.includes('missing_owner_user_id')) return '缺少主人 QQ ID，不能发送'
+  if (code.includes('missing_candidate_message')) return '提醒内容为空，不能发送'
+  if (code.includes('desktop_qq_enqueue_failed')) return '发送到 QQ 队列失败'
+  return `操作失败：${compact(proactiveTextLabel(code), 72)}`
 }
 
 export function stickerMoodLabel(value: unknown): string {

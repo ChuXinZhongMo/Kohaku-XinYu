@@ -1,8 +1,8 @@
 import { BrowserWindow, clipboard } from 'electron'
-import { spawn } from 'node:child_process'
+import { execSync, spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { Socket } from 'node:net'
 
 export type ServiceProbe = {
@@ -81,11 +81,16 @@ const NAPCAT_ROOT =
     join(XINYU_ROOT, 'runtime', 'deps', 'NapCatQQ', 'NapCat.44498.Shell'),
     join(XINYU_ROOT, 'NapCatQQ', 'NapCat.44498.Shell')
   ])
+const NAPCAT_BAT = join(NAPCAT_ROOT, 'napcat.bat')
+const NAPCAT_UTF8_LAUNCHER = join(NAPCAT_ROOT, 'start_napcat_utf8.ps1')
+const NAPCAT_START_TIMEOUT_MS = 90_000
 const NAPCAT_WEBUI_URL = process.env.XINYU_NAPCAT_WEBUI_URL || 'http://127.0.0.1:6099/webui/'
 const NAPCAT_WEBUI_LOGIN_URL =
   process.env.XINYU_NAPCAT_WEBUI_LOGIN_URL || 'http://127.0.0.1:6099/webui/web_login'
 
 let napCatWebUIWindow: BrowserWindow | null = null
+type NapCatWebUIAuth = { token: string; credential: string; checked: boolean }
+let napCatAuthCache: ({ key: string; checkedAt: number } & NapCatWebUIAuth) | null = null
 
 function firstExistingPath(candidates: string[]): string {
   return candidates.find((candidate) => existsSync(candidate)) || candidates[0]
@@ -195,6 +200,9 @@ export async function setQQRuntimeConfig(patchValue: unknown): Promise<QQRuntime
   }
 }
 
+const QQ_GATEWAY_RESTART_DRAIN_SECONDS = 20
+const QQ_GATEWAY_RESTART_TIMEOUT_MS = (QQ_GATEWAY_RESTART_DRAIN_SECONDS + 90) * 1000
+
 export async function restartQQGateway(): Promise<QQRuntimeConfigActionResult> {
   const script = join(XINYU_CORE_DIR, 'start_xinyu_qq_gateway.ps1')
   if (!existsSync(script)) {
@@ -207,15 +215,27 @@ export async function restartQQGateway(): Promise<QQRuntimeConfigActionResult> {
     }
   }
 
+  const restartArgs = [
+    '-ForceRestart',
+    '-RestartDrainTimeoutSeconds',
+    String(QQ_GATEWAY_RESTART_DRAIN_SECONDS)
+  ]
+
   try {
-    await runPowerShellFile(script, ['-ForceRestart', '-RestartDrainTimeoutSeconds', '20'], XINYU_CORE_DIR, 90_000)
-    return {
-      accepted: true,
-      message: 'gateway_restarted',
-      config: getQQRuntimeConfig(),
-      status: await getQQEnvironmentStatus()
-    }
+    await runPowerShellFile(script, restartArgs, XINYU_CORE_DIR, QQ_GATEWAY_RESTART_TIMEOUT_MS)
   } catch (error) {
+    const timedOut = error instanceof Error && error.message === 'powershell_file_timeout'
+    if (timedOut) {
+      const qqGateway = await tcpProbe('qqGateway', 'QQ 网关 6199', '127.0.0.1', 6199)
+      if (qqGateway.ok) {
+        return {
+          accepted: true,
+          message: 'gateway_restarted',
+          config: getQQRuntimeConfig(),
+          status: await getQQEnvironmentStatus()
+        }
+      }
+    }
     return {
       accepted: false,
       message: 'gateway_restart_failed',
@@ -223,6 +243,13 @@ export async function restartQQGateway(): Promise<QQRuntimeConfigActionResult> {
       status: await getQQEnvironmentStatus(),
       error: errorLabel(error)
     }
+  }
+
+  return {
+    accepted: true,
+    message: 'gateway_restarted',
+    config: getQQRuntimeConfig(),
+    status: await getQQEnvironmentStatus()
   }
 }
 
@@ -234,9 +261,9 @@ export async function getQQEnvironmentStatus(): Promise<QQEnvironmentStatus> {
     establishedProbe()
   ])
   const services = [coreBridge, qqGateway, napcatWebui, napcatReverseWs]
-  const webuiToken = readNapCatWebUIToken()
-  const tokenAvailable = Boolean(webuiToken)
-  const napcatQQLoggedIn = napcatWebui.ok && webuiToken ? await getNapCatQQLoggedIn(webuiToken) : null
+  const webuiAuth = await resolveNapCatWebUIAuth(napcatWebui.ok)
+  const tokenAvailable = Boolean(webuiAuth.token)
+  const napcatQQLoggedIn = webuiAuth.credential ? await getNapCatQQLoggedIn(webuiAuth.credential) : null
   return {
     checkedAt: new Date().toISOString(),
     allReady: services.every((service) => service.ok),
@@ -327,13 +354,40 @@ function asRecord(value: unknown): Record<string, unknown> {
 }
 
 export async function startQQEnvironment(): Promise<QQEnvironmentActionResult> {
+  const status = await getQQEnvironmentStatus()
+  const byKey = Object.fromEntries(status.services.map((service) => [service.key, service])) as Partial<
+    Record<ServiceProbe['key'], ServiceProbe>
+  >
+  const coreUp = Boolean(byKey.coreBridge?.ok)
+  const gatewayUp = Boolean(byKey.qqGateway?.ok)
+  const napcatUp = Boolean(byKey.napcatWebui?.ok)
+
+  if (coreUp && gatewayUp && !napcatUp) {
+    try {
+      const probe = await ensureNapCatRunning()
+      return {
+        accepted: probe.ok,
+        message: probe.ok ? 'napcat_started' : 'start_failed',
+        error: probe.ok ? undefined : 'NapCat 6099 未就绪',
+        status: await getQQEnvironmentStatus()
+      }
+    } catch (error) {
+      return {
+        accepted: false,
+        message: 'start_failed',
+        error: errorLabel(error),
+        status: await getQQEnvironmentStatus()
+      }
+    }
+  }
+
   const startScript = resolveStartScriptPath()
   if (!startScript) {
     return {
       accepted: false,
       message: 'start_script_missing',
       error: START_SCRIPT_CANDIDATES.join(' | '),
-      status: await getQQEnvironmentStatus()
+      status
     }
   }
 
@@ -352,7 +406,7 @@ export async function startQQEnvironment(): Promise<QQEnvironmentActionResult> {
     return {
       accepted: true,
       message: 'start_requested',
-      status: await getQQEnvironmentStatus()
+      status
     }
   } catch (error) {
     return {
@@ -366,10 +420,26 @@ export async function startQQEnvironment(): Promise<QQEnvironmentActionResult> {
 
 export async function openNapCatWebUI(): Promise<QQEnvironmentActionResult> {
   try {
-    const webuiWindow = getNapCatWebUIWindow()
-    if (!webuiWindow.webContents.getURL()) {
-      await webuiWindow.loadURL(NAPCAT_WEBUI_URL)
+    const webuiReady = await ensureNapCatRunning()
+    if (!webuiReady.ok) {
+      return {
+        accepted: false,
+        message: 'webui_open_failed',
+        error: 'NapCat 6099 未就绪，自动拉起失败',
+        status: await getQQEnvironmentStatus()
+      }
     }
+    const auth = await resolveNapCatWebUIAuth(true)
+    if (auth.checked && auth.token && !auth.credential) {
+      return {
+        accepted: false,
+        message: 'webui_token_invalid',
+        error: 'configured token was rejected by running NapCat',
+        status: await getQQEnvironmentStatus()
+      }
+    }
+    const webuiWindow = getNapCatWebUIWindow()
+    await webuiWindow.loadURL(auth.token ? buildNapCatWebUILoginUrl(auth.token) : NAPCAT_WEBUI_LOGIN_URL)
     webuiWindow.show()
     webuiWindow.focus()
     return {
@@ -388,21 +458,93 @@ export async function openNapCatWebUI(): Promise<QQEnvironmentActionResult> {
 }
 
 export async function copyNapCatWebUIToken(): Promise<QQEnvironmentActionResult> {
-  const token = readNapCatWebUIToken()
-  if (!token) {
+  const webuiReady = await tcpProbe('napcatWebui', 'NapCat 网页端 6099', '127.0.0.1', 6099)
+  const auth = await resolveNapCatWebUIAuth(webuiReady.ok)
+  if (!auth.token) {
     return {
       accepted: false,
       message: 'webui_token_missing',
       status: await getQQEnvironmentStatus()
     }
   }
+  if (webuiReady.ok && auth.checked && !auth.credential) {
+    return {
+      accepted: false,
+      message: 'webui_token_invalid',
+      error: 'configured token was rejected by running NapCat',
+      status: await getQQEnvironmentStatus()
+    }
+  }
 
-  clipboard.writeText(token)
+  clipboard.writeText(auth.token)
   return {
     accepted: true,
     message: 'webui_token_copied',
     status: await getQQEnvironmentStatus()
   }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
+function napCatBootProcessRunning(): boolean {
+  try {
+    const output = execSync('tasklist /FI "IMAGENAME eq NapCatWinBootMain.exe" /NH', {
+      encoding: 'utf8',
+      windowsHide: true
+    })
+    return output.toLowerCase().includes('napcatwinbootmain.exe')
+  } catch {
+    return false
+  }
+}
+
+function startNapCatProcess(): void {
+  const launcher = existsSync(NAPCAT_BAT) ? NAPCAT_BAT : NAPCAT_UTF8_LAUNCHER
+  if (!existsSync(launcher)) {
+    throw new Error(`napcat launcher not found: ${launcher}`)
+  }
+  // NapCatWinBootMain needs a real console; hidden PowerShell spawn often fails silently.
+  const child = spawn('C:\\Windows\\System32\\cmd.exe', ['/k', launcher], {
+    cwd: NAPCAT_ROOT,
+    detached: true,
+    stdio: 'ignore',
+    windowsHide: false
+  })
+  child.unref()
+}
+
+async function waitForTcpProbe(
+  key: ServiceProbe['key'],
+  label: string,
+  host: string,
+  port: number,
+  timeoutMs: number,
+  intervalMs = 2000
+): Promise<ServiceProbe> {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const probe = await tcpProbe(key, label, host, port)
+    if (probe.ok) {
+      return probe
+    }
+    await delay(intervalMs)
+  }
+  return tcpProbe(key, label, host, port)
+}
+
+async function ensureNapCatRunning(timeoutMs = NAPCAT_START_TIMEOUT_MS): Promise<ServiceProbe> {
+  const probe = await tcpProbe('napcatWebui', 'NapCat 网页端 6099', '127.0.0.1', 6099)
+  if (probe.ok) {
+    return probe
+  }
+  if (!napCatBootProcessRunning()) {
+    startNapCatProcess()
+  }
+  return waitForTcpProbe('napcatWebui', 'NapCat 网页端 6099', '127.0.0.1', 6099, timeoutMs)
 }
 
 function getNapCatWebUIWindow(): BrowserWindow {
@@ -460,14 +602,44 @@ function qqEnvironmentDiagnosis(services: ServiceProbe[], tokenAvailable: boolea
   return 'partial'
 }
 
-async function getNapCatQQLoggedIn(token: string): Promise<boolean | null> {
+async function resolveNapCatWebUIAuth(validateWithRunningWebUI: boolean): Promise<NapCatWebUIAuth> {
+  const candidates = readNapCatWebUITokenCandidates()
+  const key = candidates.join('\n')
+  if (!validateWithRunningWebUI) {
+    return { token: candidates[0] || '', credential: '', checked: false }
+  }
+  if (napCatAuthCache && napCatAuthCache.key === key && Date.now() - napCatAuthCache.checkedAt < 30_000) {
+    return { token: napCatAuthCache.token, credential: napCatAuthCache.credential, checked: napCatAuthCache.checked }
+  }
+
+  let checked = false
+  for (const token of candidates) {
+    const result = await getNapCatWebUICredential(token)
+    checked ||= result.checked
+    if (result.credential) {
+      napCatAuthCache = { key, checkedAt: Date.now(), token, credential: result.credential, checked: true }
+      return { token, credential: result.credential, checked: true }
+    }
+  }
+
+  const fallback = { token: candidates[0] || '', credential: '', checked }
+  napCatAuthCache = { key, checkedAt: Date.now(), ...fallback }
+  return fallback
+}
+
+async function getNapCatWebUICredential(token: string): Promise<{ credential: string; checked: boolean }> {
   try {
     const hash = createHash('sha256').update(`${token}.napcat`).digest('hex')
     const login = await postNapCatApi('/auth/login', { hash })
-    const credential = String(asRecord(login.data).Credential || '').trim()
-    if (!credential) {
-      return null
-    }
+    return { credential: String(asRecord(login.data).Credential || '').trim(), checked: true }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error || '')
+    return { credential: '', checked: message.startsWith('napcat_api_http_') }
+  }
+}
+
+async function getNapCatQQLoggedIn(credential: string): Promise<boolean | null> {
+  try {
     const status = await postNapCatApi('/QQLogin/CheckLoginStatus', {}, credential)
     const data = asRecord(status.data)
     return typeof data.isLogin === 'boolean' ? data.isLogin : null
@@ -495,7 +667,24 @@ async function postNapCatApi(path: string, body: Record<string, unknown>, creden
   return (await response.json()) as Record<string, unknown>
 }
 
-function readNapCatWebUIToken(): string {
+function readNapCatWebUITokenCandidates(): string[] {
+  const candidates = [
+    process.env.NAPCAT_WEBUI_SECRET_KEY,
+    readNapCatWebUITokenFromConfig(),
+    ...readNapCatWebUITokenCandidatesFromLogs()
+  ]
+  return candidates
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+    .filter(isNapCatWebUITokenCandidate)
+    .filter((value, index, items) => items.indexOf(value) === index)
+}
+
+function isNapCatWebUITokenCandidate(value: string): boolean {
+  return /^[\x21-\x7e]{6,256}$/.test(value)
+}
+
+function readNapCatWebUITokenFromConfig(): string {
   const configPath = resolveNapCatWebUIConfigPath()
   if (!configPath || !existsSync(configPath)) {
     return ''
@@ -512,6 +701,59 @@ function readNapCatWebUIToken(): string {
     return ''
   }
   return ''
+}
+
+function readNapCatWebUITokenCandidatesFromLogs(): string[] {
+  const configPath = resolveNapCatWebUIConfigPath()
+  if (!configPath) {
+    return []
+  }
+  const logsPath = join(dirname(configPath), '..', 'logs')
+  if (!existsSync(logsPath)) {
+    return []
+  }
+  try {
+    return readdirSync(logsPath, { withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => {
+        const path = join(logsPath, entry.name)
+        return { path, mtimeMs: statSync(path).mtimeMs }
+      })
+      .sort((left, right) => right.mtimeMs - left.mtimeMs)
+      .slice(0, 5)
+      .flatMap((entry) => readNapCatWebUITokenCandidatesFromLog(entry.path))
+  } catch {
+    return []
+  }
+}
+
+function readNapCatWebUITokenCandidatesFromLog(path: string): string[] {
+  try {
+    return readFileSync(path, 'utf-8')
+      .split(/\r?\n/)
+      .slice(-500)
+      .map((line) => {
+        const match = line.match(/WebUi Token:\s*(\S+)/i) || line.match(/WebUI Token\b.*?(\S+)$/i)
+        return match ? match[1] : ''
+      })
+      .filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
+function buildNapCatWebUILoginUrl(token: string): string {
+  if (!token) {
+    return NAPCAT_WEBUI_LOGIN_URL
+  }
+  try {
+    const url = new URL(NAPCAT_WEBUI_LOGIN_URL)
+    url.searchParams.set('token', token)
+    return url.toString()
+  } catch {
+    const joiner = NAPCAT_WEBUI_LOGIN_URL.includes('?') ? '&' : '?'
+    return `${NAPCAT_WEBUI_LOGIN_URL}${joiner}token=${encodeURIComponent(token)}`
+  }
 }
 
 function resolveNapCatWebUIConfigPath(): string {

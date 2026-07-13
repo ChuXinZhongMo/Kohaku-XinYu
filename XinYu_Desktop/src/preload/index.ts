@@ -4,8 +4,18 @@ const api = {
   getSnapshot: () => ipcRenderer.invoke('xinyu:get-snapshot'),
   getProactiveInbox: () => ipcRenderer.invoke('xinyu:get-proactive-inbox'),
   getMemoryGrowthCandidates: () => ipcRenderer.invoke('xinyu:get-memory-growth-candidates'),
+  getVoiceFlags: () => ipcRenderer.invoke('xinyu:get-voice-flags'),
+  setVoiceFlags: (request: { flags?: Record<string, boolean>; persist?: boolean }) =>
+    ipcRenderer.invoke('xinyu:set-voice-flags', request),
   getStage8MemoryGovernance: () => ipcRenderer.invoke('xinyu:get-stage8-memory-governance'),
+  getKernelGovernance: () => ipcRenderer.invoke('xinyu:get-kernel-governance'),
+  reviewKernelItem: (request: { domain: string; itemId: string; decision: 'approve' | 'reject' }) =>
+    ipcRenderer.invoke('xinyu:review-kernel-item', request),
+  grantKernelScope: (request: { scope: string; note?: string }) =>
+    ipcRenderer.invoke('xinyu:grant-kernel-scope', request),
   getAsyncExplorationState: () => ipcRenderer.invoke('xinyu:get-async-exploration-state'),
+  reviewMemoryCandidate: (request: { candidateId: string; decision: 'approve' | 'reject'; notes?: string }) =>
+    ipcRenderer.invoke('xinyu:review-memory-candidate', request),
   getStage12GateStatus: () => ipcRenderer.invoke('xinyu:get-stage12-gate-status'),
   getStage13GateStatus: () => ipcRenderer.invoke('xinyu:get-stage13-gate-status'),
   getImpulseSoupState: () => ipcRenderer.invoke('xinyu:get-impulse-soup-state'),
@@ -65,6 +75,21 @@ const api = {
     authorizeCodex?: boolean
     authorizeExisting?: boolean
   }) => ipcRenderer.invoke('xinyu:decide-self-action-approval', request),
+  pausePrivateShare: (request: { paused: boolean }) => ipcRenderer.invoke('xinyu:pause-private-share', request),
+  setOwnerPrivateShareEnabled: (request: { enabled: boolean }) =>
+    ipcRenderer.invoke('xinyu:owner-private-share-set-enabled', request),
+  setPrivateEcosystemEnabled: (request: { enabled: boolean }) =>
+    ipcRenderer.invoke('xinyu:private-ecosystem-set-enabled', request),
+  setPrivateBrowserGrant: (request: { enabled: boolean; readOnly?: boolean; allowedUrls?: string[] }) =>
+    ipcRenderer.invoke('xinyu:private-browser-grant', request),
+  tickPrivateEcosystem: () => ipcRenderer.invoke('xinyu:private-ecosystem-tick'),
+  observePrivateBrowser: (request: { url: string }) => ipcRenderer.invoke('xinyu:observe-private-browser', request),
+  getPrivateDesktopSnapshot: () => ipcRenderer.invoke('xinyu:private-desktop-snapshot'),
+  startPrivateDesktop: () => ipcRenderer.invoke('xinyu:private-desktop-start'),
+  stopPrivateDesktop: () => ipcRenderer.invoke('xinyu:private-desktop-stop'),
+  observePrivateDesktop: () => ipcRenderer.invoke('xinyu:private-desktop-observe'),
+  setPrivateDesktopEnabled: (request: { enabled: boolean }) =>
+    ipcRenderer.invoke('xinyu:private-desktop-set-enabled', request),
   listMetabolismTickets: (statuses?: string) => ipcRenderer.invoke('xinyu:list-metabolism-tickets', statuses),
   yieldCompute: (request: { ticketId: string; seconds?: number; note?: string }) =>
     ipcRenderer.invoke('xinyu:yield-compute', request),

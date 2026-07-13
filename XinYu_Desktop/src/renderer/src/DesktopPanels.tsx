@@ -1,8 +1,10 @@
 ﻿import React from 'react'
-import { Activity, Bell, Brain, Check, ChevronDown, ChevronRight, Clock3, Compass, Clipboard, Download, Eye, ExternalLink, Heart, History, MessageCircle, Play, Puzzle, Radio, RefreshCw, Save, Send, ShieldAlert, Sparkles, Terminal, TimerReset, Plus, Trash2, Volume2, Wifi, X } from 'lucide-react'
+import { Activity, Bell, Brain, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Compass, Clipboard, Download, Eye, ExternalLink, Heart, History, MessageCircle, Play, Puzzle, Radio, RefreshCw, Save, Send, ShieldAlert, Sparkles, Terminal, TimerReset, Plus, Trash2, Volume2, Wifi, X } from 'lucide-react'
+import { createPortal } from 'react-dom'
 import { EnvironmentValve } from './EnvironmentValve'
+import { VoiceFlagsPanel } from './VoiceFlagsPanel'
 import { SurfacePart } from './AffectiveSurfaceProvider'
-import type { ApiConfigActionState, ApiConfigProfile, ApiConfigProfilePatch, ApiConfigStatus, AsyncExplorationState, CommandState, DesktopEvent, ExternalPluginActionState, ExternalPluginConfigPatch, ExternalPluginControl, ExternalPluginInstallRequest, ExternalPluginsStatus, GatewayStatus, GrowthCandidatePromotionStatus, ImpulseSoupState, JsonRecord, ProactiveAction, ProactiveIntent, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, SelfActionSnapshot, Snapshot, Stage8MemoryGovernanceStatus, Stage12GateStatus, Stage13GateStatus, StickerActionState, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
+import type { ApiConfigActionState, ApiConfigProfile, ApiConfigProfilePatch, ApiConfigStatus, AsyncExplorationState, CommandState, DesktopEvent, ExternalPluginActionState, ExternalPluginConfigPatch, ExternalPluginControl, ExternalPluginInstallRequest, ExternalPluginsStatus, GatewayStatus, GrowthCandidatePromotionStatus, ImpulseSoupState, JsonRecord, KernelGovernanceStatus, MetabolismTicket, MetabolismTicketActionState, ProactiveAction, ProactiveIntent, PrivateBrowserGrantPatch, PrivateEcosystemSnapshot, QQActionState, QQEnvironmentStatus, QQRuntimeActionState, QQRuntimeConfig, QQRuntimeConfigPatch, SelfActionSnapshot, Snapshot, Stage8MemoryGovernanceStatus, Stage12GateStatus, Stage13GateStatus, StickerActionState, StickerLibrary, StickerRecord, ThemeName, XinYuState } from './desktopTypes'
 import { actionLabel, asRecord, buildStats, commandStatusLabel, compact, defaultQQRuntimeConfig, defaultQQServices, digestPressureLabel, digestResidueLabel, digestResultLabel, digestThemeLabel, eventLabel, externalPluginInstallStateLabel, externalPluginNoteLabel, formatLatency, formatTime, formatTurnMeta, isCommandRenderedByTurn, memorySummary, platformLabel, proactiveTextLabel, qqDetailLabel, qqDiagnosisLabel, qqServiceLabel, riskLabel, runtimeLabel, sourceLabel, statusLabel, stickerClipLabel, stickerCorrectionMoods, stickerMoodLabel, themeOptions } from './desktopModel'
 
 const avatarSrc = './xinyu-avatar.png'
@@ -143,6 +145,27 @@ function memoryCandidateLabels(values: string[]): string {
   return values.length ? values.map((value) => memoryCandidateLabel(value)).join(' / ') : '无风险标记'
 }
 
+function kernelDomainLabel(value: string | undefined, fallback = '未知'): string {
+  const text = String(value || '').trim()
+  if (!text) return fallback
+  const labels: Record<string, string> = {
+    world_model: '世界模型',
+    reorganization: '重组提案',
+    belief: '信念',
+    followup: '行动后续候选',
+    self_model: '自我模型',
+    all: '全部域',
+    candidate: '候选',
+    review_only: '仅审核',
+    stable: '稳定',
+    balanced: '平衡',
+    consider_lower_slow_escalation_threshold: '建议降低慢信号阈值',
+    fast_reorg_often_ineffective_review_gates: '快重组常无效',
+    insufficient_data: '数据不足'
+  }
+  return labels[text] || text
+}
+
 function stage8Label(value: string | undefined, fallback = '暂无'): string {
   const text = String(value || '').trim()
   if (!text) return fallback
@@ -274,6 +297,27 @@ export function MindStatePanel(props: {
     decision: 'approved' | 'denied',
     options?: { authorizeExisting?: boolean }
   ) => void
+  privateShareBusy?: boolean
+  privateEcosystemBusy?: boolean
+  privateEcosystemResult?: string
+  onPausePrivateShare?: (paused: boolean) => void
+  onSetPrivateShareEnabled?: (enabled: boolean) => void
+  onSetPrivateEcosystemEnabled?: (enabled: boolean) => void
+  onTickPrivateEcosystem?: () => void
+  browserGrantBusy?: boolean
+  browserGrantResult?: string
+  onSetPrivateBrowserGrant?: (patch: PrivateBrowserGrantPatch) => void
+  browserObserveBusy?: boolean
+  browserObserveResult?: string
+  onObservePrivateBrowser?: (url: string) => void
+  privateDesktop?: Record<string, unknown>
+  privateDesktopBusy?: boolean
+  onStartPrivateDesktop?: () => void
+  onStopPrivateDesktop?: () => void
+  onObservePrivateDesktop?: () => void
+  onRefreshPrivateDesktop?: () => void
+  onSetPrivateDesktopEnabled?: (enabled: boolean) => void
+  privateDesktopResult?: string
 }): JSX.Element {
   return (
     <aside className="mind-panel">
@@ -296,6 +340,31 @@ export function MindStatePanel(props: {
         selfAction={props.snapshot?.selfAction}
         busy={props.selfActionApprovalBusy}
         onDecide={props.onDecideSelfActionApproval}
+      />
+      <PrivateEcosystemPanel
+        privateEcosystem={props.snapshot?.privateEcosystem}
+        busy={props.privateEcosystemBusy || props.privateShareBusy}
+        result={props.privateEcosystemResult}
+        onPauseShare={props.onPausePrivateShare}
+        onSetShareEnabled={props.onSetPrivateShareEnabled}
+        onSetEnabled={props.onSetPrivateEcosystemEnabled}
+        onTick={props.onTickPrivateEcosystem}
+        browserGrantBusy={props.browserGrantBusy}
+        browserGrantResult={props.browserGrantResult}
+        onSetBrowserGrant={props.onSetPrivateBrowserGrant}
+        observeBusy={props.browserObserveBusy}
+        observeResult={props.browserObserveResult}
+        onObserveUrl={props.onObservePrivateBrowser}
+      />
+      <PrivateDesktopPanel
+        privateDesktop={props.privateDesktop}
+        busy={props.privateDesktopBusy}
+        onStart={props.onStartPrivateDesktop}
+        onStop={props.onStopPrivateDesktop}
+        onObserve={props.onObservePrivateDesktop}
+        onRefresh={props.onRefreshPrivateDesktop}
+        onSetEnabled={props.onSetPrivateDesktopEnabled}
+        result={props.privateDesktopResult}
       />
 
       <section className="vital-strip" aria-label="当前数据">
@@ -461,6 +530,682 @@ function SelfActionFact(props: { label: string; value: string }): JSX.Element {
       <small>{props.label}</small>
       <strong>{props.value}</strong>
     </span>
+  )
+}
+
+function privateEcosystemRolloutLabel(value: string): string {
+  if (!value || value === 'disabled') return '关闭'
+  if (value === 'dry_run') return '干跑'
+  if (value === 'observe_only') return '低风险观察'
+  if (value === 'owner_private_share_enabled') return '可准备主人私聊'
+  if (value === 'browser_read_only') return '可只读浏览'
+  if (value === 'single_step_approved_actions') return '单步批准动作'
+  return compact(value, 24)
+}
+
+function privateEcosystemGoalLabel(value: string): string {
+  if (!value || value === 'none' || value === '暂无') return '暂无目标'
+  if (value === 'observe_private_space') return '观察自己的私有空间'
+  if (value === 'tend_private_journal') return '整理私有日志'
+  if (value === 'reflect_recent_feedback') return '消化最近主人反馈'
+  if (value === 'review_memory_pressure') return '检查记忆候选压力'
+  if (value === 'explore_browser_readonly') return '只读观察主人允许的页面'
+  return compact(value, 34)
+}
+
+function privateEcosystemActionLabel(value: string): string {
+  if (!value || value === 'none' || value === '无') return '暂无动作'
+  if (value === 'local_probe') return '本地低风险探测'
+  if (value === 'browser_observe') return '只读浏览观察'
+  if (value === 'owner_private_share') return '准备主人私聊候选'
+  if (value === 'memory_candidate') return '生成记忆候选'
+  return proactiveTextLabel(value)
+}
+
+function privateEcosystemStatusLabel(value: string): string {
+  if (!value || value === 'none' || value === '无') return '暂无'
+  if (value === 'completed') return '已完成'
+  if (value === 'queued') return '已排队'
+  if (value === 'blocked') return '已拦截'
+  if (value === 'failed') return '失败'
+  if (value === 'read_only_allowed') return '只读已允许'
+  if (value === 'browser_grant_disabled') return '浏览授权未启用'
+  if (value === 'plugin_disabled') return '插件未启用'
+  if (value.startsWith('sensitive_page_blocked')) return '敏感页面已拦截'
+  return compact(value, 24)
+}
+
+function privateBrowserEngineLabel(value: string): string {
+  if (!value || value === 'unavailable' || value === 'none') return '未装'
+  if (value === 'simulated') return '模拟'
+  if (value === 'playwright') return 'Playwright'
+  return compact(value, 20)
+}
+
+function parseAllowedUrls(value: string): string[] {
+  return Array.from(
+    new Set(
+      value
+        .split(/[\n,，]+/)
+        .map((url) => url.trim())
+        .filter(Boolean)
+    )
+  ).slice(0, 20)
+}
+
+function PrivateEcosystemPanel(props: {
+  privateEcosystem?: PrivateEcosystemSnapshot
+  busy?: boolean
+  result?: string
+  onPauseShare?: (paused: boolean) => void
+  onSetShareEnabled?: (enabled: boolean) => void
+  onSetEnabled?: (enabled: boolean) => void
+  onTick?: () => void
+  browserGrantBusy?: boolean
+  browserGrantResult?: string
+  onSetBrowserGrant?: (patch: PrivateBrowserGrantPatch) => void
+  observeBusy?: boolean
+  observeResult?: string
+  onObserveUrl?: (url: string) => void
+}): JSX.Element {
+  const [observeUrl, setObserveUrl] = React.useState('')
+  const [allowedUrlDraft, setAllowedUrlDraft] = React.useState('')
+  const [allowedUrlDirty, setAllowedUrlDirty] = React.useState(false)
+  const pe = props.privateEcosystem
+  const observed = Boolean(pe?.observed)
+  const counters = pe?.counters ?? {}
+  const share = pe?.ownerPrivateShare ?? {}
+  const journal = pe?.journal ?? {}
+  const browser = pe?.browser ?? {}
+  const computer = pe?.computer ?? {}
+  const kill = pe?.killSwitch ?? {}
+  const boundaries = pe?.boundaries ?? {}
+  const grantedAllowedUrls = Array.isArray(browser.allowedUrls) ? browser.allowedUrls : []
+  const grantedAllowedUrlText = grantedAllowedUrls.join('\n')
+
+  React.useEffect(() => {
+    if (!allowedUrlDirty && grantedAllowedUrlText) {
+      setAllowedUrlDraft(grantedAllowedUrlText)
+    }
+  }, [allowedUrlDirty, grantedAllowedUrlText])
+
+  const ecosystemEnabled = Boolean(pe?.enabled)
+  const rolloutState = String(pe?.rolloutState || 'disabled')
+  const activeGoalId = String(pe?.activeGoalId || 'none')
+  const latestActionKind = String(pe?.latestActionKind || 'none')
+  const latestActionStatus = String(pe?.latestActionStatus || 'none')
+  const tickCount = Number(counters.ticks ?? 0)
+  const goalLabel = privateEcosystemGoalLabel(activeGoalId)
+  const visibleGoalLabel = ecosystemEnabled ? goalLabel : '等待启动'
+  const latestActionLabel = privateEcosystemActionLabel(latestActionKind)
+  const actionStatusLabel = privateEcosystemStatusLabel(latestActionStatus)
+  const sharePaused = Boolean(kill.sharePaused ?? share.paused)
+  const shareEnabled = Boolean(kill.shareEnabled ?? share.enabled)
+  const heldCount = Number(counters.sharesHeld ?? 0)
+  const blockedCount = Number(counters.blockedHighRisk ?? 0)
+  const stableWrites = Number(journal.stableMemoryWriteCount ?? 0)
+  const browserEnabled = Boolean(browser.enabled)
+  const browserReadOnly = browser.readOnly !== false
+  const allowedUrls = parseAllowedUrls(allowedUrlDraft)
+  const browserGrantReady = allowedUrls.length > 0
+
+  const shareLabel = !shareEnabled ? '未授权' : sharePaused ? '已暂停' : '已授权'
+  const killLabel = sharePaused ? '已停止' : shareEnabled ? '可主动私聊' : '默认关闭'
+  const browserLabel = `${browserEnabled ? '已授权' : '未授权'} · ${browserReadOnly ? '只读' : '非只读'}`
+  const tone = !ecosystemEnabled ? 'idle' : stableWrites > 0 ? 'blocked' : sharePaused ? 'warn' : 'active'
+  const headline = !ecosystemEnabled
+    ? '目标未启用'
+    : observed
+      ? compact(visibleGoalLabel, 22)
+      : '等待第一次 tick'
+  const loopStatus = !ecosystemEnabled ? '目标循环未启用' : observed ? '目标循环已启用' : '已启用，未跑过'
+  const loopReason = !ecosystemEnabled
+    ? '现在不会自动围绕目标行动；只能由主人手动观察或手动触发。'
+    : observed
+      ? `最近：${latestActionLabel} / ${actionStatusLabel}；后台维护会继续低频推进。`
+      : '已经授权低风险私有生态，点“推进一次”会立刻生成当前目标。'
+
+  return (
+    <section className={`self-action-panel ${tone}`} aria-label="私有生态状态">
+      <div className="self-action-head">
+        <span>
+          <Radio size={15} />
+          <span>私有生态</span>
+        </span>
+        <strong>{headline}</strong>
+      </div>
+
+      <div className="self-action-summary">
+        <Compass size={14} />
+        <span>
+          <small>目标循环</small>
+          <strong>{compact(`${loopStatus} / ${visibleGoalLabel}`, 58)}</strong>
+        </span>
+      </div>
+
+      <div className="private-desktop-action-status" aria-label="私有生态目标状态">
+        <span>
+          <Activity size={13} />
+          <strong>{ecosystemEnabled ? `当前目标：${visibleGoalLabel}` : '现在没有启用目标循环'}</strong>
+        </span>
+        <small>{loopReason}</small>
+      </div>
+
+      <div className="self-action-grid">
+        <SelfActionFact label="目标循环" value={loopStatus} />
+        <SelfActionFact label="阶段" value={privateEcosystemRolloutLabel(rolloutState)} />
+        <SelfActionFact label="tick" value={String(tickCount)} />
+        <SelfActionFact label="低风险已执行" value={String(counters.lowRiskExecuted ?? 0)} />
+        <SelfActionFact label="最近动作" value={`${latestActionLabel}·${actionStatusLabel}`} />
+        <SelfActionFact label="记忆候选" value={String(counters.memoryCandidates ?? 0)} />
+        <SelfActionFact label="已拦截高风险" value={String(blockedCount)} />
+        <SelfActionFact label="稳定记忆写入" value={stableWrites > 0 ? `异常:${stableWrites}` : '0（受阻）'} />
+        <SelfActionFact label="主动私聊" value={shareLabel} />
+        <SelfActionFact
+          label="私聊配额"
+          value={`${share.dailyRemaining ?? 0}/${share.dailyLimit ?? 0}`}
+        />
+        <SelfActionFact label="冷却剩余" value={`${share.cooldownRemainingMinutes ?? 0} 分`} />
+        <SelfActionFact label="已发/已暂存" value={`${counters.sharesSent ?? 0} / ${heldCount}`} />
+        <SelfActionFact label="浏览器" value={`${privateBrowserEngineLabel(String(browser.engine || ''))} · 拦截${browser.actionsBlocked ?? 0}`} />
+        <SelfActionFact label="浏览授权" value={browserLabel} />
+        <SelfActionFact label="电脑控制" value={`${computer.backend || '未装'} · 观察${computer.observedCount ?? 0}`} />
+      </div>
+
+      <p className="self-action-note">
+        <ShieldAlert size={13} /> 终止开关：{killLabel}。 稳定记忆 {boundaries.stableMemoryWrite || 'blocked'}，
+        QQ 直发 {boundaries.qqMessageEnqueuedDirectly ? '是（异常）' : '否'}，
+        浏览器使用主人配置 {browser.usesOwnerProfile ? '是（异常）' : '否'}，
+        多步任意控制 {computer.multiStepArbitraryControl || 'disabled'}。
+      </p>
+
+      {props.onSetEnabled || props.onTick ? (
+        <div className="self-action-actions">
+          {props.onSetEnabled ? (
+            ecosystemEnabled ? (
+              <button
+                type="button"
+                disabled={Boolean(props.busy)}
+                onClick={() => props.onSetEnabled?.(false)}
+                title="关闭私有生态目标循环；不会影响手动隔离桌面观察授权"
+              >
+                <ShieldAlert size={13} />
+                <span>{props.busy ? '处理中' : '关闭目标循环'}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="approve"
+                disabled={Boolean(props.busy)}
+                onClick={() => props.onSetEnabled?.(true)}
+                title="启用低风险私有生态目标循环；稳定记忆、QQ直发、桌面点击仍受阻"
+              >
+                <Play size={13} />
+                <span>{props.busy ? '处理中' : '启动目标循环'}</span>
+              </button>
+            )
+          ) : null}
+          {props.onTick ? (
+            <button
+              type="button"
+              className="approve"
+              disabled={Boolean(props.busy) || !ecosystemEnabled}
+              onClick={() => props.onTick?.()}
+              title={ecosystemEnabled ? '立刻推进一次低风险目标循环' : '先启动目标循环'}
+            >
+              <RefreshCw size={13} />
+              <span>{props.busy ? '处理中' : '推进一次'}</span>
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {props.onPauseShare && shareEnabled ? (
+        <div className="self-action-actions">
+          {sharePaused ? (
+            <button
+              type="button"
+              className="approve"
+              disabled={Boolean(props.busy)}
+              onClick={() => props.onPauseShare?.(false)}
+              title="恢复心玉的主动私聊"
+            >
+              <Radio size={13} />
+              <span>{props.busy ? '处理中' : '恢复主动私聊'}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={Boolean(props.busy)}
+              onClick={() => props.onPauseShare?.(true)}
+              title="立即停止心玉的主动私聊（终止开关）"
+            >
+              <ShieldAlert size={13} />
+              <span>{props.busy ? '处理中' : '暂停主动私聊'}</span>
+            </button>
+          )}
+        </div>
+      ) : null}
+
+      {props.onSetShareEnabled ? (
+        <div className="self-action-actions">
+          {shareEnabled ? (
+            <button
+              type="button"
+              disabled={Boolean(props.busy)}
+              onClick={() => props.onSetShareEnabled?.(false)}
+              title="撤销主动私聊授权；不会删除已有候选，也不会发送消息"
+            >
+              <ShieldAlert size={13} />
+              <span>{props.busy ? '处理中' : '关闭主动私聊授权'}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="approve"
+              disabled={Boolean(props.busy)}
+              onClick={() => props.onSetShareEnabled?.(true)}
+              title="只写主人授权：允许心玉准备主人私聊候选，不直接发送新入口"
+            >
+              <Radio size={13} />
+              <span>{props.busy ? '处理中' : '启用主动私聊授权'}</span>
+            </button>
+          )}
+        </div>
+      ) : null}
+
+      {props.onSetBrowserGrant ? (
+        <div className="self-action-actions" style={{ gridTemplateColumns: '1fr', gap: 6 }}>
+          <p className="self-action-note" style={{ margin: 0 }}>
+            <ShieldAlert size={13} /> 只读浏览需要启用 xinyu_private_browser 插件，并在这里授权 allowed_urls；登录、支付、凭证页仍会被拦截。
+          </p>
+          <textarea
+            value={allowedUrlDraft}
+            spellCheck={false}
+            rows={3}
+            placeholder="每行一个允许只读观察的网址，例如 https://example.com/news"
+            onChange={(event) => {
+              setAllowedUrlDirty(true)
+              setAllowedUrlDraft(event.currentTarget.value)
+            }}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              resize: 'vertical',
+              borderRadius: 6,
+              border: '1px solid rgba(255,255,255,0.18)',
+              padding: '6px 8px',
+              background: 'rgba(0,0,0,0.16)',
+              color: 'inherit',
+              fontSize: 12,
+              lineHeight: 1.35
+            }}
+          />
+          <div className="self-action-actions">
+            <button
+              type="button"
+              className="approve"
+              disabled={Boolean(props.browserGrantBusy) || !browserGrantReady}
+              onClick={() => props.onSetBrowserGrant?.({ enabled: true, readOnly: true, allowedUrls })}
+              title={browserGrantReady ? '保存只读浏览授权和 allowed_urls' : '先填写至少一个 allowed_url'}
+            >
+              <Check size={13} />
+              <span>{props.browserGrantBusy ? '保存中' : '保存只读授权'}</span>
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(props.browserGrantBusy)}
+              onClick={() => props.onSetBrowserGrant?.({ enabled: false, readOnly: true, allowedUrls })}
+              title="撤销 private_browser.enabled；allowed_urls 会保留在授权文件中"
+            >
+              <ShieldAlert size={13} />
+              <span>{props.browserGrantBusy ? '保存中' : '撤销浏览授权'}</span>
+            </button>
+          </div>
+          {props.browserGrantResult ? <small className="self-action-updated">{props.browserGrantResult}</small> : null}
+        </div>
+      ) : null}
+
+      {props.onObserveUrl ? (
+        <div className="self-action-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
+          <input
+            type="text"
+            value={observeUrl}
+            spellCheck={false}
+            placeholder="https://… 让心玉只读观察"
+            onChange={(event) => setObserveUrl(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && observeUrl.trim()) {
+                props.onObserveUrl?.(observeUrl.trim())
+              }
+            }}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '4px 8px',
+              borderRadius: 6,
+              border: '1px solid rgba(255,255,255,0.18)',
+              background: 'rgba(0,0,0,0.18)',
+              color: 'inherit',
+              fontSize: 12
+            }}
+          />
+          <button
+            type="button"
+            disabled={Boolean(props.observeBusy) || !observeUrl.trim()}
+            onClick={() => props.onObserveUrl?.(observeUrl.trim())}
+            title="只读观察这个网页（需插件启用且已保存浏览授权；凭证/支付页会被拦截）"
+          >
+            <Send size={13} />
+            <span>{props.observeBusy ? '观察中' : '只读观察'}</span>
+          </button>
+          {props.observeResult ? <small className="self-action-updated">{props.observeResult}</small> : null}
+        </div>
+      ) : null}
+
+      {props.result ? <small className="self-action-updated">{props.result}</small> : null}
+
+      {pe?.updatedAt ? (
+        <small className="self-action-updated">
+          <Clock3 size={12} />
+          {formatTime(pe.updatedAt)}
+        </small>
+      ) : null}
+    </section>
+  )
+}
+
+function desktopActionResultLabel(value: string): string {
+  if (!value || value === 'none') return '暂无'
+  if (value === 'completed') return '已完成'
+  if (value === 'simulated') return '模拟完成'
+  if (value === 'prepared') return '已准备'
+  if (value === 'proposed') return '已提出'
+  if (value === 'blocked') return '已拦截'
+  if (value === 'failed') return '失败'
+  return compact(value, 28)
+}
+
+function desktopActionKindLabel(value: string): string {
+  if (!value || value === 'none') return '暂无'
+  return proactiveTextLabel(value)
+}
+
+function PrivateDesktopPanel(props: {
+  privateDesktop?: Record<string, unknown>
+  busy?: boolean
+  onStart?: () => void
+  onStop?: () => void
+  onObserve?: () => void
+  onRefresh?: () => void
+  onSetEnabled?: (enabled: boolean) => void
+  result?: string
+}): JSX.Element {
+  const [zoomed, setZoomed] = React.useState(false)
+  const dialogRef = React.useRef<HTMLDivElement | null>(null)
+  const dialogTitleId = React.useId()
+  const pd = props.privateDesktop ?? {}
+  const grant = (pd.grant as Record<string, unknown>) ?? {}
+  const boundaries = (pd.boundaries as Record<string, unknown>) ?? {}
+  const backend = String(pd.backend || 'unavailable')
+  const sessionState = String(pd.session_state || 'stopped')
+  const live = sessionState === 'live'
+  const liveUrl = String(pd.live_view_url || '')
+  const displaySize = String(pd.display_size || '—')
+  const frameAge = pd.frame_age_seconds
+  const enabled = Boolean(grant.enabled)
+  const observeOnly = Boolean(grant.observe_only)
+  const singleStep = Boolean(grant.single_step_actions)
+  const lastAction = String(pd.last_action_kind || 'none')
+  const lastResult = String(pd.last_result || 'none')
+  const actionsExecuted = Number(pd.actions_executed ?? 0)
+  const actionsBlocked = Number(pd.actions_blocked ?? 0)
+
+  const backendLabel =
+    backend === 'docker_xfce_vnc' ? '隔离桌面(docker)' : backend === 'simulated' ? '模拟(未起容器)' : '不可用'
+  const sessionLabel =
+    sessionState === 'live' ? '运行中' : sessionState === 'starting' ? '启动中' : sessionState === 'error' ? '错误' : '已停止'
+  const gateLabel = !enabled ? '未授权' : observeOnly ? '仅观察' : grant.single_step_actions ? '单步(已授权)' : '单步(需逐次批准)'
+  const tone = !enabled ? 'idle' : live ? 'active' : 'warn'
+  const actionStatus = !enabled
+    ? '没动：隔离桌面未授权'
+    : !live
+      ? '没动：隔离桌面未启动'
+      : observeOnly
+        ? '可见动作：只读观察'
+        : singleStep
+          ? '可执行：单步动作已授权'
+          : '等授权：单步动作需逐次批准'
+  const actionReason = !enabled
+    ? '先授权后才能观察隔离桌面。'
+    : !live
+      ? '启动后才能看到实时画面和执行只读观察。'
+      : observeOnly
+        ? '当前安全边界只允许截图、状态、窗口列表等只读动作，不会点鼠标或输入。'
+        : singleStep
+          ? '允许单步动作，但仍禁止 shell、下载、安装和外网。'
+          : '只读观察可用；点击、输入等动作还需要主人逐次批准。'
+
+  // View-only live monitor over loopback noVNC. Owner-only, bridge-token gated.
+  // liveUrl already carries autoconnect + the one-time session password, so we
+  // only append the view-only/scaling flags with the correct separator.
+  const embedUrl = live && liveUrl
+    ? `${liveUrl}${liveUrl.includes('?') ? '&' : '?'}view_only=true&resize=scale`
+    : ''
+  const stoppedMessage = '隔离桌面已停止 · 由主人启动后显示实时画面'
+  const unavailableMessage = !enabled
+    ? '未授权隔离桌面（默认关闭）'
+    : live
+      ? '运行中，但暂无实时画面地址'
+      : stoppedMessage
+  const previewMessage = zoomed && embedUrl ? '弹窗观察中' : unavailableMessage
+  const modalMessage = !enabled ? '未授权隔离桌面（默认关闭）— 先点「授权（仅观察）」再启动' : unavailableMessage
+
+  React.useEffect(() => {
+    if (!zoomed) {
+      return
+    }
+    const previousOverflow = document.body.style.overflow
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        setZoomed(false)
+      }
+    }
+    document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', handleKeyDown)
+    window.requestAnimationFrame(() => dialogRef.current?.focus())
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [zoomed])
+
+  return (
+    <section className={`self-action-panel ${tone}`} aria-label="隔离桌面状态">
+      <div className="self-action-head">
+        <span>
+          <Eye size={15} />
+          <span>隔离桌面</span>
+        </span>
+        <strong>{backendLabel}</strong>
+      </div>
+
+      <div className="private-desktop-stage">
+        {embedUrl && !zoomed ? (
+          <iframe
+            title="心玉隔离桌面实时画面"
+            src={embedUrl}
+            sandbox="allow-scripts allow-same-origin"
+            className="private-desktop-frame"
+          />
+        ) : (
+          <div className="private-desktop-empty">
+            {previewMessage}
+          </div>
+        )}
+        <button
+          type="button"
+          className="private-desktop-zoom-btn"
+          disabled={!embedUrl}
+          onClick={() => embedUrl && setZoomed(true)}
+          title={embedUrl ? '弹窗观察（实时画面居中放大）' : '没有实时画面地址，先授权并启动隔离桌面'}
+          aria-label={embedUrl ? '弹窗观察隔离桌面' : '隔离桌面暂无实时画面'}
+        >
+          <ExternalLink size={12} />
+          <span>{embedUrl ? '弹窗观察' : '暂无画面'}</span>
+        </button>
+      </div>
+
+      <div className="private-desktop-action-status" aria-label="隔离桌面行动状态">
+        <span>
+          <Activity size={13} />
+          <strong>{actionStatus}</strong>
+        </span>
+        <small>
+          最近：{desktopActionKindLabel(lastAction)} / {desktopActionResultLabel(lastResult)}；{actionReason}
+        </small>
+      </div>
+
+      <div className="self-action-grid">
+        <SelfActionFact label="后端" value={backendLabel} />
+        <SelfActionFact label="会话" value={sessionLabel} />
+        <SelfActionFact label="分辨率" value={displaySize} />
+        <SelfActionFact label="画面延迟" value={frameAge == null ? '—' : `${frameAge}s`} />
+        <SelfActionFact label="授权" value={gateLabel} />
+        <SelfActionFact
+          label="最近动作"
+          value={`${desktopActionKindLabel(lastAction)}·${desktopActionResultLabel(lastResult)}`}
+        />
+        <SelfActionFact label="已执行/拦截" value={`${actionsExecuted} / ${actionsBlocked}`} />
+        <SelfActionFact label="帧数" value={String(pd.frame_count ?? 0)} />
+      </div>
+
+      <p className="self-action-note">
+        <ShieldAlert size={13} /> 主人桌面捕获 {boundaries.host_screen_captured ? '是（异常）' : 'false'}，
+        操作系统鼠标控制 {boundaries.owner_mouse_moved ? '是（异常）' : 'false'}，
+        computer_control {boundaries.computer_control_enabled ? 'on（异常）' : 'off'}，
+        端口仅 127.0.0.1。shell/下载/安装/网络在本期禁用。
+      </p>
+
+      <div className="self-action-actions">
+        {props.onSetEnabled ? (
+          enabled ? (
+            <button
+              type="button"
+              disabled={Boolean(props.busy) || live}
+              onClick={() => props.onSetEnabled?.(false)}
+              title={live ? '请先停止隔离桌面再撤销授权' : '撤销隔离桌面授权（仅观察）'}
+            >
+              <ShieldAlert size={13} />
+              <span>撤销授权</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="approve"
+              disabled={Boolean(props.busy)}
+              onClick={() => props.onSetEnabled?.(true)}
+              title="授权心玉的隔离桌面（仅观察；单步/ shell / 网络仍关闭）"
+            >
+              <Eye size={13} />
+              <span>{props.busy ? '处理中' : '授权（仅观察）'}</span>
+            </button>
+          )
+        ) : null}
+        {live ? (
+          <button
+            type="button"
+            disabled={Boolean(props.busy)}
+            onClick={() => props.onStop?.()}
+            title="停止并移除心玉的隔离桌面容器"
+          >
+            <X size={13} />
+            <span>{props.busy ? '处理中' : '停止隔离桌面'}</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="approve"
+            disabled={Boolean(props.busy) || !enabled}
+            onClick={() => props.onStart?.()}
+            title={enabled ? '启动心玉的隔离桌面（需已构建镜像）' : '请先在授权里启用 private_desktop'}
+          >
+            <Play size={13} />
+            <span>{props.busy ? '处理中' : '启动隔离桌面'}</span>
+          </button>
+        )}
+        {props.onObserve ? (
+          <button
+            type="button"
+            className="approve"
+            disabled={Boolean(props.busy) || !enabled || !live}
+            onClick={() => props.onObserve?.()}
+            title={enabled && live ? '执行一次只读观察并刷新画面' : '需要先授权并启动隔离桌面'}
+            aria-label="观察一次隔离桌面"
+          >
+            <Eye size={13} />
+            <span>{props.busy ? '观察中' : '观察一次'}</span>
+          </button>
+        ) : null}
+        {props.onRefresh ? (
+          <button type="button" disabled={Boolean(props.busy)} onClick={() => props.onRefresh?.()} title="刷新隔离桌面状态">
+            <RefreshCw size={13} />
+            <span>刷新</span>
+          </button>
+        ) : null}
+      </div>
+
+      {props.result ? <small className="self-action-updated">{props.result}</small> : null}
+
+      {pd.updated_at ? (
+        <small className="self-action-updated">
+          <Clock3 size={12} />
+          {formatTime(String(pd.updated_at))}
+        </small>
+      ) : null}
+
+      {zoomed
+        ? createPortal(
+            <div className="private-desktop-modal-backdrop" onMouseDown={() => setZoomed(false)} role="presentation">
+              <div
+                ref={dialogRef}
+                className="private-desktop-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={dialogTitleId}
+                tabIndex={-1}
+                onMouseDown={(event) => event.stopPropagation()}
+              >
+                <header className="private-desktop-dialog-head">
+                  <span>
+                    <Eye size={15} />
+                    <strong id={dialogTitleId}>隔离桌面</strong>
+                    <small>{sessionLabel} · {displaySize}</small>
+                  </span>
+                  <button type="button" onClick={() => setZoomed(false)} title="关闭弹窗观察" aria-label="关闭弹窗观察">
+                    <X size={16} />
+                  </button>
+                </header>
+                <div className="private-desktop-dialog-frame">
+                  {embedUrl ? (
+                    <iframe
+                      title="心玉隔离桌面实时画面（弹窗）"
+                      src={embedUrl}
+                      sandbox="allow-scripts allow-same-origin"
+                      className="private-desktop-frame"
+                    />
+                  ) : (
+                    <div className="private-desktop-empty">
+                      {modalMessage}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
+    </section>
   )
 }
 
@@ -1050,6 +1795,7 @@ export function IntentQueuePanel(props: {
   intents: ProactiveIntent[]
   history: ProactiveIntent[]
   pending: Record<string, ProactiveAction>
+  feedback: Record<string, string>
   actionDigest?: unknown
   recentMemoryEvents: unknown[]
   lastEvent?: DesktopEvent
@@ -1089,7 +1835,7 @@ export function IntentQueuePanel(props: {
     <aside className="intent-panel">
       <header className="intent-head">
         <div>
-          <p className="label"> </p>
+          <p className="label">队列</p>
           <h2>主动提醒</h2>
         </div>
         <span>{props.intents.length}</span>
@@ -1101,7 +1847,7 @@ export function IntentQueuePanel(props: {
           <div className="empty-intents">
             <Bell size={18} />
             <strong>暂无候选</strong>
-            <span> </span>
+            <span>新的主动预览、只读提醒和需确认动作会出现在这里。</span>
           </div>
         ) : null}
 
@@ -1110,6 +1856,7 @@ export function IntentQueuePanel(props: {
             key={intent.id}
             intent={intent}
             pendingAction={props.pending[intent.id]}
+            feedback={props.feedback[intent.id]}
             onAck={props.onAck}
             onOpenDetail={props.onOpenDetail}
           />
@@ -1161,8 +1908,11 @@ export function SystemControlPanel(props: {
   qqRuntimeAction: QQRuntimeActionState
   stickerLibrary: StickerLibrary | null
   stickerAction: StickerActionState
+  metabolismTickets: MetabolismTicket[]
+  metabolismAction: MetabolismTicketActionState
   memoryGrowthCandidates: GrowthCandidatePromotionStatus | null
   stage8MemoryGovernance: Stage8MemoryGovernanceStatus | null
+  kernelGovernance: KernelGovernanceStatus | null
   actionDigest?: unknown
   recentMemoryEvents: unknown[]
   lastEvent?: DesktopEvent
@@ -1185,6 +1935,15 @@ export function SystemControlPanel(props: {
   onRunStickerMaintenance: (action: 'import-pending' | 'rebuild-index') => void
   onMoveStickerToMood: (file: string, mood: string) => void
   onOpenStickerAssetDir: () => void
+  onRefreshMetabolismTickets: () => void
+  onYieldCompute: (ticketId: string, seconds: number) => void
+  onMaintainBoundary: (ticketId: string) => void
+  onReviewMemoryCandidate?: (candidateId: string, decision: 'approve' | 'reject') => void
+  reviewMemoryCandidateBusy?: string
+  onReviewKernelItem?: (domain: string, itemId: string, decision: 'approve' | 'reject') => void
+  reviewKernelItemBusy?: string
+  onGrantKernelScope?: (scope: string) => void
+  grantKernelScopeBusy?: string
 }): JSX.Element {
   return (
     <aside className="system-panel">
@@ -1194,6 +1953,8 @@ export function SystemControlPanel(props: {
           <h2>API / 插件 / QQ / 记忆</h2>
         </div>
       </header>
+
+      <VoiceFlagsPanel />
 
       <ApiConfigPanel
         status={props.apiConfig}
@@ -1236,9 +1997,29 @@ export function SystemControlPanel(props: {
         onOpenAssetDir={props.onOpenStickerAssetDir}
       />
 
+      <MetabolismTicketsPanel
+        tickets={props.metabolismTickets}
+        action={props.metabolismAction}
+        onRefresh={props.onRefreshMetabolismTickets}
+        onYieldCompute={props.onYieldCompute}
+        onMaintainBoundary={props.onMaintainBoundary}
+      />
+
       <Stage8MemoryGovernancePanel status={props.stage8MemoryGovernance} />
 
-      <MemoryGrowthCandidatePanel status={props.memoryGrowthCandidates} />
+      <KernelGovernancePanel
+        status={props.kernelGovernance}
+        onReviewItem={props.onReviewKernelItem}
+        reviewBusy={props.reviewKernelItemBusy}
+        onGrantScope={props.onGrantKernelScope}
+        grantScopeBusy={props.grantKernelScopeBusy}
+      />
+
+      <MemoryGrowthCandidatePanel
+        status={props.memoryGrowthCandidates}
+        onReviewCandidate={props.onReviewMemoryCandidate}
+        reviewBusy={props.reviewMemoryCandidateBusy}
+      />
 
       <ActionDigestPanel digest={props.actionDigest} />
 
@@ -1247,6 +2028,315 @@ export function SystemControlPanel(props: {
   )
 }
 
+function metabolismTicketId(ticket: MetabolismTicket): string {
+  return String(ticket.ticket_id || ticket.ticketId || ticket.id || '').trim()
+}
+
+function metabolismTicketStatusLabel(value: string): string {
+  const text = String(value || '').trim()
+  const labels: Record<string, string> = {
+    approved: '已批准',
+    cancelled: '已取消',
+    completed: '已完成',
+    expired: '已过期',
+    failed: '失败',
+    rejected: '已守边界',
+    requested: '请求中',
+    running: '让渡中',
+    yielded: '已让出计算'
+  }
+  return labels[text] || compact(text || '未知', 24)
+}
+
+function metabolismTicketKindLabel(ticket: MetabolismTicket): string {
+  const value = String(ticket.kind || ticket.request_kind || ticket.action_kind || ticket.desire_shape || '').trim()
+  const labels: Record<string, string> = {
+    async_exploration: '异步探索',
+    creative_writing: '创作写作',
+    deep_research: '深度研究',
+    desire_drive: '欲望驱动',
+    memory_consolidation: '记忆整理',
+    metabolism_window: '计算让渡窗口',
+    private_ecosystem_tick: '私有生态推进',
+    self_repair: '自修复',
+    yield_compute: '让出计算'
+  }
+  return labels[value] || compact(value || '代谢票据', 28)
+}
+
+function metabolismTicketSeconds(ticket: MetabolismTicket): number {
+  const seconds = Number(ticket.requested_seconds || ticket.approved_seconds || ticket.duration_seconds || ticket.seconds || 600)
+  if (!Number.isFinite(seconds) || seconds <= 0) return 600
+  return Math.max(60, Math.min(7200, Math.round(seconds)))
+}
+
+function metabolismSecondsLabel(seconds: number): string {
+  if (seconds >= 3600) return `${Math.round(seconds / 3600)} 小时`
+  return `${Math.max(1, Math.round(seconds / 60))} 分`
+}
+
+function metabolismTicketReason(ticket: MetabolismTicket): string {
+  return compact(
+    String(ticket.reason || ticket.note || ticket.summary || ticket.description || ticket.request_reason || '核心请求一个可控计算窗口。'),
+    86
+  )
+}
+
+function metabolismTicketTime(ticket: MetabolismTicket): string {
+  const time = String(ticket.expires_at || ticket.updated_at || ticket.created_at || '')
+  return time ? formatTime(time) : '暂无时间'
+}
+
+function metabolismSecondOptions(defaultSeconds: number): number[] {
+  return Array.from(new Set([defaultSeconds, 300, 600, 1200, 1800, 3600])).sort((a, b) => a - b)
+}
+
+function MetabolismTicketsPanel(props: {
+  tickets: MetabolismTicket[]
+  action: MetabolismTicketActionState
+  onRefresh: () => void
+  onYieldCompute: (ticketId: string, seconds: number) => void
+  onMaintainBoundary: (ticketId: string) => void
+}): JSX.Element {
+  const [secondsByTicket, setSecondsByTicket] = React.useState<Record<string, number>>({})
+  const busy = props.action.kind !== 'idle'
+  const activeCount = props.tickets.filter((ticket) => !['completed', 'cancelled', 'expired', 'rejected', 'yielded'].includes(String(ticket.status || ''))).length
+  const tone = props.action.message.startsWith('失败') ? 'blocked' : activeCount ? 'warn' : 'idle'
+  const headline = busy ? '处理中' : activeCount ? `${activeCount} 张待决策` : '暂无请求'
+
+  return (
+    <section className={`self-action-panel ${tone}`} aria-label="计算代谢票据">
+      <div className="self-action-head">
+        <span>
+          <TimerReset size={15} />
+          <span>计算代谢</span>
+        </span>
+        <strong>{headline}</strong>
+      </div>
+
+      <div className="self-action-summary">
+        <Activity size={14} />
+        <span>
+          <small>票据队列</small>
+          <strong>{props.tickets.length ? `后端已返回 ${props.tickets.length} 张票据` : '等待核心请求计算窗口'}</strong>
+        </span>
+      </div>
+
+      <div className="self-action-actions">
+        <button type="button" onClick={props.onRefresh} disabled={busy} title="刷新代谢票据">
+          <RefreshCw size={13} className={props.action.kind === 'loading' ? 'spin' : ''} />
+          <span>{props.action.kind === 'loading' ? '刷新中' : '刷新票据'}</span>
+        </button>
+      </div>
+
+      {!props.tickets.length ? (
+        <p className="self-action-note">暂无需要主人决策的计算让渡票据；这里会显示请求原因、时长和边界动作。</p>
+      ) : null}
+
+      <div style={{ display: 'grid', gap: 7 }}>
+        {props.tickets.slice(0, 6).map((ticket, index) => {
+          const ticketId = metabolismTicketId(ticket)
+          const defaultSeconds = metabolismTicketSeconds(ticket)
+          const selectedSeconds = secondsByTicket[ticketId] || defaultSeconds
+          const rowBusy = Boolean(ticketId && props.action.ticketId === ticketId && props.action.kind !== 'idle')
+          const status = String(ticket.status || 'requested')
+          const closed = ['completed', 'cancelled', 'expired', 'rejected', 'yielded'].includes(status)
+          const disabled = busy || !ticketId || closed
+          const options = metabolismSecondOptions(defaultSeconds)
+          return (
+            <article className="evidence-row runtime-row" key={ticketId || `metabolism-ticket-${index}`}>
+              <TimerReset size={13} />
+              <span title={ticketId}>{compact(metabolismTicketKindLabel(ticket), 36)}</span>
+              <strong>{rowBusy ? '提交中' : metabolismTicketStatusLabel(status)}</strong>
+              <small>{metabolismTicketReason(ticket)}</small>
+              <small>
+                请求 {metabolismSecondsLabel(defaultSeconds)} · {metabolismTicketTime(ticket)}
+              </small>
+              <div
+                className="self-action-actions"
+                style={{ gridColumn: '2 / -1', gridTemplateColumns: 'minmax(0, 0.9fr) repeat(2, minmax(0, 1fr))' }}
+              >
+                <select
+                  value={selectedSeconds}
+                  disabled={busy || closed}
+                  aria-label="让渡计算时长"
+                  onChange={(event) =>
+                    setSecondsByTicket((current) => ({ ...current, [ticketId]: Number(event.currentTarget.value) }))
+                  }
+                  style={{
+                    minWidth: 0,
+                    borderRadius: 8,
+                    border: '1px solid rgba(255,255,255,0.18)',
+                    padding: '0 6px',
+                    background: 'rgba(0,0,0,0.12)',
+                    color: 'inherit',
+                    fontSize: 12,
+                    fontWeight: 800
+                  }}
+                >
+                  {options.map((seconds) => (
+                    <option value={seconds} key={seconds}>
+                      {metabolismSecondsLabel(seconds)}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="approve"
+                  disabled={disabled}
+                  onClick={() => props.onYieldCompute(ticketId, selectedSeconds)}
+                  title={closed ? '这张票据已经结束' : '批准这个计算让渡窗口'}
+                >
+                  <Play size={13} />
+                  <span>让出计算</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => props.onMaintainBoundary(ticketId)}
+                  title={closed ? '这张票据已经结束' : '拒绝这张票据并守住边界'}
+                >
+                  <ShieldAlert size={13} />
+                  <span>守住边界</span>
+                </button>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+
+      {props.action.message ? <small className="self-action-updated">{props.action.message}</small> : null}
+    </section>
+  )
+}
+
+const KERNEL_GRANT_SCOPES = ['world_model', 'reorganization', 'belief', 'self_model'] as const
+
+function KernelGovernancePanel(props: {
+  status: KernelGovernanceStatus | null
+  onReviewItem?: (domain: string, itemId: string, decision: 'approve' | 'reject') => void
+  reviewBusy?: string
+  onGrantScope?: (scope: string) => void
+  grantScopeBusy?: string
+}): JSX.Element {
+  const { status, onReviewItem, reviewBusy, onGrantScope, grantScopeBusy } = props
+  const items = status?.items || []
+  const reviewable = items.filter((item) => item.reviewStatus === 'candidate' || item.reviewStatus === 'review_only')
+  const headline = status?.ok === false
+    ? '读取失败'
+    : !status?.available
+      ? '内核不可用'
+      : reviewable.length > 0
+        ? `${reviewable.length} 条待审核`
+        : '无待审核'
+  const tone = !status || status.ok === false
+    ? 'blocked'
+    : reviewable.length > 0
+      ? 'warn'
+      : status.writesBlocked
+        ? 'prepared'
+        : 'active'
+
+  return (
+    <section className={`stage8-governance-panel self-action-panel ${tone}`} aria-label="认知内核审核">
+      <div className="self-action-head">
+        <span>
+          <Brain size={15} />
+          <span>认知内核 · 主人审核</span>
+        </span>
+        <strong>{headline}</strong>
+      </div>
+
+      <p className="self-action-note">
+        审核世界模型、重组提案、信念变更与行动后续候选。批准后写入运行时 Self 或标记后续候选；拒绝则丢弃待审项。这不等同于 Stage8 稳定记忆写入。
+      </p>
+
+      <div className="self-action-grid">
+        <SelfActionFact label="待审" value={String(status?.pendingCount ?? 0)} />
+        <SelfActionFact label="世界模型" value={String(status?.worldModelCount ?? 0)} />
+        <SelfActionFact label="重组" value={String(status?.reorganizationCount ?? 0)} />
+        <SelfActionFact label="信念" value={String(status?.beliefCount ?? 0)} />
+        <SelfActionFact label="后续候选" value={String(status?.followupCount ?? 0)} />
+        <SelfActionFact label="慢信号" value={`${status?.slowSignalCount ?? 0}/${status?.slowEscalationThreshold ?? 3}`} />
+        <SelfActionFact label="重组建议" value={kernelDomainLabel(status?.reorgRecommendation, '暂无')} />
+      </div>
+
+      {status?.selfStorySummary ? (
+        <p className="self-action-note">自我叙事摘要：{compact(status.selfStorySummary, 160)}</p>
+      ) : null}
+
+      {status?.error ? <p className="self-action-note">{compact(status.error, 120)}</p> : null}
+
+      <div className="kernel-grant-strip">
+        <small>域授权：将 review_only 降级为 candidate，仍需逐条批准。</small>
+        {KERNEL_GRANT_SCOPES.map((scope) => {
+          const granted = status?.grantedScopes?.includes(scope)
+          return (
+            <span key={`kernel-grant-${scope}`} className="kernel-grant-chip">
+              {granted ? (
+                <strong>
+                  <Check size={11} />
+                  {kernelDomainLabel(scope)}
+                </strong>
+              ) : onGrantScope ? (
+                <button
+                  type="button"
+                  className="memory-review-approve"
+                  disabled={grantScopeBusy === scope}
+                  onClick={() => onGrantScope(scope)}
+                  title={`授权 ${kernelDomainLabel(scope)} 域进入候选审核`}
+                >
+                  <ShieldAlert size={11} />
+                  {grantScopeBusy === scope ? '授权中' : `授权${kernelDomainLabel(scope)}`}
+                </button>
+              ) : (
+                <small>{kernelDomainLabel(scope)}</small>
+              )}
+            </span>
+          )
+        })}
+      </div>
+
+      {reviewable.slice(0, 4).map((item) => {
+        const busyKey = `${item.domain}:${item.itemId}`
+        return (
+          <div className="evidence-row runtime-row memory-review-row" key={`kernel-review-${busyKey}`}>
+            <ShieldAlert size={13} />
+            <span>{compact(item.itemId, 24)}</span>
+            <strong>{kernelDomainLabel(item.domain)}</strong>
+            <small>{compact(item.contentPreview, 72)}</small>
+            <small>{kernelDomainLabel(item.reviewStatus)}</small>
+            {typeof item.confidence === 'number' ? <small>置信 {Math.round(item.confidence * 100)}%</small> : null}
+            {onReviewItem ? (
+              <small className="memory-review-actions">
+                <button
+                  type="button"
+                  disabled={reviewBusy === busyKey}
+                  className="memory-review-approve"
+                  onClick={() => onReviewItem(item.domain, item.itemId, 'approve')}
+                  title="批准这条内核变更"
+                >
+                  <Check size={11} />
+                  {reviewBusy === busyKey ? '处理中' : '批准'}
+                </button>
+                <button
+                  type="button"
+                  disabled={reviewBusy === busyKey}
+                  className="memory-review-reject"
+                  onClick={() => onReviewItem(item.domain, item.itemId, 'reject')}
+                  title="拒绝这条内核变更"
+                >
+                  <X size={11} />
+                  拒绝
+                </button>
+              </small>
+            ) : null}
+          </div>
+        )
+      })}
+    </section>
+  )
+}
 
 function Stage8MemoryGovernancePanel(props: { status: Stage8MemoryGovernanceStatus | null }): JSX.Element {
   const status = props.status
@@ -1353,16 +2443,22 @@ function Stage8MemoryGovernancePanel(props: { status: Stage8MemoryGovernanceStat
   )
 }
 
-function MemoryGrowthCandidatePanel(props: { status: GrowthCandidatePromotionStatus | null }): JSX.Element {
-  const status = props.status
+function MemoryGrowthCandidatePanel(props: {
+  status: GrowthCandidatePromotionStatus | null
+  onReviewCandidate?: (candidateId: string, decision: 'approve' | 'reject') => void
+  reviewBusy?: string
+}): JSX.Element {
+  const { status, onReviewCandidate, reviewBusy } = props
   const pending = status?.pendingApply || []
   const applied = status?.applied || []
   const ownerReview = status?.ownerReviewRequired || []
   const headline = status?.ok === false
     ? '读取失败'
-    : pending.length > 0
-      ? `${status?.pendingApplyCount ?? pending.length} 条待应用`
-      : '无待应用'
+    : ownerReview.length > 0
+      ? `${ownerReview.length} 条待主人审核`
+      : pending.length > 0
+        ? `${status?.pendingApplyCount ?? pending.length} 条待应用`
+        : '无待应用'
   const copyCommand = (command: string): void => {
     if (!command) return
     void navigator.clipboard?.writeText(command).catch(() => undefined)
@@ -1388,14 +2484,38 @@ function MemoryGrowthCandidatePanel(props: { status: GrowthCandidatePromotionSta
       </div>
       {status?.error ? <p className="self-action-note">{compact(status.error, 120)}</p> : null}
       {ownerReview.slice(0, 3).map((item) => (
-        <div className="evidence-row runtime-row" key={`owner-review-${item.candidateId}`}>
+        <div className="evidence-row runtime-row memory-review-row" key={`owner-review-${item.candidateId}`}>
           <ShieldAlert size={13} />
-          <span>{compact(item.candidateId, 34)}</span>
-          <strong>需主人审查</strong>
-          <small>{compact(memoryCandidateLabel(item.candidateType || item.targetGate || 'owner_review_required'), 48)}</small>
-          <small>{compact(memoryCandidateLabel(item.targetMemoryLayer || 'memory/people/owner.md'), 64)}</small>
-          {item.riskFlags.length ? <small>{compact(memoryCandidateLabels(item.riskFlags), 96)}</small> : null}
-          <small>正文已隐藏；请在本地命令行审查</small>
+          <span>{compact(item.candidateId, 28)}</span>
+          <strong>待审核</strong>
+          <small>{compact(memoryCandidateLabel(item.candidateType || item.targetGate || 'owner_review_required'), 40)}</small>
+          <small>{compact(memoryCandidateLabel(item.targetMemoryLayer || 'memory/reflection/growth_log.md'), 32)}</small>
+          {item.riskFlags.length ? <small>{compact(memoryCandidateLabels(item.riskFlags), 72)}</small> : null}
+          <small>正文已隐藏</small>
+          {onReviewCandidate ? (
+            <small className="memory-review-actions">
+              <button
+                type="button"
+                disabled={reviewBusy === item.candidateId}
+                className="memory-review-approve"
+                onClick={() => onReviewCandidate(item.candidateId, 'approve')}
+                title="批准这条候选进入成长日志预览（仍需 apply 才能写入稳定记忆）"
+              >
+                <Check size={11} />
+                {reviewBusy === item.candidateId ? '处理中' : '批准'}
+              </button>
+              <button
+                type="button"
+                disabled={reviewBusy === item.candidateId}
+                className="memory-review-reject"
+                onClick={() => onReviewCandidate(item.candidateId, 'reject')}
+                title="拒绝这条候选"
+              >
+                <X size={11} />
+                拒绝
+              </button>
+            </small>
+          ) : null}
         </div>
       ))}
       {pending.slice(0, 4).map((item) => (
@@ -1781,6 +2901,7 @@ type ApiConfigDraft = {
   }
   tts: {
     enabled: boolean
+    engine: string
     model: string
     baseUrl: string
     apiKey: string
@@ -1788,6 +2909,12 @@ type ApiConfigDraft = {
     format: string
     requestMode: string
     timeoutSeconds: number
+    genieBaseUrl: string
+    genieCharacter: string
+    genieSplitSentence: boolean
+    genieSampleRate: number
+    genieChannels: number
+    genieSampleWidth: number
   }
   other: {
     openAIApiKey: string
@@ -1795,6 +2922,21 @@ type ApiConfigDraft = {
 }
 
 type ApiSectionId = 'llm' | 'vision' | 'hearing' | 'tts' | 'other'
+const API_NEW_PROFILE_ID = '__new__'
+const API_PROVIDER_OPTIONS = [
+  { value: 'ciallo', label: 'Ciallo / MiMo 兼容' },
+  { value: 'mimo', label: 'MiMo 兼容' },
+  { value: 'openai', label: 'OpenAI 兼容' },
+  { value: 'openrouter', label: 'OpenRouter 兼容' },
+  { value: 'gemini', label: 'Gemini 兼容' },
+  { value: 'deepseek', label: 'DeepSeek 兼容' },
+  { value: 'qwen', label: '通义千问兼容' },
+  { value: 'siliconflow', label: '硅基流动兼容' },
+  { value: 'moonshot', label: 'Moonshot 兼容' },
+  { value: 'minimax', label: 'MiniMax 兼容' },
+  { value: 'custom_openai_compatible', label: '自定义 OpenAI 兼容' },
+  { value: 'message', label: 'Claude Messages（仅测试）' }
+] as const
 
 function ApiConfigPanel(props: {
   status: ApiConfigStatus | null
@@ -1808,16 +2950,18 @@ function ApiConfigPanel(props: {
 }): JSX.Element {
   const profiles = props.status?.profiles || []
   const activeProfileId = props.status?.activeProfileId || ''
-  const [selectedId, setSelectedId] = React.useState(() => activeProfileId || profiles[0]?.id || '__new__')
+  const preferredProfileId = activeProfileId || profiles[0]?.id || API_NEW_PROFILE_ID
+  const [selectedId, setSelectedId] = React.useState(() => preferredProfileId)
   const [activeSection, setActiveSection] = React.useState<ApiSectionId>('llm')
-  const selected = profiles.find((profile) => profile.id === selectedId) || null
+  const selected = selectedId === API_NEW_PROFILE_ID ? null : profiles.find((profile) => profile.id === selectedId) || null
   const [draft, setDraft] = React.useState<ApiConfigDraft>(() => apiDraftFromStatus(props.status))
   const [draftDirty, setDraftDirty] = React.useState(false)
-  const [draftSourceId, setDraftSourceId] = React.useState('__new__')
+  const [draftSourceId, setDraftSourceId] = React.useState(API_NEW_PROFILE_ID)
   const didInitSelection = React.useRef(Boolean(props.status))
+  const userSelectedNew = React.useRef(false)
   const busy = props.action.kind !== 'idle'
   const current = props.status?.current
-  const sourceId = selected?.id || '__new__'
+  const sourceId = selected?.id || API_NEW_PROFILE_ID
 
   React.useEffect(() => {
     if (!props.status) {
@@ -1825,14 +2969,24 @@ function ApiConfigPanel(props: {
     }
     if (!didInitSelection.current) {
       didInitSelection.current = true
-      setSelectedId(activeProfileId || profiles[0]?.id || '__new__')
+      setSelectedId(preferredProfileId)
       return
     }
-    if (selectedId === '__new__' || profiles.some((profile) => profile.id === selectedId)) {
+    if (
+      selectedId === API_NEW_PROFILE_ID &&
+      !draftDirty &&
+      activeProfileId &&
+      !userSelectedNew.current
+    ) {
+      setSelectedId(activeProfileId)
       return
     }
-    setSelectedId(activeProfileId || profiles[0]?.id || '__new__')
-  }, [activeProfileId, profiles, props.status, selectedId])
+    if (selectedId === API_NEW_PROFILE_ID || profiles.some((profile) => profile.id === selectedId)) {
+      return
+    }
+    userSelectedNew.current = false
+    setSelectedId(preferredProfileId)
+  }, [activeProfileId, draftDirty, preferredProfileId, profiles, props.status, selectedId])
 
   React.useEffect(() => {
     if (draftDirty && draftSourceId === sourceId) {
@@ -1891,13 +3045,20 @@ function ApiConfigPanel(props: {
       },
       tts: {
         enabled: draft.tts.enabled,
+        engine: draft.tts.engine,
         model: draft.tts.model,
         baseUrl: draft.tts.baseUrl,
         apiKey: draft.tts.apiKey.trim() || undefined,
         voice: draft.tts.voice,
         format: draft.tts.format,
         requestMode: draft.tts.requestMode,
-        timeoutSeconds: draft.tts.timeoutSeconds
+        timeoutSeconds: draft.tts.timeoutSeconds,
+        genieBaseUrl: draft.tts.genieBaseUrl,
+        genieCharacter: draft.tts.genieCharacter,
+        genieSplitSentence: draft.tts.genieSplitSentence,
+        genieSampleRate: draft.tts.genieSampleRate,
+        genieChannels: draft.tts.genieChannels,
+        genieSampleWidth: draft.tts.genieSampleWidth
       },
       other: {
         openAIApiKey: draft.other.openAIApiKey.trim() || undefined
@@ -1910,6 +3071,7 @@ function ApiConfigPanel(props: {
     if (!savedId) {
       return null
     }
+    userSelectedNew.current = false
     setSelectedId(savedId)
     setDraftSourceId(savedId)
     setDraftDirty(false)
@@ -1937,56 +3099,73 @@ function ApiConfigPanel(props: {
 
   function selectProfile(nextId: string): void {
     setSelectedId(nextId)
+    userSelectedNew.current = nextId === API_NEW_PROFILE_ID
     const nextProfile = profiles.find((profile) => profile.id === nextId)
     setDraft(nextProfile ? apiDraftFromProfile(nextProfile) : apiDraftFromStatus(props.status))
-    setDraftSourceId(nextProfile?.id || '__new__')
+    setDraftSourceId(nextProfile?.id || API_NEW_PROFILE_ID)
     setDraftDirty(false)
   }
 
   const activeProfileLabel = profiles.find((profile) => profile.active)?.label || ''
-  const currentText = activeProfileLabel || (current ? `${current.llm.provider} / ${current.llm.model}` : '未加载')
+  const currentText = current ? `${current.llm.provider} / ${current.llm.model}` : '未加载'
+  const currentSecretText = current?.llm.hasApiKey ? current.llm.apiKeyPreview : '无 LLM 密钥'
+  const currentMetaText = activeProfileLabel
+    ? `活跃：${compact(activeProfileLabel, 18)} · ${currentSecretText}`
+    : currentSecretText
   const llmSecret = selected?.llm || current?.llm
   const visionSecret = selected?.vision || current?.vision
   const hearingSecret = selected?.hearing || current?.hearing
   const ttsSecret = selected?.tts || current?.tts
   const otherSecret = selected?.other || current?.other
+  const ttsEngine = draft.tts.engine === 'genie' ? 'genie' : 'current'
   const sectionCards = [
     {
       id: 'llm' as const,
       icon: <Brain size={14} />,
       label: 'LLM',
-      summary: current ? `${current.llm.provider} / ${current.llm.model}` : '未配置',
-      ready: Boolean(current?.llm.baseUrl)
+      summary: `${draft.llm.provider || '未填'} / ${draft.llm.model || '未填模型'}`,
+      ready: Boolean(draft.llm.baseUrl)
     },
     {
       id: 'vision' as const,
       icon: <Eye size={14} />,
       label: '视觉',
-      summary: current?.vision.enabled ? current.vision.model : '未启用',
-      ready: Boolean(current?.vision.enabled)
+      summary: draft.vision.enabled ? draft.vision.model || '未填模型' : '未启用',
+      ready: Boolean(draft.vision.enabled)
     },
     {
       id: 'hearing' as const,
       icon: <Radio size={14} />,
       label: '听觉',
-      summary: current?.hearing.enabled ? `${current.hearing.model} / ${current.hearing.language}` : '未启用',
-      ready: Boolean(current?.hearing.enabled)
+      summary: draft.hearing.enabled ? `${draft.hearing.model || '未填模型'} / ${draft.hearing.language || '未填语言'}` : '未启用',
+      ready: Boolean(draft.hearing.enabled)
     },
     {
       id: 'tts' as const,
       icon: <Volume2 size={14} />,
       label: 'TTS',
-      summary: current?.tts.enabled ? `${current.tts.model} / ${current.tts.voice}` : 'Disabled',
-      ready: Boolean(current?.tts.enabled)
+      summary: draft.tts.enabled
+        ? ttsEngine === 'genie'
+          ? `Genie / ${draft.tts.genieCharacter || '未填角色'}`
+          : `${draft.tts.model || '未填模型'} / ${draft.tts.voice || '未填音色'}`
+        : '已关闭',
+      ready: Boolean(draft.tts.enabled)
     },
     {
       id: 'other' as const,
       icon: <Puzzle size={14} />,
       label: '其他',
-      summary: current?.other.hasOpenAIApiKey ? current.other.openAIApiKeyPreview : '未配置',
-      ready: Boolean(current?.other.hasOpenAIApiKey)
+      summary: draft.other.openAIApiKey ? '将覆盖共享密钥' : otherSecret?.hasOpenAIApiKey ? otherSecret.openAIApiKeyPreview : '未配置',
+      ready: Boolean(draft.other.openAIApiKey || otherSecret?.hasOpenAIApiKey)
     }
   ]
+  const providerKnown = API_PROVIDER_OPTIONS.some((option) => option.value === draft.llm.provider)
+  const providerHelp =
+    draft.llm.provider === 'message'
+      ? '这个接口只用于 Claude Messages /v1/messages 连通性测试；当前 core 主运行时还不能应用它。'
+      : draft.llm.provider === 'custom_openai_compatible'
+        ? '用于任何真实支持 /chat/completions 的服务；不要填 Claude Messages 原生接口。'
+        : '应用到 core 时会按 /chat/completions 协议调用。'
 
   return (
     <section className={`api-config-panel ${activeProfileId ? 'ready' : 'warn'}`}>
@@ -2000,16 +3179,16 @@ function ApiConfigPanel(props: {
 
       <div className="api-current-line">
         <span>{compact(currentText, 42)}</span>
-        <small>{current?.llm.hasApiKey ? current.llm.apiKeyPreview : '无 LLM 密钥'}</small>
+        <small>{compact(currentMetaText, 42)}</small>
       </div>
 
       <div className="api-profile-select">
         <select value={selectedId} disabled={busy} onChange={(event) => selectProfile(event.currentTarget.value)}>
-          <option value="__new__">新建配置</option>
+          <option value={API_NEW_PROFILE_ID}>从当前配置新建</option>
           {profiles.map((profile) => (
             <option value={profile.id} key={profile.id}>
               {profile.active ? '* ' : ''}
-              {profile.label}
+              {profile.label} · {profile.llm.model}
             </option>
           ))}
         </select>
@@ -2049,7 +3228,18 @@ function ApiConfigPanel(props: {
           <div className="api-config-grid">
             <label>
               <span>提供方</span>
-              <input value={draft.llm.provider} disabled={busy} onChange={(event) => updateDraftSection('llm', { provider: event.currentTarget.value })} />
+              <select
+                value={providerKnown ? draft.llm.provider : 'custom_openai_compatible'}
+                disabled={busy}
+                onChange={(event) => updateDraftSection('llm', { provider: event.currentTarget.value })}
+              >
+                {API_PROVIDER_OPTIONS.map((option) => (
+                  <option value={option.value} key={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <small>{providerKnown ? providerHelp : `当前未知提供方 ${draft.llm.provider}；应用前请选择“自定义 OpenAI 兼容”。`}</small>
             </label>
             <label>
               <span>模型</span>
@@ -2207,63 +3397,159 @@ function ApiConfigPanel(props: {
       ) : null}
       {activeSection === 'tts' ? (
         <>
-          <div className="api-runtime-flags api-runtime-flags-single">
+          <div className="api-runtime-flags">
             <RuntimeSwitch
               label="TTS"
               checked={draft.tts.enabled}
-              detail={draft.tts.enabled ? 'Local playback on' : 'Local playback off'}
+              detail={draft.tts.enabled ? '本地播放开启' : '本地播放关闭'}
               disabled={busy}
               onToggle={() => updateDraftSection('tts', { enabled: !draft.tts.enabled })}
             />
+            <div className="api-engine-choice" role="group" aria-label="语音引擎">
+              <button
+                type="button"
+                className={ttsEngine === 'current' ? 'active' : ''}
+                aria-pressed={ttsEngine === 'current'}
+                disabled={busy}
+                onClick={() => updateDraftSection('tts', { engine: 'current' })}
+              >
+                <strong>当前接口</strong>
+                <small>OpenAI / MiMo</small>
+              </button>
+              <button
+                type="button"
+                className={ttsEngine === 'genie' ? 'active' : ''}
+                aria-pressed={ttsEngine === 'genie'}
+                disabled={busy}
+                onClick={() => updateDraftSection('tts', { engine: 'genie' })}
+              >
+                <strong>Genie-TTS</strong>
+                <small>{draft.tts.genieCharacter || 'feibi'}</small>
+              </button>
+            </div>
           </div>
 
-          <div className="api-config-grid">
-            <label>
-              <span>Model</span>
-              <input value={draft.tts.model} disabled={busy} onChange={(event) => updateDraftSection('tts', { model: event.currentTarget.value })} />
-            </label>
-            <label>
-              <span>Voice</span>
-              <input value={draft.tts.voice} disabled={busy} onChange={(event) => updateDraftSection('tts', { voice: event.currentTarget.value })} />
-            </label>
-            <label className="full">
-              <span>Base URL</span>
-              <input value={draft.tts.baseUrl} disabled={busy} onChange={(event) => updateDraftSection('tts', { baseUrl: event.currentTarget.value })} />
-            </label>
-            <label>
-              <span>Request Mode</span>
-              <select value={draft.tts.requestMode} disabled={busy} onChange={(event) => updateDraftSection('tts', { requestMode: event.currentTarget.value })}>
-                <option value="auto">auto</option>
-                <option value="chat_audio">chat_audio</option>
-                <option value="audio_speech">audio_speech</option>
-              </select>
-            </label>
-            <label>
-              <span>Format</span>
-              <input value={draft.tts.format} disabled={busy} onChange={(event) => updateDraftSection('tts', { format: event.currentTarget.value })} />
-            </label>
-            <label>
-              <span>Timeout (s)</span>
-              <input
-                type="number"
-                min={1}
-                value={draft.tts.timeoutSeconds}
-                disabled={busy}
-                onChange={(event) => updateDraftSection('tts', { timeoutSeconds: parseDraftNumber(event.currentTarget.value, draft.tts.timeoutSeconds) })}
-              />
-            </label>
-            <label className="api-key-field">
-              <span>API Key</span>
-              <input
-                value={draft.tts.apiKey}
-                disabled={busy}
-                type="password"
-                placeholder={apiSecretPlaceholder(ttsSecret?.hasApiKey, ttsSecret?.apiKeyPreview, 'Paste TTS API key')}
-                onChange={(event) => updateDraftSection('tts', { apiKey: event.currentTarget.value })}
-              />
-              <small>{apiSecretHint(draft.tts.apiKey, Boolean(ttsSecret?.hasApiKey), 'New key will replace the stored key', 'Leave blank to reuse current env key')}</small>
-            </label>
-          </div>
+          {ttsEngine === 'genie' ? (
+            <>
+              <div className="api-runtime-flags api-runtime-flags-single">
+                <RuntimeSwitch
+                  label="分句"
+                  checked={draft.tts.genieSplitSentence}
+                  detail={draft.tts.genieSplitSentence ? '开启' : '关闭'}
+                  disabled={busy}
+                  onToggle={() => updateDraftSection('tts', { genieSplitSentence: !draft.tts.genieSplitSentence })}
+                />
+              </div>
+              <div className="api-config-grid">
+                <label className="full">
+                  <span>Genie 地址</span>
+                  <input
+                    value={draft.tts.genieBaseUrl}
+                    disabled={busy}
+                    onChange={(event) => updateDraftSection('tts', { genieBaseUrl: event.currentTarget.value })}
+                  />
+                </label>
+                <label>
+                  <span>角色</span>
+                  <input
+                    value={draft.tts.genieCharacter}
+                    disabled={busy}
+                    onChange={(event) => updateDraftSection('tts', { genieCharacter: event.currentTarget.value })}
+                  />
+                </label>
+                <label>
+                  <span>超时（秒）</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={draft.tts.timeoutSeconds}
+                    disabled={busy}
+                    onChange={(event) => updateDraftSection('tts', { timeoutSeconds: parseDraftNumber(event.currentTarget.value, draft.tts.timeoutSeconds) })}
+                  />
+                </label>
+                <label>
+                  <span>采样率</span>
+                  <input
+                    type="number"
+                    min={8000}
+                    value={draft.tts.genieSampleRate}
+                    disabled={busy}
+                    onChange={(event) => updateDraftSection('tts', { genieSampleRate: parseDraftNumber(event.currentTarget.value, draft.tts.genieSampleRate) })}
+                  />
+                </label>
+                <label>
+                  <span>声道</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={8}
+                    value={draft.tts.genieChannels}
+                    disabled={busy}
+                    onChange={(event) => updateDraftSection('tts', { genieChannels: parseDraftNumber(event.currentTarget.value, draft.tts.genieChannels) })}
+                  />
+                </label>
+                <label>
+                  <span>采样宽度</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={4}
+                    value={draft.tts.genieSampleWidth}
+                    disabled={busy}
+                    onChange={(event) => updateDraftSection('tts', { genieSampleWidth: parseDraftNumber(event.currentTarget.value, draft.tts.genieSampleWidth) })}
+                  />
+                </label>
+              </div>
+            </>
+          ) : (
+            <div className="api-config-grid">
+              <label>
+                <span>模型</span>
+                <input value={draft.tts.model} disabled={busy} onChange={(event) => updateDraftSection('tts', { model: event.currentTarget.value })} />
+              </label>
+              <label>
+                <span>音色</span>
+                <input value={draft.tts.voice} disabled={busy} onChange={(event) => updateDraftSection('tts', { voice: event.currentTarget.value })} />
+              </label>
+              <label className="full">
+                <span>基础地址</span>
+                <input value={draft.tts.baseUrl} disabled={busy} onChange={(event) => updateDraftSection('tts', { baseUrl: event.currentTarget.value })} />
+              </label>
+              <label>
+                <span>请求模式</span>
+                <select value={draft.tts.requestMode} disabled={busy} onChange={(event) => updateDraftSection('tts', { requestMode: event.currentTarget.value })}>
+                  <option value="auto">自动</option>
+                  <option value="chat_audio">聊天音频</option>
+                  <option value="audio_speech">语音生成</option>
+                </select>
+              </label>
+              <label>
+                <span>格式</span>
+                <input value={draft.tts.format} disabled={busy} onChange={(event) => updateDraftSection('tts', { format: event.currentTarget.value })} />
+              </label>
+              <label>
+                <span>超时（秒）</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={draft.tts.timeoutSeconds}
+                  disabled={busy}
+                  onChange={(event) => updateDraftSection('tts', { timeoutSeconds: parseDraftNumber(event.currentTarget.value, draft.tts.timeoutSeconds) })}
+                />
+              </label>
+              <label className="api-key-field">
+                <span>密钥</span>
+                <input
+                  value={draft.tts.apiKey}
+                  disabled={busy}
+                  type="password"
+                  placeholder={apiSecretPlaceholder(ttsSecret?.hasApiKey, ttsSecret?.apiKeyPreview, '粘贴 TTS API 密钥')}
+                  onChange={(event) => updateDraftSection('tts', { apiKey: event.currentTarget.value })}
+                />
+                <small>{apiSecretHint(draft.tts.apiKey, Boolean(ttsSecret?.hasApiKey), '新密钥会覆盖已保存密钥', '留空则沿用当前环境密钥')}</small>
+              </label>
+            </div>
+          )}
         </>
       ) : null}
 
@@ -2653,13 +3939,20 @@ function apiDraftFromStatus(status: ApiConfigStatus | null): ApiConfigDraft {
     },
     tts: {
       enabled: Boolean(current?.tts.enabled),
+      engine: current?.tts.engine || 'current',
       model: current?.tts.model || 'mimo-v2.5-tts',
       baseUrl: current?.tts.baseUrl || current?.hearing.baseUrl || '',
       apiKey: '',
       voice: current?.tts.voice || 'mimo_default',
       format: current?.tts.format || 'wav',
       requestMode: current?.tts.requestMode || 'auto',
-      timeoutSeconds: current?.tts.timeoutSeconds || 60
+      timeoutSeconds: current?.tts.timeoutSeconds || 60,
+      genieBaseUrl: current?.tts.genieBaseUrl || 'http://127.0.0.1:8000',
+      genieCharacter: current?.tts.genieCharacter || 'feibi',
+      genieSplitSentence: Boolean(current?.tts.genieSplitSentence),
+      genieSampleRate: current?.tts.genieSampleRate || 32000,
+      genieChannels: current?.tts.genieChannels || 1,
+      genieSampleWidth: current?.tts.genieSampleWidth || 2
     },
     other: {
       openAIApiKey: ''
@@ -2671,7 +3964,7 @@ function apiBlankDraft(): ApiConfigDraft {
   return {
     label: '',
     llm: {
-      provider: 'openai',
+      provider: 'message',
       model: '',
       baseUrl: '',
       apiKey: '',
@@ -2698,13 +3991,20 @@ function apiBlankDraft(): ApiConfigDraft {
     },
     tts: {
       enabled: false,
+      engine: 'current',
       model: 'mimo-v2.5-tts',
       baseUrl: '',
       apiKey: '',
       voice: 'mimo_default',
       format: 'wav',
       requestMode: 'auto',
-      timeoutSeconds: 60
+      timeoutSeconds: 60,
+      genieBaseUrl: 'http://127.0.0.1:8000',
+      genieCharacter: 'feibi',
+      genieSplitSentence: false,
+      genieSampleRate: 32000,
+      genieChannels: 1,
+      genieSampleWidth: 2
     },
     other: {
       openAIApiKey: ''
@@ -2743,13 +4043,20 @@ function apiDraftFromProfile(profile: ApiConfigProfile): ApiConfigDraft {
     },
     tts: {
       enabled: profile.tts.enabled,
+      engine: profile.tts.engine || 'current',
       model: profile.tts.model,
       baseUrl: profile.tts.baseUrl,
       apiKey: '',
       voice: profile.tts.voice,
       format: profile.tts.format,
       requestMode: profile.tts.requestMode,
-      timeoutSeconds: profile.tts.timeoutSeconds
+      timeoutSeconds: profile.tts.timeoutSeconds,
+      genieBaseUrl: profile.tts.genieBaseUrl || 'http://127.0.0.1:8000',
+      genieCharacter: profile.tts.genieCharacter || 'feibi',
+      genieSplitSentence: profile.tts.genieSplitSentence,
+      genieSampleRate: profile.tts.genieSampleRate || 32000,
+      genieChannels: profile.tts.genieChannels || 1,
+      genieSampleWidth: profile.tts.genieSampleWidth || 2
     },
     other: {
       openAIApiKey: ''
@@ -2858,7 +4165,7 @@ function QQBridgePanel(props: {
           type="button"
           onClick={props.onOpenWebUI}
           disabled={busy}
-          title="打开 NapCat 网页端"
+          title="打开 NapCat 网页端（未启动时会自动拉起）"
           aria-label="打开 NapCat 网页端"
         >
           <ExternalLink size={15} />
@@ -3081,10 +4388,13 @@ function RuntimeSwitch(props: {
 function IntentRow(props: {
   intent: ProactiveIntent
   pendingAction?: ProactiveAction
+  feedback?: string
   onAck: (candidateId: string, action: ProactiveAction) => void
   onOpenDetail: (candidateId: string) => void
 }): JSX.Element {
   const disabled = Boolean(props.pendingAction)
+  const localOnlyNote = props.intent.claimable ? '' : '仅桌面可见，不能直接发 QQ'
+  const actionNote = props.pendingAction ? actionLabel(props.pendingAction) : props.feedback || localOnlyNote
   return (
     <article
       className={`intent-row risk-${props.intent.risk} ${props.intent.claimable ? '' : 'not-claimable'}`}
@@ -3111,24 +4421,39 @@ function IntentRow(props: {
           <ShieldAlert size={13} />
           {props.intent.riskLabel}
         </span>
-        <span>{proactiveTextLabel(props.intent.delivery)}</span>
+        <span>{props.intent.claimable ? proactiveTextLabel(props.intent.delivery) : '仅桌面可见'}</span>
       </div>
       <div className="intent-actions">
-        <button disabled={disabled} onClick={() => props.onAck(props.intent.id, 'read_locally')} title="只在本地读过">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => props.onAck(props.intent.id, 'read_locally')}
+          title="只在本地读过"
+          aria-label="只在本地读过"
+        >
           <Eye size={14} />
         </button>
         <button
-          disabled={disabled || !props.intent.claimable}
-          onClick={() => props.onAck(props.intent.id, 'approve_qq')}
-          title={props.intent.claimable ? '同意发送到 QQ' : '本地预览不能直接发 QQ'}
+          type="button"
+          className={props.intent.claimable ? '' : 'unavailable'}
+          disabled={disabled}
+          onClick={() => (props.intent.claimable ? props.onAck(props.intent.id, 'approve_qq') : props.onOpenDetail(props.intent.id))}
+          title={props.intent.claimable ? '同意发送到 QQ' : '这条仅桌面可见，不能直接发 QQ；点击查看详情'}
+          aria-label={props.intent.claimable ? '同意发送到 QQ' : '不能直接发 QQ，查看详情'}
         >
           <Send size={14} />
         </button>
-        <button disabled={disabled} onClick={() => props.onAck(props.intent.id, 'dismiss')} title="忽略">
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => props.onAck(props.intent.id, 'dismiss')}
+          title="忽略"
+          aria-label="忽略"
+        >
           <X size={14} />
         </button>
       </div>
-      {props.pendingAction ? <small className="pending-action">{actionLabel(props.pendingAction)}</small> : null}
+      {actionNote ? <small className="intent-action-note">{actionNote}</small> : null}
     </article>
   )
 }
@@ -3208,6 +4533,7 @@ function isHandledIntent(intent: ProactiveIntent): boolean {
 export function IntentDetailDialog(props: {
   intent: ProactiveIntent
   pendingAction?: ProactiveAction
+  feedback?: string
   onClose: () => void
   onAck: (candidateId: string, action: ProactiveAction) => void
   onReply: (intent: ProactiveIntent, text: string) => void
@@ -3215,6 +4541,9 @@ export function IntentDetailDialog(props: {
   const handled = isHandledIntent(props.intent)
   const disabled = Boolean(props.pendingAction) || handled
   const text = props.intent.fullText || props.intent.plannedText
+  const actionNote = props.pendingAction
+    ? actionLabel(props.pendingAction)
+    : props.feedback || (!props.intent.claimable ? '这条仅桌面可见，不能直接发送到 QQ。' : '')
   const [replyText, setReplyText] = React.useState('')
 
   return (
@@ -3231,7 +4560,7 @@ export function IntentDetailDialog(props: {
             <p className="label">主动预览</p>
             <h3 id="intent-dialog-title">{proactiveTextLabel(props.intent.trigger)}</h3>
           </div>
-          <button type="button" onClick={props.onClose} title="关闭">
+          <button type="button" onClick={props.onClose} title="关闭" aria-label="关闭主动提醒详情">
             <X size={16} />
           </button>
         </header>
@@ -3255,6 +4584,12 @@ export function IntentDetailDialog(props: {
               <dt>动作</dt>
               <dd>{intentRequestedActionLabel(proactiveTextLabel(props.intent.requestedAction))}</dd>
             </div>
+            {props.intent.reasonText ? (
+              <div>
+                <dt>原因</dt>
+                <dd>{compact(proactiveTextLabel(props.intent.reasonText), 72)}</dd>
+              </div>
+            ) : null}
             <div>
               <dt>创建</dt>
               <dd>{formatTime(props.intent.createdAt)}</dd>
@@ -3289,6 +4624,7 @@ export function IntentDetailDialog(props: {
             type="button"
             disabled={disabled}
             onClick={() => props.onAck(props.intent.id, 'read_locally')}
+            title="只在本地读过"
           >
             <Eye size={15} />
             本地已读
@@ -3297,14 +4633,16 @@ export function IntentDetailDialog(props: {
             type="button"
             disabled={disabled || !props.intent.claimable}
             onClick={() => props.onAck(props.intent.id, 'approve_qq')}
+            title={props.intent.claimable ? '同意发送到 QQ' : '这条仅桌面可见，不能直接发 QQ'}
           >
             <Send size={15} />
-            发送到 QQ
+            {props.intent.claimable ? '发送到 QQ' : '不能发 QQ'}
           </button>
-          <button type="button" disabled={disabled} onClick={() => props.onAck(props.intent.id, 'dismiss')}>
+          <button type="button" disabled={disabled} onClick={() => props.onAck(props.intent.id, 'dismiss')} title="忽略">
             <X size={15} />
             忽略
           </button>
+          {actionNote ? <small className="intent-dialog-note">{actionNote}</small> : null}
         </footer>
       </section>
     </div>
@@ -3431,8 +4769,9 @@ export function AutonomyGatePanel(props: {
   qqEnvironment: QQEnvironmentStatus | null
   stage8: Stage8MemoryGovernanceStatus | null
   asyncExploration: AsyncExplorationState | null
+  kernelGovernance: KernelGovernanceStatus | null
 }): JSX.Element {
-  const { stage12, stage13, qqEnvironment, stage8, asyncExploration } = props
+  const { stage12, stage13, qqEnvironment, stage8, asyncExploration, kernelGovernance } = props
 
   const services: GateCell[] = (qqEnvironment?.services || []).map((s) => ({
     label: qqServiceLabel(s),
@@ -3457,7 +4796,7 @@ export function AutonomyGatePanel(props: {
 
   const s12StatusLabel = stage12
     ? stage12.readyForStage13
-      ? '✓ 已就绪'
+      ? '已就绪'
       : `${stage12.liveLoopPassedCount}/${stage12.liveLoopRequiredCount} 通过`
     : '—'
 
@@ -3483,10 +4822,12 @@ export function AutonomyGatePanel(props: {
           <Brain size={12} /> Stage12
           <span className={`gate-summary ${s12StatusTone}`}>{s12StatusLabel}</span>
         </span>
-        <div className="gate-cells">
-          {s12cells.length ? s12cells.map((c) => <GateCellView key={c.label} cell={c} />) : <span className="gate-empty">无状态</span>}
-        </div>
-        {stage12 && !stage12.readyForStage13 && stage12.liveLoopFailingDetail ? (
+        {stage12 && stage12.readyForStage13 ? null : (
+          <div className="gate-cells">
+            {s12cells.map((c) => <GateCellView key={c.label} cell={c} />)}
+          </div>
+        )}
+        {stage12 && !stage12.readyForStage13 && stage12.liveLoopFailingDetail && stage12.liveLoopFailingDetail !== 'none' ? (
           <div className="gate-blocker">{compact(stage12.liveLoopFailingDetail, 120)}</div>
         ) : null}
       </div>
@@ -3535,6 +4876,33 @@ export function AutonomyGatePanel(props: {
             <span className="gate-summary status-ok">治理清洁</span>
           ) : null}
         </span>
+      </div>
+
+      <div className="gate-section">
+        <span className="gate-section-label">
+          <Brain size={12} /> 认知内核
+          {kernelGovernance && kernelGovernance.pendingCount > 0 ? (
+            <span className="gate-summary status-fail">待审 {kernelGovernance.pendingCount}</span>
+          ) : kernelGovernance?.available ? (
+            <span className="gate-summary status-ok">审核清洁</span>
+          ) : null}
+        </span>
+        {kernelGovernance?.available ? (
+          <div className="gate-blocker" style={{ color: 'var(--app-text)' }}>
+            慢信号 {kernelGovernance.slowSignalCount}/{kernelGovernance.slowEscalationThreshold}
+            {' · '}
+            {kernelDomainLabel(kernelGovernance.reorgRecommendation, '重组建议暂无')}
+            {' · '}
+            周期 {kernelGovernance.cycleCount}
+            {kernelGovernance.grantedScopes.length
+              ? ` · 已授权 ${kernelGovernance.grantedScopes.map((scope) => kernelDomainLabel(scope)).join(' / ')}`
+              : ''}
+          </div>
+        ) : kernelGovernance?.error ? (
+          <div className="gate-blocker">{compact(kernelGovernance.error, 100)}</div>
+        ) : (
+          <span className="gate-empty">等待刷新</span>
+        )}
       </div>
     </div>
   )

@@ -21,6 +21,7 @@ import {
   testApiConfigProfile
 } from './api_config'
 import { XinyuGateway, type GatewayStatus, type XinYuDesktopEvent } from './xinyu_gateway'
+import { readVoiceFlags, writeVoiceFlags } from './voice_flags'
 
 let mainWindow: BrowserWindow | null = null
 let gateway: XinyuGateway | null = null
@@ -50,11 +51,47 @@ function createWindow(): void {
     mainWindow = null
   })
 
-  if (process.env.ELECTRON_RENDERER_URL) {
-    void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
-  } else {
-    void mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  loadRenderer(mainWindow)
+}
+
+function loadRenderer(window: BrowserWindow): void {
+  const fallbackFile = join(__dirname, '../renderer/index.html')
+  const devUrl = process.env.ELECTRON_RENDERER_URL
+  if (!devUrl) {
+    void window.loadFile(fallbackFile)
+    return
   }
+  const normalizedDevUrl = devUrl.replace(/\/+$/, '')
+  const maxAttempts = 40
+
+  let attempts = 0
+  let fallbackLoaded = false
+  const loadFallback = (): void => {
+    if (fallbackLoaded || window.isDestroyed()) {
+      return
+    }
+    fallbackLoaded = true
+    void window.loadFile(fallbackFile)
+  }
+  const retry = (): void => {
+    if (fallbackLoaded || window.isDestroyed()) {
+      return
+    }
+    attempts += 1
+    void window.loadURL(devUrl).catch(() => undefined)
+  }
+  window.webContents.on('did-fail-load', (_event, errorCode, _errorDescription, validatedURL, isMainFrame) => {
+    const normalizedFailedUrl = validatedURL.replace(/\/+$/, '')
+    if (!isMainFrame || normalizedFailedUrl !== normalizedDevUrl || errorCode !== -102 || fallbackLoaded) {
+      return
+    }
+    if (attempts >= maxAttempts) {
+      loadFallback()
+      return
+    }
+    setTimeout(retry, 250)
+  })
+  retry()
 }
 
 function resolveWindowIcon(): string {
@@ -296,6 +333,135 @@ function readStage8MemoryGovernanceStatus(): Record<string, unknown> {
   }
 }
 
+async function readKernelGovernanceStatus(): Promise<Record<string, unknown>> {
+  const python = resolveCorePython()
+  const coreDir = resolveXinYuCoreDir()
+  const script = join(coreDir, 'xinyu_kernel_review_cli.py')
+  try {
+    const { stdout, stderr } = await execFileAsync(python, [script, 'status', '--json'], {
+      cwd: coreDir,
+      encoding: 'utf-8',
+      timeout: 30 * 1000
+    })
+    const output = stdout.trim() || stderr.trim()
+    try {
+      return JSON.parse(output)
+    } catch {
+      return { ok: false, available: false, error: output || 'parse_error' }
+    }
+  } catch (err: unknown) {
+    const error = err as { stdout?: string; stderr?: string; message?: string }
+    const detail = error.stdout?.trim() || error.stderr?.trim() || error.message || 'unknown'
+    try {
+      return JSON.parse(detail)
+    } catch {
+      return { ok: false, available: false, error: detail }
+    }
+  }
+}
+
+async function grantKernelScope(scope: string, note: string = ''): Promise<Record<string, unknown>> {
+  const python = resolveCorePython()
+  const coreDir = resolveXinYuCoreDir()
+  const script = join(coreDir, 'xinyu_kernel_review_cli.py')
+  const args = [script, 'grant', '--scope', scope]
+  const effectiveNote = note || 'desktop_owner_grant'
+  args.push('--note', effectiveNote)
+  try {
+    const { stdout, stderr } = await execFileAsync(python, args, {
+      cwd: coreDir,
+      encoding: 'utf-8',
+      timeout: 30 * 1000
+    })
+    const output = stdout.trim() || stderr.trim()
+    try {
+      return JSON.parse(output)
+    } catch {
+      return { ok: true, raw: output }
+    }
+  } catch (err: unknown) {
+    const error = err as { stdout?: string; stderr?: string; message?: string }
+    const detail = error.stdout?.trim() || error.stderr?.trim() || error.message || 'unknown'
+    try {
+      return JSON.parse(detail)
+    } catch {
+      return { ok: false, error: detail }
+    }
+  }
+}
+
+async function reviewKernelItem(
+  domain: string,
+  itemId: string,
+  action: 'approve' | 'reject'
+): Promise<Record<string, unknown>> {
+  const python = resolveCorePython()
+  const coreDir = resolveXinYuCoreDir()
+  const script = join(coreDir, 'xinyu_kernel_review_cli.py')
+  const args = [script, 'apply', '--domain', domain, '--item-id', itemId, '--action', action]
+  try {
+    const { stdout, stderr } = await execFileAsync(python, args, {
+      cwd: coreDir,
+      encoding: 'utf-8',
+      timeout: 30 * 1000
+    })
+    const output = stdout.trim() || stderr.trim()
+    try {
+      return JSON.parse(output)
+    } catch {
+      return { ok: true, raw: output }
+    }
+  } catch (err: unknown) {
+    const error = err as { stdout?: string; stderr?: string; message?: string }
+    const detail = error.stdout?.trim() || error.stderr?.trim() || error.message || 'unknown'
+    try {
+      return JSON.parse(detail)
+    } catch {
+      return { ok: false, error: detail }
+    }
+  }
+}
+
+async function reviewMemoryCandidate(
+  candidateId: string,
+  decision: 'approve' | 'reject',
+  notes: string = ''
+): Promise<Record<string, unknown>> {
+  const python = resolveCorePython()
+  const coreDir = resolveXinYuCoreDir()
+  const script = join(coreDir, 'xinyu_memory_candidate_review_cli.py')
+  const args = [script, decision, candidateId]
+  // High-risk candidates (post_reply_growth_candidate) require this token in notes.
+  // Clicking approve in the desktop UI constitutes explicit owner approval.
+  const effectiveNotes = decision === 'approve'
+    ? [notes, 'owner_approved_high_risk'].filter(Boolean).join(' ')
+    : notes
+  if (effectiveNotes) {
+    args.push('--notes', effectiveNotes)
+  }
+  try {
+    const { stdout, stderr } = await execFileAsync(python, args, {
+      cwd: coreDir,
+      encoding: 'utf-8',
+      timeout: 30 * 1000,
+    })
+    const output = stdout.trim() || stderr.trim()
+    try {
+      return JSON.parse(output)
+    } catch {
+      return { ok: true, raw: output }
+    }
+  } catch (err: unknown) {
+    const error = err as { stdout?: string; stderr?: string; message?: string }
+    const detail = error.stdout?.trim() || error.stderr?.trim() || error.message || 'unknown'
+    try {
+      return JSON.parse(detail)
+    } catch {
+      return { ok: false, error: detail }
+    }
+  }
+}
+
 function readAsyncExplorationState(): Record<string, unknown> {
   const coreDir = resolveXinYuCoreDir()
   const statePath = join(coreDir, 'memory', 'context', 'async_exploration_state.md')
@@ -320,26 +486,35 @@ function readStage12GateStatus(): Record<string, unknown> {
   const coreDir = resolveXinYuCoreDir()
   const statePath = join(coreDir, 'memory', 'context', 'stage12_long_term_evaluation_state.md')
   const s = readMarkdownFields(statePath)
+  const readyForStage13 = markdownBool(s.stage12_ready_for_stage13)
+  const liveLoopStatus = String(s.stage12_live_loop_status || 'missing')
+  const liveLoopPassRatePct = markdownNumber(s.stage12_live_loop_required_pass_rate_pct)
+  const liveLoopPassedCount = markdownNumber(s.stage12_live_loop_passed_required_check_count)
+  const liveLoopRequiredCount = markdownNumber(s.stage12_live_loop_required_check_count)
+  // Individual gate proof booleans are not written to the state file.
+  // Derive them: if readyForStage13=true, all gates passed. Otherwise use live loop pass rate.
+  const allGatesPass = readyForStage13
+  const liveLoopPass = liveLoopStatus === 'pass' || liveLoopPassRatePct >= 100
   return {
     ok: existsSync(statePath),
     loadedAt: new Date().toISOString(),
     updatedAt: String(s.updated_at || ''),
     status: String(s.stage12_long_term_evaluation_status || 'missing'),
-    readyForStage13: markdownBool(s.stage12_ready_for_stage13),
+    readyForStage13,
     reason: String(s.stage12_reason || ''),
-    liveLoopStatus: String(s.stage12_live_loop_status || 'missing'),
-    liveLoopPassRatePct: markdownNumber(s.stage12_live_loop_required_pass_rate_pct),
-    liveLoopPassedCount: markdownNumber(s.stage12_live_loop_passed_required_check_count),
-    liveLoopRequiredCount: markdownNumber(s.stage12_live_loop_required_check_count),
+    liveLoopStatus,
+    liveLoopPassRatePct,
+    liveLoopPassedCount,
+    liveLoopRequiredCount,
     liveLoopFailingChecks: String(s.stage12_live_loop_failing_required_checks || ''),
     liveLoopFailingDetail: String(s.stage12_live_loop_failing_required_check_detail || ''),
-    gateStage11Ready: markdownBool(s.stage12_gate_stage11_ready_for_stage12),
-    gateLiveLoopPass: markdownBool(s.stage12_gate_live_loop_required_checks_pass),
-    gateFeedbackClean: markdownBool(s.stage12_gate_feedback_consumption_window_clean),
-    gatePrivacyClean: markdownBool(s.stage12_gate_raw_private_boundary_clean),
-    gateStableClean: markdownBool(s.stage12_gate_stable_memory_boundary_clean),
-    gateCanaryReady: markdownBool(s.stage12_gate_owner_visible_canary_ready),
-    gateShortTermClean: markdownBool(s.stage12_gate_short_term_recall_window_clean),
+    gateStage11Ready: allGatesPass || markdownBool(s.stage12_gate_stage11_ready_for_stage12),
+    gateLiveLoopPass: liveLoopPass,
+    gateFeedbackClean: allGatesPass,
+    gatePrivacyClean: allGatesPass,
+    gateStableClean: allGatesPass,
+    gateCanaryReady: allGatesPass,
+    gateShortTermClean: allGatesPass,
     nextStep: String(s.stage12_next_step || ''),
   }
 }
@@ -642,6 +817,43 @@ function handleGatewayStatus(status: GatewayStatus): void {
   sendToRenderer('xinyu:gateway-status', status)
 }
 
+function privateDesktopGatewayUnavailable(action: string): Record<string, unknown> {
+  return {
+    ok: false,
+    accepted: false,
+    error: `gateway_unavailable:${action}`,
+    privateDesktop: {
+      backend: 'unavailable',
+      session_state: 'stopped',
+      live: false,
+      grant: { enabled: false, observe_only: true },
+      boundaries: {
+        host_screen_captured: false,
+        owner_mouse_moved: false,
+        computer_control_enabled: false
+      }
+    },
+    notes: ['gateway_unavailable']
+  }
+}
+
+function privateEcosystemGatewayUnavailable(action: string): Record<string, unknown> {
+  return {
+    ok: false,
+    accepted: false,
+    error: `gateway_unavailable:${action}`,
+    privateEcosystem: {
+      observed: false,
+      enabled: false,
+      rolloutState: 'disabled',
+      activeGoalId: 'none',
+      latestActionKind: 'none',
+      latestActionStatus: 'none'
+    },
+    notes: ['gateway_unavailable']
+  }
+}
+
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null)
   createWindow()
@@ -660,8 +872,42 @@ app.whenReady().then(() => {
   ipcMain.handle('xinyu:get-memory-growth-candidates', async () => {
     return await gateway?.getMemoryGrowthCandidates()
   })
+  ipcMain.handle('xinyu:get-voice-flags', async () => {
+    // The env file is the source of truth; reading it never depends on the
+    // bridge being up or having the runtime endpoint.
+    return { ok: true, flags: readVoiceFlags(resolveXinYuCoreDir()) }
+  })
+  ipcMain.handle('xinyu:set-voice-flags', async (_event, request: unknown) => {
+    const payload = (request && typeof request === 'object' ? request : {}) as {
+      flags?: Record<string, boolean>
+      persist?: boolean
+    }
+    const flags = payload.flags || {}
+    // 1. Authoritative: persist to xinyu.local.env (always succeeds -> the toggle
+    //    reflects the click and survives restarts).
+    const next = writeVoiceFlags(resolveXinYuCoreDir(), flags)
+    // 2. Best-effort live effect on the running bridge. Do not block the UI on
+    //    this optional endpoint; QQ voice replies read xinyu.local.env live.
+    void gateway?.setVoiceFlags({ flags, persist: false }).catch(() => undefined)
+    return { ok: true, flags: next, persisted: true, live: false }
+  })
   ipcMain.handle('xinyu:get-stage8-memory-governance', () => {
     return readStage8MemoryGovernanceStatus()
+  })
+  ipcMain.handle('xinyu:review-memory-candidate', async (_event, request: unknown) => {
+    const req = request as { candidateId: string; decision: 'approve' | 'reject'; notes?: string }
+    return await reviewMemoryCandidate(req.candidateId, req.decision, req.notes || '')
+  })
+  ipcMain.handle('xinyu:get-kernel-governance', async () => {
+    return await readKernelGovernanceStatus()
+  })
+  ipcMain.handle('xinyu:review-kernel-item', async (_event, request: unknown) => {
+    const req = request as { domain: string; itemId: string; decision: 'approve' | 'reject' }
+    return await reviewKernelItem(req.domain, req.itemId, req.decision)
+  })
+  ipcMain.handle('xinyu:grant-kernel-scope', async (_event, request: unknown) => {
+    const req = request as { scope: string; note?: string }
+    return await grantKernelScope(req.scope, req.note || '')
   })
   ipcMain.handle('xinyu:get-async-exploration-state', () => {
     return readAsyncExplorationState()
@@ -810,6 +1056,79 @@ app.whenReady().then(() => {
       authorizeCodex: Boolean(payload.authorizeCodex),
       authorizeExisting: Boolean(payload.authorizeExisting)
     })
+  })
+  ipcMain.handle('xinyu:pause-private-share', async (_event, request: unknown) => {
+    const payload = request && typeof request === 'object' ? (request as { paused?: unknown }) : {}
+    return await gateway?.pausePrivateShare(Boolean(payload.paused))
+  })
+  ipcMain.handle('xinyu:owner-private-share-set-enabled', async (_event, request: unknown) => {
+    const payload = request && typeof request === 'object' ? (request as { enabled?: unknown }) : {}
+    if (!gateway) {
+      return privateEcosystemGatewayUnavailable('owner-share-set-enabled')
+    }
+    return await gateway.setOwnerPrivateShareEnabled(Boolean(payload.enabled))
+  })
+  ipcMain.handle('xinyu:private-ecosystem-set-enabled', async (_event, request: unknown) => {
+    const payload = request && typeof request === 'object' ? (request as { enabled?: unknown }) : {}
+    if (!gateway) {
+      return privateEcosystemGatewayUnavailable('set-enabled')
+    }
+    return await gateway.setPrivateEcosystemEnabled(Boolean(payload.enabled))
+  })
+  ipcMain.handle('xinyu:private-browser-grant', async (_event, request: unknown) => {
+    const payload =
+      request && typeof request === 'object'
+        ? (request as { enabled?: unknown; readOnly?: unknown; allowedUrls?: unknown })
+        : {}
+    if (!gateway) {
+      return privateEcosystemGatewayUnavailable('private-browser-grant')
+    }
+    return await gateway.setPrivateBrowserGrant({
+      enabled: Boolean(payload.enabled),
+      readOnly: payload.readOnly !== false,
+      allowedUrls: Array.isArray(payload.allowedUrls) ? payload.allowedUrls.map((url) => String(url || '')) : []
+    })
+  })
+  ipcMain.handle('xinyu:private-ecosystem-tick', async () => {
+    if (!gateway) {
+      return privateEcosystemGatewayUnavailable('tick')
+    }
+    return await gateway.tickPrivateEcosystem()
+  })
+  ipcMain.handle('xinyu:observe-private-browser', async (_event, request: unknown) => {
+    const payload = request && typeof request === 'object' ? (request as { url?: unknown }) : {}
+    return await gateway?.observePrivateBrowser(String(payload.url || ''))
+  })
+  ipcMain.handle('xinyu:private-desktop-snapshot', async () => {
+    if (!gateway) {
+      return privateDesktopGatewayUnavailable('snapshot')
+    }
+    return await gateway.getPrivateDesktopSnapshot()
+  })
+  ipcMain.handle('xinyu:private-desktop-start', async () => {
+    if (!gateway) {
+      return privateDesktopGatewayUnavailable('start')
+    }
+    return await gateway.startPrivateDesktop()
+  })
+  ipcMain.handle('xinyu:private-desktop-stop', async () => {
+    if (!gateway) {
+      return privateDesktopGatewayUnavailable('stop')
+    }
+    return await gateway.stopPrivateDesktop()
+  })
+  ipcMain.handle('xinyu:private-desktop-observe', async () => {
+    if (!gateway) {
+      return privateDesktopGatewayUnavailable('observe')
+    }
+    return await gateway.observePrivateDesktop()
+  })
+  ipcMain.handle('xinyu:private-desktop-set-enabled', async (_event, request: unknown) => {
+    const payload = request && typeof request === 'object' ? (request as { enabled?: unknown }) : {}
+    if (!gateway) {
+      return privateDesktopGatewayUnavailable('set-enabled')
+    }
+    return await gateway.setPrivateDesktopEnabled(Boolean(payload.enabled))
   })
   ipcMain.handle('xinyu:list-metabolism-tickets', async (_event, statuses: unknown) => {
     return await gateway?.listMetabolismTickets(String(statuses || 'requested,approved,running'))

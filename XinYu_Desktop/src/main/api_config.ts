@@ -50,6 +50,7 @@ export type ApiHearingConfig = {
 
 export type ApiTtsConfig = {
   enabled: boolean
+  engine: string
   model: string
   baseUrl: string
   apiKey: string
@@ -57,6 +58,12 @@ export type ApiTtsConfig = {
   format: string
   requestMode: string
   timeoutSeconds: number
+  genieBaseUrl: string
+  genieCharacter: string
+  genieSplitSentence: boolean
+  genieSampleRate: number
+  genieChannels: number
+  genieSampleWidth: number
 }
 
 export type ApiOtherConfig = {
@@ -151,12 +158,59 @@ export type ApiConfigTestResult = {
   message: string
 }
 
+type ApiConfigTestRequest = {
+  url: string
+  headers: Record<string, string>
+  body: string
+  extractReplyPreview: (data: Record<string, unknown>) => string
+}
+
 const LOCAL_ENV_NAME = 'xinyu.local.env'
 const PROFILE_STORE_NAME = 'xinyu-api-profiles.json'
 const DEFAULT_VISION_TIMEOUT_SECONDS = 45
 const DEFAULT_VISION_MAX_BYTES = 4 * 1024 * 1024
 const DEFAULT_HEARING_TIMEOUT_SECONDS = 120
 const DEFAULT_TTS_TIMEOUT_SECONDS = 60
+const DEFAULT_GENIE_TTS_BASE_URL = 'http://127.0.0.1:8000'
+const DEFAULT_GENIE_TTS_CHARACTER = 'feibi'
+const DEFAULT_GENIE_TTS_SAMPLE_RATE = 32000
+const DEFAULT_GENIE_TTS_CHANNELS = 1
+const DEFAULT_GENIE_TTS_SAMPLE_WIDTH = 2
+const ANTHROPIC_VERSION = '2023-06-01'
+const OPENAI_COMPATIBLE_RUNTIME_PROVIDERS = new Set([
+  'openai',
+  'openrouter',
+  'gemini',
+  'mimo',
+  'ciallo',
+  'deepseek',
+  'qwen',
+  'siliconflow',
+  'moonshot',
+  'minimax',
+  'custom_openai',
+  'custom-openai',
+  'custom_openai_compatible',
+  'custom-openai-compatible',
+  'openai_compatible',
+  'openai-compatible',
+  'chat_completions',
+  'chat-completions'
+])
+const NATIVE_MESSAGES_PROVIDERS = new Set([
+  'message',
+  'messages',
+  'claude',
+  'claude_messages',
+  'claude-messages',
+  'claude_native',
+  'claude-native',
+  'anthropic',
+  'anthropic_messages',
+  'anthropic-messages',
+  'anthropic_native',
+  'anthropic-native'
+])
 
 const ENV_KEYS = [
   'XINYU_API_KEY',
@@ -180,6 +234,7 @@ const ENV_KEYS = [
   'XINYU_VOICE_STT_TIMEOUT_SECONDS',
   'XINYU_VOICE_STT_RECORD_FORMAT',
   'XINYU_TTS_ENABLED',
+  'XINYU_TTS_ENGINE',
   'XINYU_TTS_BASE_URL',
   'XINYU_TTS_API_KEY',
   'XINYU_TTS_MODEL',
@@ -187,6 +242,12 @@ const ENV_KEYS = [
   'XINYU_TTS_FORMAT',
   'XINYU_TTS_REQUEST_MODE',
   'XINYU_TTS_TIMEOUT_SECONDS',
+  'XINYU_GENIE_TTS_BASE_URL',
+  'XINYU_GENIE_TTS_CHARACTER',
+  'XINYU_GENIE_TTS_SPLIT_SENTENCE',
+  'XINYU_GENIE_TTS_SAMPLE_RATE',
+  'XINYU_GENIE_TTS_CHANNELS',
+  'XINYU_GENIE_TTS_SAMPLE_WIDTH',
   'XINYU_OPENAI_API_KEY'
 ] as const
 
@@ -241,27 +302,17 @@ export async function testApiConfigProfile(coreDir: string, patch: ApiConfigProf
   if (!llm.model) {
     return apiConfigTestResult(llm, checkedAt, started, 0, '', 'missing_model')
   }
+  const runtimeIssue = coreRuntimeProviderIssue(llm)
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 60_000)
   try {
-    const response = await fetch(`${baseUrl}/chat/completions`, {
+    const request = buildLlmTestRequest(llm, baseUrl)
+    const response = await fetch(request.url, {
       method: 'POST',
       signal: controller.signal,
-      headers: {
-        'content-type': 'application/json',
-        ...(llm.apiKey ? { authorization: `Bearer ${llm.apiKey}` } : {})
-      },
-      body: JSON.stringify({
-        model: llm.model,
-        messages: [
-          { role: 'system', content: 'Return exactly: ok' },
-          { role: 'user', content: 'ping' }
-        ],
-        max_tokens: 8,
-        temperature: 0,
-        stream: false
-      })
+      headers: request.headers,
+      body: request.body
     })
     const text = await response.text()
     let replyPreview = ''
@@ -270,7 +321,7 @@ export async function testApiConfigProfile(coreDir: string, patch: ApiConfigProf
     try {
       const data = JSON.parse(text) as Record<string, unknown>
       parsedJson = true
-      replyPreview = extractChatReplyPreview(data)
+      replyPreview = request.extractReplyPreview(data)
       errorMessage = extractApiErrorMessage(data)
     } catch {
       replyPreview = text.trim().slice(0, 120)
@@ -286,7 +337,7 @@ export async function testApiConfigProfile(coreDir: string, patch: ApiConfigProf
         baseUrl,
         status: response.status,
         replyPreview,
-        message: 'api_test_non_json_response'
+        message: runtimeIssue || 'api_test_non_json_response'
       }
     }
     if (response.ok && !replyPreview) {
@@ -300,12 +351,12 @@ export async function testApiConfigProfile(coreDir: string, patch: ApiConfigProf
         baseUrl,
         status: response.status,
         replyPreview,
-        message: 'api_test_empty_reply'
+        message: runtimeIssue || 'api_test_empty_reply'
       }
     }
     return {
       accepted: true,
-      ok: response.ok,
+      ok: response.ok && !runtimeIssue,
       checkedAt,
       elapsedMs: Date.now() - started,
       provider: llm.provider,
@@ -313,7 +364,9 @@ export async function testApiConfigProfile(coreDir: string, patch: ApiConfigProf
       baseUrl,
       status: response.status,
       replyPreview,
-      message: response.ok ? 'api_test_ok' : compactTestMessage(errorMessage || response.statusText || 'api_test_failed')
+      message: response.ok
+        ? runtimeIssue || 'api_test_ok'
+        : compactTestMessage(errorMessage || response.statusText || 'api_test_failed')
     }
   } catch (error) {
     return apiConfigTestResult(
@@ -363,6 +416,16 @@ export async function applyApiConfigProfile(
   const profile = store.profiles.find((item) => item.id === id)
   if (!profile) {
     throw new Error(`未找到 API 配置：${id}`)
+  }
+
+  const runtimeIssue = coreRuntimeProviderIssue(profile.llm)
+  if (runtimeIssue) {
+    return {
+      accepted: false,
+      message: runtimeIssue,
+      profile: summarizeProfile(profile, false),
+      status: getApiConfigStatus(coreDir)
+    }
   }
 
   writeLocalEnv(resolveLocalEnvPath(coreDir), profileToEnvUpdates(profile))
@@ -510,13 +573,20 @@ function normalizeStoredTts(value: unknown, llm: ApiLlmConfig, hearing: ApiHeari
   const model = safeText(raw.model, defaultTtsModel(llm.model))
   return {
     enabled: safeBool(raw.enabled, false),
+    engine: safeTtsEngine(raw.engine, 'current'),
     model,
     baseUrl: stripTrailingSlash(safeText(raw.baseUrl, hearing.baseUrl || llm.baseUrl || 'https://api.openai.com/v1')),
     apiKey: safeText(raw.apiKey, hearing.apiKey || other.openAIApiKey || llm.apiKey),
     voice: safeText(raw.voice, defaultTtsVoice(model)),
     format: safeText(raw.format, 'wav'),
     requestMode: safeText(raw.requestMode, 'auto'),
-    timeoutSeconds: safeInteger(raw.timeoutSeconds, DEFAULT_TTS_TIMEOUT_SECONDS, 1, 3600)
+    timeoutSeconds: safeInteger(raw.timeoutSeconds, DEFAULT_TTS_TIMEOUT_SECONDS, 1, 3600),
+    genieBaseUrl: stripTrailingSlash(safeText(raw.genieBaseUrl, DEFAULT_GENIE_TTS_BASE_URL)),
+    genieCharacter: safeText(raw.genieCharacter, DEFAULT_GENIE_TTS_CHARACTER),
+    genieSplitSentence: safeBool(raw.genieSplitSentence, false),
+    genieSampleRate: safeInteger(raw.genieSampleRate, DEFAULT_GENIE_TTS_SAMPLE_RATE, 8000, 192000),
+    genieChannels: safeInteger(raw.genieChannels, DEFAULT_GENIE_TTS_CHANNELS, 1, 8),
+    genieSampleWidth: safeInteger(raw.genieSampleWidth, DEFAULT_GENIE_TTS_SAMPLE_WIDTH, 1, 4)
   }
 }
 
@@ -588,13 +658,33 @@ function normalizeProfilePatch(
     },
     tts: {
       enabled: safeBool(ttsPatch.enabled, existing?.tts.enabled ?? envFallback.tts.enabled),
+      engine: safeTtsEngine(ttsPatch.engine, existing?.tts.engine || envFallback.tts.engine),
       model: safeText(ttsPatch.model, existing?.tts.model || envFallback.tts.model),
       baseUrl: stripTrailingSlash(safeText(ttsPatch.baseUrl, existing?.tts.baseUrl || envFallback.tts.baseUrl)),
       apiKey: mergeSecret(ttsPatch.apiKey, existing?.tts.apiKey || envFallback.tts.apiKey),
       voice: safeText(ttsPatch.voice, existing?.tts.voice || envFallback.tts.voice),
       format: safeText(ttsPatch.format, existing?.tts.format || envFallback.tts.format),
       requestMode: safeText(ttsPatch.requestMode, existing?.tts.requestMode || envFallback.tts.requestMode),
-      timeoutSeconds: safeInteger(ttsPatch.timeoutSeconds, existing?.tts.timeoutSeconds ?? envFallback.tts.timeoutSeconds, 1, 3600)
+      timeoutSeconds: safeInteger(ttsPatch.timeoutSeconds, existing?.tts.timeoutSeconds ?? envFallback.tts.timeoutSeconds, 1, 3600),
+      genieBaseUrl: stripTrailingSlash(safeText(ttsPatch.genieBaseUrl, existing?.tts.genieBaseUrl || envFallback.tts.genieBaseUrl)),
+      genieCharacter: safeText(ttsPatch.genieCharacter, existing?.tts.genieCharacter || envFallback.tts.genieCharacter),
+      genieSplitSentence: safeBool(
+        ttsPatch.genieSplitSentence,
+        existing?.tts.genieSplitSentence ?? envFallback.tts.genieSplitSentence
+      ),
+      genieSampleRate: safeInteger(
+        ttsPatch.genieSampleRate,
+        existing?.tts.genieSampleRate ?? envFallback.tts.genieSampleRate,
+        8000,
+        192000
+      ),
+      genieChannels: safeInteger(ttsPatch.genieChannels, existing?.tts.genieChannels ?? envFallback.tts.genieChannels, 1, 8),
+      genieSampleWidth: safeInteger(
+        ttsPatch.genieSampleWidth,
+        existing?.tts.genieSampleWidth ?? envFallback.tts.genieSampleWidth,
+        1,
+        4
+      )
     },
     other: {
       openAIApiKey: mergeSecret(otherPatch.openAIApiKey, existing?.other.openAIApiKey || envFallback.other.openAIApiKey)
@@ -680,6 +770,7 @@ function profileToEnvUpdates(profile: ApiConfigProfile): EnvMap {
     XINYU_VOICE_STT_TIMEOUT_SECONDS: String(profile.hearing.timeoutSeconds),
     XINYU_VOICE_STT_RECORD_FORMAT: profile.hearing.recordFormat,
     XINYU_TTS_ENABLED: profile.tts.enabled ? '1' : '0',
+    XINYU_TTS_ENGINE: profile.tts.engine,
     XINYU_TTS_BASE_URL: profile.tts.baseUrl,
     XINYU_TTS_API_KEY: profile.tts.apiKey,
     XINYU_TTS_MODEL: profile.tts.model,
@@ -687,6 +778,12 @@ function profileToEnvUpdates(profile: ApiConfigProfile): EnvMap {
     XINYU_TTS_FORMAT: profile.tts.format,
     XINYU_TTS_REQUEST_MODE: profile.tts.requestMode,
     XINYU_TTS_TIMEOUT_SECONDS: String(profile.tts.timeoutSeconds),
+    XINYU_GENIE_TTS_BASE_URL: profile.tts.genieBaseUrl,
+    XINYU_GENIE_TTS_CHARACTER: profile.tts.genieCharacter,
+    XINYU_GENIE_TTS_SPLIT_SENTENCE: profile.tts.genieSplitSentence ? '1' : '0',
+    XINYU_GENIE_TTS_SAMPLE_RATE: String(profile.tts.genieSampleRate),
+    XINYU_GENIE_TTS_CHANNELS: String(profile.tts.genieChannels),
+    XINYU_GENIE_TTS_SAMPLE_WIDTH: String(profile.tts.genieSampleWidth),
     XINYU_OPENAI_API_KEY: profile.other.openAIApiKey
   }
 }
@@ -768,12 +865,19 @@ function summarizeHearing(config: ApiHearingConfig): ApiHearingConfigSummary {
 function summarizeTts(config: ApiTtsConfig): ApiTtsConfigSummary {
   return {
     enabled: config.enabled,
+    engine: config.engine,
     model: config.model,
     baseUrl: config.baseUrl,
     voice: config.voice,
     format: config.format,
     requestMode: config.requestMode,
     timeoutSeconds: config.timeoutSeconds,
+    genieBaseUrl: config.genieBaseUrl,
+    genieCharacter: config.genieCharacter,
+    genieSplitSentence: config.genieSplitSentence,
+    genieSampleRate: config.genieSampleRate,
+    genieChannels: config.genieChannels,
+    genieSampleWidth: config.genieSampleWidth,
     hasApiKey: Boolean(config.apiKey),
     apiKeyPreview: maskSecret(config.apiKey)
   }
@@ -828,6 +932,7 @@ function profilesMatch(
     profile.hearing.timeoutSeconds === current.hearing.timeoutSeconds &&
     profile.hearing.recordFormat === current.hearing.recordFormat &&
     profile.tts.enabled === current.tts.enabled &&
+    profile.tts.engine === current.tts.engine &&
     profile.tts.model === current.tts.model &&
     profile.tts.baseUrl === current.tts.baseUrl &&
     profile.tts.apiKey === current.tts.apiKey &&
@@ -835,6 +940,12 @@ function profilesMatch(
     profile.tts.format === current.tts.format &&
     profile.tts.requestMode === current.tts.requestMode &&
     profile.tts.timeoutSeconds === current.tts.timeoutSeconds &&
+    profile.tts.genieBaseUrl === current.tts.genieBaseUrl &&
+    profile.tts.genieCharacter === current.tts.genieCharacter &&
+    profile.tts.genieSplitSentence === current.tts.genieSplitSentence &&
+    profile.tts.genieSampleRate === current.tts.genieSampleRate &&
+    profile.tts.genieChannels === current.tts.genieChannels &&
+    profile.tts.genieSampleWidth === current.tts.genieSampleWidth &&
     profile.other.openAIApiKey === current.other.openAIApiKey
   )
 }
@@ -880,6 +991,7 @@ function configFromEnv(env: EnvMap): {
   const ttsModel = safeText(env.XINYU_TTS_MODEL, defaultTtsModel(llm.model))
   const tts: ApiTtsConfig = {
     enabled: env.XINYU_TTS_ENABLED === '1',
+    engine: safeTtsEngine(env.XINYU_TTS_ENGINE, 'current'),
     model: ttsModel,
     baseUrl: stripTrailingSlash(
       safeText(env.XINYU_TTS_BASE_URL || env.OPENAI_BASE_URL, hearing.baseUrl || llm.baseUrl || 'https://api.openai.com/v1')
@@ -888,9 +1000,102 @@ function configFromEnv(env: EnvMap): {
     voice: safeText(env.XINYU_TTS_VOICE, defaultTtsVoice(ttsModel)),
     format: safeText(env.XINYU_TTS_FORMAT, 'wav'),
     requestMode: safeText(env.XINYU_TTS_REQUEST_MODE, 'auto'),
-    timeoutSeconds: safeInteger(env.XINYU_TTS_TIMEOUT_SECONDS, DEFAULT_TTS_TIMEOUT_SECONDS, 1, 3600)
+    timeoutSeconds: safeInteger(env.XINYU_TTS_TIMEOUT_SECONDS, DEFAULT_TTS_TIMEOUT_SECONDS, 1, 3600),
+    genieBaseUrl: stripTrailingSlash(safeText(env.XINYU_GENIE_TTS_BASE_URL, DEFAULT_GENIE_TTS_BASE_URL)),
+    genieCharacter: safeText(env.XINYU_GENIE_TTS_CHARACTER, DEFAULT_GENIE_TTS_CHARACTER),
+    genieSplitSentence: safeBool(env.XINYU_GENIE_TTS_SPLIT_SENTENCE, false),
+    genieSampleRate: safeInteger(env.XINYU_GENIE_TTS_SAMPLE_RATE, DEFAULT_GENIE_TTS_SAMPLE_RATE, 8000, 192000),
+    genieChannels: safeInteger(env.XINYU_GENIE_TTS_CHANNELS, DEFAULT_GENIE_TTS_CHANNELS, 1, 8),
+    genieSampleWidth: safeInteger(env.XINYU_GENIE_TTS_SAMPLE_WIDTH, DEFAULT_GENIE_TTS_SAMPLE_WIDTH, 1, 4)
   }
   return { llm, vision, hearing, tts, other }
+}
+
+function buildLlmTestRequest(llm: ApiLlmConfig, baseUrl: string): ApiConfigTestRequest {
+  if (isAnthropicMessagesProvider(llm.provider)) {
+    return buildAnthropicTestRequest(llm, baseUrl)
+  }
+  return buildOpenAiTestRequest(llm, baseUrl)
+}
+
+function buildOpenAiTestRequest(llm: ApiLlmConfig, baseUrl: string): ApiConfigTestRequest {
+  return {
+    url: `${baseUrl}/chat/completions`,
+    headers: {
+      'content-type': 'application/json',
+      ...(llm.apiKey ? { authorization: `Bearer ${llm.apiKey}` } : {})
+    },
+    body: JSON.stringify({
+      model: llm.model,
+      messages: [
+        { role: 'system', content: 'Return exactly: ok' },
+        { role: 'user', content: 'ping' }
+      ],
+      max_tokens: 512,
+      temperature: 0,
+      stream: false
+    }),
+    extractReplyPreview: extractChatReplyPreview
+  }
+}
+
+function buildAnthropicTestRequest(llm: ApiLlmConfig, baseUrl: string): ApiConfigTestRequest {
+  const headers: Record<string, string> = {
+    'content-type': 'application/json',
+    accept: 'application/json',
+    'anthropic-version': ANTHROPIC_VERSION
+  }
+  if (llm.apiKey) {
+    headers['x-api-key'] = llm.apiKey
+    headers.authorization = `Bearer ${llm.apiKey}`
+  }
+  return {
+    url: appendAnthropicMessagesEndpoint(baseUrl),
+    headers,
+    body: JSON.stringify({
+      model: llm.model,
+      system: 'Return exactly: ok',
+      messages: [{ role: 'user', content: 'ping' }],
+      max_tokens: 8,
+      temperature: 0
+    }),
+    extractReplyPreview: extractAnthropicReplyPreview
+  }
+}
+
+function appendAnthropicMessagesEndpoint(baseUrl: string): string {
+  const trimmed = baseUrl.replace(/\/+$/, '')
+  const lower = trimmed.toLowerCase()
+  if (lower.endsWith('/messages')) {
+    return trimmed
+  }
+  if (lower.endsWith('/v1')) {
+    return `${trimmed}/messages`
+  }
+  return `${trimmed}/v1/messages`
+}
+
+function isAnthropicMessagesProvider(provider: string): boolean {
+  const text = normalizeProviderId(provider)
+  return NATIVE_MESSAGES_PROVIDERS.has(text) || text.includes('anthropic_messages') || text.includes('claude_messages')
+}
+
+function normalizeProviderId(provider: string): string {
+  return String(provider || '').trim().toLowerCase().replace(/\s+/g, '_')
+}
+
+function coreRuntimeProviderIssue(llm: ApiLlmConfig): string {
+  const provider = normalizeProviderId(llm.provider)
+  if (!provider) {
+    return 'missing_provider'
+  }
+  if (isAnthropicMessagesProvider(provider)) {
+    return 'native_messages_provider_not_supported_by_core_runtime'
+  }
+  if (!OPENAI_COMPATIBLE_RUNTIME_PROVIDERS.has(provider)) {
+    return 'unknown_provider_select_custom_openai_compatible_or_known_provider'
+  }
+  return ''
 }
 
 function apiConfigTestResult(
@@ -925,13 +1130,38 @@ function extractChatReplyPreview(data: Record<string, unknown>): string {
   if (!message || typeof message !== 'object') {
     return ''
   }
-  return safeText((message as Record<string, unknown>).content, '').slice(0, 120)
+  const record = message as Record<string, unknown>
+  return safeText(record.content || record.reasoning_content || record.reasoning, '').slice(0, 120)
+}
+
+function extractAnthropicReplyPreview(data: Record<string, unknown>): string {
+  const content = data.content
+  if (Array.isArray(content)) {
+    const parts: string[] = []
+    for (const item of content) {
+      if (typeof item === 'string') {
+        parts.push(item)
+        continue
+      }
+      if (item && typeof item === 'object') {
+        const text = safeText((item as Record<string, unknown>).text, '')
+        if (text) {
+          parts.push(text)
+        }
+      }
+    }
+    return parts.join('\n').trim().slice(0, 120)
+  }
+  return safeText(content || data.text || data.reply, '').slice(0, 120)
 }
 
 function extractApiErrorMessage(data: Record<string, unknown>): string {
   const error = data.error
+  if (typeof error === 'string') {
+    return error
+  }
   if (!error || typeof error !== 'object') {
-    return ''
+    return safeText(data.message, '')
   }
   return safeText((error as Record<string, unknown>).message, '')
 }
@@ -969,6 +1199,14 @@ function safeBool(value: unknown, fallback: boolean): boolean {
     return false
   }
   return fallback
+}
+
+function safeTtsEngine(value: unknown, fallback: string): string {
+  const text = String(value ?? '').trim().toLowerCase()
+  if (text === 'genie' || text === 'current') {
+    return text
+  }
+  return fallback === 'genie' ? 'genie' : 'current'
 }
 
 function safeInteger(value: unknown, fallback: number, min: number, max: number): number {

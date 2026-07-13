@@ -17,6 +17,105 @@ export type Snapshot = {
   recentMemoryEvents?: unknown[]
   actionDigestState?: JsonRecord
   selfAction?: SelfActionSnapshot
+  privateEcosystem?: PrivateEcosystemSnapshot
+}
+
+export type PrivateEcosystemSnapshot = {
+  observed?: boolean
+  enabled?: boolean
+  rolloutState?: string
+  updatedAt?: string
+  activeGoalId?: string
+  latestActionKind?: string
+  latestActionStatus?: string
+  counters?: {
+    ticks?: number
+    lowRiskExecuted?: number
+    approvalQueued?: number
+    memoryCandidates?: number
+    sharesPrepared?: number
+    sharesSent?: number
+    sharesHeld?: number
+    blockedHighRisk?: number
+  }
+  ownerPrivateShare?: {
+    enabled?: boolean
+    paused?: boolean
+    active?: boolean
+    deliveryLevel?: string
+    dailyRemaining?: number
+    dailyLimit?: number
+    cooldownRemainingMinutes?: number
+    quietHours?: string
+  }
+  journal?: {
+    recentEvents?: number
+    latestEventKind?: string
+    stableMemoryWriteCount?: number
+  }
+  browser?: {
+    engine?: string
+    enabled?: boolean
+    readOnly?: boolean
+    allowedUrls?: string[]
+    lastActionKind?: string
+    lastResult?: string
+    actionsTotal?: number
+    actionsBlocked?: number
+    artifactCount?: number
+    screenshotCount?: number
+    usesOwnerProfile?: boolean
+  }
+  computer?: {
+    backend?: string
+    lastActionKind?: string
+    lastResult?: string
+    observedCount?: number
+    proposedCount?: number
+    blockedCount?: number
+    multiStepArbitraryControl?: string
+  }
+  killSwitch?: {
+    sharePaused?: boolean
+    shareEnabled?: boolean
+  }
+  boundaries?: {
+    stableMemoryWrite?: string
+    qqMessageEnqueuedDirectly?: boolean
+    rawOwnerTextRetained?: boolean
+    secretOrLocalPathRetained?: boolean
+  }
+  paths?: JsonRecord
+}
+
+export type PrivateBrowserGrantPatch = {
+  enabled: boolean
+  readOnly: boolean
+  allowedUrls: string[]
+}
+
+export type MetabolismTicket = JsonRecord & {
+  ticket_id?: string
+  ticketId?: string
+  id?: string
+  status?: string
+  kind?: string
+  request_kind?: string
+  action_kind?: string
+  desire_shape?: string
+  requested_seconds?: number
+  approved_seconds?: number
+  reason?: string
+  note?: string
+  created_at?: string
+  updated_at?: string
+  expires_at?: string
+}
+
+export type MetabolismTicketActionState = {
+  kind: 'idle' | 'loading' | 'yielding' | 'maintaining'
+  ticketId?: string
+  message: string
 }
 
 export type SelfActionSnapshot = {
@@ -170,6 +269,38 @@ export type Stage8PromotionDryRun = {
   blockers: string[]
 }
 
+export type KernelReviewItem = {
+  domain: string
+  itemId: string
+  contentPreview: string
+  reviewStatus: string
+  confidence?: number
+  actionType?: string
+  sourceEventId?: string
+}
+
+export type KernelGovernanceStatus = {
+  ok: boolean
+  available: boolean
+  loadedAt: string
+  selfId: string
+  error: string
+  pendingCount: number
+  worldModelCount: number
+  reorganizationCount: number
+  beliefCount: number
+  followupCount: number
+  writesBlocked: boolean
+  items: KernelReviewItem[]
+  cycleCount: number
+  slowSignalCount: number
+  slowEscalationThreshold: number
+  reorgRecommendation: string
+  selfStorySummary: string
+  grantedScopes: string[]
+  grantableScopes: string[]
+}
+
 export type Stage8MemoryGovernanceStatus = {
   ok: boolean
   loadedAt: string
@@ -242,12 +373,19 @@ export type ApiConfigHearing = {
 
 export type ApiConfigTts = {
   enabled: boolean
+  engine: string
   model: string
   baseUrl: string
   voice: string
   format: string
   requestMode: string
   timeoutSeconds: number
+  genieBaseUrl: string
+  genieCharacter: string
+  genieSplitSentence: boolean
+  genieSampleRate: number
+  genieChannels: number
+  genieSampleWidth: number
   hasApiKey: boolean
   apiKeyPreview: string
 }
@@ -320,6 +458,7 @@ export type ApiConfigProfilePatch = {
   }
   tts?: {
     enabled?: boolean
+    engine?: string
     model?: string
     baseUrl?: string
     apiKey?: string
@@ -327,6 +466,12 @@ export type ApiConfigProfilePatch = {
     format?: string
     requestMode?: string
     timeoutSeconds?: number
+    genieBaseUrl?: string
+    genieCharacter?: string
+    genieSplitSentence?: boolean
+    genieSampleRate?: number
+    genieChannels?: number
+    genieSampleWidth?: number
   }
   other?: {
     openAIApiKey?: string
@@ -507,6 +652,7 @@ export type AppState = {
   recentMemoryEvents: unknown[]
   memoryGrowthCandidates: GrowthCandidatePromotionStatus | null
   stage8MemoryGovernance: Stage8MemoryGovernanceStatus | null
+  kernelGovernance: KernelGovernanceStatus | null
   asyncExploration: AsyncExplorationState | null
   stage12Gate: Stage12GateStatus | null
   stage13Gate: Stage13GateStatus | null
@@ -542,6 +688,7 @@ export type ProactiveIntent = {
   trigger: string
   plannedText: string
   fullText: string
+  reasonText: string
   risk: 'low' | 'review' | 'blocked'
   riskLabel: string
   delivery: string

@@ -2,7 +2,7 @@ import { resolve } from 'node:path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 
-const xinyuBridgeTarget = process.env.XINYU_DESKTOP_HTTP_URL || 'http://127.0.0.1:8776'
+const xinyuBridgeTarget = process.env.XINYU_DESKTOP_HTTP_URL || 'http://127.0.0.1:8765'
 const xinyuBridgeToken = process.env.XINYU_BRIDGE_TOKEN || ''
 const xinyuBridgeProxy = {
   target: xinyuBridgeTarget,
@@ -40,6 +40,7 @@ export default defineConfig({
     root: resolve(__dirname, 'src/renderer'),
     plugins: [react()],
     server: {
+      host: '127.0.0.1',
       port: 5174,
       strictPort: true,
       proxy: {
