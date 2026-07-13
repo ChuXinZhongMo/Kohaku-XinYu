@@ -1,0 +1,42 @@
+name: SBOM (release tags)
+
+# Optional supply-chain artifact job. Does not block CI on PRs.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+
+jobs:
+  cyclonedx-python:
+    name: "CycloneDX SBOM XinYu-Core (informational)"
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: XinYu-Core/pyproject.toml
+      - name: Install env + cyclonedx
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "./XinYu-Core[dev]"
+          python -m pip install "cyclonedx-bom>=4.0.0"
+      - name: Generate CycloneDX JSON
+        run: |
+          python -m cyclonedx_py environment -o sbom-xinyu-core.cdx.json
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        with:
+          name: sbom-xinyu-core
+          path: sbom-xinyu-core.cdx.json
+          if-no-files-found: warn

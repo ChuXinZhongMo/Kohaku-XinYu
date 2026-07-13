@@ -2469,12 +2469,18 @@ class NativeQQGateway:
 
         package_text = xinyu_qq_command_router.extract_package_install_command(self, text)
         if package_text is not None:
-            if not self.config.package_install_enabled:
+            package_scope = xinyu_qq_prepare_policy.package_install_scope_reject_reason(
+                package_text=package_text,
+                enabled=self.config.package_install_enabled,
+                owner_private_only=self.config.package_install_owner_private_only,
+                message_kind=message_kind,
+                sender_id=sender_id,
+                owner_user_ids=self.config.owner_user_ids,
+            )
+            if package_scope == "package_install_disabled":
                 print("[xinyu_qq_gateway] ignored package install command: disabled", flush=True)
                 return None
-            if self.config.package_install_owner_private_only and (
-                message_kind != "private" or sender_id not in self.config.owner_user_ids
-            ):
+            if package_scope:
                 print("[xinyu_qq_gateway] ignored package install outside owner private chat", flush=True)
                 return None
             return PreparedMessage(
@@ -2490,13 +2496,20 @@ class NativeQQGateway:
 
         codex_task = xinyu_qq_command_router.extract_codex_command(self, text)
         if codex_task is not None:
-            if not self.config.codex_command_enabled:
+            codex_scope = xinyu_qq_prepare_policy.codex_command_scope_reject_reason(
+                codex_task=codex_task,
+                enabled=self.config.codex_command_enabled,
+                message_kind=message_kind,
+                sender_id=sender_id,
+                owner_user_ids=self.config.owner_user_ids,
+            )
+            if codex_scope == "codex_command_disabled":
                 print("[xinyu_qq_gateway] ignored Codex command: disabled", flush=True)
                 return None
-            if message_kind != "private":
+            if codex_scope == "codex_private_only":
                 print("[xinyu_qq_gateway] ignored Codex command outside private chat", flush=True)
                 return None
-            if sender_id not in self.config.owner_user_ids:
+            if codex_scope == "codex_owner_only":
                 print(f"[xinyu_qq_gateway] ignored Codex command from non-owner sender={sender_id}", flush=True)
                 return None
             if not codex_task.strip():

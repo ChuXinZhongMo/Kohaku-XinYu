@@ -38,8 +38,14 @@ Attach both JSON files to the GitHub Release for that tag. Do **not** include pr
 - Do not fail PRs on the floor until the baseline is stable for two release cycles.
 - Next step: set `fail_under` only on a narrow package allowlist (not the whole app tree).
 
+## CI automation
+
+- Workflow: `.github/workflows/sbom-release.yml` (tags `v*` + `workflow_dispatch`).
+- Produces `sbom-xinyu-core.cdx.json` artifact from the installed XinYu-Core env.
+- Job is informational (`continue-on-error`); attach the artifact to the GitHub Release manually until auto-upload is added.
+
 ## Next supply-chain steps
 
-1. Add optional `workflow_dispatch` job that builds SBOM artifacts on tag.
+1. Auto-attach SBOM artifact to GitHub Releases on tag.
 2. Pin remaining third-party Actions if any float tags reappear.
 3. Document cosign/sigstore only if multi-maintainer releases start.
