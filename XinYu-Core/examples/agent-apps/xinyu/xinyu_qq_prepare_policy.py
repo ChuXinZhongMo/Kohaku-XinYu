@@ -100,3 +100,17 @@ def owner_private_command_reject_reason(
     if message_kind != "private" or sender_id not in owner_user_ids:
         return reason
     return None
+
+
+def learning_ingest_scope_reject_reason(
+    *,
+    enabled: bool,
+    has_learning_material: bool,
+    file_learning_reject_reason: str,
+) -> str | None:
+    """Return gateway ignore reason for QQ file learning, or None if allowed."""
+    if not enabled or not has_learning_material:
+        return None
+    if file_learning_reject_reason:
+        return file_learning_reject_reason
+    return None

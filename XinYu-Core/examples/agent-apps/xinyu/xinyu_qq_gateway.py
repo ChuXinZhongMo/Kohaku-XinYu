@@ -2425,9 +2425,14 @@ class NativeQQGateway:
                 sender_id=sender_id,
                 group_id=group_id,
             )
-            if file_learning_reject_reason:
+            learning_scope = xinyu_qq_prepare_policy.learning_ingest_scope_reject_reason(
+                enabled=True,
+                has_learning_material=True,
+                file_learning_reject_reason=file_learning_reject_reason,
+            )
+            if learning_scope:
                 print(
-                    f"[xinyu_qq_gateway] ignored QQ file learning: {file_learning_reject_reason}",
+                    f"[xinyu_qq_gateway] ignored QQ file learning: {learning_scope}",
                     flush=True,
                 )
                 return None

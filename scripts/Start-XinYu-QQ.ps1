@@ -318,3 +318,9 @@ if ($OpenDashboards) {
 }
 
 Write-Host "`nDone. Send a private QQ message to the whitelisted owner account to test XinYu."
+Write-Host "Health recheck anytime: .\XinYu.ps1 health   (or .\scripts\Test-XinYu-StackHealth.ps1)"
+$healthScript = Join-Path $ScriptDir "Test-XinYu-StackHealth.ps1"
+if (Test-Path -LiteralPath $healthScript) {
+    Write-Host "`n=== Stack health ==="
+    & $healthScript
+}

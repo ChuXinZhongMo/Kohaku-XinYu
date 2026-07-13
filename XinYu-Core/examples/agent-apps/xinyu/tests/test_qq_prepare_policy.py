@@ -85,3 +85,18 @@ def test_sticker_and_package_and_codex_scope() -> None:
         )
         is None
     )
+    from xinyu_qq_prepare_policy import learning_ingest_scope_reject_reason
+
+    assert learning_ingest_scope_reject_reason(
+        enabled=True,
+        has_learning_material=True,
+        file_learning_reject_reason="file_learning_private_owner_only",
+    ) == "file_learning_private_owner_only"
+    assert (
+        learning_ingest_scope_reject_reason(
+            enabled=True,
+            has_learning_material=True,
+            file_learning_reject_reason="",
+        )
+        is None
+    )

@@ -1,6 +1,6 @@
 param(
     [Parameter(Position = 0)]
-    [ValidateSet("tree", "status", "start", "stop", "test", "smoke", "verify", "clean")]
+    [ValidateSet("tree", "status", "start", "stop", "test", "smoke", "verify", "clean", "health")]
     [string]$Command = "tree",
 
     [Parameter(Position = 1)]
@@ -90,7 +90,9 @@ function Write-ComponentTree {
     Write-Host ""
     Write-Host "Common commands:"
     Write-Host "  .\XinYu.ps1 status"
+    Write-Host "  .\XinYu.ps1 health"
     Write-Host "  .\XinYu.ps1 start desktop"
+    Write-Host "  .\XinYu.ps1 start qq"
     Write-Host "  .\XinYu.ps1 stop all"
     Write-Host "  .\XinYu.ps1 test core"
     Write-Host "  .\XinYu.ps1 verify qq"
@@ -321,5 +323,12 @@ switch ($Command) {
     "test" { Invoke-CoreTests }
     "smoke" { Invoke-CoreSmoke }
     "verify" { Invoke-XinYuVerify }
+    "health" {
+        $healthScript = Resolve-XinYuScript "Test-XinYu-StackHealth.ps1"
+        if (-not (Test-Path -LiteralPath $healthScript)) {
+            throw "Stack health script not found: $healthScript"
+        }
+        & $healthScript
+    }
     "clean" { Invoke-XinYuClean }
 }
