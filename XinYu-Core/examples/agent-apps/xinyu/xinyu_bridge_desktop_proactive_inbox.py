@@ -20,6 +20,27 @@ from xinyu_bridge_desktop_proactive_inbox_state import (
 )
 from xinyu_bridge_values import safe_str as _safe_str
 
+# Facade re-exports (constants used by callers/tests importing this module).
+__all__ = (
+    "DESKTOP_PROACTIVE_FINAL_STATUSES",
+    "DESKTOP_PROACTIVE_HISTORY_MAX",
+    "DESKTOP_PROACTIVE_HISTORY_REL",
+    "DESKTOP_PROACTIVE_INBOX_MAX",
+    "DESKTOP_PROACTIVE_INBOX_STATUSES",
+    "build_desktop_proactive_inbox_payload",
+    "compact_desktop_proactive_history",
+    "desktop_clear_proactive_inbox",
+    "desktop_load_proactive_history",
+    "desktop_proactive_existing",
+    "desktop_proactive_inbox",
+    "desktop_prune_proactive_inbox",
+    "desktop_remember_proactive_history",
+    "desktop_remove_proactive_inbox",
+    "desktop_remove_proactive_state_items",
+    "desktop_upsert_proactive_inbox",
+    "parse_desktop_proactive_history_jsonl",
+)
+
 
 async def desktop_proactive_inbox(
     runtime: Any,

@@ -8,11 +8,23 @@ from xinyu_bridge_codex_presence_status import (
     codex_delegate_running,
     codex_presence_status_from_result,
 )
+from xinyu_bridge_codex_presence_trace import append_codex_delegate_background_trace
 from xinyu_bridge_values import safe_str
 from xinyu_runtime_presence import record_codex_presence
 
 CODEX_DEFAULT_TIMEOUT_SECONDS = 3600
 CODEX_VISIBLE_WINDOW_TITLE = "Xinyu codex"
+
+# Public re-exports used by runtime aliases and tests.
+__all__ = (
+    "CODEX_DEFAULT_TIMEOUT_SECONDS",
+    "CODEX_VISIBLE_WINDOW_TITLE",
+    "append_codex_delegate_background_trace",
+    "codex_busy_reply",
+    "codex_busy_reply_default",
+    "codex_delegate_running_for_runtime",
+    "record_codex_delegate_presence_state",
+)
 
 
 def codex_delegate_running_for_runtime(runtime: Any) -> dict[str, Any]:

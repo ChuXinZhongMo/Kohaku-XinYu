@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+from xinyu_bridge_semantic_fast_text_extract import SEMANTIC_FAST_ALLOWED_INTENTS
 from xinyu_bridge_semantic_fast_text_extract import _CONFUSION_ONLY_MARKERS
 from xinyu_bridge_semantic_fast_text_extract import _OWNER_STATE_QUESTION_MARKERS
 from xinyu_bridge_semantic_fast_text_extract import _REPLY_QUALITY_COMPLAINT_MARKERS
@@ -19,6 +20,11 @@ from xinyu_bridge_semantic_fast_text_format import empty_visible_reply_fallback_
 from xinyu_bridge_semantic_fast_text_format import owner_private_direct_repair_reply_impl as _owner_private_direct_repair_reply_impl_base
 from xinyu_bridge_semantic_fast_text_format import owner_private_empty_state_notice as _owner_private_empty_state_notice_base
 from xinyu_bridge_semantic_fast_text_format import reply_looks_like_stale_plan_residue as _reply_looks_like_stale_plan_residue_base
+
+# Public re-export for routes/tests that import from this facade module.
+__all__ = (
+    "SEMANTIC_FAST_ALLOWED_INTENTS",
+)
 
 
 def _compact_text(text: str) -> str:

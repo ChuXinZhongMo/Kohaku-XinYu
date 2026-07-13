@@ -961,7 +961,7 @@ function App(): JSX.Element {
         stickerLibrary: library,
         stickerAction: {
           kind: 'idle',
-          message: Boolean(result.moved) ? `已归到${moodLabel}` : `已经在${moodLabel}`
+          message: result.moved ? `已归到${moodLabel}` : `已经在${moodLabel}`
         }
       }))
     } catch (error) {
@@ -1726,7 +1726,7 @@ function App(): JSX.Element {
     void refreshPrivateDesktop()
     const timer = setInterval(() => void refreshPrivateDesktop(), 10000)
     return () => clearInterval(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [])
 
   return (

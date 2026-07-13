@@ -763,8 +763,8 @@ function readStickerLibrarySummary(): Record<string, unknown> {
     .sort((a, b) => {
       const aMood = String(a.mood || '')
       const bMood = String(b.mood || '')
-      const aRank = aMood === 'unclear' ? 0 : Boolean(a.confirmed) ? 2 : 1
-      const bRank = bMood === 'unclear' ? 0 : Boolean(b.confirmed) ? 2 : 1
+      const aRank = aMood === 'unclear' ? 0 : a.confirmed ? 2 : 1
+      const bRank = bMood === 'unclear' ? 0 : b.confirmed ? 2 : 1
       if (aRank !== bRank) {
         return aRank - bRank
       }
@@ -778,7 +778,7 @@ function readStickerLibrarySummary(): Record<string, unknown> {
     counts,
     unclear: counts.unclear || 0,
     confirmed: stickers.filter((item) => Boolean(item.confirmed)).length,
-    unconfirmed: stickers.filter((item) => !Boolean(item.confirmed)).length,
+    unconfirmed: stickers.filter((item) => !item.confirmed).length,
     ocr: stickers.filter((item) => String(item.ocr_text || '').trim()).length,
     autoSend: stickers.filter((item) => Boolean(item.auto_send)).length,
     corrections: correctionItems.length,

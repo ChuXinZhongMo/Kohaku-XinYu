@@ -477,7 +477,7 @@ function SelfActionPanel(props: {
 
       <div className="self-action-grid">
         <SelfActionFact label="队列" value={pendingCount > 0 ? `${pendingCount} 待批准` : compact(queueId || '无待批准', 30)} />
-        <SelfActionFact label="交接" value={Boolean(handoff.exists) ? compact(String(handoff.queueId || '已生成'), 30) : '未生成'} />
+        <SelfActionFact label="交接" value={handoff.exists ? compact(String(handoff.queueId || '已生成'), 30) : '未生成'} />
         <SelfActionFact label="补丁任务" value={taskId ? compact(taskId, 30) : '暂无'} />
         <SelfActionFact label="Codex" value={selfActionCodexLabel(codexStatus)} />
       </div>
@@ -1489,7 +1489,7 @@ function preferredConversationKey(conversations: ConversationTrack[]): string {
 }
 
 function turnSpeakerLabel(turn: JsonRecord): string {
-  if (Boolean(turn.isOwner)) return '你'
+  if (turn.isOwner) return '你'
   return compact(String(turn.senderName || turn.sessionLabel || 'QQ联系人'), 24)
 }
 
@@ -1677,7 +1677,7 @@ function ChatTimeline(props: { turns: unknown[]; commands: CommandState[] }): JS
     <div className="chat-timeline">
       {turns.map((turn, index) => (
         <React.Fragment key={`${String(turn.turnId || index)}-${index}`}>
-          <MessageBubble side={Boolean(turn.isOwner) ? 'owner' : 'contact'} speaker={turnSpeakerLabel(turn)} text={String(turn.textPreview || '...')} meta={formatTurnMeta(turn)} />
+          <MessageBubble side={turn.isOwner ? 'owner' : 'contact'} speaker={turnSpeakerLabel(turn)} text={String(turn.textPreview || '...')} meta={formatTurnMeta(turn)} />
           <MessageBubble
             side="xinyu"
             speaker="心玉"

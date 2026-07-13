@@ -111,7 +111,7 @@ export async function setQQRuntimeConfig(patchValue: unknown): Promise<QQRuntime
   let changed = false
 
   if (hasPatchKey(patch, 'allowExternalPrivate')) {
-    raw.require_whitelist = !Boolean(patch.allowExternalPrivate)
+    raw.require_whitelist = !patch.allowExternalPrivate
     changed = true
   }
 

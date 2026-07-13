@@ -159,18 +159,25 @@ foreach ($path in $tracked) {
     }
     if ($skip) { continue }
 
-    # Normalize git path separators; avoid Test-Path choking on odd encodings.
-    $norm = ($path -replace '/', [IO.Path]::DirectorySeparatorChar)
-    $full = [IO.Path]::GetFullPath((Join-Path $Root $norm))
-    if (-not [IO.File]::Exists($full)) { continue }
+    # Resolve path safely (Chinese / long / odd names must not abort the whole scan).
+    $full = $null
+    try {
+        $norm = ($path -replace '/', [IO.Path]::DirectorySeparatorChar)
+        # Strip accidental surrounding quotes from pathological index entries.
+        $norm = $norm.Trim().Trim('"')
+        $full = [IO.Path]::Combine($Root, $norm)
+        if (-not [IO.File]::Exists($full)) { continue }
+    } catch {
+        continue
+    }
 
     # Skip large files (>1.5 MiB)
     try {
         $item = [IO.FileInfo]::new($full)
+        if ($item.Length -gt 1.5MB) { continue }
     } catch {
         continue
     }
-    if ($item.Length -gt 1.5MB) { continue }
 
     $text = $null
     try {
