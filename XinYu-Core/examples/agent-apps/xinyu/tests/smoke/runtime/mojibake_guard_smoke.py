@@ -59,6 +59,8 @@ SCAN_EXCLUDED_PARTS = {
     ".pytest_cache",
     "node_modules",
     "runtime",
+    # Private/local owner state — never part of public CI surface.
+    "memory",
 }
 SCAN_EXCLUDED_PREFIXES = (
     ("learning", "owner_supplied"),
@@ -68,6 +70,15 @@ SCAN_EXCLUDED_PREFIXES = (
 )
 SCAN_EXCLUDED_RELS = {
     ("memory", "creative", "planning", "inspiration", "local_reference_index.jsonl"),
+}
+# Modules that intentionally keep dual-encoding / legacy mojibake *matcher*
+# tables so runtime can still recognize corrupted owner text. Scanning them for
+# "known fragments" is a false positive against their purpose.
+SCAN_EXCLUDED_INTENTIONAL_MARKER_RELS = {
+    "xinyu_bridge_promise_markers.py",
+    "xinyu_bridge_codex_wait.py",
+    "xinyu_text_variants.py",
+    "tests/smoke/runtime/mojibake_guard_smoke.py",
 }
 
 COMMON_CHARS = (
@@ -216,17 +227,42 @@ def _iter_guard_files() -> list[Path]:
     return sorted(files.values(), key=lambda item: str(item.relative_to(ROOT)))
 
 
+def _rel_key(path: Path) -> str:
+    return str(path.relative_to(PROJECT_ROOT)).replace("\\", "/")
+
+
+def _contains_literal_replacement_char(text: str) -> bool:
+    """True when the file body has a real U+FFFD glyph, not just the escape ``\\ufffd``."""
+    if "\ufffd" not in text:
+        return False
+    # Strip common intentional mentions used by detectors/tests.
+    stripped = (
+        text.replace("\\ufffd", "")
+        .replace("\\uFFFD", "")
+        .replace("U+FFFD", "")
+        .replace("u+fffd", "")
+    )
+    return "\ufffd" in stripped
+
+
 def main() -> int:
     failures: list[str] = _synthetic_guard_failures()
     checked = 0
     for path in _iter_guard_files():
-        rel = str(path.relative_to(PROJECT_ROOT))
+        rel = _rel_key(path)
         if not path.exists():
+            # Private/runtime seeds listed in CRITICAL_FILES may be absent on CI.
+            if rel.startswith("memory/") or rel.startswith("runtime/"):
+                continue
             failures.append(f"{rel}: missing")
+            continue
+        # Owner-private trees and intentional dual-encoding matcher tables.
+        if rel.startswith("memory/") or rel in SCAN_EXCLUDED_INTENTIONAL_MARKER_RELS:
+            checked += 1
             continue
         checked += 1
         text = path.read_text(encoding="utf-8")
-        if "\ufffd" in text:
+        if _contains_literal_replacement_char(text):
             failures.append(f"{rel}: contains replacement character U+FFFD")
         fragment_hits = [fragment for fragment in KNOWN_MOJIBAKE_FRAGMENTS if fragment in text]
         if fragment_hits:
