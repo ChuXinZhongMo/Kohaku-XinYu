@@ -198,11 +198,9 @@ class BaseInputModule(ABC):
 
     async def _on_start(self) -> None:
         """Called when module starts. Override in subclass."""
-        pass
 
     async def _on_stop(self) -> None:
         """Called when module stops. Override in subclass."""
-        pass
 
     @abstractmethod
     async def get_input(self) -> TriggerEvent | None:

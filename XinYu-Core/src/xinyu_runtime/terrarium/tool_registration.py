@@ -21,8 +21,8 @@ def ensure_terrarium_tools_registered() -> None:
     if _REGISTERED:
         return
     _REGISTERED = True
-    import xinyu_runtime.builtins.tools.terrarium_creature  # noqa: F401
-    import xinyu_runtime.builtins.tools.terrarium_lifecycle  # noqa: F401
+    import xinyu_runtime.builtins.tools.terrarium_creature
+    import xinyu_runtime.builtins.tools.terrarium_lifecycle
     import xinyu_runtime.builtins.tools.terrarium_messaging  # noqa: F401
 
 

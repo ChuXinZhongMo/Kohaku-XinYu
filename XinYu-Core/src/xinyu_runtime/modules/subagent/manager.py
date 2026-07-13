@@ -6,8 +6,9 @@ Supports both regular (stateless) and interactive (long-lived) sub-agents.
 """
 
 import asyncio
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from xinyu_runtime.core.budget import IterationBudget
 from xinyu_runtime.core.job import (

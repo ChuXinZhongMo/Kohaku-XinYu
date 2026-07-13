@@ -219,7 +219,7 @@ class _OAuthCallbackHandler(BaseHTTPRequestHandler):
             b"</body></html>"
         )
 
-    def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
+    def log_message(self, format: str, *args: Any) -> None:
         pass
 
 

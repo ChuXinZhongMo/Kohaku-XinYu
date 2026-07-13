@@ -142,7 +142,7 @@ def _load_base_config_data(base_path: Path) -> dict[str, Any] | None:
     data = _interpolate_env_vars(raw)
 
     # Recursively resolve base_config if the base also has one
-    if "base_config" in data and data["base_config"]:
+    if data.get("base_config"):
         grandparent_path = _resolve_base_config_path(data["base_config"], base_path)
         if grandparent_path:
             grandparent_data = _load_base_config_data(grandparent_path)
@@ -359,13 +359,13 @@ def _construct_agent_config(
             "temperature", config_data.get("temperature", 0.7)
         ),
         max_tokens=controller_data.get(
-            "max_tokens", config_data.get("max_tokens", None)
+            "max_tokens", config_data.get("max_tokens")
         ),
         reasoning_effort=controller_data.get(
             "reasoning_effort", config_data.get("reasoning_effort", "medium")
         ),
         service_tier=controller_data.get(
-            "service_tier", config_data.get("service_tier", None)
+            "service_tier", config_data.get("service_tier")
         ),
         extra_body=controller_data.get("extra_body", config_data.get("extra_body", {})),
         system_prompt=config_data.get("system_prompt", "You are a helpful assistant."),

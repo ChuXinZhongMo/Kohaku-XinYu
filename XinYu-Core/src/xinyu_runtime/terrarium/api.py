@@ -98,7 +98,7 @@ class TerrariumAPI:
 
         # Record in observer if one exists
         if hasattr(self._runtime, "_observer"):
-            observer: "ChannelObserver" = self._runtime._observer
+            observer: ChannelObserver = self._runtime._observer
             observer.record(name, msg)
 
         logger.debug(

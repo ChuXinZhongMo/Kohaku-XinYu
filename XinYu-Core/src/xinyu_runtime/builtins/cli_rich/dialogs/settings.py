@@ -32,14 +32,12 @@ from xinyu_runtime.llm.profiles import (
     delete_backend,
     delete_profile,
     get_default_model,
-)
-from xinyu_runtime.llm.profiles import list_all as list_all_presets
-from xinyu_runtime.llm.profiles import (
     load_backends,
     load_presets,
     save_backend,
     set_default_model,
 )
+from xinyu_runtime.llm.profiles import list_all as list_all_presets
 from xinyu_runtime.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -91,7 +89,7 @@ class SettingsOverlay:
         self.visible = False
         self.mode = "list"  # list | form | confirm
         self.tab = TABS[0]
-        self._cursor: dict[str, int] = {t: 0 for t in TABS}
+        self._cursor: dict[str, int] = dict.fromkeys(TABS, 0)
         self._entries: dict[str, list[dict[str, Any]]] = {t: [] for t in TABS}
         self._form: FormState | None = None
         self._confirm: ConfirmState | None = None

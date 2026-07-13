@@ -4,7 +4,8 @@ Module and tool registration system.
 Provides global registry for tools, sub-agents, and other modules.
 """
 
-from typing import Any, Callable, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from xinyu_runtime.modules.tool.base import Tool, ToolInfo
 from xinyu_runtime.utils.logging import get_logger

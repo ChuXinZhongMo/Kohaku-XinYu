@@ -287,7 +287,7 @@ async def run_terrarium_with_tui(runtime: TerrariumRuntime) -> None:
     suppress_logging()
 
     # Start TUI app
-    _app_task = asyncio.create_task(tui.run_app())  # noqa: F841
+    _app_task = asyncio.create_task(tui.run_app())
     await tui.wait_ready()
 
     # Emit session info for the root agent
@@ -708,7 +708,7 @@ def _run_terrarium_cli(args: argparse.Namespace) -> int:
             if store:
                 store.close()
             if session_file and session_file.exists():
-                print(f"\nSession saved. To resume:")
+                print("\nSession saved. To resume:")
                 print(f"  kt resume {session_file.stem}")
 
     # No root agent: basic seed/observe CLI

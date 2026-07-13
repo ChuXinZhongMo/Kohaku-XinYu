@@ -282,7 +282,7 @@ def _load_one_package_command(
 
 __all__: tuple[str, ...] = (
     "BUILTIN_COMMANDS",
-    "run_post_llm_call_chain",
     "register_controller_command",
     "register_plugin_and_package_commands",
+    "run_post_llm_call_chain",
 )

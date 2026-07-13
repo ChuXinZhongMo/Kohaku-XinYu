@@ -12,8 +12,9 @@ variation_groups/selected_variations so UX is consistent across the
 web frontend, TUI, and CLI.
 """
 
+from collections.abc import Callable
 from io import StringIO
-from typing import Any, Callable
+from typing import Any
 
 from rich.console import Console, Group, RenderableType
 from rich.panel import Panel

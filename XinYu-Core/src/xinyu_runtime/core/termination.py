@@ -7,8 +7,9 @@ contributed by plugins.
 """
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from xinyu_runtime.utils.logging import get_logger
 
@@ -89,10 +90,10 @@ class TerminationChecker:
         self._terminated: bool = False
         self._reason: str = ""
         # Plugin-supplied checkers, wired by Agent._init_plugins.
-        self._plugin_manager: "PluginManager | None" = None
+        self._plugin_manager: PluginManager | None = None
         # Hooks to pull state for TerminationContext without coupling
         # this module to Agent. Populated by Agent wiring.
-        self._scratchpad_ref: "Scratchpad | None" = None
+        self._scratchpad_ref: Scratchpad | None = None
         self._recent_tool_results: list[Any] = []
 
     def attach_plugins(self, manager: "PluginManager | None") -> None:

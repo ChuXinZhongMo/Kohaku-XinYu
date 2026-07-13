@@ -12,9 +12,10 @@ Rich UI payloads:
 """
 
 from abc import abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, ClassVar, Protocol, runtime_checkable
+from typing import Any, ClassVar, Protocol, runtime_checkable
 
 
 class CommandLayer(Enum):

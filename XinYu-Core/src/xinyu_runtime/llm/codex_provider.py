@@ -8,7 +8,8 @@ ChatGPT Plus/Pro subscription, not API credits.
 
 import hashlib
 import json as _json
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 try:
     from openai import AsyncOpenAI

@@ -15,9 +15,10 @@ import base64
 import re
 import tempfile
 import time
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from xinyu_runtime.llm.base import ToolSchema
@@ -40,7 +41,10 @@ from xinyu_runtime.core.executor import Executor
 from xinyu_runtime.core.job import JobResult, JobStatus, JobStore
 from xinyu_runtime.core.registry import Registry
 from xinyu_runtime.llm.base import LLMProvider
-from xinyu_runtime.llm.failover import failover_context_from_events, provider_failover_context
+from xinyu_runtime.llm.failover import (
+    failover_context_from_events,
+    provider_failover_context,
+)
 from xinyu_runtime.llm.message import ContentPart, FilePart, ImagePart, TextPart
 from xinyu_runtime.llm.tools import build_provider_native_tools, build_tool_schemas
 from xinyu_runtime.modules.tool.base import ToolInfo

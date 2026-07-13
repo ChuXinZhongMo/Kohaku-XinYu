@@ -46,7 +46,6 @@ class DiffHunk:
 class DiffParseError(Exception):
     """Error parsing diff format."""
 
-    pass
 
 
 def parse_unified_diff(diff_text: str) -> list[DiffHunk]:
@@ -353,7 +352,7 @@ class EditTool(BaseTool):
             return ToolResult(error=f"Not a file: {path}")
 
         try:
-            async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
+            async with aiofiles.open(file_path, encoding="utf-8") as f:
                 original = await f.read()
 
             count = original.count(old)

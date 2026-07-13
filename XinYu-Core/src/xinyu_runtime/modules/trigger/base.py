@@ -154,11 +154,9 @@ class BaseTrigger(ABC):
 
     async def _on_start(self) -> None:
         """Called when trigger starts. Override in subclass."""
-        pass
 
     async def _on_stop(self) -> None:
         """Called when trigger stops. Override in subclass."""
-        pass
 
     def set_context(self, context: dict[str, Any]) -> None:
         """Update trigger context."""
@@ -167,7 +165,6 @@ class BaseTrigger(ABC):
 
     def _on_context_update(self, context: dict[str, Any]) -> None:
         """Called when context is updated. Override in subclass."""
-        pass
 
     @abstractmethod
     async def wait_for_trigger(self) -> TriggerEvent | None:

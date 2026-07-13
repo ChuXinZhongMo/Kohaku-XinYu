@@ -151,7 +151,7 @@ class CallableTriggerTool(BaseTool):
 
         try:
             trigger = self._cls.from_setup_args(args)
-        except Exception as e:  # noqa: BLE001 — surface class-level failures to the LLM
+        except Exception as e:
             return ToolResult(
                 error=f"Failed to build {self._cls.__name__}: {e}",
                 exit_code=1,
@@ -159,7 +159,7 @@ class CallableTriggerTool(BaseTool):
 
         try:
             self._cls.post_setup(trigger, context)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             return ToolResult(
                 error=f"post_setup failed for {self._cls.__name__}: {e}",
                 exit_code=1,
@@ -175,7 +175,7 @@ class CallableTriggerTool(BaseTool):
                 error=(f"Failed to register trigger with name={requested_id!r}: {e}"),
                 exit_code=1,
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             return ToolResult(
                 error=f"Failed to register trigger: {e}",
                 exit_code=1,

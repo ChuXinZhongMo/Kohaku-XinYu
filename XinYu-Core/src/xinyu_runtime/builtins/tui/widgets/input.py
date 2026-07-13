@@ -39,7 +39,6 @@ class ChatInput(TextArea):
     class EditQueued(Message):
         """Posted when user presses Up on empty input to edit last queued message."""
 
-        pass
 
     class CommandHint(Message):
         """Posted when user is typing a / command, for hint display."""

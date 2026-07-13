@@ -145,7 +145,7 @@ class ToolCallBlock:
         self.running_completion_tokens: int = 0
         self.running_total_tokens: int = 0
         # Children (sub-agent's nested tool blocks)
-        self.children: list["ToolCallBlock"] = []
+        self.children: list[ToolCallBlock] = []
         # When True, the live view skips the preview truncation and
         # renders the full output. Toggled by Ctrl+O from the composer.
         self.expanded: bool = False

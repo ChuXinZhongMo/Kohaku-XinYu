@@ -15,8 +15,8 @@ from xinyu_runtime.builtins.tool_catalog import (
 )
 
 __all__ = [
-    "register_builtin",
     "get_builtin_tool",
-    "list_builtin_tools",
     "is_builtin_tool",
+    "list_builtin_tools",
+    "register_builtin",
 ]

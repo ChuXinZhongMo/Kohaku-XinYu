@@ -23,7 +23,6 @@ T = TypeVar("T")
 class ModuleLoadError(Exception):
     """Error loading a module."""
 
-    pass
 
 
 class ModuleLoader:

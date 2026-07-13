@@ -1,8 +1,9 @@
 """Scripted LLM provider for deterministic testing."""
 
 import asyncio
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Any, AsyncIterator
+from typing import Any
 
 from xinyu_runtime.llm.base import ChatResponse
 from xinyu_runtime.llm.message import Message

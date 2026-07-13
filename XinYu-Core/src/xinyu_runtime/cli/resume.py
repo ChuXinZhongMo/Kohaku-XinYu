@@ -79,6 +79,6 @@ def resume_cli(
         if store:
             store.close()
         if path.exists():
-            print(f"\nSession saved. To resume:")
+            print("\nSession saved. To resume:")
             print(f"  xinyu-runtime resume {path.stem}")
 

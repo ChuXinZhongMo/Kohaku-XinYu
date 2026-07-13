@@ -50,9 +50,6 @@ from xinyu_runtime.builtins.user_commands.skill import SkillUserCommand
 from xinyu_runtime.builtins.user_commands.status import StatusCommand
 
 __all__ = [
-    "register_user_command",
-    "get_builtin_user_command",
-    "list_builtin_user_commands",
     "ClearCommand",
     "CompactCommand",
     "ExitCommand",
@@ -63,4 +60,7 @@ __all__ = [
     "SettingsCommand",
     "SkillUserCommand",
     "StatusCommand",
+    "get_builtin_user_command",
+    "list_builtin_user_commands",
+    "register_user_command",
 ]

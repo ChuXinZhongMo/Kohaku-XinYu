@@ -5,7 +5,7 @@ output chunks via an async iterator.
 """
 
 import asyncio
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 from uuid import uuid4
 
 from xinyu_runtime.core.agent import Agent

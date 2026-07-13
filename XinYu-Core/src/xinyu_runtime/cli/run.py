@@ -224,7 +224,7 @@ def run_agent_cli(
         if store:
             store.close()
         if session_file and session_file.exists():
-            print(f"\nSession saved. To resume:")
+            print("\nSession saved. To resume:")
             print(f"  xinyu-runtime resume {session_file.stem}")
 
 

@@ -109,7 +109,7 @@ def show_agent_info_cli(agent_path: str) -> int:
                     print(f"  - {sa}")
 
         # Files
-        print(f"\nFiles:")
+        print("\nFiles:")
         for f in sorted(path.iterdir()):
             if f.is_file():
                 print(f"  - {f.name}")
@@ -131,7 +131,7 @@ def install_cli(source: str, editable: bool = False, name: str | None = None) ->
         print("Usage:")
         print(f"  kt run @{pkg_name}/creatures/<name>")
         print(f"  kt terrarium run @{pkg_name}/terrariums/<name>")
-        print(f"  kt list")
+        print("  kt list")
         return 0
     except Exception as e:
         print(f"Error: {e}")

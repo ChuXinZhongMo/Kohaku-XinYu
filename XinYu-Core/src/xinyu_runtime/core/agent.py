@@ -150,7 +150,7 @@ class Agent(AgentInitMixin, AgentHandlersMixin, AgentMessagesMixin, AgentModelMi
         self._last_turn_text: list[str] = []
 
         # Environment and session (explicit or auto-created in _init_executor)
-        self.environment: Optional["Environment"] = environment
+        self.environment: Environment | None = environment
         self._explicit_session: Session | None = session
 
         # Module loader for custom components

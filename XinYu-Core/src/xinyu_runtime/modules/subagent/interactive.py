@@ -9,9 +9,10 @@ Unlike regular sub-agents that complete after a task, interactive sub-agents:
 """
 
 import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any
 
 from xinyu_runtime.core.conversation import Conversation
 from xinyu_runtime.core.registry import Registry

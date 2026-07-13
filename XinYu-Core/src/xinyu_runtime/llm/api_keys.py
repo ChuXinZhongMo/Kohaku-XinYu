@@ -54,7 +54,7 @@ def get_api_key(provider_or_env: str) -> str:
 
     # 1. Stored key
     keys = _load_api_keys()
-    if provider in keys and keys[provider]:
+    if keys.get(provider):
         return keys[provider]
 
     # 2. Env var (by provider name or direct env var name)

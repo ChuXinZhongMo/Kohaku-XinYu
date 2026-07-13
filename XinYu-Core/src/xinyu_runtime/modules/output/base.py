@@ -135,11 +135,9 @@ class BaseOutputModule(ABC):
 
     async def _on_start(self) -> None:
         """Called when module starts. Override in subclass."""
-        pass
 
     async def _on_stop(self) -> None:
         """Called when module stops. Override in subclass."""
-        pass
 
     @abstractmethod
     async def write(self, content: str) -> None:
@@ -152,19 +150,15 @@ class BaseOutputModule(ABC):
 
     async def flush(self) -> None:
         """Flush buffered content. Default is no-op."""
-        pass
 
     async def on_processing_start(self) -> None:
         """Called when agent starts processing. Default is no-op."""
-        pass
 
     async def on_processing_end(self) -> None:
         """Called when agent finishes processing. Default is no-op."""
-        pass
 
     def on_activity(self, activity_type: str, detail: str) -> None:
         """Called when tool/subagent activity occurs. Default is no-op."""
-        pass
 
     def on_assistant_image(
         self,
@@ -176,12 +170,9 @@ class BaseOutputModule(ABC):
         revised_prompt: str | None = None,
     ) -> None:
         """Called when the assistant emits a structured image. Default no-op."""
-        pass
 
     async def on_user_input(self, text: str) -> None:
         """Called when user input is received. Default is no-op."""
-        pass
 
     async def on_resume(self, events: list[dict]) -> None:
         """Called during session resume with historical events. Default is no-op."""
-        pass

@@ -23,9 +23,10 @@ Usage:
 import asyncio
 import sys
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, AsyncIterator
+from typing import Any
 
 from xinyu_runtime.core.events import EventType, TriggerEvent
 from xinyu_runtime.modules.input.base import InputModule

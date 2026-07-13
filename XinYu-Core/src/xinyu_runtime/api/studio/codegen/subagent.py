@@ -251,12 +251,7 @@ def _collect_string_assignments(tree: cst.Module) -> dict[str, str]:
             if not isinstance(tgt, cst.Name):
                 continue
             value = stmt.value
-            if isinstance(value, cst.SimpleString):
-                try:
-                    out[tgt.value] = value.evaluated_value
-                except Exception:
-                    pass
-            elif isinstance(value, cst.ConcatenatedString):
+            if isinstance(value, cst.SimpleString) or isinstance(value, cst.ConcatenatedString):
                 try:
                     out[tgt.value] = value.evaluated_value
                 except Exception:

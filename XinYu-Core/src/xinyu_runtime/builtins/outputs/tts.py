@@ -30,9 +30,10 @@ Usage:
 import asyncio
 import sys
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, AsyncIterator
+from typing import Any
 
 from xinyu_runtime.modules.output.base import OutputModule
 from xinyu_runtime.utils.logging import get_logger
@@ -254,11 +255,9 @@ class TTSModule(OutputModule, ABC):
 
     async def _initialize(self) -> None:
         """Initialize TTS backend. Override if needed."""
-        pass
 
     async def _cleanup(self) -> None:
         """Cleanup TTS backend. Override if needed."""
-        pass
 
     @abstractmethod
     async def _synthesize(self, text: str) -> AsyncIterator[AudioChunk]:
@@ -325,11 +324,9 @@ class DummyTTS(TTSModule):
 
     async def _play_audio(self, chunk: AudioChunk) -> None:
         """No-op for dummy."""
-        pass
 
     async def _stop_playback(self) -> None:
         """No-op for dummy."""
-        pass
 
 
 class ConsoleTTS(TTSModule):

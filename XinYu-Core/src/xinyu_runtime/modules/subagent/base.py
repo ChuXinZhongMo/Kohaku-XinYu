@@ -583,7 +583,7 @@ class SubAgent:
                         error=error,
                     )
             except Exception as e:
-                results.append(f"[{tool_call.name}] Error: {str(e)}")
+                results.append(f"[{tool_call.name}] Error: {e!s}")
                 logger.error(
                     "Sub-agent tool exception",
                     subagent_name=self.config.name,

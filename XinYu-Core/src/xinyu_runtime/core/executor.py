@@ -5,8 +5,9 @@ Manages async execution of tools without blocking the controller.
 """
 
 import asyncio
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from xinyu_runtime.core.constants import TOOL_OUTPUT_PREVIEW_CHARS
 from xinyu_runtime.core.events import TriggerEvent, create_tool_complete_event

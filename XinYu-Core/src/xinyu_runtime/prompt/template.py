@@ -28,7 +28,7 @@ class PackagePromptLoader(BaseLoader):
     packages without reloading the module.
     """
 
-    def get_source(self, environment, template):  # noqa: D401 — Jinja API
+    def get_source(self, environment, template):
         # Local import — ``packages`` imports ``packages_manifest`` which
         # imports ``packages`` in turn, so we defer to avoid a cold-boot
         # circular import through this module's top-level.

@@ -66,5 +66,5 @@ def build_image_part(item: Any, output_format: str) -> ImagePart | None:
         # Not part of the dataclass — attach dynamically so the
         # controller / session-output layer can surface it without
         # forcing every ImagePart to carry the field.
-        setattr(part, "revised_prompt", revised)
+        part.revised_prompt = revised
     return part

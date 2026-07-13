@@ -1,6 +1,7 @@
 """Interactive sub-agent management mixin."""
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from xinyu_runtime.modules.subagent.interactive import (
     InteractiveOutput,

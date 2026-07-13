@@ -18,13 +18,13 @@ MAX_RESULTS = 10
 _HAS_DDG = False
 _DDG_MODULE = ""
 try:
-    from ddgs import DDGS  # noqa: F401
+    from ddgs import DDGS
 
     _HAS_DDG = True
     _DDG_MODULE = "ddgs"
 except ImportError:
     try:
-        from duckduckgo_search import DDGS  # noqa: F401
+        from duckduckgo_search import DDGS
 
         _HAS_DDG = True
         _DDG_MODULE = "duckduckgo_search"

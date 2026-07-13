@@ -8,8 +8,9 @@ running independently, firing a callback on completion.
 """
 
 import asyncio
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 from xinyu_runtime.utils.logging import get_logger
 
@@ -43,13 +44,13 @@ class BackgroundifyHandle:
     """
 
     __slots__ = (
-        "_task",
+        "_completed",
         "_job_id",
         "_on_bg_complete",
         "_promoted",
         "_promotion_event",
-        "_completed",
         "_result",
+        "_task",
     )
 
     def __init__(

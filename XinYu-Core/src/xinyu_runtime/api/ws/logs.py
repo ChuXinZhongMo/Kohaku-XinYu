@@ -78,7 +78,7 @@ async def _tail_file(path: Path, websocket: WebSocket) -> None:
         )
         return
 
-    fh = open(path, "r", encoding="utf-8", errors="replace")
+    fh = open(path, encoding="utf-8", errors="replace")
     try:
         # Seed the stream with the most recent ~200 lines so the client
         # has context without replaying an hour of history.

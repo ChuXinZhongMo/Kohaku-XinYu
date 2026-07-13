@@ -8,9 +8,9 @@ the tree, grep, and glob tools to avoid scanning huge ignored subtrees
 """
 
 import re
+from collections.abc import Iterator
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Iterator
 
 # ── always-skip dirs ─────────────────────────────────────────────────
 # Directories unconditionally skipped regardless of .gitignore state.

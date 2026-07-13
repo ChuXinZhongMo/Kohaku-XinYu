@@ -198,7 +198,7 @@ def render_prompt(
 class _SafeFormatDict(dict):
     """Dict subclass that renders missing keys as empty string."""
 
-    def __missing__(self, key: str) -> str:  # noqa: D401 - mapping protocol
+    def __missing__(self, key: str) -> str:
         return ""
 
 

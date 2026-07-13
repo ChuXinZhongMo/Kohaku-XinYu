@@ -7,8 +7,9 @@ The interface is OpenAI API-oriented for consistency.
 
 import json
 import os
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from xinyu_runtime.llm.message import Message
 from xinyu_runtime.utils.logging import get_logger

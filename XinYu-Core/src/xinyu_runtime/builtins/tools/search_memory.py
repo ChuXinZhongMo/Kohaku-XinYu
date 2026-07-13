@@ -47,7 +47,7 @@ class SearchMemoryTool(BaseTool):
 
         mode = args.get("mode", "auto")
         k = int(args.get("k", 5))
-        agent = args.get("agent", None)
+        agent = args.get("agent")
 
         context: ToolContext | None = kwargs.get("context")
         if not context:

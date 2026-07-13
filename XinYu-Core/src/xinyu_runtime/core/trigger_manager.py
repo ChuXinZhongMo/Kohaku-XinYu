@@ -7,9 +7,10 @@ agent's trigger_manager.
 """
 
 import asyncio
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable, Coroutine
+from typing import Any
 from uuid import uuid4
 
 from xinyu_runtime.modules.trigger.base import BaseTrigger

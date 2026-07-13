@@ -271,7 +271,7 @@ async def rename_file(req: FileRename):
         new.parent.mkdir(parents=True, exist_ok=True)
         old.rename(new)
     except PermissionError:
-        raise HTTPException(400, f"Permission denied")
+        raise HTTPException(400, "Permission denied")
     except OSError as e:
         raise HTTPException(500, f"Rename error: {e}")
 

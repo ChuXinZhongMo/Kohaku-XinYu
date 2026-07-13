@@ -11,9 +11,9 @@ is a no-op.
 """
 
 import fnmatch
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from xinyu_runtime.skills.registry import Skill, SkillRegistry
 from xinyu_runtime.utils.logging import get_logger

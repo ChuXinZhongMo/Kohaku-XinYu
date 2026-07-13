@@ -6,8 +6,7 @@ renderers). It produces a ``prompt_toolkit.widgets.TextArea`` that the
 loop, one bordered input box, no flicker.
 """
 
-from pathlib import Path
-from typing import Callable
+from collections.abc import Callable
 
 from prompt_toolkit.filters import Condition
 from prompt_toolkit.history import FileHistory

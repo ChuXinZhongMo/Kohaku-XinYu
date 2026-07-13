@@ -178,7 +178,7 @@ class MultiEditTool(BaseTool):
             return ToolResult(error=f"Not a file: {path}")
 
         try:
-            async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
+            async with aiofiles.open(file_path, encoding="utf-8") as f:
                 original = await f.read()
 
             current = original

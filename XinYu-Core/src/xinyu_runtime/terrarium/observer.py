@@ -6,9 +6,10 @@ messages that flow through the API for queue channels.
 """
 
 import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any
 
 from xinyu_runtime.core.channel import (
     AgentChannel,

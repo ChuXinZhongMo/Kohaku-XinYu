@@ -16,8 +16,9 @@ Error handling:
 """
 
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from xinyu_runtime.utils.logging import get_logger
 

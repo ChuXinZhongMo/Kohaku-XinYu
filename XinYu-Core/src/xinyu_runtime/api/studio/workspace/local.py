@@ -221,7 +221,7 @@ class LocalWorkspace:
         prompts_dir = creature_dir / "prompts"
         prompts_dir.mkdir()
         # Seed system.md + config.yaml from templates
-        from xinyu_runtime.api.studio.templates_render import (  # noqa: E402
+        from xinyu_runtime.api.studio.templates_render import (
             render_creature_config,
             render_system_prompt,
         )

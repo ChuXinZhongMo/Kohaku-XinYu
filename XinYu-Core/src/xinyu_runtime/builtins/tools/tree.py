@@ -52,9 +52,7 @@ def parse_frontmatter(content: str) -> dict[str, Any]:
             value = value.strip()
 
             # Handle quoted strings
-            if value.startswith('"') and value.endswith('"'):
-                value = value[1:-1]
-            elif value.startswith("'") and value.endswith("'"):
+            if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
                 value = value[1:-1]
 
             # Handle arrays [item1, item2]

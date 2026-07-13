@@ -5,7 +5,8 @@ Provides common async patterns and helpers.
 """
 
 import asyncio
-from typing import Any, AsyncIterator, Awaitable, Callable, TypeVar
+from collections.abc import AsyncIterator, Awaitable, Callable
+from typing import Any, TypeVar
 
 from xinyu_runtime.utils.logging import get_logger
 
