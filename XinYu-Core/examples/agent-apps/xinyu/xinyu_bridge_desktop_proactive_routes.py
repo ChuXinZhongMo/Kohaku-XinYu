@@ -4,10 +4,10 @@ from typing import Any
 
 from xinyu_bridge_desktop_proactive_facade import bind_desktop_proactive_facade as _bind_proactive_facade
 import xinyu_bridge_desktop_proactive_route_glue as _proactive_route_glue
-from xinyu_bridge_desktop_proactive_state_store import (
+from xinyu_bridge_stores import (
     append_desktop_proactive_history_jsonl as append_jsonl,
 )
-from xinyu_bridge_desktop_proactive_state_store import (
+from xinyu_bridge_stores import (
     write_desktop_proactive_request_state_text as atomic_write_text,
 )
 from xinyu_bridge_desktop_projection import desktop_hash, desktop_text_preview
@@ -47,4 +47,34 @@ globals().update(
         facade_provider=_facade,
         module_name=__name__,
     )
+)
+
+__all__ = (
+    "Any",
+    "DESKTOP_PROACTIVE_ACK_ACTIONS",
+    "DESKTOP_PROACTIVE_FINAL_STATUSES",
+    "DESKTOP_PROACTIVE_HISTORY_MAX",
+    "DESKTOP_PROACTIVE_HISTORY_REL",
+    "DESKTOP_PROACTIVE_INBOX_MAX",
+    "DESKTOP_PROACTIVE_INBOX_STATUSES",
+    "_as_bool",
+    "_bind_proactive_facade",
+    "_dedupe",
+    "_deps",
+    "_ensure_payload",
+    "_facade",
+    "_proactive_route_glue",
+    "_read_text_safe",
+    "_safe_str",
+    "_state_field",
+    "annotations",
+    "append_jsonl",
+    "atomic_write_text",
+    "compose_proactive_visible_message",
+    "desktop_hash",
+    "desktop_text_preview",
+    "enqueue_qq_outbox_message",
+    "record_initiative_feedback",
+    "runtime_owner_private_turns",
+    "write_proactive_qq_dispatch_state",
 )

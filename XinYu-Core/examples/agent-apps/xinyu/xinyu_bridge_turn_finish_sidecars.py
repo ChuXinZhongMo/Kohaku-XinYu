@@ -17,8 +17,10 @@ from xinyu_bridge_turn_finish_memory import (
     archive_dialogue_turn_sidecar as _runtime_archive_dialogue_turn,
     extract_memory_candidates_sidecar as _runtime_extract_memory_candidates,
     record_interaction_journal_sidecar as _runtime_record_interaction_journal,
+    run_kernel_post_turn_sidecar as _runtime_run_kernel_post_turn,
     run_memory_self_review_sidecar as _runtime_run_memory_self_review,
 )
+from xinyu_bridge_kernel_turn import run_kernel_post_turn_cycle
 import xinyu_bridge_turn_finish_post_reply_bindings as _post_reply_bindings
 from xinyu_bridge_turn_finish_post_reply import (
     observe_post_reply_self_observation_sidecar as _runtime_observe_post_reply_self_observation,
@@ -66,6 +68,7 @@ _archive_dialogue_turn = _memory_bindings.bind_archive_dialogue_turn(_facade_glo
 _extract_memory_candidates = _memory_bindings.bind_extract_memory_candidates(_facade_globals)
 _run_memory_self_review = _memory_bindings.bind_run_memory_self_review(_facade_globals)
 _record_interaction_journal = _memory_bindings.bind_record_interaction_journal(_facade_globals)
+_run_kernel_post_turn = _memory_bindings.bind_run_kernel_post_turn(_facade_globals)
 _schedule_promised_followup = _delivery_bindings.bind_schedule_promised_followup(_facade_globals)
 _maybe_enqueue_sticker_reply = _delivery_bindings.bind_maybe_enqueue_sticker_reply(_facade_globals)
 _turn_action_result = _delivery_bindings.bind_turn_action_result(_facade_globals)
@@ -99,6 +102,7 @@ async def run_slow_turn_finish_sidecars(
     model_codex_task: str,
     wait_to_think_task: str,
     model_codex_delegate_note: str,
+    event_sidecar: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return await _runtime_run_slow_turn_finish_sidecars(
         runtime,
@@ -144,5 +148,74 @@ async def run_slow_turn_finish_sidecars(
             turn_action_result=_turn_action_result,
             finish_turn_coherence=_finish_turn_coherence,
             memory_snapshot=_memory_snapshot,
+            run_kernel_post_turn=_run_kernel_post_turn,
         ),
+        event_sidecar=event_sidecar,
     )
+
+__all__ = (
+    "Any",
+    "TurnFinishServiceDeps",
+    "_archive_dialogue_turn",
+    "_as_bool",
+    "_dedupe",
+    "_delivery_bindings",
+    "_extract_memory_candidates",
+    "_facade_globals",
+    "_finish_turn_coherence",
+    "_maybe_enqueue_sticker_reply",
+    "_memory_bindings",
+    "_memory_snapshot",
+    "_observe_post_reply_self_observation",
+    "_post_reply_bindings",
+    "_record_curiosity_prediction",
+    "_record_interaction_journal",
+    "_record_learning_closed_loop",
+    "_record_owner_voice_sidecars",
+    "_record_private_thought_link",
+    "_record_uncertainty_pause",
+    "_run_kernel_post_turn",
+    "_run_memory_self_review",
+    "_runtime_archive_dialogue_turn",
+    "_runtime_extract_memory_candidates",
+    "_runtime_finish_turn_coherence",
+    "_runtime_maybe_enqueue_sticker_reply",
+    "_runtime_observe_post_reply_self_observation",
+    "_runtime_record_curiosity_prediction",
+    "_runtime_record_interaction_journal",
+    "_runtime_record_learning_closed_loop",
+    "_runtime_record_owner_voice_sidecars",
+    "_runtime_record_private_thought_link",
+    "_runtime_record_uncertainty_pause",
+    "_runtime_run_kernel_post_turn",
+    "_runtime_run_memory_self_review",
+    "_runtime_run_slow_turn_finish_sidecars",
+    "_runtime_schedule_promised_followup",
+    "_runtime_turn_action_result",
+    "_safe_str",
+    "_schedule_promised_followup",
+    "_turn_action_result",
+    "annotations",
+    "archive_dialogue_turn",
+    "asyncio",
+    "ensure_recent_context_health",
+    "extract_memory_candidates",
+    "finish_turn_coherence",
+    "is_waiting_reply",
+    "log_living_memory_recall",
+    "maybe_enqueue_sticker_reply",
+    "observe_post_reply_self_observation",
+    "record_interaction_turn",
+    "record_learning_closed_loop_turn",
+    "record_private_thought_reply_link",
+    "record_reply_prediction",
+    "record_uncertainty_pause",
+    "record_voice_correction",
+    "record_voice_trial_overlay",
+    "run_kernel_post_turn_cycle",
+    "run_memory_candidate_maintenance",
+    "run_memory_self_review",
+    "run_slow_turn_finish_sidecars",
+    "time",
+    "write_turn_residue",
+)

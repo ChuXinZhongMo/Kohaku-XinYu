@@ -6,7 +6,6 @@ import v1_canary_gate
 from xinyu_bridge_semantic_fast_decision import ensure_v1_app
 from xinyu_bridge_semantic_fast_decision import owner_private_semantic_fast_decision_impl
 from xinyu_bridge_semantic_fast_handler import handle_owner_private_semantic_fast_turn_impl
-from xinyu_bridge_semantic_fast_payloads import command_id as _command_id
 from xinyu_bridge_semantic_fast_payloads import owner_private_llm_failover_context_impl
 from xinyu_bridge_semantic_fast_payloads import provider_failover_context as _provider_failover_context
 from xinyu_bridge_semantic_fast_payloads import safe_str as _safe_str
@@ -135,18 +134,43 @@ async def handle_owner_private_semantic_fast_turn(
         provider_failover_context_func=_provider_failover_context,
         safe_str_func=_safe_str,
         timestamp_func=_timestamp_or_now_iso,
-        command_id_func=_command_id,
     )
 
 
-__all__ = [
+__all__ = (
+    "Any",
     "SEMANTIC_FAST_ALLOWED_INTENTS",
+    "_CONFUSION_ONLY_MARKERS",
+    "_OWNER_STATE_FAST_MAX_CHARS",
+    "_OWNER_STATE_QUESTION_MARKERS",
+    "_REPLY_QUALITY_COMPLAINT_MARKERS",
+    "_RUNTIME_STATUS_MARKERS",
+    "_STALE_PLAN_REPLY_MARKERS",
+    "_as_bool",
+    "_compact_text",
+    "_contains_any",
+    "_direct_greeting_ack_reply",
+    "_looks_like_owner_state_question",
+    "_ordinary_private_repair_reply",
+    "_provider_failover_context",
+    "_repair_intents_for_text",
+    "_safe_str",
+    "_timestamp_or_now_iso",
+    "annotations",
     "empty_visible_reply_fallback",
+    "empty_visible_reply_fallback_impl",
     "ensure_v1_app",
     "handle_owner_private_semantic_fast_turn",
+    "handle_owner_private_semantic_fast_turn_impl",
+    "looks_like_codex_request",
+    "looks_like_owner_local_write_request",
     "owner_private_direct_repair_reply",
+    "owner_private_direct_repair_reply_impl",
     "owner_private_empty_state_notice",
     "owner_private_llm_failover_context",
+    "owner_private_llm_failover_context_impl",
     "owner_private_semantic_fast_decision",
+    "owner_private_semantic_fast_decision_impl",
     "reply_looks_like_stale_plan_residue",
-]
+    "v1_canary_gate",
+)

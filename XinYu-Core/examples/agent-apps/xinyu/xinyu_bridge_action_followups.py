@@ -44,11 +44,6 @@ async def _handle_action_followup_turn(
     row_note_func: Callable[[dict[str, Any], Callable[..., str]], str],
     result_key: str,
     result_payload_func: Callable[[dict[str, Any], dict[str, Any], Callable[..., str]], dict[str, str]],
-    memory_snapshot_func: Callable[[Any], dict[str, Any]],
-    record_turn_finished_func: Callable[..., Any],
-    visible_text_hash_func: Callable[[str], str],
-    timestamp_or_now_iso_func: Callable[[Any], str],
-    command_id_func: Callable[[dict[str, Any]], str],
     safe_str_func: Callable[..., str],
 ) -> dict[str, Any] | None:
     return await _dispatch_action_followup_turn(
@@ -70,11 +65,6 @@ async def _handle_action_followup_turn(
             result_payload_func=result_payload_func,
         ),
         facade_deps=_deps(),
-        memory_snapshot_func=memory_snapshot_func,
-        record_turn_finished_func=record_turn_finished_func,
-        visible_text_hash_func=visible_text_hash_func,
-        timestamp_or_now_iso_func=timestamp_or_now_iso_func,
-        command_id_func=command_id_func,
         safe_str_func=safe_str_func,
     )
 
@@ -92,11 +82,6 @@ async def handle_recent_action_followup_turn(
     cleanup: dict[str, Any],
     event_sidecar: dict[str, Any],
     compose_recent_action_followup_func: Callable[[Any, str], dict[str, Any] | None],
-    memory_snapshot_func: Callable[[Any], dict[str, Any]],
-    record_turn_finished_func: Callable[..., Any],
-    visible_text_hash_func: Callable[[str], str],
-    timestamp_or_now_iso_func: Callable[[Any], str],
-    command_id_func: Callable[[dict[str, Any]], str],
     safe_str_func: Callable[..., str],
 ) -> dict[str, Any] | None:
     return await _handle_action_followup_turn(
@@ -115,11 +100,6 @@ async def handle_recent_action_followup_turn(
         row_note_func=_recent_action_row_note,
         result_key="recent_action_followup",
         result_payload_func=_recent_action_payload,
-        memory_snapshot_func=memory_snapshot_func,
-        record_turn_finished_func=record_turn_finished_func,
-        visible_text_hash_func=visible_text_hash_func,
-        timestamp_or_now_iso_func=timestamp_or_now_iso_func,
-        command_id_func=command_id_func,
         safe_str_func=safe_str_func,
     )
 
@@ -137,11 +117,6 @@ async def handle_action_digest_followup_turn(
     cleanup: dict[str, Any],
     event_sidecar: dict[str, Any],
     compose_action_digest_followup_func: Callable[[Any, str], dict[str, Any] | None],
-    memory_snapshot_func: Callable[[Any], dict[str, Any]],
-    record_turn_finished_func: Callable[..., Any],
-    visible_text_hash_func: Callable[[str], str],
-    timestamp_or_now_iso_func: Callable[[Any], str],
-    command_id_func: Callable[[dict[str, Any]], str],
     safe_str_func: Callable[..., str],
 ) -> dict[str, Any] | None:
     return await _handle_action_followup_turn(
@@ -160,10 +135,26 @@ async def handle_action_digest_followup_turn(
         row_note_func=_action_digest_row_note,
         result_key="action_digest_followup",
         result_payload_func=_action_digest_payload,
-        memory_snapshot_func=memory_snapshot_func,
-        record_turn_finished_func=record_turn_finished_func,
-        visible_text_hash_func=visible_text_hash_func,
-        timestamp_or_now_iso_func=timestamp_or_now_iso_func,
-        command_id_func=command_id_func,
         safe_str_func=safe_str_func,
     )
+
+__all__ = (
+    "ActionFollowupFacadeDeps",
+    "ActionFollowupSpec",
+    "Any",
+    "Callable",
+    "_action_digest_payload",
+    "_action_digest_row_note",
+    "_deps",
+    "_dispatch_action_followup_turn",
+    "_facade_deps",
+    "_handle_action_followup_turn",
+    "_handle_action_followup_turn_impl",
+    "_recent_action_payload",
+    "_recent_action_row_note",
+    "annotations",
+    "extend_common_finish_notes",
+    "finish_action_turn",
+    "handle_action_digest_followup_turn",
+    "handle_recent_action_followup_turn",
+)

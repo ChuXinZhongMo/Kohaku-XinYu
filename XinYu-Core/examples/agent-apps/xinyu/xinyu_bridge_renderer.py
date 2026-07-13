@@ -108,3 +108,30 @@ class BridgeRenderer:
 
     def strip_renderer_wrappers(self, text: str) -> str:
         return renderer_payload.strip_renderer_wrappers(self.speech_controller, text)
+
+__all__ = (
+    "Any",
+    "BridgeRenderer",
+    "CRITICAL_FINAL_GUARD_FLAGS",
+    "DEBUG_LIVE_SYSTEM_PROMPT_REL",
+    "DEBUG_PROMPT_DUMP_ENV",
+    "Path",
+    "_safe_str",
+    "annotations",
+    "build_renderer_memory_context",
+    "critical_final_guard_flags",
+    "dedupe_visible_reply",
+    "normalize_reply",
+    "read_limited",
+    "render_outward_reply_impl",
+    "renderer_context",
+    "renderer_payload",
+    "replace_last_assistant_message",
+    "runtime_build_renderer_messages",
+    "runtime_conversation_tail",
+    "runtime_maybe_dump_live_system_prompt",
+    "runtime_read_text",
+    "runtime_renderer_memory_context",
+    "runtime_renderer_reason",
+    "runtime_strip_renderer_wrappers",
+)

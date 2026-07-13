@@ -43,21 +43,28 @@ class UtilityRouteDeps:
     mark_goldmark_request: Callable[..., Any]
 
 
-__all__ = [
+__all__ = (
+    "Any",
+    "Callable",
     "UtilityRouteDeps",
+    "_drop_dialogue_tail",
+    "_drop_live_session_tail",
+    "_extend_notes",
+    "annotations",
+    "dataclass",
     "ensure_open",
     "ensure_payload",
-    "payload_or_empty",
-    "sessions",
-    "probe",
-    "runtime_probe",
-    "review_inbox_command",
-    "package_install",
+    "goldmark_mark_request",
     "learning_ingest",
-    "learning_study",
     "learning_observe",
-    "sticker_import",
+    "learning_study",
     "message_ack",
     "message_drop",
-    "goldmark_mark_request",
-]
+    "package_install",
+    "payload_or_empty",
+    "probe",
+    "review_inbox_command",
+    "runtime_probe",
+    "sessions",
+    "sticker_import",
+)

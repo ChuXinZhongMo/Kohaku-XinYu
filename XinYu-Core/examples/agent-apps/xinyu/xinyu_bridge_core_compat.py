@@ -15,7 +15,6 @@ from xinyu_action_experience_digest import (
 from xinyu_action_reply_composer import compose_action_reply
 from xinyu_bridge_autonomous_maintenance import AUTONOMOUS_MAINTENANCE_PROMPT
 from xinyu_bridge_bootstrap import ensure_repo_src as _ensure_repo_src
-from xinyu_bridge_core_compat_exports import CORE_COMPAT_EXPORTS
 from xinyu_bridge_desktop_actions import desktop_scrub_action_markers as _desktop_scrub_action_markers
 from xinyu_bridge_errors import BridgeRequestError
 from xinyu_bridge_session import AgentSession
@@ -42,6 +41,13 @@ from xinyu_memory_event_sourcing import record_action_experience_event, record_c
 from xinyu_memory_weights import refresh_memory_weight_state
 from xinyu_private_thought_events import record_private_thought_reply_link
 from xinyu_visible_state_hygiene import sanitize_visible_state_files
+
+# K-002: Safe Self Model access (kernel is independent)
+try:
+    from kernel import get_kernel_self_model
+except Exception:
+    def get_kernel_self_model(self_id: str = "xinyu_main", persist_path=None):
+        return {"self_id": self_id, "core_statements": [], "error": "kernel not available"}
 
 CODEX_DEFAULT_TIMEOUT_SECONDS = xinyu_bridge_codex_runtime.CODEX_DEFAULT_TIMEOUT_SECONDS
 CODEX_VISIBLE_WINDOW_TITLE = xinyu_bridge_codex_runtime.CODEX_VISIBLE_WINDOW_TITLE
@@ -77,4 +83,74 @@ OWNER_SELF_CODE_GRANT_CUES = xinyu_bridge_codex_runtime.OWNER_SELF_CODE_GRANT_CU
 
 PROMPT_CONTEXT_SIGNATURE_FILES = xinyu_bridge_context.PROMPT_CONTEXT_SIGNATURE_FILES
 
-__all__ = CORE_COMPAT_EXPORTS
+__all__ = (
+    "AUTONOMOUS_MAINTENANCE_PROMPT",
+    "AgentSession",
+    "BridgeRequestError",
+    "CODEX_DEFAULT_TIMEOUT_SECONDS",
+    "CODEX_DELEGATE_CLOSE",
+    "CODEX_DELEGATE_OPEN",
+    "CODEX_DELEGATE_PATTERNS",
+    "CODEX_GENERATED_IMAGE_SUFFIXES",
+    "CODEX_VISIBLE_WINDOW_TITLE",
+    "DEBUG_LIVE_SYSTEM_PROMPT_REL",
+    "DEBUG_PROMPT_DUMP_ENV",
+    "DESKTOP_PROACTIVE_FINAL_STATUSES",
+    "DESKTOP_PROACTIVE_HISTORY_MAX",
+    "DESKTOP_PROACTIVE_HISTORY_REL",
+    "DESKTOP_PROACTIVE_INBOX_STATUSES",
+    "DESKTOP_RECENT_MEMORY_EVENTS_MAX",
+    "DESKTOP_RECENT_TURNS_MAX",
+    "OWNER_DIRECT_CODEX_DELEGATE_MARKERS",
+    "OWNER_DIRECT_CODEX_NEGATIVE_MARKERS",
+    "OWNER_DIRECT_CODEX_SUPPORT_MARKERS",
+    "OWNER_SELF_CODE_EDIT_GRANT_MARKERS",
+    "OWNER_SELF_CODE_GRANT_CUES",
+    "OWNER_SELF_CODE_NEGATIVE_MARKERS",
+    "OWNER_SELF_CODE_START_MARKERS",
+    "PROMISE_FOLLOWUP_DONE_MARKERS",
+    "PROMISE_FOLLOWUP_REPLY_MARKERS",
+    "PROMISE_FOLLOWUP_STATE_REL",
+    "PROMISE_FOLLOWUP_USER_MARKERS",
+    "PROMPT_CONTEXT_SIGNATURE_FILES",
+    "V1_CANARY_ACK_TEXTS",
+    "V1_CANARY_GREETING_TEXTS",
+    "V1_OWNER_SIMPLE_CANARY_ENV",
+    "WAIT_TO_THINK_PATTERNS",
+    "_as_bool",
+    "_as_int",
+    "_as_str_set",
+    "_compact_text",
+    "_contains_any",
+    "_dedupe",
+    "_desktop_scrub_action_markers",
+    "_ensure_repo_src",
+    "_optional_int",
+    "_parse_iso",
+    "_payload_has_attachment_signal",
+    "_payload_path",
+    "_safe_str",
+    "_seconds_since_iso",
+    "build_experience_frame",
+    "compose_action_digest_followup",
+    "compose_action_reply",
+    "compose_recent_action_followup",
+    "digest_action_experience_residue",
+    "record_action_experience_event",
+    "record_chat_event",
+    "record_initiative_feedback",
+    "record_private_thought_reply_link",
+    "refresh_current_life_month_context",
+    "refresh_memory_weight_state",
+    "sanitize_visible_state_files",
+    "write_action_experience_residue",
+    "write_recent_action_experience",
+    "xinyu_bridge_codex_markers",
+    "xinyu_bridge_codex_runtime",
+    "xinyu_bridge_context",
+    "xinyu_bridge_desktop_proactive_routes",
+    "xinyu_bridge_desktop_recent_routes",
+    "get_kernel_self_model",
+    "xinyu_bridge_renderer",
+    "xinyu_bridge_runtime_dialogue_aliases",
+)
