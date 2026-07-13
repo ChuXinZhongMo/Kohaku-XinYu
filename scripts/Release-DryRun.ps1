@@ -158,20 +158,28 @@ foreach ($path in $tracked) {
     }
     if ($skip) { continue }
 
-    $full = Join-Path $Root $path
-    if (-not (Test-Path -LiteralPath $full -PathType Leaf)) { continue }
+    # Normalize git path separators; avoid Test-Path choking on odd encodings.
+    $norm = ($path -replace '/', [IO.Path]::DirectorySeparatorChar)
+    $full = [IO.Path]::GetFullPath((Join-Path $Root $norm))
+    if (-not [IO.File]::Exists($full)) { continue }
 
     # Skip large files (>1.5 MiB)
-    $item = Get-Item -LiteralPath $full -ErrorAction SilentlyContinue
-    if ($null -eq $item -or $item.Length -gt 1.5MB) { continue }
+    try {
+        $item = [IO.FileInfo]::new($full)
+    } catch {
+        continue
+    }
+    if ($item.Length -gt 1.5MB) { continue }
 
     $text = $null
     try {
         $bytes = [System.IO.File]::ReadAllBytes($full)
         # crude binary skip
-        if ($bytes.Length -gt 0 -and ($bytes | Where-Object { $_ -eq 0 } | Select-Object -First 1)) {
-            continue
+        $hasNull = $false
+        foreach ($b in $bytes) {
+            if ($b -eq 0) { $hasNull = $true; break }
         }
+        if ($hasNull) { continue }
         $text = [System.Text.Encoding]::UTF8.GetString($bytes)
     } catch {
         continue
