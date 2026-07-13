@@ -12,6 +12,14 @@ import sys
 import time
 from pathlib import Path
 
+# Many tests hardcode Asia/Shanghai (+08:00) ISO strings. Pin process TZ early
+# (works on Linux CI; Windows may ignore TZ, so CI also sets TZ=Asia/Shanghai).
+os.environ.setdefault("TZ", "Asia/Shanghai")
+try:
+    time.tzset()  # type: ignore[attr-defined]
+except AttributeError:
+    pass
+
 XINYU_APP_DIR = Path(__file__).resolve().parents[1]
 if str(XINYU_APP_DIR) not in sys.path:
     sys.path.insert(0, str(XINYU_APP_DIR))
