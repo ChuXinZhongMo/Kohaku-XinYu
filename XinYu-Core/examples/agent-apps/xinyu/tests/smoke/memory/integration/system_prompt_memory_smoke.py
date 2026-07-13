@@ -5,7 +5,6 @@ from _bootstrap import ensure_project_root_on_path
 ROOT = ensure_project_root_on_path()
 
 import sys
-from pathlib import Path
 
 from xinyu_bridge_renderer import BridgeRenderer
 from xinyu_speech_controller import XinyuSpeechController
