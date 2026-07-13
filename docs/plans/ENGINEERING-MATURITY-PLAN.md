@@ -37,18 +37,18 @@ Related:
 
 ## 1. Scorecard (track monthly)
 
-| Dimension | Baseline | 30d | 90d | Top-tier |
-|-----------|----------|-----|-----|----------|
-| Docs / community facade | 72 | 85 | 90 | 95 |
-| Privacy / release boundary | 85 | 88 | 90 | 90 |
-| Packaging / toolchains | 65 | 75 | 85 | 95 |
-| CI/CD quality gates | 40 | 65 | 80 | 95 |
-| Test maturity | 60 | 68 | 78 | 90 |
-| Architecture modularity | 35 | 42 | 60 | 90 |
-| Release / supply chain | 35 | 50 | 70 | 95 |
-| Contributor UX | 40 | 65 | 80 | 95 |
-| Governance / bus factor | 25 | 35 | 50 | 90 |
-| **Overall** | **~45** | **~60** | **~70** | **100** |
+| Dimension | Baseline | Now (2026-07-13) | 30d target | 90d | Top-tier |
+|-----------|----------|------------------|------------|-----|----------|
+| Docs / community facade | 72 | **88** | 85 | 90 | 95 |
+| Privacy / release boundary | 85 | **88** | 88 | 90 | 90 |
+| Packaging / toolchains | 65 | **72** | 75 | 85 | 95 |
+| CI/CD quality gates | 40 | **72** | 65 | 80 | 95 |
+| Test maturity | 60 | **64** | 68 | 78 | 90 |
+| Architecture modularity | 35 | **48** | 42 | 60 | 90 |
+| Release / supply chain | 35 | **55** | 50 | 70 | 95 |
+| Contributor UX | 40 | **70** | 65 | 80 | 95 |
+| Governance / bus factor | 25 | **30** | 35 | 50 | 90 |
+| **Overall** | **~45** | **~65** | **~60** | **~70** | **100** |
 
 ---
 
