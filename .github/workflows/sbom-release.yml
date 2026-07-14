@@ -1,6 +1,6 @@
 name: SBOM (release tags)
 
-# Optional supply-chain artifact job. Does not block CI on PRs.
+# Supply-chain artifact job for tagged releases + manual runs.
 on:
   push:
     tags:
@@ -12,12 +12,13 @@ defaults:
     shell: bash
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   cyclonedx-python:
-    name: "CycloneDX SBOM XinYu-Core (informational)"
+    name: "CycloneDX SBOM XinYu-Core"
     runs-on: ubuntu-latest
+    # Keep non-blocking so a tooling blip never blocks tagging.
     continue-on-error: true
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7
@@ -34,9 +35,21 @@ jobs:
       - name: Generate CycloneDX JSON
         run: |
           python -m cyclonedx_py environment -o sbom-xinyu-core.cdx.json
-      - name: Upload SBOM artifact
+          ls -la sbom-xinyu-core.cdx.json
+      - name: Upload SBOM workflow artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: sbom-xinyu-core
           path: sbom-xinyu-core.cdx.json
           if-no-files-found: warn
+      - name: Attach SBOM to GitHub Release (tag pushes only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228  # v3.0.2
+        with:
+          files: sbom-xinyu-core.cdx.json
+          fail_on_unmatched_files: false
+          # Do not rewrite release notes; only attach asset when release exists
+          # or create a minimal release if tag has none yet.
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

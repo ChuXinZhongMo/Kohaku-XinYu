@@ -41,8 +41,9 @@ Attach both JSON files to the GitHub Release for that tag. Do **not** include pr
 ## CI automation
 
 - Workflow: `.github/workflows/sbom-release.yml` (tags `v*` + `workflow_dispatch`).
-- Produces `sbom-xinyu-core.cdx.json` artifact from the installed XinYu-Core env.
-- Job is informational (`continue-on-error`); attach the artifact to the GitHub Release manually until auto-upload is added.
+- Produces `sbom-xinyu-core.cdx.json` from the installed XinYu-Core env.
+- Uploads workflow artifact **and** attaches the file to the GitHub Release on tag pushes
+  (`softprops/action-gh-release`, continue-on-error so tagging is never bricked).
 
 ## Next supply-chain steps
 

@@ -85,15 +85,14 @@ Estimated distance to formal **Passing**: medium-low after v0.1.0 + protection +
 | Pinned GitHub Actions SHAs | **met** | `ci.yml` / `security.yml` pin checkout/setup-*/upload-artifact full SHAs |
 | Secrets out of VCS | **met** / **partial** | Strong `.gitignore` + privacy dry-run; continuous vigilance required |
 | Release dry-run / privacy check | **met** / partial | `scripts/Release-DryRun.ps1` used for v0.1.0; not yet CI-automated |
-| Coverage floor | **partial** | Informational 35% summary in CI (no fail yet) |
-| SBOM | **partial** | Operator recipe in `docs/plans/SBOM-AND-RELEASE-SUPPLY-CHAIN.md` |
+| Coverage floor | **met** / partial | Hard `--cov-fail-under=50` on unit suite; stretch note at 70% |
+| SBOM | **met** / partial | Tag workflow generates CycloneDX and attaches to GitHub Release |
 
 ## Next OpenSSF actions (ordered)
 
-1. Promote coverage floor to fail-under only after two stable release cycles.
-2. Optional tag workflow: build CycloneDX SBOM artifacts automatically.
-3. Tabletop: run one private vulnerability report drill; document SLA in `SECURITY.md`.
-4. Formal badge submission only after SBOM automation + maintainer bandwidth.
+1. Raise coverage fail-under toward ~70% only after another stable release cycle.
+2. Tabletop: run one private vulnerability report drill; document SLA in `SECURITY.md`.
+3. Formal badge submission when maintainer bandwidth allows.
 
 ### Analysis & governance
 
