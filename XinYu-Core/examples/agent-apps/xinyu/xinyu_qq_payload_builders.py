@@ -520,19 +520,21 @@ def build_codex_payload(
     }
 
 
+# Fallbacks only — do not import xinyu_qq_gateway here (circular import under
+# prepare_message: gateway -> payload_builders -> gateway breaks private chat).
+_DEFAULT_GATEWAY_NAME = "xinyu_native_qq_gateway"
+_DEFAULT_GATEWAY_VERSION = "0.1.31"
+
+
 def _gateway_name(gateway: Any) -> str:
     name = getattr(gateway, "gateway_name", None)
     if name:
         return str(name)
-    import xinyu_qq_gateway
-
-    return xinyu_qq_gateway.GATEWAY_NAME
+    return _DEFAULT_GATEWAY_NAME
 
 
 def _gateway_version(gateway: Any) -> str:
     version = getattr(gateway, "gateway_version", None)
     if version:
         return str(version)
-    import xinyu_qq_gateway
-
-    return xinyu_qq_gateway.GATEWAY_VERSION
+    return _DEFAULT_GATEWAY_VERSION
