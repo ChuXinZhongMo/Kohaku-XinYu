@@ -4,6 +4,7 @@ from typing import Any
 
 from xinyu_persona_voice import thin_expression_contract, unified_voice_enabled
 from xinyu_prompt_lean import lean_prompt_enabled
+from xinyu_text_world_anchors import world_anchor_prompt_block
 
 # Recency anchor: a short persona re-assertion placed as the LAST line of the prompt,
 # right before generation. LLM persona drifts toward the generic helpful-assistant
@@ -85,6 +86,7 @@ def build_lean_live_system_prompt(
         f"source: {live_state.source_line}",
         f"sender_display: {live_state.sender_name or 'unknown'}",
         live_state.time_context_block,
+        world_anchor_prompt_block(),
         live_state.tail_block,
         *sidecar_lines,
         "Use the recent conversation tail for callbacks, corrections, and direct references to the previous reply.",
@@ -141,6 +143,7 @@ def build_live_system_prompt(
         f"speaker_relation: {live_state.relationship_line}",
         f"sender_display: {live_state.sender_name or 'unknown'}",
         live_state.time_context_block,
+        world_anchor_prompt_block(),
         live_state.residue_line,
         live_state.tail_block,
         *sidecar_lines,
