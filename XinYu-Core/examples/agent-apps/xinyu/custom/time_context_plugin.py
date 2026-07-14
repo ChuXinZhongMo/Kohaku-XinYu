@@ -39,9 +39,13 @@ class TimeContextPlugin(BasePlugin):
 
     async def pre_llm_call(self, messages: list[dict], **kwargs) -> list[dict] | None:
         now = self._now()
+        weekday_names = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+        weekday_cn = ("周一", "周二", "周三", "周四", "周五", "周六", "周日")
+        weekday_idx = int(now.weekday()) % 7
         parts = [
             f"Current real time: {now.isoformat()}",
             f"Current date: {now.date().isoformat()}",
+            f"Current weekday: {weekday_names[weekday_idx]} / {weekday_cn[weekday_idx]}",
         ]
 
         if self._inject_timezone:
@@ -61,6 +65,9 @@ class TimeContextPlugin(BasePlugin):
 
         parts.append(
             "Interpret memory through real elapsed time: recent, lingering, distant, overdue, or faded."
+        )
+        parts.append(
+            "When saying 星期/周几, use Current weekday exactly; do not re-derive it from chat memory."
         )
 
         injection = {

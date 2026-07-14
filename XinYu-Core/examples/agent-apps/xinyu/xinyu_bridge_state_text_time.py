@@ -44,6 +44,14 @@ def payload_event_timestamp_seconds(payload: Mapping[str, Any] | None, *, fallba
     return int(datetime.now().astimezone().timestamp())
 
 
+_CN_WEEKDAYS = ("周一", "周二", "周三", "周四", "周五", "周六", "周日")
+
+
+def chinese_weekday_name(value: datetime) -> str:
+    """Monday=周一 ... Sunday=周日 (datetime.weekday())."""
+    return _CN_WEEKDAYS[int(value.weekday()) % 7]
+
+
 def build_payload_time_context_block(
     payload: Mapping[str, Any] | None,
     *,
@@ -71,15 +79,23 @@ def build_payload_time_context_block(
             f"## {safe_str(heading).strip() or 'Live Time Context'}",
             f"current_runtime_time: {observed_local.isoformat(timespec='seconds')}",
             f"current_runtime_unix: {int(observed_local.timestamp())}",
+            # Explicit calendar anchors — models often mis-map ISO timestamps to
+            # Chinese weekdays if only given a raw datetime string.
+            f"current_local_date: {observed_local.date().isoformat()}",
+            f"current_local_weekday: {chinese_weekday_name(observed_local)}",
+            f"current_local_hour: {observed_local.hour:02d}",
             f"message_event_time: {event_local.isoformat(timespec='seconds')}",
             f"message_event_unix: {int(event_local.timestamp())}",
+            f"message_event_local_weekday: {chinese_weekday_name(event_local)}",
             f"message_age_seconds: {age_seconds}",
             f"event_time_source: {event_source}",
             f"clock_skew_possible: {str(clock_skew).lower()}",
             (
                 "time_policy: use message_event_time for when the owner actually said the message; "
                 "use current_runtime_time for the reply moment; use message_age_seconds when judging "
-                "waiting, sleep/wake state, emotional residue, and whether older context is stale."
+                "waiting, sleep/wake state, emotional residue, and whether older context is stale; "
+                "when speaking about 星期/周几, use current_local_weekday / "
+                "message_event_local_weekday exactly and do not re-derive weekday from memory."
             ),
         ]
     )
