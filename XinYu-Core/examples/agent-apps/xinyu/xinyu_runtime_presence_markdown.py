@@ -31,7 +31,9 @@ def render_presence_markdown(
     *,
     default_visible_window_title: str = "Xinyu codex",
 ) -> str:
-    value = lambda key, default="": scrub_field(fields.get(key) or default)
+    def value(key: str, default: str = "") -> str:
+        return scrub_field(fields.get(key) or default)
+
     updated_at = _timestamp_or_now_iso(fields.get("updated_at"))
     return "\n".join(
         [

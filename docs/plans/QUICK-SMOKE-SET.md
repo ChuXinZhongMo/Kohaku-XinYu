@@ -118,7 +118,9 @@ Verified green offline and wired in `python-smoke-offline`:
 | `tests/smoke/runtime/runtime_security_smoke.py` |
 | `tests/smoke/runtime/runtime_presence_smoke.py` |
 | `tests/smoke/runtime/mojibake_guard_smoke.py` |
+| `tests/smoke/runtime/state_io_smoke.py` |
 | `tests/smoke/memory/memory_braid_smoke.py` |
+| `tests/smoke/memory/summary_coverage_smoke.py` |
 | `tests/smoke/bridge/bridge_renderer_guard_flags_smoke.py` |
 | `tests/smoke/bridge/bridge_auth_smoke.py` |
 | `tests/smoke/bridge/bridge_values_smoke.py` |
@@ -140,7 +142,7 @@ Verified green offline and wired in `python-smoke-offline`:
 
 | Script | Why red |
 |---|---|
-| _(none for offline set)_ | Mojibake guard now skips private `memory/` and intentional dual-encoding matcher tables |
+| `memory_event_sourcing_smoke.py` | Still fails offline on current tree (not promoted) |
 
 ## Suggested next engineering steps
 
