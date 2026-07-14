@@ -6,6 +6,7 @@ from typing import Any
 from xinyu_qq_gateway_utils import safe_str as _safe_str
 from xinyu_qq_models import PreparedMessage, ReplyTarget
 from xinyu_qq_visible_send_shadow import record_visible_send_shadow
+from xinyu_text_world_anchors import apply_text_realism_visible_pass
 from xinyu_visible_reply_guard import dedupe_visible_reply
 from xinyu_visible_text_sanitizer import sanitize_visible_text
 
@@ -22,6 +23,9 @@ def visible_reply(gateway: Any, text: str) -> str:
         return ""
     reply = sanitize_visible_text(reply).strip()
     reply = dedupe_visible_reply(reply).text
+    # Text-only realism: fix clear wrong "今天是周X" claims against runtime clock.
+    repaired = apply_text_realism_visible_pass(reply)
+    reply = str(repaired.get("reply") or reply).strip()
     max_reply_chars = getattr(gateway.config, "max_reply_chars", 0)
     if max_reply_chars and len(reply) > max_reply_chars:
         return reply[:max_reply_chars].rstrip() + "\n[truncated]"
