@@ -43,6 +43,10 @@ NOTE_APPENDERS: dict[str, NoteAppendSpec] = {
             ("load_run_github_autonomous_learning_func", "_load_run_github_autonomous_learning"),
         ),
     ),
+    "agent_tech_scout": NoteAppendSpec(
+        _intake_sidecars.append_agent_tech_scout_note,
+        (),
+    ),
     "daily_digest": NoteAppendSpec(
         _intake_sidecars.append_daily_digest_note,
         (("run_daily_digest_maintenance_func", "run_daily_digest_maintenance"),),

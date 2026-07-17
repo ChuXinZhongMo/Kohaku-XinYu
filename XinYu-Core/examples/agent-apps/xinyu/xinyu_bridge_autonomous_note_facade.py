@@ -6,6 +6,7 @@ from xinyu_bridge_autonomous_note_dispatch import (
     append_creative_writing_note,
     append_daily_digest_note,
     append_emotion_council_note,
+    append_agent_tech_scout_note,
     append_github_learning_note,
     append_action_followup_audit_note,
     append_goal_ecology_note,
@@ -31,6 +32,7 @@ from xinyu_bridge_autonomous_proactive_ready_note import append_desktop_proactiv
 __all__ = (
     "run_autonomous_self_thought_sidecars",
     "append_watched_source_note",
+    "append_agent_tech_scout_note",
     "append_github_learning_note",
     "append_daily_digest_note",
     "append_creative_writing_note",

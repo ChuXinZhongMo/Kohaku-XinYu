@@ -85,6 +85,42 @@ def append_github_learning_note(
     )
 
 
+def append_agent_tech_scout_note(
+    runtime: Any,
+    notes: list[str],
+    *,
+    checked_at: str,
+) -> None:
+    """Full-open Agent tech scout: search → evaluate → micro skill apply."""
+    try:
+        from xinyu_agent_tech_scout_loop import run_agent_tech_scout_loop
+    except Exception as exc:
+        append_autonomous_error(runtime, notes, "agent_tech_scout", exc)
+        return
+
+    def _run(root: Any, **kwargs: Any) -> dict[str, Any]:
+        return run_agent_tech_scout_loop(root, checked_at=str(kwargs.get("checked_at") or checked_at))
+
+    def _summary(result: dict[str, Any]) -> str | None:
+        if not isinstance(result, dict):
+            return None
+        if not result.get("ok"):
+            return f"agent_tech_scout:{result.get('reason') or 'unknown'}"
+        micro = result.get("steps", {}).get("micro_apply") if isinstance(result.get("steps"), dict) else {}
+        applied = int((micro or {}).get("applied") or 0)
+        links = len(result.get("linked_items") or [])
+        return f"agent_tech_scout:ok links={links} micro={applied}"
+
+    _append_intake_result_note(
+        runtime,
+        notes,
+        note_kind="agent_tech_scout",
+        run_func=_run,
+        kwargs={"checked_at": checked_at},
+        render_summary=_summary,
+    )
+
+
 def append_daily_digest_note(
     runtime: Any,
     notes: list[str],

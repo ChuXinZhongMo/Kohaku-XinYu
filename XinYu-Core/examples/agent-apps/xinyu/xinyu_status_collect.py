@@ -59,6 +59,30 @@ from xinyu_status_checks import (  # noqa: F401
 )
 
 
+def nine_score_fields(root: Path) -> dict[str, str]:
+    """H4/E7 nine-score operator fields (agent-blind gates + A/B delta)."""
+    try:
+        from xinyu_nine_score_ab import nine_score_status_fields
+
+        return nine_score_status_fields(root)
+    except Exception:
+        return {
+            "nine_score_computed_at": "missing",
+            "nine_score_overall": "missing",
+            "nine_score_gates_pass": "missing",
+            "nine_score_agent_blind": "true",
+            "nine_score_empty_idle_sends": "missing",
+            "nine_score_silence_explain_rate": "missing",
+            "nine_score_future_effect_rate": "missing",
+            "nine_score_lean_prompt_p50": "missing",
+            "nine_score_fact_hit_rate_72h": "missing",
+            "nine_score_auto_reweight": "0",
+            "nine_score_ab_delta": "missing",
+            "nine_score_ab_equal_overall": "missing",
+            "nine_score_ab_reweight_overall": "missing",
+        }
+
+
 def group_social_fields(root: Path) -> dict[str, str]:
     """Group social memory diagnostics (plan §7). Hashes/counts only — never a
     raw QQ id."""
@@ -137,6 +161,7 @@ def status_fields(root: Path) -> dict[str, str]:
     qq_latest_inbound_flow = qq_latest_inbound_flow_fields(root)
     private_reply_selftest = private_reply_selftest_fields(root)
     group_social = group_social_fields(root)
+    nine_score = nine_score_fields(root)
     coverage_metrics = (
         action_feedback_coverage.get("metrics")
         if isinstance(action_feedback_coverage.get("metrics"), dict)
@@ -310,6 +335,7 @@ def status_fields(root: Path) -> dict[str, str]:
         **qq_latest_inbound_flow,
         **private_reply_selftest,
         **group_social,
+        **nine_score,
         "proactive_evaluated_at": extract_value(proactive, "evaluated_at", "missing"),
         "proactive_decision": extract_value(proactive, "proactive_decision", "missing"),
         "proactive_reason": extract_value(proactive, "reason", "missing"),

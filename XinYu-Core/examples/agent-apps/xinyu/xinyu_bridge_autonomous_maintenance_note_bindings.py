@@ -10,6 +10,7 @@ NoteDepsFunc = Callable[[], Any]
 _DEPS_FORWARDERS = (
     "append_watched_source_note",
     "append_github_learning_note",
+    "append_agent_tech_scout_note",
     "append_daily_digest_note",
     "append_creative_writing_note",
     "append_review_inbox_note",

@@ -60,9 +60,11 @@ def test_index_lists_skill(tmp_path: Path) -> None:
 def test_recall_block_matches_on_trigger(tmp_path: Path) -> None:
     write_skill(tmp_path, _skill())
     block = build_skill_recall_block(tmp_path, query_text="主人说我语气太机械了")
-    assert "## Learned Skills" in block
-    assert "voice-correction-abc123" in block
-    assert "situational_hint_not_stable_identity" in block
+    assert "## 可复用做法" in block
+    assert "skill_id:" not in block
+    assert "situational_hint_not_stable_identity" not in block
+    assert "当「" in block
+    assert "语气" in block or "接待" in block or "风格" in block
 
 
 def test_recall_block_empty_when_no_match(tmp_path: Path) -> None:

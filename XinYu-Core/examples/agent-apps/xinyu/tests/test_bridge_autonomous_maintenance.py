@@ -302,28 +302,28 @@ def test_run_autonomous_maintenance_once_runs_event_and_records_state(tmp_path, 
     assert result["memory_changed"] is True
     assert result["reply_preview"] == "hello world"
     assert result["sessions"] == 2
-    assert result["notes"] == [
-        "autonomous_maintenance_turn",
-        "no_visible_reply",
-        "heavy_maintenance:disabled",
-        "sidecar_note",
-        "cleaned_idle_sessions:2",
-    ]
+    notes = result["notes"]
+    assert notes[0] == "autonomous_maintenance_turn"
+    assert notes[1] == "no_visible_reply"
+    assert "heavy_maintenance:disabled" in notes
+    assert "sidecar_note" in notes
+    assert "cleaned_idle_sessions:2" in notes
+    assert any(str(n).startswith("tick_queue:") for n in notes)
+    assert "tick_queue" in result
     assert session.last_used_at == 123.0
     assert runtime._autonomous_run_count == 5
     assert runtime._autonomous_last_error == ""
     assert runtime._autonomous_in_progress is False
-    assert calls[0] == ("trace", "heavy_maintenance disabled")
-    assert calls[1:7] == [
-        ("lock", "enter"),
-        ("cleanup", {"auto"}),
-        ("get_session", "auto"),
-        ("trace", "run started"),
-        ("state", ("running", {})),
-        ("inject", "event"),
-    ]
-    assert calls[-2][0] == "state"
-    assert calls[-2][1][0] == "last_run_ok"
+    # E4: first autonomous trace is tick_queue planning; heavy follows.
+    assert calls[0][0] == "trace"
+    assert str(calls[0][1]).startswith("tick_queue:")
+    assert ("trace", "heavy_maintenance disabled") in calls
+    assert ("lock", "enter") in calls
+    assert ("cleanup", {"auto"}) in calls
+    assert ("get_session", "auto") in calls
+    assert ("inject", "event") in calls
+    assert ("trace", "run started") in calls
+    assert any(c[0] == "state" and c[1][0] == "last_run_ok" for c in calls if c[0] == "state")
     assert calls[-1] == ("lock", "exit")
 
 
@@ -381,15 +381,14 @@ def test_run_autonomous_maintenance_once_interrupts_agent_on_timeout(tmp_path, m
     with pytest.raises(TimeoutError):
         asyncio.run(xinyu_bridge_autonomous_maintenance.run_autonomous_maintenance_once(runtime))
 
-    assert calls == [
-        "trace:heavy_maintenance disabled",
-        "lock_enter",
-        "trace:run started",
-        "state:running",
-        "wait_for:7",
-        "interrupt",
-        "lock_exit",
-    ]
+    assert calls[0].startswith("trace:tick_queue:")
+    assert "trace:heavy_maintenance disabled" in calls
+    assert "lock_enter" in calls
+    assert "trace:run started" in calls
+    assert "state:running" in calls
+    assert "wait_for:7" in calls
+    assert "interrupt" in calls
+    assert calls[-1] == "lock_exit"
     assert runtime._autonomous_in_progress is False
 
 
@@ -1059,6 +1058,7 @@ def test_run_autonomous_self_thought_sidecars_runs_candidate_branch_in_order() -
     runtime = SimpleNamespace(
         _append_watched_source_note=append("watched", "watched"),
         _append_github_learning_note=append("github", "github"),
+        _append_agent_tech_scout_note=append("scout", "scout"),
         _append_daily_digest_note=append("digest", "digest"),
         _append_creative_writing_note=append("creative", "creative"),
         _append_review_inbox_note=append("review", "review"),
@@ -1084,6 +1084,7 @@ def test_run_autonomous_self_thought_sidecars_runs_candidate_branch_in_order() -
     assert notes == [
         "watched",
         "github",
+        "scout",
         "digest",
         "creative",
         "review",
@@ -1103,6 +1104,7 @@ def test_run_autonomous_self_thought_sidecars_runs_candidate_branch_in_order() -
     assert [name for name, _ in calls] == [
         "watched",
         "github",
+        "scout",
         "digest",
         "creative",
         "review",
@@ -1119,8 +1121,8 @@ def test_run_autonomous_self_thought_sidecars_runs_candidate_branch_in_order() -
         "closed_loop",
         "outcome",
     ]
-    assert calls[13][1] == {"checked_at": "2026-06-06T01:00:00+08:00", "prepare_request": False}
-    assert calls[15][1]["request"] == {"status": "ready", "notes": ["request-note"]}  # type: ignore[index]
+    assert calls[14][1] == {"checked_at": "2026-06-06T01:00:00+08:00", "prepare_request": False}
+    assert calls[16][1]["request"] == {"status": "ready", "notes": ["request-note"]}  # type: ignore[index]
 
 
 def test_run_autonomous_self_thought_sidecars_handles_research_without_candidate() -> None:
@@ -1154,6 +1156,7 @@ def test_run_autonomous_self_thought_sidecars_handles_research_without_candidate
     runtime = SimpleNamespace(
         _append_watched_source_note=append_base("watched"),
         _append_github_learning_note=append_base("github"),
+        _append_agent_tech_scout_note=append_base("scout"),
         _append_daily_digest_note=append_base("digest"),
         _append_creative_writing_note=append_base("creative"),
         _append_review_inbox_note=append_base("review"),
@@ -1194,6 +1197,7 @@ def test_run_autonomous_self_thought_sidecars_records_outcome_when_thought_fails
     runtime = SimpleNamespace(
         _append_watched_source_note=append_base("watched"),
         _append_github_learning_note=append_base("github"),
+        _append_agent_tech_scout_note=append_base("scout"),
         _append_daily_digest_note=append_base("digest"),
         _append_creative_writing_note=append_base("creative"),
         _append_review_inbox_note=append_base("review"),
@@ -1216,6 +1220,7 @@ def test_run_autonomous_self_thought_sidecars_records_outcome_when_thought_fails
     assert calls == [
         "watched",
         "github",
+        "scout",
         "digest",
         "creative",
         "review",

@@ -20,6 +20,12 @@ from xinyu_dialogue_archive import list_memory_candidates
 from xinyu_memory_candidate_analysis import candidate_review_context
 from xinyu_skill_library import read_skill, slugify, tokenize, write_skill
 
+try:
+    from xinyu_method_immunity import MethodImmunityBlocked
+except ImportError:  # pragma: no cover
+    class MethodImmunityBlocked(Exception):
+        pass
+
 # candidate_type -> (skill title prefix, situation framing, routine verb)
 _TYPE_FRAMING = {
     "voice_correction": ("说话风格", "主人对说话风格/语气给出过反馈时", "按主人纠正过的风格说话"),
@@ -132,11 +138,28 @@ def run_skill_synthesis(
 
     created = 0
     updated = 0
+    skipped = 0
     skill_ids: list[str] = []
     for topic, info in clusters.items():
         skill = _synthesize_skill(topic, info["rows"], info["review"])
+        triggers = [t for t in (skill.get("trigger_keys") or []) if len(str(t).strip()) >= 2]
+        evidence_count = int(skill.get("evidence_count") or 0)
+        tags = {str(t).strip().lower() for t in (skill.get("tags") or [])}
+        # Quality gate: weak triggers or thin project-fact noise → skip.
+        if len(triggers) < 2:
+            skipped += 1
+            continue
+        if "project_fact" in tags or "project" in tags:
+            if evidence_count < max(2, int(min_evidence)):
+                skipped += 1
+                continue
+        skill["trigger_keys"] = triggers
         existed = bool(read_skill(root, skill["skill_id"]))
-        write_skill(root, skill)
+        try:
+            write_skill(root, skill)
+        except MethodImmunityBlocked:
+            skipped += 1
+            continue
         skill_ids.append(skill["skill_id"])
         if existed:
             updated += 1
@@ -149,5 +172,6 @@ def run_skill_synthesis(
         "clusters": len(clusters),
         "created": created,
         "updated": updated,
+        "skipped_quality_gate": skipped,
         "skill_ids": skill_ids,
     }

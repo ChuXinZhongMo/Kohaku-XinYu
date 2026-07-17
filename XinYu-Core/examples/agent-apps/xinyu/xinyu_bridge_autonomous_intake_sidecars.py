@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from xinyu_bridge_autonomous_intake_sidecars_appenders import (
+    append_agent_tech_scout_note,
     append_creative_writing_note,
     append_daily_digest_note,
     append_github_learning_note,
@@ -13,6 +14,7 @@ from xinyu_bridge_autonomous_intake_sidecars_appenders import (
 __all__ = (
     "append_watched_source_note",
     "append_github_learning_note",
+    "append_agent_tech_scout_note",
     "append_daily_digest_note",
     "append_creative_writing_note",
     "append_review_inbox_note",

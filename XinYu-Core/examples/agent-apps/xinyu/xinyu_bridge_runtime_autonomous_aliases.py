@@ -14,6 +14,7 @@ def install_autonomous_maintenance_aliases(runtime_cls: type[Any]) -> None:
     )
     runtime_cls._append_watched_source_note = xinyu_bridge_autonomous_maintenance.append_watched_source_note
     runtime_cls._append_github_learning_note = xinyu_bridge_autonomous_maintenance.append_github_learning_note
+    runtime_cls._append_agent_tech_scout_note = xinyu_bridge_autonomous_maintenance.append_agent_tech_scout_note
     runtime_cls._append_daily_digest_note = xinyu_bridge_autonomous_maintenance.append_daily_digest_note
     runtime_cls._append_creative_writing_note = xinyu_bridge_autonomous_maintenance.append_creative_writing_note
     runtime_cls._append_review_inbox_note = xinyu_bridge_autonomous_maintenance.append_review_inbox_note

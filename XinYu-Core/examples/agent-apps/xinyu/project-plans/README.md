@@ -9,6 +9,12 @@ bodies, raw prompts, raw replies, URLs, or tokens.
 
 ## Active
 
+- `XINYU-24H-SELF-ITERATION-DEEP-RESEARCH-2026-07-17.md`
+  - Timed deep-research delivery for 24h bounded self-iteration: H4 agent-blind verifier, H1 allostatic initiative, H3 method immunity, H2′ influence-governed memory (dual-sleep refuted); E0–E7 execution order.
+- `XINYU-NINE-SCORE-SHORTFALL-FUSION-PLAN-2026-07-15.md`
+  - Shortfall-first fusion plan to reach ≥9/10 on XinYu's own axes (gated memory, oral continuity, silence discipline, autonomy loop, modularity) by borrowing mechanisms not product shells.
+- `XINYU-NINE-SCORE-EXECUTION-RUNBOOK-2026-07-15.md`
+  - Executable WP runbook with checkpoint protocol for automated segment continuation after context compression.
 - `XINYU-ZEROLAN-HUMANLIKE-REFERENCE-PLAN-2026-05-23.md`
   - ZerolanProject-inspired event/pipeline/expression reference plan for making XinYu more humanlike without bypassing memory, privacy, proactive, or owner-control gates.
 - `XINYU-DESKTOP-SPLIT-READINESS-2026-05-21.md`

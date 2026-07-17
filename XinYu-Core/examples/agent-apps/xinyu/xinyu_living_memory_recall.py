@@ -137,6 +137,7 @@ def run_living_memory_recall_algorithm(
         dialogue_tail=dialogue_tail,
         visible_turn=visible_turn,
     )
+    result = apply_influence_governance(result)
     result = apply_temporal_memory_context(result, user_text=user_text, evaluated_at=evaluated_at)
     result = apply_memory_candidate_boundaries(root, result, user_text=user_text)
     result = apply_skill_recall(root, result, user_text=user_text)
@@ -222,6 +223,68 @@ def apply_temporal_memory_context(
         prompt_block=prompt_block,
         items=enhanced_items,
         notes=tuple([*result.notes, *temporal.notes]),
+    )
+
+
+def apply_influence_governance(result: RecalledContextResult) -> RecalledContextResult:
+    """H2′: drop items that must not influence live generation (status/supersede/boundary).
+
+    RecalledContextItem has no first-class status field; we project confidence/relevance
+    markers into the influence gate. Empty filter is a no-op.
+    """
+    if not result.items:
+        return result
+    try:
+        from xinyu_memory_influence_gate import evaluate_memory_influence
+    except Exception:
+        return result
+
+    kept: list[RecalledContextItem] = []
+    blocked = 0
+    for item in result.items:
+        confidence = str(getattr(item, "confidence", "") or "").strip().lower()
+        relevance = str(getattr(item, "relevance", "") or "").strip().lower()
+        status = confidence
+        superseded_by = ""
+        if "superseded" in confidence or "superseded" in relevance:
+            status = "superseded"
+            superseded_by = "relevance_marker"
+        elif confidence in {"stale", "archived", "expired", "rejected", "ignore", "never"}:
+            status = confidence
+        boundary = ""
+        if "raw_qq" in relevance or "no_prompt" in relevance:
+            boundary = "no_prompt"
+        decision = evaluate_memory_influence(
+            {
+                "status": status,
+                "boundary": boundary,
+                "superseded_by": superseded_by,
+                "confidence": confidence,
+            }
+        )
+        if decision.allow:
+            kept.append(item)
+        else:
+            blocked += 1
+    if blocked <= 0:
+        return replace(
+            result,
+            notes=tuple([*result.notes, "influence_governance_checked"]),
+        )
+    prompt_block = render_recalled_context(
+        list(kept),
+        max_chars=4200 if _is_self_state_recall(result) else None,
+    )
+    return replace(
+        result,
+        items=tuple(kept),
+        prompt_block=prompt_block,
+        notes=tuple(
+            [
+                *result.notes,
+                f"influence_governance_blocked:{blocked}",
+            ]
+        ),
     )
 
 

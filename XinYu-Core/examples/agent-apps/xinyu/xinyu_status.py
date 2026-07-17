@@ -59,6 +59,7 @@ from xinyu_status_collect import (  # noqa: F401
     autonomy_decision_chain_fields,
     group_social_fields,
     learning_trial_gate_fields,
+    nine_score_fields,
     private_reply_selftest_fields,
     qq_group_reply_boundary_fields,
     qq_latest_inbound_flow_fields,

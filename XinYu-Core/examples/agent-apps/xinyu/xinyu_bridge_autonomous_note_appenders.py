@@ -17,6 +17,10 @@ def append_github_learning_note(deps: Any, runtime: Any, notes: list[str], *, ch
     append_note_without_result("github_learning", deps, runtime, notes, checked_at=checked_at)
 
 
+def append_agent_tech_scout_note(deps: Any, runtime: Any, notes: list[str], *, checked_at: str) -> None:
+    append_note_without_result("agent_tech_scout", deps, runtime, notes, checked_at=checked_at)
+
+
 def append_daily_digest_note(deps: Any, runtime: Any, notes: list[str], *, checked_at: str) -> None:
     append_note_without_result("daily_digest", deps, runtime, notes, checked_at=checked_at)
 

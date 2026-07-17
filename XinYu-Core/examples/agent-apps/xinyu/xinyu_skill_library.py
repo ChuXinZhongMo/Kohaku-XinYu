@@ -32,6 +32,11 @@ _SCALAR_FIELDS = (
     "evidence_count",
     "confidence",
     "permission",
+    "use_count",
+    "helpful_count",
+    "harmful_count",
+    "last_outcome",
+    "promoted_at",
 )
 _LIST_FIELDS = ("trigger_keys", "evidence_candidate_ids", "tags")
 
@@ -154,10 +159,22 @@ def write_skill(root: Path, skill: dict[str, Any]) -> Path:
     now = _now_iso()
     existing = read_skill(root, skill_id)
     record = dict(skill)
+    # E5 method immunity: block bad methods/sources; force review_only when needed.
+    try:
+        from xinyu_method_immunity import BLOCK, MethodImmunityBlocked, gate_skill_record
+
+        record, immune = gate_skill_record(record)
+        if immune.action == BLOCK:
+            raise MethodImmunityBlocked(immune.reason, immune)
+    except ImportError:
+        pass
     record["skill_id"] = skill_id
     record["memory_type"] = SKILL_MEMORY_TYPE
     record["permission"] = SKILL_PERMISSION
     record.setdefault("status", SKILL_PERMISSION)
+    # Permission stays review_only contract unless status already active via RPE.
+    if str(record.get("status") or "").strip().lower() not in {"active", "promoted"}:
+        record["permission"] = SKILL_PERMISSION
     record["created_at"] = existing.get("created_at") if existing else now
     record["updated_at"] = now
     path = skill_path(root, skill_id)
@@ -242,11 +259,73 @@ def _clip(text: str, limit: int) -> str:
     return clean[: max(0, limit - 1)].rstrip() + "…"
 
 
+def _as_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(str(value).strip() or default)
+    except (TypeError, ValueError):
+        return default
+
+
+def record_skill_outcome(
+    root: Path,
+    skill_id: str,
+    *,
+    helpful: bool | None = None,
+    harmful: bool | None = None,
+    better_than_predicted: bool = False,
+) -> dict[str, Any]:
+    """Record use/outcome counters. RPE-style promote only on better_than_predicted."""
+    skill = read_skill(root, skill_id)
+    if not skill:
+        return {}
+    skill["use_count"] = _as_int(skill.get("use_count")) + 1
+    if helpful:
+        skill["helpful_count"] = _as_int(skill.get("helpful_count")) + 1
+        skill["last_outcome"] = "helpful"
+    if harmful:
+        skill["harmful_count"] = _as_int(skill.get("harmful_count")) + 1
+        skill["last_outcome"] = "harmful"
+        # Harmful skills drop to archived influence (method hygiene).
+        if _as_int(skill.get("harmful_count")) >= 2:
+            skill["status"] = "archived"
+    if better_than_predicted and not harmful:
+        skill["last_outcome"] = "better_than_predicted"
+        # Promote out of pure review_only draft only with positive RPE.
+        if _safe_str(skill.get("status"), SKILL_PERMISSION) in {
+            SKILL_PERMISSION,
+            "draft",
+            "review_only",
+            "",
+        }:
+            skill["status"] = "active"
+            skill["promoted_at"] = _now_iso()
+            skill["confidence"] = str(max(_as_int(skill.get("confidence")), 3))
+    write_skill(root, skill)
+    return read_skill(root, skill_id)
+
+
 def build_skill_recall_block(root: Any, *, query_text: str = "", limit: int = 3) -> str:
-    """Situation-keyed skill recall, rendered with the same review-only boundary
-    framing the candidate boundaries use, so the model treats skills as hints."""
+    """Situation-keyed skill recall as Chinese L1 one-liners (progressive disclosure).
+
+    Always-on prompt only gets short hints. No skill_id / English meta wall.
+    review_only: current turn and owner correction always win.
+    Influence gate (H2′) drops archived/superseded/blocked skills.
+    """
 
     skills = list_skills(Path(root))
+    if not skills:
+        return ""
+    try:
+        from xinyu_memory_influence_gate import filter_influence_items
+
+        skills = filter_influence_items(skills)
+    except Exception:
+        skills = [
+            s
+            for s in skills
+            if _safe_str(s.get("status"), SKILL_PERMISSION).strip().lower()
+            not in {"archived", "disabled"}
+        ]
     if not skills:
         return ""
     query_tokens = set(tokenize(query_text))
@@ -259,19 +338,14 @@ def build_skill_recall_block(root: Any, *, query_text: str = "", limit: int = 3)
         return ""
     ranked = ranked[: max(1, int(limit))]
     lines = [
-        "## Learned Skills",
-        "purpose: reusable routines distilled from past experience; recall as hints only.",
-        "- review_only: true",
-        "- current_turn_wins: true",
+        "## 可复用做法（仅提示，当前句优先）",
     ]
     for skill in ranked:
-        lines.extend(
-            [
-                f"- skill_id: {_safe_str(skill.get('skill_id'), 'unknown')}",
-                f"  title: {_clip(skill.get('title'), 80)}",
-                f"  when: {_clip(skill.get('situation'), 160)}",
-                f"  routine: {_clip(skill.get('routine'), 220)}",
-                "  use_policy: situational_hint_not_stable_identity",
-            ]
-        )
+        when = _clip(skill.get("situation") or skill.get("title"), 72)
+        routine = _clip(skill.get("routine"), 100)
+        if not when and not routine:
+            continue
+        lines.append(f"- 当「{when}」时：{routine}")
+    if len(lines) <= 1:
+        return ""
     return "\n".join(lines).strip()

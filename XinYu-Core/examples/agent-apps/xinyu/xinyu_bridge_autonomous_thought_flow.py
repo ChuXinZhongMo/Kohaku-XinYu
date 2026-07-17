@@ -9,6 +9,7 @@ from xinyu_bridge_values import as_bool
 _BASE_THOUGHT_SIDECAR_METHODS = (
     "_append_watched_source_note",
     "_append_github_learning_note",
+    "_append_agent_tech_scout_note",
     "_append_daily_digest_note",
     "_append_creative_writing_note",
     "_append_review_inbox_note",
